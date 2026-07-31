@@ -89,7 +89,7 @@ Goal: merchants manage a real catalog without touching the canvas.
       product content) OR rich-text field for v1 — decide, record in VISION.md
 - [x] Slug uniqueness + redirect table for renamed slugs
 - [x] CSV import for products/variants (merchant onboarding path)
-- [ ] Seed script: demo store (12 products, 3 collections) for dev/demo
+- [x] Seed script: demo store (12 products, 3 collections) for dev/demo
 
 **DEMO:** import the seed CSV, edit a price, reorder a collection — all through
 the admin UI.

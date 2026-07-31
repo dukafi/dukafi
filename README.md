@@ -120,6 +120,17 @@ bundle exec ruby scripts/seed_admin.rb
 cd ..
 ```
 
+Populate a development database with 12 products, 20 variants, and three
+ordered collections:
+
+```bash
+cd dukafy
+bundle exec ruby scripts/seed_demo_store.rb
+cd ..
+```
+
+The demo seed is idempotent, so it is safe to run again.
+
 ## Run development
 
 Start Ruby and the visual editor together:
