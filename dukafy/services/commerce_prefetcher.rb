@@ -5,6 +5,7 @@ class CommercePrefetcher
       [product.slug, {
         "id" => product.id, "slug" => product.slug, "title" => product.title,
         "href" => "/products/#{product.slug}", "imageUrl" => "",
+        "images" => [],
         "priceCents" => variant&.price_cents, "currency" => variant&.currency || "USD",
         "variants" => product.variants.sort_by(&:position).map do |item|
           {

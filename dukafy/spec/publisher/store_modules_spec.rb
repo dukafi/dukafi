@@ -68,4 +68,44 @@ class StoreModulesSpec < Minitest::Test
 
     assert_equal '<span class="dukafy-price" data-product="">EUR 25.99</span>', output.fetch(:html)
   end
+
+  def test_image_gallery_matches_golden_output_and_uses_prefetched_images
+    document = {
+      "rootNodeId" => "gallery",
+      "nodes" => {
+        "gallery" => {
+          "id" => "gallery", "moduleId" => "store.image-gallery", "children" => [], "classIds" => [],
+          "breakpointOverrides" => {}, "props" => {
+            "productSlug" => "canvas-bag", "images" => "/fallback.jpg", "alt" => "Fallback",
+          },
+        },
+      },
+    }
+    prefetched = {
+      "products" => {
+        "canvas-bag" => {
+          "images" => [
+            { "url" => "/uploads/bag-front.jpg", "alt" => "Canvas bag, front" },
+            { "url" => "/uploads/bag-side.jpg", "alt" => "Canvas bag, side & strap" },
+          ],
+        },
+      },
+    }
+
+    result = Dukafy::Publisher::RenderPage.call(document:, registry: Dukafy::Publisher::REGISTRY, prefetched:)
+
+    assert_equal File.read(File.expand_path("../golden/image_gallery.html", __dir__)).chomp, result.html
+    assert_includes result.css, ".dukafy-image-gallery{"
+  end
+
+  def test_image_gallery_uses_safe_authored_fallbacks
+    definition = Dukafy::Publisher::REGISTRY.fetch("store.image-gallery")
+    output = definition.render(
+      { "productSlug" => "", "images" => "javascript:alert(1)\n/uploads/detail.jpg", "alt" => 'Detail "view"' },
+      [], prefetched: {}
+    )
+
+    refute_includes output.fetch(:html), "javascript:"
+    assert_includes output.fetch(:html), 'src="/uploads/detail.jpg" alt="Detail &quot;view&quot;"'
+  end
 end

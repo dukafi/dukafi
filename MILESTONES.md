@@ -103,7 +103,7 @@ Goal: the editor builds real store pages.
 - [ ] Canvas (React) + publisher (Ruby) pairs, each with golden tests:
   - [x] `store.product-card` (image, title, price)
   - [x] `store.price` (variant-aware, currency formatting)
-  - [ ] `store.image-gallery`
+  - [x] `store.image-gallery`
   - [ ] `store.variant-picker`
   - [ ] `store.buy-button` (posts to cart fragment endpoint)
   - [ ] `store.collection-loop` (port of base.loop, source = collection,
