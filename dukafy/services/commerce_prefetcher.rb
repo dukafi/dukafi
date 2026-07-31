@@ -23,6 +23,6 @@ class CommercePrefetcher
         "description" => collection.description.to_s, "products" => items,
       }]
     end
-    { "products" => products, "collections" => collections }
+    MediaPrefetcher.call.merge("products" => products, "collections" => collections)
   end
 end

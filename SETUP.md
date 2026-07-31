@@ -24,6 +24,13 @@ If mise is unavailable, any method giving Ruby 3.4+ and Bun 1.x is acceptable.
 Bun is a BUILD-TIME dependency only (editor bundling). The runtime product is
 pure Ruby + SQLite.
 
+Install libvips for responsive media processing:
+
+```bash
+sudo apt-get install libvips        # Debian/Ubuntu
+# or: brew install vips             # macOS
+```
+
 ---
 
 ## 1. Create the repo

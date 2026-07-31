@@ -44,4 +44,23 @@ class BaseModulesSpec < Minitest::Test
 
     assert_equal '<div title="Safe"></div>', result.html
   end
+
+  def test_image_emits_responsive_variants_with_original_fallback
+    definition = Dukafy::Publisher::REGISTRY.fetch("base.image")
+    output = definition.render(
+      { "src" => "/uploads/hero.jpg", "loading" => "lazy", "fetchPriority" => "auto", "decoding" => "async", "htmlAttributes" => {} },
+      [], prefetched: { "/uploads/hero.jpg" => {
+        "width" => 1_200, "height" => 800,
+        "variants" => [
+          { "url" => "/uploads/hero-w320.webp", "width" => 320 },
+          { "url" => "/uploads/hero-w640.webp", "width" => 640 },
+        ],
+      } }
+    )
+
+    assert_includes output.fetch(:html), 'src="/uploads/hero.jpg"'
+    assert_includes output.fetch(:html), 'srcset="/uploads/hero-w320.webp 320w, /uploads/hero-w640.webp 640w"'
+    assert_includes output.fetch(:html), 'sizes="auto, 100vw"'
+    assert_includes output.fetch(:html), 'width="1200" height="800"'
+  end
 end

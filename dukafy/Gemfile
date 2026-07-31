@@ -11,6 +11,8 @@ gem "rack-session"
 gem "rackup"
 gem "stripe"
 gem "csv"
+gem "image_processing"
+gem "ruby-vips"
 
 group :development do
   gem "rerun"

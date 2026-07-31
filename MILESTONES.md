@@ -120,7 +120,7 @@ Goal: the editor builds real store pages.
 - [x] `dependency_tracker.rb`: record page_path ⇄ product_id during bake
 - [x] Partial re-bake: product save re-bakes its page + containing collection
       pages only (spec: editing 1 of 500 products re-bakes ≤ N pages)
-- [ ] Media variants: resize on upload (libvips via image_processing gem),
+- [x] Media variants: resize on upload (libvips via image_processing gem),
       `srcset` emission in image modules
 
 **DEMO:** 500-product seed; edit one product; publish completes in well under a

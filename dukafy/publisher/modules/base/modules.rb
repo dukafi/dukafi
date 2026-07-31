@@ -52,8 +52,14 @@ class Dukafy
           decoding = %w[sync auto].include?(props["decoding"]) ? props["decoding"] : "async"
           priority = %w[high low].include?(props["fetchPriority"]) ? %( fetchpriority="#{props['fetchPriority']}") : ""
           dimensions = %w[width height].filter_map { |key| media[key] ? %( #{key}="#{Integer(media[key])}") : nil }.join
+          variants = media.fetch("variants", [])
+          srcset = variants.filter_map do |variant|
+            url = BaseHelpers.safe_url(variant["url"])
+            %(#{url} #{Integer(variant["width"])}w) unless url.empty? || url == "#"
+          end.join(", ")
+          responsive = srcset.empty? ? "" : %( srcset="#{srcset}" sizes="auto, 100vw")
           attrs = BaseHelpers.html_attributes(props["htmlAttributes"])
-          { html: %(<img#{attrs} src="#{src}" alt="#{alt}"#{dimensions} loading="#{loading}" decoding="#{decoding}"#{priority}>) }
+          { html: %(<img#{attrs} src="#{src}"#{responsive} alt="#{alt}"#{dimensions} loading="#{loading}" decoding="#{decoding}"#{priority}>) }
         end
       end
 

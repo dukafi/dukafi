@@ -75,7 +75,8 @@ class Dukafy
             next if source.empty? || source == "#"
 
             alt = CGI.escapeHTML(image.is_a?(Hash) ? image.fetch("alt", props["alt"]).to_s : props["alt"].to_s)
-            %(<img class="dukafy-image-gallery__item" src="#{source}" alt="#{alt}" loading="lazy" decoding="async">)
+            responsive = image.is_a?(Hash) ? responsive_image_attributes(image) : ""
+            %(<img class="dukafy-image-gallery__item" src="#{source}"#{responsive} alt="#{alt}" loading="lazy" decoding="async">)
           end.join
           modifier = items.empty? ? " dukafy-image-gallery--empty" : ""
           { html: %(<div class="dukafy-image-gallery#{modifier}" data-product="#{CGI.escapeHTML(product_slug)}">#{items}</div>), css: IMAGE_GALLERY_CSS }
@@ -152,6 +153,16 @@ class Dukafy
       def bound_product(props, context)
         slug = props["productSlug"].to_s
         slug.empty? ? (context[:current_product] || {}) : (context[:prefetched].dig("products", slug) || {})
+      end
+
+      def responsive_image_attributes(image)
+        variants = image.fetch("variants", [])
+        srcset = variants.filter_map do |variant|
+          url = BaseHelpers.safe_url(variant["url"])
+          %(#{url} #{Integer(variant['width'])}w) unless url.empty? || url == "#"
+        end.join(", ")
+        dimensions = %w[width height].filter_map { |key| image[key] ? %( #{key}="#{Integer(image[key])}") : nil }.join
+        srcset.empty? ? dimensions : %( srcset="#{srcset}" sizes="auto, 100vw"#{dimensions})
       end
 
       def bound_product_slug(props, product)

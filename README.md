@@ -39,7 +39,7 @@ Commerce admin ─────────────┘                    ├
 | Admin interactions | Instatic React workspace | Products, variants, collections, media, and visual editing in one CMS shell |
 | Storefront interactions | Server-rendered HTML, HTMX 2 | Small dynamic fragments for cart, stock, and checkout |
 | Visual editor | Instatic, React 19, Vite, Bun | Build-time visual page editing |
-| Publisher | Plain Ruby renderers | Pure document-to-HTML rendering |
+| Publisher | Plain Ruby renderers, libvips | Pure document-to-HTML rendering and responsive media variants |
 | Styling | Tailwind CSS 4 standalone | Used-utility-only CSS generated during publish |
 | Payments | Stripe Checkout | Hosted payment collection planned for M5 |
 | Deployment | Docker, Caddy, Litestream | Planned one-image deployment, TLS, and SQLite backup |
@@ -59,6 +59,7 @@ storefront pages contain no publisher JavaScript.
 - Permanent redirects for renamed product and collection slugs
 - Product and variant CSV import
 - Media upload and management
+- Responsive WebP media variants with `srcset` output
 - Session authentication and first-admin setup
 
 See [MILESTONES.md](MILESTONES.md) for detailed progress and

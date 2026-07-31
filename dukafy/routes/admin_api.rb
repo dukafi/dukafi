@@ -98,6 +98,7 @@ class AdminApi < Roda
       id: asset.id.to_s, filename: File.basename(asset.path), mimeType: asset.mime,
       sizeBytes: File.exist?(full_path) ? File.size(full_path) : 0,
       publicPath: "/#{asset.path}", uploadedByUserId: nil, createdAt: asset.created_at.utc.iso8601,
+      width: asset.width, height: asset.height, variants: asset.variants,
     }
   end
 
@@ -437,9 +438,20 @@ class AdminApi < Roda
             relative_path = File.join("uploads", stored_name)
             destination = File.expand_path("../#{relative_path}", __dir__)
             FileUtils.copy_file(upload[:tempfile].path, destination)
-            asset = MediaAsset.create(path: relative_path, mime: upload[:type] || "application/octet-stream")
+            mime = upload[:type] || "application/octet-stream"
+            processed = MediaVariants.call(source: destination, relative_path:, mime:)
+            asset = MediaAsset.create(
+              path: relative_path, mime:, width: processed[:width], height: processed[:height],
+              variants_json: JSON.generate(processed[:variants])
+            )
             response.status = 201
             { asset: media_payload(asset) }
+          rescue MediaVariants::Unavailable => error
+            File.delete(destination) if destination && File.file?(destination)
+            halt_json(503, "image_processing_unavailable", error.message)
+          rescue MediaVariants::ProcessingError => error
+            File.delete(destination) if destination && File.file?(destination)
+            halt_json(422, "invalid_image", error.message)
           end
         end
         r.get("folders") { { folders: [] } }
@@ -448,6 +460,10 @@ class AdminApi < Roda
           r.delete do
             path = File.expand_path("../#{asset.path}", __dir__)
             File.delete(path) if File.file?(path)
+            asset.variants.each do |variant|
+              variant_path = File.expand_path("../#{variant.fetch('url').delete_prefix('/')}", __dir__)
+              File.delete(variant_path) if File.file?(variant_path)
+            end
             asset.destroy
             response.status = 204
             ""
