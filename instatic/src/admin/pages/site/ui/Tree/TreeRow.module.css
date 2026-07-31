@@ -1,0 +1,137 @@
+/* Shared tree row visuals for structural editor trees. */
+
+.row {
+    --tree-row-accent: transparent;
+    --tree-row-focus: transparent;
+    /* Default — overridden by `data-editor-density` on the editor root.
+       Compact (default): 28px. Comfortable: 36px. The `--tree-row-h` var
+       lives on the editor root so EVERY tree (Layers, Selectors, …) follows
+       the same density without per-tree wiring. */
+    --tree-row-h: 28px;
+
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: var(--tree-row-h);
+    padding-left: var(--tree-row-pl);
+    padding-right: var(--space-l);
+    gap: var(--space-4xs);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    outline: none;
+    user-select: none;
+    cursor: pointer;
+    transition:
+        background 80ms ease,
+        color 80ms ease,
+        opacity 80ms ease;
+}
+
+/* Density override — the editor root sets `data-editor-density` so the
+   variable cascades to every tree row regardless of where it lives. */
+:global([data-editor-density='comfortable']) .row {
+    --tree-row-h: 36px;
+    font-size: var(--text-s);
+}
+
+.row:hover,
+.rowHovered {
+    background: var(--overlay-10);
+    color: var(--text-muted);
+}
+
+.row:focus-visible,
+.rowFocused {
+    --tree-row-focus: var(--overlay-20);
+}
+
+.rowSelected {
+    --tree-row-accent: var(--overlay-60);
+
+    background: var(--overlay-10);
+    color: var(--text);
+}
+
+.rowMuted {
+    color: var(--text-muted);
+}
+
+.rowLocked {
+    color: var(--text-disabled);
+}
+
+.rowHidden {
+    opacity: 0.35;
+}
+
+.rowGenerated {
+    opacity: 0.6;
+}
+
+.rowDragging {
+    cursor: grabbing;
+    opacity: 0.5;
+}
+
+.chevron {
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-disabled);
+    transition: transform 120ms ease;
+}
+
+.chevronExpanded {
+    transform: rotate(90deg);
+}
+
+.chevronCollapsed {
+    transform: rotate(0deg);
+}
+
+.chevronHidden {
+    visibility: hidden;
+}
+
+.iconSlot {
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-disabled);
+}
+
+.labelGroup {
+    flex: 1;
+    min-width: 0;
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2xs);
+}
+
+.label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--text-s);
+    font-weight: 500;
+    letter-spacing: 0;
+}
+
+.meta {
+    flex-shrink: 0;
+    color: var(--text-disabled);
+    font-size: var(--text-3xs);
+    line-height: 1;
+}

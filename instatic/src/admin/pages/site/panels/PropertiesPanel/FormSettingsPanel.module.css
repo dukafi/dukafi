@@ -1,0 +1,176 @@
+.formSettingsPanel {
+    display: grid;
+    gap: var(--space-m);
+    padding: var(--space-l);
+    border-radius: var(--radius);
+    background: var(--bg-surface);
+}
+
+.header {
+    display: grid;
+    gap: var(--space-4xs);
+}
+
+.kicker {
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    font-weight: 750;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.title {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-size: var(--text-m);
+    font-weight: 750;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2xs);
+}
+
+.metaItem {
+    max-width: 100%;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface-2);
+    color: var(--text-muted);
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    line-height: 1;
+    padding: var(--space-2xs) var(--space-s);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fieldRow {
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.primaryControls {
+    display: grid;
+    gap: var(--space-m);
+}
+
+.section {
+    display: grid;
+    gap: var(--space-s);
+}
+
+.targetTableControl {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+    gap: var(--space-xs);
+}
+
+.targetTableControl .createTableButton.createTableButton {
+    height: 100%;
+}
+
+.sectionLabel {
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    font-weight: 750;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.missingFieldList {
+    display: grid;
+    gap: var(--space-3xs);
+}
+
+.missingFieldRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: var(--space-xs);
+    min-height: 28px;
+    border-radius: var(--radius);
+    background: var(--bg-surface-2);
+    padding: var(--space-3xs) var(--space-2xs) var(--space-3xs) var(--space-s);
+}
+
+.missingFieldName {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.missingFieldType {
+    border-radius: var(--radius-sm);
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.relationship {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    line-height: 1.45;
+}
+
+.warnings {
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.warning {
+    border-radius: var(--radius);
+    background: var(--warning-10);
+    color: var(--warning);
+    font-size: var(--text-xs);
+    line-height: 1.4;
+    padding: var(--space-s);
+}
+
+.danger {
+    background: var(--danger-10);
+    color: var(--danger);
+}
+
+.inlineStatus {
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    line-height: 1.45;
+}
+
+.createTableForm {
+    display: grid;
+    gap: var(--space-l);
+}
+
+.dialogField {
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.dialogLabel {
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.dialogError {
+    margin: 0;
+    color: var(--danger);
+    font-size: var(--text-xs);
+    line-height: 1.35;
+}

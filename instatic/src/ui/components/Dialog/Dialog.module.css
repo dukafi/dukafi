@@ -1,0 +1,98 @@
+.backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    display: grid;
+    place-items: center;
+    padding: var(--space-5xl);
+    background: color-mix(in srgb, var(--bg-body) 50%, transparent);
+}
+
+.dialog {
+    width: 100%;
+    max-height: 80vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    border-radius: var(--panel-radius);
+    background: var(--bg-surface);
+    box-shadow: 0 18px 48px color-mix(in srgb, var(--bg-body) 28%, transparent);
+    color: var(--text);
+    overflow: hidden;
+}
+
+.dialog[data-size="sm"] {
+    width: min(360px, 100%);
+}
+
+.dialog[data-size="md"] {
+    width: min(440px, 100%);
+}
+
+.dialog[data-size="lg"] {
+    width: min(520px, 100%);
+}
+
+.dialog[data-size="xl"] {
+    width: min(640px, 100%);
+}
+
+.dialog[data-size="2xl"] {
+    width: min(820px, 100%);
+}
+
+.header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 26px;
+    align-items: center;
+    gap: var(--space-s);
+    background: var(--bg-surface-2);
+    padding: var(--space-l) var(--space-xl);
+    border-bottom: 1px solid var(--border);
+}
+
+.headerText {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4xs);
+    min-width: 0;
+}
+
+.eyebrow {
+    margin: 0;
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-subtle);
+}
+
+.dialog[data-tone="danger"] .eyebrow {
+    color: var(--danger);
+}
+
+.title {
+    margin: 0;
+    overflow: hidden;
+    font-size: var(--text-l);
+    font-weight: 700;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.body {
+    padding: var(--space-2xl);
+    overflow-y: auto;
+}
+
+.footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-s);
+    padding: var(--space-l) var(--space-xl);
+    border-top: 1px solid var(--border);
+    background: var(--bg-surface-2);
+}
+
+/* The dialog body's skeleton is rendered via the shared
+ * `<SkeletonBlock>` primitive — see `src/ui/components/Skeleton/`. */

@@ -1,0 +1,121 @@
+/* Skeleton primitives.
+ *
+ * Local spans own the shimmer paint, animation, dimensions, and layout
+ * for the THREE editor-specific shapes:
+ *
+ *   • `.skeletonBlock`  — single three-bar block
+ *   • `.skeletonCards`  — vertical stack of skeleton cards
+ *   • `.skeletonRows`   — vertical stack of thin shimmer rows
+ *
+ * Plus the `.skeletonCard` card-chrome utility that matches the
+ * real `--bg-surface-2` cards on Plugins / Users / Posts pages.
+ */
+
+/* --- low-level shimmer bar --- */
+.skeleton {
+    --skeleton-width: 100%;
+    --skeleton-height: 1em;
+    --skeleton-radius: var(--radius-sm);
+
+    display: inline-block;
+    width: var(--skeleton-width);
+    max-width: 100%;
+    height: var(--skeleton-height);
+    min-width: 0;
+    overflow: hidden;
+    vertical-align: middle;
+    user-select: none;
+    border-radius: var(--skeleton-radius);
+    background-color: var(--bg-surface-3);
+    background-image: linear-gradient(
+        90deg,
+        var(--bg-surface-3) 0%,
+        var(--bg-surface-4) 50%,
+        var(--bg-surface-3) 100%
+    );
+    background-size: 200% 100%;
+    animation: instaticSkeletonShimmer 1.4s ease-in-out infinite;
+}
+
+/* --- SkeletonBlock --- */
+.skeletonBlock {
+    --skeleton-block-min-height: 0;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-m);
+    width: 100%;
+    min-height: var(--skeleton-block-min-height);
+}
+
+/* --- SkeletonCards --- */
+.skeletonCards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-l);
+    width: 100%;
+}
+
+.skeletonCard {
+    background: var(--bg-surface-2);
+    border-radius: 16px;
+    padding: var(--space-xl) var(--space-2xl);
+}
+
+/* --- SkeletonRows --- */
+.skeletonRows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    width: 100%;
+}
+
+/* --- SkeletonTree --- */
+.skeletonTree {
+    --skeleton-tree-row-h: 28px;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-px);
+    width: 100%;
+}
+
+.skeletonTreeRow {
+    --skeleton-tree-indent: 8px;
+    --skeleton-delay: 0ms;
+
+    display: flex;
+    align-items: center;
+    gap: var(--space-4xs);
+    height: var(--skeleton-tree-row-h);
+    padding-right: var(--space-l);
+    padding-left: var(--skeleton-tree-indent);
+}
+
+/* Stagger each row's shimmer by its inherited delay so the loading state
+   cascades down the tree. More specific than the base `.skeleton` rule, so it
+   overrides the `animation` shorthand's reset of `animation-delay` to 0. The
+   custom property inherits from the row to its three bars, keeping them in
+   sync within a row. */
+.skeletonTree .skeleton {
+    animation-delay: var(--skeleton-delay);
+}
+
+.skeletonTreeChevron {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+}
+
+@keyframes instaticSkeletonShimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}

@@ -1,0 +1,186 @@
+/* PropertiesPanel - inspector shell. */
+
+.panel {
+    position: fixed;
+    --panel-x: calc(100% - 376px);
+    --panel-y: 64px;
+    /* Background the inner fade gradients (ClassPicker fade, search-bar fade,
+       locked-preview teaser) blend into. Floating panel surface is --bg-surface;
+       the docked variant is transparent over the --bg-body sidebar, so it
+       overrides this below. Descendants read it via var(--panel-fade-bg). */
+    --panel-fade-bg: var(--bg-surface);
+    left: var(--panel-x);
+    top: var(--panel-y);
+    bottom: auto;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    width: var(--panel-w);
+    height: var(--panel-h);
+    min-width: 280px;
+    min-height: 240px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 80px);
+    overflow: hidden;
+    border: 1px solid var(--overlay-10);
+    border-radius: var(--panel-radius);
+    background: var(--bg-surface);
+    backdrop-filter: blur(var(--panel-blur));
+    box-shadow: var(--shadow-panel);
+    outline: none;
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+.panelDocked {
+    position: relative;
+    /* Docked surface is transparent over the --bg-body sidebar, so the inner
+       fades must blend into --bg-body rather than the floating --bg-surface. */
+    --panel-fade-bg: var(--bg-body);
+    left: auto;
+    top: auto;
+    bottom: auto;
+    z-index: auto;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    max-width: none;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    background: transparent;
+    transition: none;
+    will-change: auto;
+    transform: none;
+}
+
+.srLiveRegion {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.propertiesPanel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ── Node inspector container — holds ClassPicker + StyleSurface (no overflow) */
+.nodeArea {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.nodeViewSwitcher {
+    display: flex;
+    align-items: center;
+    gap: var(--space-l);
+    padding: var(--space-m) var(--space-xl) 0;
+}
+
+.nodeViewSwitcher .nodeViewButton {
+    height: auto;
+    padding: 0;
+    border-radius: var(--radius-sm);
+    color: var(--text-disabled);
+    font-size: var(--text-2xs);
+    font-weight: 800;
+    line-height: 1.4;
+}
+
+.nodeViewSwitcher .nodeViewButton:hover {
+    background: transparent;
+    color: var(--text-muted);
+}
+
+.nodeViewSwitcher .nodeViewButton[data-active="true"] {
+    color: var(--text);
+    font-weight: 800;
+}
+
+/*  `position: relative` + `z-index: 1` make this the containing block AND
+    stacking context for the `::after` fade, so the gradient renders above
+    the scrolling StyleSurface that follows. Bottom padding is intentionally
+    zero — the fade itself acts as the visual separator and lets the first
+    rows of content peek up to (and dim below) the picker as users scroll. */
+.headerClassPicker {
+    position: relative;
+    z-index: 1;
+    padding: var(--space-m) var(--space-xl) 0;
+}
+
+/*  Soft fade just below the ClassPicker — mirrors the bottom search bar's
+    gradient so content scrolling up under the picker fades out instead of
+    snapping to a hard color edge. */
+.headerClassPicker::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 100%;
+    height: 16px;
+    pointer-events: none;
+    background: linear-gradient(180deg, var(--panel-fade-bg) 0%, transparent);
+}
+
+.headerNodeTitle {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: var(--space-3xs);
+}
+
+.headerNodeLabel {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font: inherit;
+    white-space: nowrap;
+}
+
+.headerLayerMenuIcon {
+    display: block;
+    transform: rotate(90deg);
+    transform-origin: center;
+}
+
+.headerNameInput {
+    width: 100%;
+    min-width: 0;
+}
+
+/* ── SelectorInspector: search bar + scroll-container+rail grid ────────────── */
+
+.selectorSearchBar {
+    padding: var(--space-l) var(--space-xl);
+    background: var(--overlay-5);
+}
+
+.selectorSurfaceLayout {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 32px;
+    gap: var(--space-3xs);
+    min-width: 0;
+    overflow: hidden;
+}
+
+.selectorScrollContainer {
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}

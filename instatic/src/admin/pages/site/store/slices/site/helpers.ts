@@ -1,0 +1,549 @@
+/**
+ * Closure-shared helpers for the site slice.
+ *
+ * `buildSiteHelpers(set, get)` returns the shared mutation helpers packaged
+ * into a single object that gets passed to every per-domain action factory.
+ *
+ * `depthInTree` is a pure utility consumed by the helpers / action factories —
+ * it lives here so it sits next to the active tree code that uses it.
+ */
+
+import { nanoid } from 'nanoid'
+import type { StoreApi } from 'zustand'
+import type { NodeTree, PageNode, StyleRule, SiteDocument } from '@core/page-tree'
+import { addPage, createNode, reconcileSiteExplorerInPlace, reindexNodeParents } from '@core/page-tree'
+import type { VisualComponent } from '@core/visualComponents'
+import { syncAllVCRefSlotInstances, allTreeNodeMaps } from '../vcSlotReconcile'
+import { collectSlotOutletNames } from '@core/visualComponents'
+import { create } from 'mutative'
+import type { Draft, Patches } from 'mutative'
+import type { ImportFragment } from '@core/htmlImport'
+import type { NewStyleRule } from '@core/siteImport'
+import { addImportedScriptDependencies, addImportedScripts, addImportedStylesheets } from './importedSiteFiles'
+import { applyLocalSitePatches, notifyCollabBlocked } from './collabBinding'
+import type { EditorStore } from '@site/store/types'
+import { reconcileFrameworkClasses } from './framework/reconcile'
+import {
+  createStyleRuleOrderAllocator,
+  indexStyleRulesByName,
+  linkImportedClassNames,
+  type StyleRuleOrderAllocator,
+} from './importLinking'
+import { addImportedColorTokens, overwriteImportedColorTokens } from './importedColorTokens'
+import { addImportedFonts, addImportedFontTokens, addInstalledFontEntries, overwriteImportedFontTokens } from './importedFonts'
+import type { SiteMutationResult, SiteSliceHelpers, SiteSliceRecipe } from './types'
+import type { SiteImportTransaction } from '@core/siteImport'
+
+/**
+ * Compute a node's depth in a tree by walking the O(1) `parentId` pointer up
+ * to the root — O(depth), no node-map scans. `parentId` is the engine's
+ * denormalised parent cache (see `reindexNodeParents` / `getParent` in
+ * `@core/page-tree`): restamped at every load boundary and maintained by every
+ * tree mutation, so it is reliably consistent for any tree in the store.
+ *
+ * Used by `deleteNodes` to delete leaves before parents within a single batch
+ * so descendants aren't double-removed (which would throw inside the helper).
+ *
+ * Returns 0 for the root, +Infinity for orphans — a `null` (or dangling)
+ * `parentId` on a non-root node (sorts last in DESC order → effectively a
+ * no-op when the orphan slot is reached).
+ */
+export function depthInTree(tree: NodeTree<PageNode>, nodeId: string): number {
+  if (nodeId === tree.rootNodeId) return 0
+  let current = nodeId
+  let depth = 0
+  const visited = new Set<string>()
+  while (!visited.has(current)) {
+    visited.add(current)
+    const parentId = tree.nodes[current]?.parentId
+    if (!parentId || !tree.nodes[parentId]) return Infinity
+    depth++
+    if (parentId === tree.rootNodeId) return depth
+    current = parentId
+  }
+  return depth
+}
+
+/**
+ * Resolve the tree the `mutateActiveTree*` helpers route to, from either the
+ * frozen store state or a Mutative draft of it:
+ *   - VC mode (`activeDocument.kind === 'visualComponent'`): the VC's tree,
+ *     returned alongside the owning VisualComponent so callers can propagate
+ *     slot-outlet changes.
+ *   - Page mode (null or `kind === 'page'`): the active Page — Page IS
+ *     NodeTree<PageNode>, so no conversion is needed (`vc` is null).
+ *
+ * This is the single implementation of the `kind === 'visualComponent'` tree
+ * routing (CLAUDE.md §"Mutation API"). `deleteNodes` also calls it against the
+ * frozen pre-mutation state to precompute deletion depths without touching
+ * draft proxies.
+ */
+export function resolveActiveTreeTarget(
+  state: Pick<EditorStore, 'site' | 'activeDocument' | 'activePageId'>,
+): { tree: NodeTree<PageNode>; vc: VisualComponent | null } | null {
+  const { site, activeDocument } = state
+  if (!site) return null
+
+  if (activeDocument?.kind === 'visualComponent') {
+    const vc = site.visualComponents.find((v) => v.id === activeDocument.vcId)
+    if (!vc) return null
+    // VCNode is structurally compatible with PageNode (dynamicBindings is optional).
+    return { tree: vc.tree as NodeTree<PageNode>, vc }
+  }
+
+  const pageId = activeDocument?.kind === 'page' ? activeDocument.pageId : state.activePageId
+  const page = site.pages.find((p) => p.id === pageId)
+  return page ? { tree: page, vc: null } : null
+}
+
+function stringArraysEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false
+  }
+  return true
+}
+
+function applyImportedBodyAttributes(
+  rootNode: PageNode,
+  fragment: ImportFragment,
+  site: SiteDocument,
+  byName: Map<string, string>,
+  allocateOrder: StyleRuleOrderAllocator,
+): void {
+  const body = fragment.body
+  if (!body) return
+
+  if (body.props && Object.keys(body.props).length > 0) {
+    rootNode.props = { ...rootNode.props, ...body.props }
+  }
+  if (body.classIds?.length) {
+    rootNode.classIds = linkImportedClassNames(body.classIds, site.styleRules, byName, allocateOrder)
+  }
+  if (body.inlineStyles && Object.keys(body.inlineStyles).length > 0) {
+    rootNode.inlineStyles = body.inlineStyles
+  }
+}
+
+/**
+ * Build the closure-shared helpers passed to every per-domain action factory.
+ *
+ * The `mutate*` helpers snapshot the current site before running the recipe,
+ * then commit that snapshot to undo history only when the recipe reports a
+ * semantic mutation. Recipes return `false` for explicit no-ops; `void` keeps
+ * the historical default of "changed" so existing mutating recipes remain
+ * concise. They differ only in what they hand the recipe:
+ *
+ *   - `mutateSite`:       the SiteDocument draft.
+ *   - `mutateSiteState`:  the full editor-state draft plus the SiteDocument draft.
+ *   - `mutateActiveTree`: the active NodeTree<PageNode>, routed by `activeDocument`.
+ *
+ * `resolveActiveTreeTarget` (above) is the SOLE implementation of the
+ * `kind === 'visualComponent'` tree routing; `mutateActiveTree` is the only
+ * mutation path through it — every named tree-mutation action delegates there.
+ * Gated by `src/__tests__/architecture/no-vc-mode-branches-in-mutations.test.ts`.
+ */
+export function buildSiteHelpers(
+  set: (recipe: SiteSliceRecipe) => void,
+  get: StoreApi<EditorStore>['getState'],
+): SiteSliceHelpers {
+  function recipeDidMutate(result: SiteMutationResult): boolean {
+    return result !== false
+  }
+
+
+  /**
+   * Core of every undoable mutation. Runs `recipe` against a Mutative draft of
+   * the WHOLE editor store with patch capture, then:
+   *   - applies every changed top-level field to the live store, and
+   *   - records ONLY the `site`-scoped patches in undo history.
+   *
+   * Editor-state fields a recipe touches (selection, runtime mirror, …) are
+   * applied live but are NOT undoable — matching the prior snapshot model, which
+   * only ever restored `site`. Capturing over the whole store (rather than just
+   * `site`) is what lets `mutateSiteState` mutate editor state and the document
+   * in one pass while keeping history `site`-only.
+   *
+   * Cost is O(change): Mutative only drafts/copies the paths the recipe touches,
+   * so there is no full-site clone per mutation.
+   */
+  function runHistoricMutation(
+    recipe: (draft: Draft<EditorStore>) => SiteMutationResult,
+    coalesceKey: string | null,
+  ): boolean {
+    const cur = get()
+    if (!cur.site) return false
+
+    let result: SiteMutationResult = false
+    const [next, patches] = create(
+      cur,
+      (draft) => {
+        result = recipe(draft as Draft<EditorStore>)
+        if (result !== false && draft.site) {
+          draft.site.updatedAt = Date.now()
+        }
+      },
+      { enablePatches: true },
+    )
+    if (result === false) return false
+
+    const touched = new Set<string>()
+    for (const p of patches) touched.add(String(p.path[0]))
+    if (touched.size === 0) return true // non-false result but no actual change
+
+    // Site-relative patches feed the collab write path: they translate into
+    // Y operations (per-doc undo + wire sync). See collabBinding.ts.
+    const siteForward: Patches = patches
+      .filter((p) => p.path[0] === 'site')
+      .map((p) => ({ ...p, path: p.path.slice(1) }))
+
+    if (siteForward.length > 0) {
+      const outcome = applyLocalSitePatches(siteForward, cur.site, next.site!, coalesceKey)
+      if (!outcome.accepted) {
+        // The edit cannot reach the relay, and there is no save path behind
+        // it — so it is refused wholesale rather than applied to a store the
+        // server will never agree with. The user is told; silence here is how
+        // work disappeared.
+        notifyCollabBlocked(outcome.reason)
+        return false
+      }
+    }
+
+    set((state) => {
+      // Apply every changed top-level field (site + any editor fields) from the
+      // produced `next` onto the live draft. Each is a structurally-shared new
+      // object, so this is a cheap reference copy, not a deep clone.
+      const live = state as unknown as Record<string, unknown>
+      const produced = next as unknown as Record<string, unknown>
+      for (const key of touched) live[key] = produced[key]
+    })
+    return true
+  }
+
+  /**
+   * Shared recipe core for `mutateActiveTree` / `mutateActiveTreeAndSite`.
+   *
+   * Routes to the active tree via `resolveActiveTreeTarget`, runs `fn`, and —
+   * in VC mode — propagates any change in the VC's slot-outlet set to every
+   * consumer VC ref, across all pages AND every other VC's tree (refs nested
+   * inside other VCs, ISS-026), via `syncAllVCRefSlotInstances`. The sweep
+   * runs INSIDE the recipe so those writes land in the same patch set.
+   *
+   * The sweep is GATED on an actual change of the VC's ordered slot-outlet
+   * name sequence: the pre-mutation sequence is read from the frozen store
+   * state (cheap — no draft proxies), the post-mutation sequence from the
+   * VC-tree-sized draft. That sequence is the ONLY input `syncSlotInstances`
+   * reads from the VC, so an unchanged sequence makes the sweep a guaranteed
+   * no-op — and running it anyway rewrites every consumer ref's `children`
+   * array, turning each per-keystroke VC prop edit into a site-wide sweep.
+   * Gating on the ordered sequence (not the name SET) keeps outlet reorders
+   * propagating, since slot-instance order follows outlet order.
+   */
+  function runActiveTreeRecipe(
+    draft: Draft<EditorStore>,
+    fn: (tree: NodeTree<PageNode>) => SiteMutationResult,
+  ): SiteMutationResult {
+    const target = resolveActiveTreeTarget(draft)
+    if (!target) return false
+    const { tree, vc } = target
+    if (!vc) return fn(tree)
+
+    // `get()` is the frozen pre-mutation state — the VC is guaranteed present
+    // there because the draft (where it was just found) mirrors it.
+    const frozenVc = get().site?.visualComponents.find((v) => v.id === vc.id)
+    const outletNamesBefore = frozenVc ? collectSlotOutletNames(frozenVc.tree) : null
+
+    const result = fn(tree)
+    if (result === false) return false
+
+    const outletNamesAfter = collectSlotOutletNames(vc.tree)
+    if (outletNamesBefore === null || !stringArraysEqual(outletNamesBefore, outletNamesAfter)) {
+      syncAllVCRefSlotInstances(allTreeNodeMaps(draft.site!), vc.id, vc)
+    }
+    return result
+  }
+
+  /**
+   * Mutate the active node tree — auto-records undo history on real changes.
+   *
+   * Routes based on `activeDocument` (see `resolveActiveTreeTarget`):
+   *   - Page mode (null or kind === 'page'): passes the active Page directly —
+   *     Page IS NodeTree<PageNode> so no conversion needed.
+   *   - VC mode (kind === 'visualComponent'): passes vc.tree directly, then
+   *     propagates slot-outlet changes to every consumer VC ref when the
+   *     outlet sequence changed (see `runActiveTreeRecipe`).
+   */
+  function mutateActiveTree(
+    fn: (tree: NodeTree<PageNode>) => SiteMutationResult,
+    opts?: { coalesceKey?: string },
+  ): boolean {
+    return runHistoricMutation((draft) => runActiveTreeRecipe(draft, fn), opts?.coalesceKey ?? null)
+  }
+
+  /** Mutate the site — auto-records undo history on real changes. */
+  function mutateSite(
+    fn: (site: SiteDocument) => SiteMutationResult,
+    opts?: { coalesceKey?: string },
+  ): boolean {
+    return runHistoricMutation((draft) => fn(draft.site!), opts?.coalesceKey ?? null)
+  }
+
+  const mutateSiteWithExplorerReconcile: SiteSliceHelpers['mutateSiteWithExplorerReconcile'] = (fn) =>
+    mutateSite((site) => {
+      const result = fn(site)
+      if (!recipeDidMutate(result)) return false
+      reconcileSiteExplorerInPlace(site)
+      return result
+    })
+
+  /**
+   * Mutate editor state and site together — records undo history on real
+   * changes. The recipe gets the full editor draft plus the SiteDocument draft;
+   * site changes are undoable, editor-state changes are applied live only
+   * (parity with the prior snapshot model — see `runHistoricMutation`).
+   */
+  const mutateSiteState: SiteSliceHelpers['mutateSiteState'] = (fn) =>
+    runHistoricMutation((draft) => fn(draft, draft.site!), null)
+
+  /**
+   * Mutate the active node tree AND the surrounding site — records undo history
+   * on real changes. Same routing and slot-outlet propagation contract as
+   * `mutateActiveTree` (shared via `runActiveTreeRecipe`), but also hands the
+   * recipe a `SiteDocument` draft so it can read or write site-level state
+   * alongside the tree mutation in one transaction.
+   *
+   * Used by duplicate operations that must clone scoped classes (which live
+   * on `site.styleRules`) atomically with the node duplication. Without this
+   * the duplicate's `classIds` would point at the source's scoped classes,
+   * silently coupling per-node CSS across both nodes.
+   */
+  function mutateActiveTreeAndSite(
+    fn: (tree: NodeTree<PageNode>, site: SiteDocument) => SiteMutationResult,
+  ): boolean {
+    return runHistoricMutation(
+      (draft) => runActiveTreeRecipe(draft, (tree) => fn(tree, draft.site!)),
+      null,
+    )
+  }
+
+  /**
+   * Mutate the entire site — all pages and style rules — in ONE undoable
+   * history snapshot. The recipe receives a SiteDocument draft and transaction
+   * helpers for adding or overwriting pages and style rules.
+   *
+   * Class names on imported fragment nodes are resolved to registry ids (and
+   * unknown names auto-create bare classes) via the shared `byName` map that
+   * the helpers build once and share across the whole recipe. This guarantees
+   * that a class added by `addStyleRule` earlier in the recipe is reused by
+   * `addPage` later in the same recipe — no duplicate rules for the same name.
+   *
+   * A history snapshot is pushed ONLY when the recipe returns a non-false
+   * result AND at least one helper actually mutated the site. Explicit no-ops
+   * (`return false`) never produce a history entry.
+   */
+  function mutateAllPagesAndSite(
+    fn: (site: SiteDocument, helpers: SiteImportTransaction) => SiteMutationResult,
+  ): boolean {
+    return runHistoricMutation((draft) => {
+      const site = draft.site!
+      let didMutate = false
+
+      // Build the name→id index once. All helpers share this map so that
+      // a `addStyleRule(kind:'class', name:'btn')` followed by
+      // `addPage(fragment with node.classIds:['btn'])` resolves to the same id.
+      const byName = indexStyleRulesByName(site.styleRules)
+      const allocateStyleRuleOrder = createStyleRuleOrderAllocator(site.styleRules)
+
+      const helpers: SiteImportTransaction = {
+        addPage({ id: pageId, title, slug, nodeFragment }: { id?: string; title: string; slug: string; nodeFragment: ImportFragment }): string {
+          // addPage creates a fresh base.body root, normalises the slug, and
+          // pushes the page onto site.pages. We then graft the fragment nodes
+          // in as children of that root — same logical step as insertImportedNodes.
+          const page = addPage(site as SiteDocument, title, slug)
+          // Honour a caller-supplied id so the importer can pre-mint page ids
+          // and rewrite internal links to `cms:page:<id>` before committing.
+          if (pageId) page.id = pageId
+          applyImportedBodyAttributes(
+            page.nodes[page.rootNodeId]!,
+            nodeFragment,
+            site,
+            byName,
+            allocateStyleRuleOrder,
+          )
+          for (const [id, node] of Object.entries(nodeFragment.nodes)) {
+            // `node.inlineStyles` rides along on the spread — first-class field.
+            page.nodes[id] = {
+              ...node,
+              classIds: linkImportedClassNames(
+                node.classIds,
+                site.styleRules,
+                byName,
+                allocateStyleRuleOrder,
+              ),
+            }
+          }
+          page.nodes[page.rootNodeId]!.children = [...nodeFragment.rootIds]
+          reindexNodeParents(page.nodes)
+          didMutate = true
+          return page.id
+        },
+
+        addStyleRule(rule: NewStyleRule): string {
+          const id = nanoid()
+          const now = Date.now()
+          const newRule: StyleRule = {
+            ...rule,
+            id,
+            createdAt: now,
+            updatedAt: now,
+            order: allocateStyleRuleOrder(),
+          }
+          site.styleRules[id] = newRule
+          // Register in byName so subsequent addPage calls referencing this
+          // class name resolve to this id rather than creating a duplicate.
+          if (rule.kind === 'class') byName.set(rule.name, id)
+          didMutate = true
+          return id
+        },
+
+        overwritePage(pageId: string, { title, slug, nodeFragment }: { title: string; slug: string; nodeFragment: ImportFragment }): void {
+          const page = site.pages.find((p) => p.id === pageId)
+          if (!page) throw new Error('overwritePage: page not found')
+
+          // Mint a fresh body root; wire fragment roots as its children.
+          const rootNode = createNode('base.body')
+          rootNode.children = [...nodeFragment.rootIds]
+          applyImportedBodyAttributes(rootNode, nodeFragment, site, byName, allocateStyleRuleOrder)
+
+          const newNodes: Record<string, PageNode> = { [rootNode.id]: rootNode }
+          for (const [id, node] of Object.entries(nodeFragment.nodes)) {
+            newNodes[id] = {
+              ...node,
+              classIds: linkImportedClassNames(
+                node.classIds,
+                site.styleRules,
+                byName,
+                allocateStyleRuleOrder,
+              ),
+            }
+          }
+
+          // Replace tree fields; preserve identity + ownership fields.
+          reindexNodeParents(newNodes)
+          page.rootNodeId = rootNode.id
+          page.nodes = newNodes
+          page.title = title
+          page.slug = slug
+          didMutate = true
+        },
+
+        overwriteStyleRule(ruleId: string, rule: NewStyleRule): void {
+          const existing = site.styleRules[ruleId]
+          if (!existing) throw new Error('overwriteStyleRule: style rule not found')
+
+          const now = Date.now()
+          // Replace all fields except identity + cascade position.
+          site.styleRules[ruleId] = {
+            ...rule,
+            id: ruleId,
+            createdAt: existing.createdAt,
+            updatedAt: now,
+            order: existing.order,
+          }
+          if (rule.kind === 'class') byName.set(rule.name, ruleId)
+          didMutate = true
+        },
+
+        addConditions(conditions): void {
+          if (conditions.length === 0) return
+          if (!site.conditions) site.conditions = []
+          const existing = new Set(site.conditions.map((c) => c.id))
+          for (const def of conditions) {
+            if (existing.has(def.id)) continue
+            existing.add(def.id)
+            site.conditions.push(def)
+            didMutate = true
+          }
+        },
+
+        addFonts(fonts): { id: string; family: string }[] {
+          const committed = addImportedFonts(site, fonts)
+          if (committed.length > 0) didMutate = true
+          return committed
+        },
+
+        addInstalledFonts(fonts): { id: string; family: string }[] {
+          const committed = addInstalledFontEntries(site, fonts)
+          if (committed.length > 0) didMutate = true
+          return committed
+        },
+
+        addFontTokens(tokens): { id: string; name: string; variable: string }[] {
+          const committed = addImportedFontTokens(site, tokens)
+          if (committed.length > 0) didMutate = true
+          return committed
+        },
+
+        overwriteFontTokens(items): { id: string; name: string; variable: string }[] {
+          const committed = overwriteImportedFontTokens(site, items)
+          if (committed.length > 0) didMutate = true
+          return committed
+        },
+
+        addColorTokens(colors): { slug: string; value: string }[] {
+          const committed = addImportedColorTokens(site, colors)
+          if (committed.length > 0) {
+            reconcileFrameworkClasses(site)
+            didMutate = true
+          }
+          return committed
+        },
+
+        overwriteColorTokens(items): { slug: string; value: string }[] {
+          const committed = overwriteImportedColorTokens(site, items)
+          if (committed.length > 0) {
+            reconcileFrameworkClasses(site)
+            didMutate = true
+          }
+          return committed
+        },
+
+        addScripts(scripts): { id: string; path: string }[] {
+          const dependenciesChanged = addImportedScriptDependencies(site, scripts)
+          if (dependenciesChanged) {
+            draft.packageJson = {
+              dependencies: { ...site.packageJson.dependencies },
+              devDependencies: { ...site.packageJson.devDependencies },
+            }
+          }
+          const committed = addImportedScripts(site, draft.siteRuntime, scripts)
+          if (committed.length > 0 || dependenciesChanged) didMutate = true
+          return committed
+        },
+
+        addStylesheets(stylesheets): { id: string; path: string }[] {
+          const committed = addImportedStylesheets(site, draft.siteRuntime, stylesheets)
+          if (committed.length > 0) didMutate = true
+          return committed
+        },
+      }
+
+      const result = fn(site as SiteDocument, helpers)
+      // Push history only when the recipe reported a change AND a helper
+      // actually mutated the site — `runHistoricMutation` treats `false` as a
+      // no-op (no patches captured, no history entry).
+      return recipeDidMutate(result) && didMutate ? true : false
+    }, null)
+  }
+
+  return {
+    set,
+    get,
+    mutateActiveTree,
+    mutateActiveTreeAndSite,
+    mutateSite,
+    mutateSiteWithExplorerReconcile,
+    mutateSiteState,
+    mutateAllPagesAndSite,
+  }
+}

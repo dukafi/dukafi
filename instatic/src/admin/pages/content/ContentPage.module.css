@@ -1,0 +1,301 @@
+.contentCanvas {
+    user-select: text;
+    touch-action: pan-y;
+}
+
+.notchAddButton {
+    min-width: 72px;
+}
+
+.documentScroll {
+    position: absolute;
+    inset: 0;
+    padding-inline: var(--space-4xl);
+    overflow-y: auto;
+}
+
+/* `--gutter` reserves space on both sides of the document for the
+ * editor's left-margin "+" affordance. Title + body text both sit inside
+ * the gutter so they stay perfectly aligned. The total document width
+ * is bumped by 2× the gutter so the readable text width stays at the
+ * original 820px target on wide viewports. */
+.document {
+    --gutter: 48px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5xl);
+    width: min(calc(820px + 2 * var(--gutter)), 100%);
+    min-height: min(640px, calc(100vh - 176px));
+    margin: var(--space-12xl) auto;
+    padding-inline: var(--gutter);
+    box-sizing: border-box;
+}
+
+.titleInput {
+    display: block;
+    height: auto;
+    min-height: 1.05em;
+    overflow: hidden;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text);
+    font-size: var(--text-7xl);
+    font-weight: 780;
+    line-height: 0.98;
+    resize: none;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.titleInput:focus,
+.titleInput:focus-visible {
+    background: transparent;
+    border: 0;
+    outline: none;
+    box-shadow: none;
+}
+
+.emptyState {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-l);
+    width: min(520px, 100%);
+    margin: 18vh auto 0;
+    color: var(--text);
+    text-align: center;
+}
+
+.emptyState h2 {
+    margin: 0;
+    font-size: var(--text-4xl);
+    letter-spacing: 0;
+}
+
+.emptyState p,
+.error {
+    margin: 0;
+    font-size: var(--text-s);
+    line-height: 1.5;
+}
+
+.emptyState p {
+    color: var(--text-subtle);
+}
+
+.canvasLoading {
+    display: grid;
+    gap: var(--space-3xl);
+    width: min(760px, 100%);
+    margin: var(--space-12xl) auto 0;
+}
+
+/* Bespoke skeleton shapes were retired in favour of `<SkeletonBlock>`
+ * (see `src/ui/components/Skeleton/`). The content document canvas's
+ * loading state now renders the universal local three-bar skeleton. */
+
+.error {
+    color: var(--danger);
+}
+
+.collectionFields {
+    display: grid;
+    gap: var(--space-s);
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.collectionFields legend {
+    margin: 0 0 var(--space-4xs);
+    padding: 0;
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    font-weight: 700;
+}
+
+.collectionFields > div {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-s);
+    color: var(--text);
+    font-size: var(--text-s);
+    line-height: 1.2;
+}
+
+.collectionFields input {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--overlay);
+}
+
+.entryRow {
+    min-height: 38px;
+    /* Wider first column accommodates a 28px featured-media thumbnail without
+       reflowing the row when an entry has no featured image (the fallback
+       icon centers inside the same slot). */
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+}
+
+.entryRowPreview {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    color: var(--text-subtle);
+}
+
+.entryRowImage {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.entryTitleStack {
+    display: grid;
+    min-width: 0;
+    gap: var(--space-4xs);
+}
+
+.entryTitle,
+.entryAuthor {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.entryAuthor {
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    line-height: 1.15;
+}
+
+/* Bespoke skeleton shapes (entriesSkeleton*, settingsSkeleton*) were
+ * retired in favour of `<SkeletonRows>` / `<SkeletonBlock>` from
+ * `src/ui/components/Skeleton/`. The shared primitives keep every
+ * loading region in the editor visually identical. */
+
+.settingsBody {
+    display: grid;
+    align-content: start;
+    gap: var(--space-xl);
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--space-m) var(--space-xl) var(--space-3xl);
+}
+
+.settingsSkeleton {
+    display: grid;
+    gap: var(--space-m);
+}
+
+.field {
+    display: grid;
+    gap: var(--space-s);
+}
+
+.field span,
+.metaBlock span,
+.authorBlock > span,
+.featuredMediaField > span {
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    font-weight: 750;
+}
+
+.metaBlock,
+.authorBlock,
+.featuredMediaField {
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.metaBlock strong {
+    overflow-wrap: anywhere;
+    color: var(--text);
+    font-size: var(--text-s);
+    font-weight: 700;
+}
+
+.authorRow {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: var(--space-s);
+}
+
+.authorRow > div {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.authorRow strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+    font-size: var(--text-s);
+    font-weight: 700;
+}
+
+.authorRoleBadge {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 0 var(--space-s);
+    border-radius: 8px;
+    background: linear-gradient(0deg, var(--bg-surface-3), transparent);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 620;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.featuredMediaField small {
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+}
+
+/* Custom (non-built-in) collection fields, rendered generically via
+ * CellEditorRenderer. The label style is scoped to the DIRECT child span —
+ * the cell editors nest their own spans (media filename, relation display)
+ * that must keep their own styling. */
+.customField {
+    display: grid;
+    gap: var(--space-s);
+}
+
+.customField > span {
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    font-weight: 750;
+}
+
+.customField > small {
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+}
+
+@media (max-width: 720px) {
+    .documentScroll {
+        padding: var(--space-11xl) var(--space-2xl) var(--space-9xl);
+    }
+
+    .document {
+        padding: var(--space-8xl) var(--space-6xl) var(--space-10xl);
+    }
+
+    .titleInput {
+        font-size: var(--text-6xl);
+    }
+}

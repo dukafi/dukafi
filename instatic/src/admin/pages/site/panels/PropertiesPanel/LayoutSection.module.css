@@ -1,0 +1,223 @@
+/* LayoutSection — visual editor for the layout-position CSS section.
+ *
+ * Hosts the DisplaySwitcher, FlexDirection / FlexWrap controls, alignment
+ * controls, and the leftover ClassPropertyRow rows. Reuses the same
+ * vertical rhythm as Section.module.css's .sectionBody (8px gap).
+ */
+
+.layoutSection {
+    display: grid;
+    gap: var(--space-s);
+}
+
+/* Display row holds either the SegmentedControl (unset / flex / grid) or
+ * the full-width chip + close-button group (other values). Both layouts
+ * occupy the same row height so toggling between them doesn't shift the
+ * surrounding rows. */
+.displayRow {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+}
+
+/* "Other value" layout — a full-width chip + a square close button,
+ * fused into a single track that mirrors the SegmentedControl's chrome
+ * (same 2px-padded background, same internal radius). Lets users see
+ * the current display value at a glance and clear it without opening
+ * the dropdown. */
+.displayChipGroup {
+    display: flex;
+    width: 100%;
+    align-items: stretch;
+    gap: var(--space-4xs);
+    padding: var(--space-4xs);
+    border-radius: 10px;
+    background: var(--bg-surface-2);
+}
+
+/* Doubled `.displayChipGroup .displayChip.displayChip` selector lifts
+ * specificity above Button.module.css's `.btn.variant-secondary` (0,2,0)
+ * so this rule wins regardless of stylesheet load order. */
+.displayChipGroup .displayChip.displayChip {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0 var(--space-s);
+    border-radius: 8px;
+    background: var(--bg-surface);
+    color: var(--text);
+    text-align: left;
+    overflow: hidden;
+}
+
+.displayChipGroup .displayChip.displayChip:hover {
+    background: var(--bg-surface-3);
+}
+
+.displayChipKicker {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.displayChipValue {
+    color: var(--text);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+/* Close button — square, fixed-width to match SegmentedControl's
+ * trailing slot (26px = sm Button intrinsic height). */
+.displayChipGroup .displayChipClear.displayChipClear {
+    flex: 0 0 26px;
+    width: 26px;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+}
+
+.displayChipGroup .displayChipClear.displayChipClear:hover {
+    background: var(--bg-surface-3);
+    color: var(--text);
+}
+
+/* Sub-field block for flex-only / grid-only controls. Just a vertical
+ * stack — no inset chrome. The reveal/hide animation keyed off the
+ * display value is enough of a "this group belongs to flex/grid" cue
+ * without painting a frame around the rows. */
+.flexBlock {
+    display: grid;
+    gap: var(--space-s);
+}
+
+/* Mini label + control row used by the flex / grid sub-fields. Matches the
+ * 100px label column + 4px gap from controls.module.css's .controlWrapper
+ * so the labels align vertically with the fallback ClassPropertyRow rows
+ * rendered below the visual block. */
+.labeledRow {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    align-items: center;
+    gap: var(--space-3xs);
+    min-height: 28px;
+}
+
+/* Default (no state hint) keeps the secondary-text colour used by
+ * controls.module.css's .labelRow. The data-state attribute toggles
+ * between brighter (set) and muted (unset) tones, mirroring the
+ * ClassPropertyRow.module.css `.propertyRowUnset` treatment so visual
+ * switchers and generic property rows share a single language for
+ * "this property is/isn't set". */
+.labeledLabel {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 620;
+}
+
+.labeledRow[data-state="set"] .labeledLabel {
+    color: var(--text);
+}
+
+.labeledRow[data-state="unset"] .labeledLabel {
+    color: var(--text-subtle);
+}
+
+.labeledControl {
+    min-width: 0;
+}
+
+/* ─── Position block — TRBL offsets ──────────────────────────────────────
+ * Two-column grid showing the four direction inputs in clockwise order
+ * (top, right, bottom, left). Each cell uses a small leading icon as the
+ * label so two cells fit comfortably on one row of the panel. */
+.positionDirectionsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xs);
+}
+
+/* Single direction cell: icon · input · (clear button on hover when set).
+ * Mirrors ClassPropertyRow's set/unset language via data-state so the
+ * leading icon dims for unset values just like the labels in the rest of
+ * the inspector. */
+.directionCell {
+    position: relative;
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    align-items: center;
+    gap: var(--space-3xs);
+    color: var(--text);
+}
+
+.directionCell[data-state="unset"] .directionIcon {
+    color: var(--text-subtle);
+}
+
+.directionCell[data-state="set"] .directionIcon {
+    color: var(--text);
+}
+
+.directionIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    color: var(--text-muted);
+}
+
+.directionInput {
+    min-width: 0;
+}
+
+/* Clear button overlays the trailing edge of the input on hover/focus,
+ * fading in/out so the cell stays compact when idle. Mirrors the
+ * ClassPropertyRow.module.css `.removeBtn` pattern. */
+.directionClearBtn.directionClearBtn {
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+    background: var(--bg-surface-2);
+    border: 1px solid var(--border-muted);
+    color: var(--text-muted);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%);
+    transition:
+        opacity 100ms ease,
+        background-color 100ms ease,
+        color 100ms ease;
+}
+
+.directionCell:hover .directionClearBtn,
+.directionCell:focus-within .directionClearBtn {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.directionClearBtn.directionClearBtn:hover {
+    color: var(--text);
+}
+
+/* Grid-specific edit row — wraps a full-width text input that replaces
+ * the segmented control while the user types a custom track template.
+ *
+ * Pinned to 30px (the SegmentedControl's outer track height: 26px sm-Button
+ * + 2px×2 chrome padding) so toggling between preset and custom modes
+ * doesn't jolt the surrounding rows. `align-items: stretch` on the row
+ * combined with the Input's own `min-height` lets the field grow to the
+ * row height instead of staying at its 28px default — keeping the visible
+ * field flush with the segmented track height it replaces. */
+.gridEditRow {
+    display: flex;
+    width: 100%;
+    align-items: stretch;
+    min-height: 30px;
+}

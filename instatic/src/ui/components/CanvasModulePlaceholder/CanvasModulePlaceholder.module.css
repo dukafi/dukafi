@@ -1,0 +1,176 @@
+/*
+ * CanvasModulePlaceholder — module canvas-preview empty state.
+ *
+ * Strictly achromatic (Constraint #376): the diagonal-stripe pattern and
+ * the surface tint are both derived from --text-subtle via
+ * color-mix() so they render the same neutral gray on any canvas
+ * background (light or dark). No hex / rgb / hsl literals.
+ *
+ * Stripe geometry: 45°, 6 px lit + 6 px empty. Low enough contrast (~6 %)
+ * to read as "placeholder pattern" rather than competing with real
+ * content above/below. The base surface tint underneath the stripes
+ * (~4 %) guarantees the slot is visible even on very light or very dark
+ * backgrounds.
+ */
+
+.root {
+    display: block;
+    box-sizing: border-box;
+    min-width: 0;
+    border-radius: var(--radius);
+    background: var(--canvas-placeholder-bg);
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+    line-height: 1.4;
+    user-select: none;
+}
+
+/* ── variant: block (image / video / content / loop) ───────────────────────
+ * Fills the module's width with a visible minimum height so empty layers
+ * are easy to find on the canvas. Icon + label + (optional) description
+ * stack vertically and center.
+ */
+.variant-block {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    min-height: 100px;
+    padding: var(--space-xl);
+    text-align: center;
+}
+
+/* ── variant: inline (slot-outlet marker, unknown VC ref) ───────────────────
+ * One-row strip. Icon + label horizontal. Used when the module is purely
+ * an editor-only marker (the publisher never emits these — slot-outlets
+ * fold into the matching slot-instance content, missing VC refs collapse
+ * to nothing) so a full block of space would be misleading.
+ */
+.variant-inline {
+    display: inline-grid;
+    align-items: center;
+    min-height: 32px;
+    padding: var(--space-xs) var(--space-m);
+}
+
+.content {
+    box-sizing: border-box;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
+}
+
+.variant-block .content {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    row-gap: var(--space-s);
+}
+
+.variant-block[data-layout="row"] .content {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-s);
+}
+
+.variant-inline .content {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 0;
+    color: var(--text-disabled);
+    line-height: 1;
+}
+
+.icon > svg {
+    display: block;
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 0;
+}
+
+.label {
+    display: block;
+    margin: 0;
+    padding: 0;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.variant-inline .label {
+    font-weight: 500;
+}
+
+.description {
+    max-width: 36ch;
+    margin: 0;
+    padding: 0;
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    font-weight: 500;
+}
+
+/* ── action row (block variant) ────────────────────────────────────────────
+ * Optional row beneath the description. Used by placeholders that surface a
+ * one-click affordance (e.g. "Add dependency"). The `actions` container is
+ * marked `data-canvas-interactive="true"` on the React side so clicks reach
+ * the embedded controls instead of being swallowed by the canvas selection
+ * capture in `NodeWrapper`.
+ *
+ * Buttons inside `.actions` are restyled to read well on the light canvas
+ * placeholder surface. The shared `Button` primitive's `variant-primary`
+ * uses chrome-dark surface tokens that were tuned for the editor sidebar,
+ * not for a light page background — without these overrides the button
+ * disappears into the placeholder pattern. We override here (not on the
+ * primitive) so the Button stays generic and the canvas-specific look is
+ * owned by the canvas-specific component.
+ */
+.actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-xs);
+    margin-top: var(--space-3xs);
+    pointer-events: auto;
+}
+
+/* Descendant selector gives us specificity over `.variant-primary` /
+ * `.size-xs` from `Button.module.css` (both 0,1,0). The button still gets
+ * the Button primitive's reset (display, font, border-radius), focus
+ * ring, and disabled treatment — we only retune the colour, size and
+ * padding so the affordance reads on the light placeholder. */
+.actions button {
+    height: 28px;
+    padding: 0 var(--space-xl);
+    border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+    border-radius: 999px;
+    background: var(--bg-surface);
+    color: var(--text-bright);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition:
+        background-color 150ms ease,
+        border-color 150ms ease,
+        color 150ms ease;
+}
+
+.actions button:hover {
+    background: var(--bg-surface-2);
+    border-color: color-mix(in srgb, var(--text) 22%, transparent);
+}
+
+.actions button:active {
+    background: var(--bg-surface-3);
+}

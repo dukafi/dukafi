@@ -1,0 +1,157 @@
+.window {
+    position: fixed;
+    /* Sit above the sidebars (z-index 85, see LeftSidebar.module.css) so the
+     viewer always wins when dragged across them. The toolbar's own dropdowns
+     and modals live at 200+ which is intentionally still above us. */
+    z-index: 90;
+    --media-viewer-width: min(880px, calc(100vw - var(--space-2xl)));
+    --media-viewer-height: min(640px, calc(100vh - var(--space-2xl)));
+    left: max(var(--space-m), min(var(--panel-x), calc(100vw - var(--media-viewer-width) - var(--space-m))));
+    top: max(var(--space-m), min(var(--panel-y), calc(100vh - var(--media-viewer-height) - var(--space-m))));
+    width: var(--media-viewer-width);
+    height: var(--media-viewer-height);
+    background: var(--bg-surface);
+    border: 1px solid var(--overlay-10);
+    border-radius: var(--panel-radius);
+    box-shadow: var(--shadow-panel);
+    backdrop-filter: blur(var(--panel-blur));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.body {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    min-height: 0;
+}
+
+.viewer {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: stretch;
+    min-width: 0;
+    min-height: 0;
+    background: var(--bg-body);
+}
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-l);
+    padding: var(--space-l);
+    overflow: auto;
+    background: var(--bg-body);
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.sectionTitle {
+    font-size: var(--text-2xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-subtle);
+    margin: 0;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+}
+
+.fieldLabel {
+    font-size: var(--text-2xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-subtle);
+}
+
+.actionsRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+}
+
+.detailList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+    margin: 0;
+    padding: 0;
+}
+
+.detailRow {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-s);
+    font-size: var(--text-s);
+}
+
+.detailLabel {
+    flex: 0 0 70px;
+    font-size: var(--text-xs);
+    color: var(--text-subtle);
+    margin: 0;
+}
+
+.detailValue {
+    flex: 1 1 auto;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3xs);
+    color: var(--text);
+    word-break: break-word;
+}
+
+.folderList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3xs);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.folderChip {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-4xs) var(--space-xs);
+    background: var(--bg-surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+    color: var(--text);
+}
+
+.placeholder {
+    font-size: var(--text-xs);
+    color: var(--text-subtle);
+    margin: 0;
+}
+
+.warning {
+    font-size: var(--text-xs);
+    color: var(--warning);
+    margin: 0 0 var(--space-xs) 0;
+}
+
+@media (max-width: 700px) {
+    .body {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(180px, 36%) minmax(0, 1fr);
+    }
+
+    .sidebar {
+        min-height: 0;
+    }
+}

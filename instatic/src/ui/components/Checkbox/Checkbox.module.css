@@ -1,0 +1,90 @@
+/* Checkbox primitive — achromatic, native-input-driven.
+ *
+ * Every `.box` and `.input` rule is scoped under `.checkbox` so the primitive's
+ * styling beats ambient descendant-selector rules from container CSS modules
+ * (e.g. `.resourceField span` boosting label spans). Specificity 0,2,0 / 0,3,0
+ * is enough to override the achromatic 0,1,1 patterns we have in the wild
+ * without resorting to !important.
+ */
+
+.checkbox {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    vertical-align: middle;
+    cursor: pointer;
+    line-height: 0;
+}
+
+.checkbox[data-size="md"] {
+    width: 16px;
+    height: 16px;
+}
+
+.checkbox[data-size="sm"] {
+    width: 12px;
+    height: 12px;
+}
+
+/* The native input stays in the a11y tree but is visually replaced by `.box`.
+   Stretching it across the wrapper means clicks on the wrapper still hit the
+   input directly (so labels and form semantics keep working). */
+.checkbox .input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    appearance: none;
+    background: transparent;
+    border: 0;
+    cursor: inherit;
+    opacity: 0;
+}
+
+.checkbox .input:disabled {
+    cursor: not-allowed;
+}
+
+.checkbox .box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    border: 1px solid var(--overlay-20);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: transparent;
+    transition:
+        background-color 120ms ease,
+        border-color 120ms ease,
+        color 120ms ease;
+}
+
+.checkbox:hover .box {
+    border-color: var(--overlay-30);
+}
+
+.checkbox .input:focus-visible + .box {
+    border-color: var(--overlay-50);
+    box-shadow: var(--shadow-input-focus);
+}
+
+.checkbox .input:checked + .box {
+    background: var(--text);
+    border-color: var(--text);
+    color: var(--bg-body);
+}
+
+.checkbox .input:disabled + .box {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.checkbox .check {
+    pointer-events: none;
+}

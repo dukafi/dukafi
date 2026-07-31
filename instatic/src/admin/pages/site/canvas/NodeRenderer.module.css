@@ -1,0 +1,27 @@
+/**
+ * NodeRenderer — canvas-only module render chrome.
+ *
+ * After the iframe-per-frame refactor, NodeRenderer no longer emits a wrapping
+ * `<div>` per node — every module spreads the `nodeWrapperProps` bag
+ * (data-node-id, canvas selection attrs, click/hover/keyboard handlers, tabIndex)
+ * directly onto its own root element. The canvas DOM therefore matches the
+ * published DOM exactly, and CSS combinators (`body > nav`, `:nth-child()`,
+ * `+`, `~`) work the same in both surfaces.
+ *
+ * What's left in this stylesheet is the one piece of chrome that does need a
+ * visible box: the unknown-module fallback. Everything else that used to live
+ * here — `.nodeWrapper { display: contents }`, the embedded-iframe
+ * pointer-events override — moved to `IframeFrameSurface.applyIframeBodyReset`,
+ * where it gets injected into each breakpoint iframe's `<head>` so the rule
+ * only affects canvas content (not the published page).
+ *
+ * Tokens come from globals.css — no hardcoded colours.
+ */
+
+/* Fallback for unknown / unregistered module — the only canvas-only chrome
+ * left after the iframe refactor. Rendered inline by NodeRenderer when the
+ * module id isn't found in the registry. */
+.unknownModule {
+  outline: 1px dashed var(--danger);
+  padding: var(--space-3xs);
+}

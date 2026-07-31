@@ -1,0 +1,7 @@
+/* Stack base settings on top, step list / chart below — single column for
+ * the narrow side-panel surface. */
+.fluidGrid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-m);
+}

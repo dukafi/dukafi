@@ -1,0 +1,152 @@
+/**
+ * Shared styles for the chart primitives used by dashboard widgets.
+ *
+ * Achromatic by default — all colour comes from caller-provided `tint`
+ * props (which themselves resolve to design tokens like
+ * `var(--accent-1)`). Sizes are driven through CSS custom
+ * properties supplied by each component so consumers can compose them
+ * without inline `style={{ width: ... }}` walls.
+ *
+ * NOTE: bare `var(--token)` only — fallback values are banned by
+ * `no-css-var-fallbacks.test.ts`. Defaults for JS-set properties
+ * (`--sparkline-h`, `--bars-cols`, `--bars-tint`, …) are declared on
+ * the host class below so the var resolves even when the component
+ * caller forgets to pass the prop.
+ */
+
+/* ── Sparkline ─────────────────────────────────────────────────── */
+.sparkline {
+    /* Default so bare consumers without an explicit height still render. */
+    --sparkline-h: 56px;
+    width: 100%;
+    height: var(--sparkline-h);
+    display: block;
+    margin-top: var(--space-s);
+}
+
+/* ── Bars ──────────────────────────────────────────────────────── */
+.bars {
+    /* Default column count, height, gap and tint — overridden by inline
+       CSS custom properties supplied by the component. The default tint
+       points at the single global chart-tint token (defined in :root) so
+       plugins drop a Bars into any container and inherit a visible,
+       on-brand colour without having to specify one. */
+    --bars-cols: 28;
+    --bars-height: 76px;
+    --bars-gap: var(--space-4xs);
+    --bars-tint: var(--chart-default-tint);
+    display: grid;
+    grid-template-columns: repeat(var(--bars-cols), 1fr);
+    gap: var(--bars-gap);
+    align-items: end;
+    height: var(--bars-height);
+    margin-top: auto;
+}
+
+.bars span {
+    display: block;
+    background: var(--bars-tint);
+    border-radius: 1px;
+    opacity: 0.5;
+}
+
+.bars span.barActive {
+    opacity: 1;
+}
+
+/* ── StackedBar ────────────────────────────────────────────────── */
+.stack {
+    display: grid;
+    gap: var(--space-s);
+    margin-top: auto;
+}
+
+/* The track is a flex row of pill-shaped segments separated by a 1px
+   gap. We deliberately drop the previous `overflow: hidden` +
+   container-level rounding: each segment now owns its own full radius
+   (height/2 = 4px) so neighbouring segments read as distinct chips
+   instead of melting into a single continuous bar. The host track
+   stays transparent — there is no quota-style remainder background
+   in the storage widget anymore. */
+.stackBar {
+    display: flex;
+    gap: var(--space-px);
+    height: 8px;
+    background: transparent;
+}
+
+.stackSeg {
+    height: 100%;
+    border-radius: 4px;
+}
+
+.stackLegend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-m) var(--space-xl);
+    font-size: var(--text-xs);
+    color: var(--text-subtle);
+    font-family: var(--font-mono);
+}
+
+.stackLegend span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.stackLegend i {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    display: inline-block;
+}
+
+/* ── StatValue + Delta ─────────────────────────────────────────── */
+.statRow {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-l);
+}
+
+.statValue {
+    font-size: var(--text-6xl);
+    font-weight: 600;
+    color: var(--text-bright);
+    letter-spacing: -0.025em;
+    line-height: 1;
+    font-feature-settings: "tnum";
+}
+
+.statDelta {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-3xs);
+}
+
+.statSub {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-xs);
+    margin-top: var(--space-m);
+    font-size: var(--text-s);
+    color: var(--text-subtle);
+}
+
+.delta {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: 500;
+}
+
+.delta-up {
+    color: var(--success);
+}
+
+.delta-down {
+    color: var(--danger);
+}
+
+.delta-flat {
+    color: var(--text-subtle);
+}

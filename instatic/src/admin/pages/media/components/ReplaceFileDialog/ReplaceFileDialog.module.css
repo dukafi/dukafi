@@ -1,0 +1,49 @@
+.body {
+  margin: 0 0 var(--space-l) 0;
+  font-size: var(--text-m);
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.current {
+  margin: 0 0 var(--space-l) 0;
+  padding: var(--space-s) var(--space-l);
+  background: var(--bg-surface-2);
+  border-radius: var(--radius);
+  font-size: var(--text-s);
+  color: var(--text-subtle);
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: var(--space-s);
+  row-gap: var(--space-4xs);
+}
+
+.current dt {
+  text-transform: uppercase;
+  font-size: var(--text-2xs);
+  letter-spacing: 0.06em;
+  color: var(--text-subtle);
+}
+
+.current dd {
+  margin: 0;
+  color: var(--text);
+}
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.picked {
+  font-size: var(--text-s);
+  color: var(--text);
+  margin: 0;
+}
+
+.error {
+  margin: var(--space-s) 0 0 0;
+  font-size: var(--text-s);
+  color: var(--danger);
+}

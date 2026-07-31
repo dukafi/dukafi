@@ -1,0 +1,123 @@
+.summary {
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+  padding: 0 var(--space-3xs) var(--space-s) var(--space-3xs);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: start;
+  gap: var(--space-s);
+  padding: var(--space-xs);
+  background: var(--bg-surface-2);
+  border-radius: var(--radius-sm);
+}
+
+.preview {
+  width: 28px;
+  height: 28px;
+  background: var(--bg-body);
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: var(--text-subtle);
+}
+
+.previewImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4xs);
+  min-width: 0;
+}
+
+.name {
+  font-size: var(--text-s);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-2xs);
+  color: var(--text-subtle);
+}
+
+.error {
+  font-size: var(--text-2xs);
+  color: var(--danger);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.progressBar {
+  display: block;
+  height: 3px;
+  background: var(--bg-body);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-top: var(--space-3xs);
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  background: var(--canvas-selection-ring-color);
+  transition: width 80ms ease-out;
+}
+
+.progressFill[data-status='succeeded'] {
+  background: var(--success-bright);
+}
+
+.progressFill[data-status='failed'],
+.progressFill[data-status='cancelled'] {
+  background: var(--danger);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4xs);
+}
+
+.badgeBusy,
+.badgeSuccess,
+.badgeError,
+.badgeMuted {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4xs);
+  padding: var(--space-px) var(--space-3xs);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-3xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badgeBusy { color: var(--text-subtle); }
+.badgeSuccess { color: var(--success-bright); }
+.badgeError { color: var(--danger); }
+.badgeMuted { color: var(--text-subtle); }

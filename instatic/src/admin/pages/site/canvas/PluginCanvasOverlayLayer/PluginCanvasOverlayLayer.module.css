@@ -1,0 +1,25 @@
+/*
+ * Plugin canvas overlay layer.
+ *
+ * Sits on top of the canvas, fills the canvas area, ignores pointer
+ * events by default. Plugin-rendered children opt into pointer events
+ * with `pointer-events: auto` on their own elements.
+ *
+ * The layer is OUTSIDE the transform layer so its coordinate space is
+ * the canvas viewport in screen pixels — `useCanvasNodeRect()` returns
+ * coords already mapped into this space, including any pan/zoom applied
+ * to the underlying transform layer.
+ */
+.layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 50;
+    overflow: hidden;
+}
+
+.overlaySlot {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}

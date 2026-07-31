@@ -1,0 +1,14 @@
+/**
+ * base.list — editor-only chrome.
+ * No published-output styles: <ul>/<ol> render bare, with browser defaults
+ * unless the user attaches a class.
+ */
+
+/* Editor-only placeholder when no items are configured. Inline text inside
+ * the user's `<li>` so it reads naturally as list content — full-block
+ * `CanvasModulePlaceholder` would visually disconnect from the parent
+ * `<ul>` / `<ol>` and confuse the editor preview. */
+.placeholder {
+  color: var(--text-subtle);
+  margin-bottom: 6px;
+}

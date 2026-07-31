@@ -1,0 +1,9 @@
+/* Shared hidden native file input with a design-system button trigger. */
+
+.fileUpload {
+  display: inline-flex;
+}
+
+.nativeInput {
+  display: none;
+}

@@ -1,0 +1,46 @@
+.handle {
+    position: absolute;
+    top: 12px;
+    bottom: 0;
+    z-index: 3;
+    width: 8px;
+    cursor: ew-resize;
+    outline: none;
+    background: transparent;
+}
+
+.handle[data-side="left"] {
+    right: -4px;
+}
+
+.handle[data-side="right"] {
+    left: -3px;
+}
+
+.handle::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 3px;
+    width: 1px;
+    background: transparent;
+    transition: background-color 120ms ease;
+}
+
+.handle:hover::after,
+.handle:focus-visible::after {
+    background: linear-gradient(
+        0deg,
+        transparent 10%,
+        var(--overlay) 30%,
+        var(--overlay) 70%,
+        transparent 90%
+    );
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .handle::after {
+        transition: none;
+    }
+}

@@ -1,0 +1,155 @@
+/* TagPill — shared compact tinted badge / removable chip primitive. */
+
+.pill {
+    --pill-accent: var(--accent-1);
+    --pill-color: var(--text-muted);
+    --pill-bg: var(--bg-surface-2);
+    --pill-bg-hover: var(--bg-surface-3);
+    --pill-bg-active: var(--bg-surface-4);
+    display: inline-flex;
+    max-width: 100%;
+    width: fit-content;
+    align-items: center;
+    gap: var(--space-3xs);
+    overflow: hidden;
+    border-radius: var(--radius);
+    background: linear-gradient(0deg, var(--pill-bg), transparent);
+    color: var(--pill-color);
+    font-weight: 620;
+    line-height: 1.4;
+    user-select: none;
+    transition:
+        background-color 120ms ease,
+        color 120ms ease;
+}
+
+.pill[data-size="xs"] {
+    min-height: 18px;
+    padding: var(--space-px) var(--space-xs);
+    font-size: var(--text-2xs);
+}
+
+.pill[data-size="sm"] {
+    min-height: 20px;
+    padding: 0 var(--space-s);
+    font-size: var(--text-xs);
+}
+
+.pill[data-removable="true"] {
+    padding-right: var(--space-3xs);
+}
+
+.pill[data-clickable="true"] {
+    padding: 0;
+    gap: 0;
+}
+
+.pill[data-clickable="true"][data-removable="true"] {
+    padding-right: 0;
+}
+
+.pill[data-monospace="true"] {
+    font-family: var(--font-mono);
+}
+
+.pill[data-active="true"] {
+    background: var(--pill-bg-active);
+    color: var(--pill-color);
+    box-shadow: inset 0 1px 0 color-mix(in oklab, var(--overlay) 6%, transparent);
+}
+
+.pill[data-clickable="true"]:not([data-active="true"]):hover {
+    background: var(--pill-bg-hover);
+}
+
+.pill:not([data-muted="true"]) {
+    --pill-color: var(--pill-accent);
+    --pill-bg: color-mix(in oklab, var(--pill-accent) 14%, transparent);
+    --pill-bg-hover: color-mix(in oklab, var(--pill-accent) 18%, transparent);
+    --pill-bg-active: color-mix(in oklab, var(--pill-accent) 30%, transparent);
+}
+
+.pill[data-muted="true"] {
+    --pill-color: var(--text);
+    --pill-bg: var(--bg-surface-3);
+    --pill-bg-hover: var(--bg-surface-3);
+    --pill-bg-active: var(--bg-surface-4);
+}
+
+.staticContent,
+.mainButton.mainButton {
+    display: inline-flex;
+    min-width: 0;
+    max-width: 100%;
+    align-items: center;
+    gap: var(--space-3xs);
+    color: inherit;
+}
+
+.staticContent {
+    overflow: hidden;
+}
+
+.mainButton.mainButton {
+    flex: 1 1 auto;
+    height: auto;
+    justify-content: flex-start;
+    padding: 0;
+    background: transparent;
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+.pill[data-size="xs"][data-clickable="true"] .mainButton.mainButton {
+    min-height: 18px;
+    padding: var(--space-px) var(--space-xs);
+}
+
+.pill[data-size="sm"][data-clickable="true"] .mainButton.mainButton {
+    min-height: 20px;
+    padding: 0 var(--space-s);
+}
+
+.pill[data-clickable="true"][data-removable="true"] .mainButton.mainButton {
+    padding-right: var(--space-3xs);
+}
+
+.mainButton.mainButton:hover,
+.mainButton.mainButton:active,
+.mainButton.mainButton[aria-pressed="true"] {
+    background: transparent;
+    color: inherit;
+}
+
+.leading {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+}
+
+.label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.removeButton.removeButton {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    border-radius: var(--radius-sm);
+    color: inherit;
+}
+
+.pill[data-size="xs"] .removeButton.removeButton {
+    flex-basis: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+.pill[data-size="sm"] .removeButton.removeButton {
+    flex-basis: 20px;
+    width: 20px;
+    height: 20px;
+}

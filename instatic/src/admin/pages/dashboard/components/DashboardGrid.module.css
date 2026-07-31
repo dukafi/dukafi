@@ -1,0 +1,377 @@
+/**
+ * Dashboard grid — true 12-column / fixed-row-height tile layout.
+ *
+ * The fixed row track (`grid-auto-rows: var(--row-h)`) is what makes
+ * per-tile vertical resize work: changing a widget's `grid-row: span N`
+ * snaps its height to an integer multiple of `--row-h`. Without it the
+ * grid would collapse rows to the tallest widget and all neighbours
+ * would inherit the same height.
+ *
+ * `--row-h` and `--gap` are mirrored from the GRID_ROW_HEIGHT / GRID_GAP
+ * constants in useDashboardLayout.ts so the JS resize handler can
+ * compute snap deltas without a duplicated magic number.
+ *
+ * `auto-flow: dense` lets later widgets backfill earlier gaps so the
+ * layout reads as densely-packed even when sizes vary.
+ */
+
+.gridLayout {
+    --row-h: 70px;
+    /* Hairline divider. The grid sits
+       on `--bg-surface` (darker) while each card is `--bg-surface-2`
+       (lighter), so the gap reveals the parent and reads as a
+       borderless tile divider. */
+    --gap: var(--space-px);
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-auto-rows: var(--row-h);
+    /* No `grid-auto-flow`: each cell ships an explicit `grid-column` /
+       `grid-row` from `useDashboardLayout` so users can leave gaps
+       between widgets. Auto-flow would silently pack cells back
+       together and undo any deliberate spacing. */
+    gap: var(--gap);
+    position: relative;
+    /* Animate the gap change when toggling customize mode.
+       CSS Grid's `gap` is natively animatable in every shipping browser;
+       the columns are `1fr` so they auto-resize as the gap interpolates,
+       and the cards reflow smoothly with the column change. No JS
+       animation library needed for a single typed property like this. */
+    /* Outline is always declared (just transparent off-mode) so the
+       transition can interpolate its colour rather than appearing /
+       disappearing instantly. `outline-color` is animatable; `outline-
+       style` and `outline-width` aren't. */
+    outline: 1px dashed transparent;
+    outline-offset: 8px;
+    border-radius: 12px;
+    transition:
+        gap 220ms cubic-bezier(0.4, 0, 0.2, 1),
+        outline-color 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gridLayout {
+        transition: none;
+    }
+}
+
+.editing {
+    /* Widen the gutter while customising so each card has breathing
+       room around its edges. JS snap math reads the computed `--gap`
+       value so drag/drop geometry stays in sync with the fluid token. */
+    --gap: var(--space-2xl);
+    outline-color: color-mix(in srgb, var(--accent-3) 18%, transparent);
+    /* `--grid-min-height` is set inline by GridSurface in customize
+       mode — extra empty rows below the lowest widget so the user has
+       drop zones when dragging from the block library. View mode
+       leaves the variable unset and the grid sizes to content. */
+    min-height: var(--grid-min-height);
+}
+
+.cell {
+    --span: 4;
+    --rows: 2;
+    --col: 1;
+    --row: auto;
+    /* Explicit placement on the grid — column / row start come from the
+       persisted DashboardItem (set inline by DashboardGrid.tsx). The
+       size of the cell is `--span` columns wide and `--rows` rows tall.
+       `--row: auto` for cells that intentionally don't pin to a row
+       (the "Add block" tile uses this so it lands at the bottom). */
+    grid-column: var(--col) / span var(--span);
+    grid-row: var(--row) / span var(--rows);
+    min-width: 0;
+    position: relative;
+    background: transparent;
+    padding: 0;
+}
+
+/* While dragging, the original cell becomes a transparent placeholder
+   that still occupies its grid slot (so siblings don't reflow). The
+   visible drag visual is rendered by `DragOverlay` — see `.dragOverlay`
+   below. Without `opacity: 0` here the user sees the original AND the
+   overlay simultaneously, which reads as "the card has split in two". */
+.dragging {
+    opacity: 0;
+    cursor: grabbing;
+}
+
+.dropTarget {
+    outline: 1px dashed var(--accent-3);
+    outline-offset: 4px;
+    border-radius: 16px;
+}
+
+/* The DragOverlay portal is sized to match the active draggable's
+   bounding rect (dnd-kit measures it on drag start). Setting the
+   inner card to `width/height: 100%` makes the floating visual
+   perfectly 1:1 with the original — no scale, no shrink, no
+   resize-flicker.
+   We deliberately DO NOT apply `transform: scale(1.02)` here at
+   rest. A sub-pixel scale-up would break the seamless lift the user
+   expects; the box-shadow alone reads as "this is lifted off the
+   surface".
+
+   `--proximity-scale` is fed inline by `DashboardPage` on every
+   `onDragMove` tick: 1 when the dragged tile is far from the
+   bottom-docked drop-to-remove pill, ramping down to ~0.32 once the
+   tile overlaps the pill. The transform-origin stays at `center center`
+   (the default) so the tile shrinks uniformly around the cursor,
+   revealing the pill below it as the tile gets smaller. We deliberately
+   do NOT anchor to `bottom center` — the cursor is typically grabbed
+   near the tile's centre, so a bottom-anchored shrink would visibly
+   drift the tile upward away from the pointer, which reads as a glitch.
+   Without this scale-down, the full-size overlay completely covers the
+   pill and the user can't see where they're aiming. */
+.dragOverlay {
+    /* Default proximity scale (1 = no shrink). `DashboardPage` overrides
+       this inline on every `onDragMove` tick so the tile shrinks as it
+       approaches the bottom-pill. The bare `--proximity-scale` token
+       (no `var(... , fallback)` form) is required by the CSS var()
+       fallback policy. */
+    --proximity-scale: 1;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    box-shadow: 0 24px 56px var(--scrim-60);
+    border-radius: 16px;
+    transform: scale(var(--proximity-scale));
+    transition: transform 140ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dragOverlay {
+        transition: none;
+    }
+}
+
+/* ── Resize handles ────────────────────────────────────────────────
+ *
+ * Each handle is positioned ON the visible card edge (not over the
+ * grid gap), so the user grabs exactly the edge they see.
+ *
+ *   ┌─────────────────────────┐
+ *   │  ┌── top ──┐            │
+ *   │  │         │            │
+ *   │ left      right         │
+ *   │  │         │            │
+ *   │  └─ bottom ┘            │
+ *   └─────────────────────────┘
+ *
+ * Horizontal handles (left / right) resize column span. Vertical
+ * handles (top / bottom) resize row span. All four are 14px wide and
+ * stay invisible until the user hovers the cell. The center 4px ×
+ * 32px (or 32px × 4px) accent rail is the visible affordance.
+ */
+.handle {
+    position: absolute;
+    z-index: 10;
+    user-select: none;
+    touch-action: none;
+}
+
+.handle::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    background: var(--accent-3);
+    border-radius: 2px;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+.cell:hover .handle::before {
+    opacity: 0.6;
+}
+
+.handle:hover::before {
+    opacity: 1;
+}
+
+/* Right edge — drag horizontally to resize column span. Width is 8px
+   (was 12px in the 14px-gap design) — with a 1px hairline gap a 12px
+   handle on each neighbour overlaps significantly, so we narrow it
+   to keep the pointer-event boundary inside each cell. */
+.handleRight {
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 100%;
+    cursor: ew-resize;
+}
+
+.handleRight::before {
+    width: 4px;
+    height: 32px;
+}
+
+/* Left edge — drag horizontally (inverted delta). */
+.handleLeft {
+    top: 0;
+    left: 0;
+    width: 8px;
+    height: 100%;
+    cursor: ew-resize;
+}
+
+.handleLeft::before {
+    width: 4px;
+    height: 32px;
+}
+
+/* Bottom edge — drag vertically to resize row span. */
+.handleBottom {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 8px;
+    cursor: ns-resize;
+}
+
+.handleBottom::before {
+    width: 32px;
+    height: 4px;
+}
+
+/* Top edge — drag vertically (inverted delta). */
+.handleTop {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 8px;
+    cursor: ns-resize;
+}
+
+.handleTop::before {
+    width: 32px;
+    height: 4px;
+}
+
+/* Bottom-right corner — simultaneous both-axis resize. Wins over the
+   bottom/right edge handles in the overlapping 12 × 12 area. */
+.handleCorner {
+    right: 0;
+    bottom: 0;
+    width: 14px;
+    height: 14px;
+    cursor: nwse-resize;
+    z-index: 11;
+}
+
+.handleCorner::before {
+    width: 6px;
+    height: 6px;
+    border-radius: 1px;
+}
+
+/* ── Drop-target preview ──────────────────────────────────────────────
+ *
+ * Translucent ghost placed at the cell the active drag would land in
+ * if released now. Positioned absolutely (NOT as a grid item) so the
+ * `top` / `left` / `width` / `height` properties — fed by
+ * `DashboardPage`'s `onDragMove` math from snapped cell coords — can
+ * transition smoothly across cell boundaries. CSS Grid's
+ * `grid-column-start` / `grid-row-start` aren't transitionable in all
+ * browsers; pixel coordinates are the reliable cross-browser path
+ * for the smooth glide the user asked for.
+ *
+ * The placeholder is only ever shown when the destination is valid
+ * (empty space); `DashboardPage` clears `dropTarget` to `null` while
+ * the proposed cell overlaps any existing widget, so the ghost
+ * disappearing IS the visual signal that the drop will be rejected.
+ */
+.dropPreview {
+    position: absolute;
+    background: var(--accent-3);
+    opacity: 0.18;
+    border-radius: 16px;
+    border: 1px dashed color-mix(in srgb, var(--accent-3) 55%, transparent);
+    pointer-events: none;
+    z-index: 1;
+    transition:
+        left 160ms cubic-bezier(0.4, 0, 0.2, 1),
+        top 160ms cubic-bezier(0.4, 0, 0.2, 1),
+        width 160ms cubic-bezier(0.4, 0, 0.2, 1),
+        height 160ms cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 120ms ease;
+    animation: dropPreviewIn 140ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes dropPreviewIn {
+    from { opacity: 0; }
+    to   { opacity: 0.18; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dropPreview {
+        transition: none;
+        animation: none;
+    }
+}
+
+/* ── "Add block" cell ──────────────────────────────────────────────── */
+.addWidget {
+    /* Mirrors the `.cell` defaults so the add-block tile is the same
+       tile size as the smallest first-party widget. */
+    --span: 3;
+    --rows: 3;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    /* Borderless to match the widget cards. The dashed indication is
+       kept as an inset box-shadow so the tile still reads as an
+       "empty slot" affordance without breaking the 1px-gap pattern. */
+    background: transparent;
+    border: 0;
+    border-radius: 16px;
+    box-shadow: inset 0 0 0 1px var(--border-muted);
+    color: var(--text-subtle);
+    cursor: pointer;
+    transition:
+        color 120ms ease,
+        background 120ms ease,
+        box-shadow 120ms ease;
+    padding: var(--space-3xl);
+    height: 100%;
+}
+
+.addWidget:hover {
+    color: var(--text-bright);
+    background: var(--overlay-5);
+    box-shadow: inset 0 0 0 1px var(--text-subtle);
+}
+
+.addInner {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-m);
+}
+
+.addIcon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    display: grid;
+    place-items: center;
+    color: var(--text-muted);
+}
+
+.addLabel {
+    font-size: var(--text-s);
+    font-weight: 500;
+}
+
+@media (max-width: 980px) {
+    /* On narrow screens we collapse to a single-column stack — the
+       explicit column from `--col` is overridden so cards reflow
+       linearly instead of clinging to whatever column the desktop
+       layout assigned. `auto` for row lets the cards auto-stack by
+       DOM order so the small screen still reads top-down. */
+    .cell {
+        grid-column: 1 / span 12;
+        grid-row: auto / span var(--rows);
+    }
+}

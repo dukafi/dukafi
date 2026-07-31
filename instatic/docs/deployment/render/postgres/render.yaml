@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: instatic
+    runtime: image
+    image:
+      url: ghcr.io/corebunch/instatic:latest
+    plan: starter
+    numInstances: 1
+    healthCheckPath: /health
+    autoDeployTrigger: off
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: instatic-db
+          property: connectionString
+      - key: UPLOADS_DIR
+        value: /app/storage/uploads
+      - key: STATIC_DIR
+        value: /app/dist
+      # Render auto-injects RENDER_EXTERNAL_URL at runtime; Instatic uses it as
+      # the CSRF public origin, so no proxy/origin config is needed here.
+      - key: INSTATIC_SECRET_KEY
+        generateValue: true
+    disk:
+      name: uploads
+      mountPath: /app/storage
+      sizeGB: 10
+
+databases:
+  - name: instatic-db
+    databaseName: instatic
+    user: instatic
+    plan: basic-256mb
+    diskSizeGB: 15
+    ipAllowList: []

@@ -1,0 +1,192 @@
+/**
+ * LiquidProgressRing styles.
+ *
+ * Three animations live here:
+ *   - `waveScroll` slides each wave path horizontally by one
+ *     wavelength (18 SVG user-units) and loops, giving the liquid
+ *     surface its endless lateral drift.
+ *   - `waveScrollSlow` does the same in the opposite direction on
+ *     the back wave so the two surfaces visually parallax against
+ *     each other.
+ *   - `bubbleRise` animates a bubble from spawn at the bottom up to
+ *     the live wave surface (distance set per-render via the
+ *     `--rise-distance` CSS custom property), then scales it up and
+ *     fades it out for the "pop" at the meniscus.
+ *
+ * Every animation respects `prefers-reduced-motion: reduce` — the
+ * ring still renders at the correct fill level, the liquid just
+ * stops moving and the bubbles vanish.
+ */
+
+.ring {
+    position: relative;
+    flex-shrink: 0;
+    /* A subtle drop-shadow gives the toxic liquid a faint glow halo
+       around the bottle. Achromatic light isn't quite right here —
+       the green tint is the whole point of the component. */
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent-1) 15%, transparent));
+}
+
+.svg {
+    display: block;
+    overflow: visible;
+}
+
+/* ── Wave surface scroll ─────────────────────────────────────────── */
+.waveFront {
+    /* CSS transforms on SVG elements need a transform-box hint so
+       transform-origin resolves against the element's own box rather
+       than the SVG root's coordinate system. Without it the wave
+       would translate around an unexpected pivot. */
+    transform-box: fill-box;
+    animation: waveScroll 4.5s linear infinite;
+    will-change: transform;
+}
+
+.waveBack {
+    transform-box: fill-box;
+    animation: waveScrollSlow 6.5s linear infinite reverse;
+    will-change: transform;
+    /* Mix-blend-mode `screen` makes the back wave brighten where it
+       overlaps the front wave — sells the "translucent toxic glow"
+       feel. */
+    mix-blend-mode: screen;
+}
+
+/* Deep wave — bigger, darker, slowest. Uses `multiply` blend so its
+   darker emerald tones tint the layers above rather than overwriting
+   them, which reads as "a shadow of a swell behind the liquid"
+   instead of a solid green hump. The slow 8.7s duration is
+   deliberately not a clean ratio with the front/back waves (4.5s /
+   6.5s) so the three layers drift in and out of alignment without
+   ever repeating exactly — gives the surface a non-periodic, organic
+   feel. */
+.waveDeep {
+    transform-box: fill-box;
+    animation: waveScrollDeep 8.7s linear infinite;
+    will-change: transform;
+    mix-blend-mode: multiply;
+}
+
+@keyframes waveScroll {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        /* One wavelength in user units. SVG `transform: translateX(n)`
+           with a unitless value moves by n user units, which matches
+           the wave's geometric period. Looks seamless. */
+        transform: translateX(-18px);
+    }
+}
+
+@keyframes waveScrollSlow {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-18px);
+    }
+}
+
+/* Deep wave loops over its own larger wavelength (30 user-units).
+   Each wave layer's `to` translation MUST match its DEEP_WAVE_WAVELENGTH /
+   WAVE_WAVELENGTH constant in LiquidProgressRing.tsx — mismatch shows
+   up as a visible "jump" at the loop boundary. */
+@keyframes waveScrollDeep {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-30px);
+    }
+}
+
+/* ── Bubbles ─────────────────────────────────────────────────────── */
+.bubble {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation-name: bubbleRise;
+    animation-timing-function: ease-in;
+    animation-iteration-count: infinite;
+    opacity: 0;
+    will-change: transform, opacity;
+}
+
+@keyframes bubbleRise {
+    0% {
+        transform: translateY(0) scale(0.6);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.85;
+        transform: translateY(calc(var(--rise-distance) * -0.05)) scale(0.9);
+    }
+    /* Slight side-wobble in the middle for a more organic rise. We use
+       a `translate3d` with non-zero X here to get a tiny lateral drift,
+       then return to centre by the end. */
+    50% {
+        transform: translate3d(1px, calc(var(--rise-distance) * -0.5), 0) scale(1);
+        opacity: 0.9;
+    }
+    80% {
+        transform: translate3d(-1px, calc(var(--rise-distance) * -0.85), 0) scale(1);
+        opacity: 0.9;
+    }
+    /* Pop at the surface — scale up and fade simultaneously to simulate
+       the bubble bursting into the wavy meniscus. */
+    100% {
+        transform: translateY(calc(var(--rise-distance) * -1)) scale(1.8);
+        opacity: 0;
+    }
+}
+
+/* ── Centered fraction text ───────────────────────────────────────── */
+.label {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+}
+
+.fraction {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-px);
+    font-family: var(--font-mono);
+    font-size: var(--text-6xl);
+    font-weight: 600;
+    color: var(--text-bright);
+    letter-spacing: -0.04em;
+    line-height: 1;
+    /* The fraction sits over the moving liquid — a translucent dark
+       text-shadow keeps it legible regardless of the wave's current
+       crest position behind it. */
+    text-shadow:
+        0 1px 2px var(--scrim-50),
+        0 0 8px var(--scrim-30);
+}
+
+.fraction small {
+    color: var(--overlay-70);
+    font-size: var(--text-l);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+}
+
+/* ── Reduced motion: kill animations, keep the fill level ────────── */
+@media (prefers-reduced-motion: reduce) {
+    .waveFront,
+    .waveBack,
+    .waveDeep {
+        animation: none;
+    }
+
+    .bubble {
+        /* Hidden entirely under reduced-motion — there's no useful
+           static representation of a "rising bubble". The wave
+           surface alone still communicates the progress amount. */
+        display: none;
+    }
+}

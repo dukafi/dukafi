@@ -1,0 +1,13 @@
+/*
+ * BackgroundImageControl — layout for the mode-specific body that hangs
+ * below the inline "Background image: [None|Image|Gradient]" row.
+ *
+ * The body sits full-width inside ClassPropertyRow's wrapper (which has no
+ * grid of its own) so it stretches past the 100px label column of the row
+ * above. A small top margin separates it from the mode row visually.
+ */
+
+.modeBody {
+    margin-top: var(--space-xs);
+    width: 100%;
+}

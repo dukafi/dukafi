@@ -1,0 +1,23 @@
+/**
+ * LayoutNameDialog — naming step for saved layouts.
+ * Token-only colours; CSS Modules only.
+ */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--text-subtle);
+}
+
+.errorAlert {
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: var(--danger-text);
+}

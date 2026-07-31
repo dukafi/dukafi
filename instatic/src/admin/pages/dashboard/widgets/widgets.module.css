@@ -1,0 +1,371 @@
+/**
+ * Shared utilities for first-party dashboard widgets — small helpers that
+ * would otherwise be repeated as inline styles across every widget body.
+ */
+
+.fillBottom {
+    margin-top: auto;
+}
+
+.axisRow {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--text-disabled);
+    margin-top: var(--space-3xs);
+}
+
+/* ── List-style widgets (Top pages, Publish queue) ────────────────── */
+.wlist {
+    list-style: none;
+    display: grid;
+    gap: 0;
+    margin-top: auto;
+    padding: 0;
+}
+
+.wlist li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-m);
+    padding: var(--space-m) 0;
+    border-top: 1px solid var(--border);
+    font-size: var(--text-m);
+    color: var(--text);
+}
+
+.wlist li:first-child {
+    border-top: 0;
+}
+
+.wlistTitle {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+}
+
+.wlistMeta {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-subtle);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-s);
+}
+
+.wlistPath {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-disabled);
+}
+
+.deltaSpacing {
+    margin-left: var(--space-s);
+}
+
+/* ── Activity feed ─────────────────────────────────────────────────── */
+.feed {
+    display: grid;
+    gap: 0;
+    margin-top: auto;
+}
+
+.feedRow {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-m);
+    padding: var(--space-m) 0;
+    border-top: 1px solid var(--border);
+}
+
+.feedRow:first-child {
+    border-top: 0;
+}
+
+/* System-initiated audit events (no actor user) render with a small
+ * cog icon in the same 22px slot the shared <UserAvatar> primitive
+ * occupies for real users. Circular to match UserAvatar's pill
+ * geometry so the column reads as a single avatar rail regardless of
+ * row type. */
+.feedSystemAvatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: var(--bg-surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.feedBody {
+    font-size: var(--text-s);
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.feedBody em {
+    font-style: normal;
+    color: var(--text-subtle);
+}
+
+.feedBody code {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-bright);
+    background: var(--overlay-10);
+    padding: var(--space-px) var(--space-3xs);
+    border-radius: 3px;
+}
+
+.feedTime {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--text-disabled);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.feedEmpty {
+    padding: var(--space-l) 0;
+}
+
+/* ── Plugin list row ───────────────────────────────────────────────── */
+.pluginRow {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    gap: var(--space-m);
+    align-items: center;
+    padding: var(--space-m) 0;
+    border-top: 1px solid var(--border);
+    font-size: var(--text-s);
+}
+
+.pluginRow:first-of-type {
+    border-top: 0;
+}
+
+.pluginIcon {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    display: grid;
+    place-items: center;
+    color: var(--text-muted);
+    overflow: hidden;
+}
+
+/* Plugin-supplied icon image inside the tile. Sits comfortably inside
+   the 28px tile with a couple of pixels of padding so the glyph reads
+   as a contained mark, not edge-to-edge artwork. `object-fit: contain`
+   so non-square icons (rare, but valid) are letterboxed rather than
+   cropped. */
+.pluginIconImg {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    display: block;
+}
+
+.pluginName {
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pluginName small {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--text-disabled);
+    margin-top: var(--space-4xs);
+}
+
+/* ── Tiny status dot ───────────────────────────────────────────────── */
+.dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.dotGreen {
+    background: var(--success);
+}
+
+.dotAmber {
+    background: var(--warning);
+}
+
+.dotMuted {
+    background: var(--text-disabled);
+}
+
+/* ── Badges (queued / live / draft) ────────────────────────────────── */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3xs);
+    padding: var(--space-4xs) var(--space-s);
+    border-radius: 999px;
+    font-size: var(--text-2xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+}
+
+.badgeDraft {
+    background: var(--overlay-10);
+    color: var(--text-subtle);
+}
+
+.badgeLive {
+    background: var(--success-10);
+    color: var(--success);
+}
+
+.badgeQueued {
+    background: var(--warning-10);
+    color: var(--warning);
+}
+
+/* "PUBLISHED" pill — success tone, sibling of `.badgeLive` but
+   semantically a finished publish rather than an in-flight build.
+   Same colour as `.badgeLive` for now; both signal "this row is on
+   the live site" — visually distinct from the warning-tone scheduled
+   pill so the eye scans the lineup at a glance. */
+.badgePublished {
+    background: var(--success-10);
+    color: var(--success);
+}
+
+/* ── Pages / posts / status row utilities ──────────────────────────── */
+.subFootRow {
+    margin-top: auto;
+    display: flex;
+    gap: var(--space-2xl);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-subtle);
+}
+
+.statusRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-m) 0;
+    border-top: 1px solid var(--border);
+}
+
+.statusRow:first-of-type {
+    border-top: 0;
+}
+
+.statusLabel {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    font-size: var(--text-s);
+    color: var(--text);
+}
+
+.statusGrid {
+    display: grid;
+    gap: 0;
+    margin-top: var(--space-3xs);
+}
+
+/* ── Domain widget ─────────────────────────────────────────────────── */
+.domainName {
+    font-family: var(--font-mono);
+    font-size: var(--text-l);
+    color: var(--text-bright);
+    margin-top: var(--space-4xs);
+}
+
+.domainList {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-subtle);
+}
+
+.domainList > div {
+    display: flex;
+    justify-content: space-between;
+}
+
+.domainOk {
+    color: var(--success);
+}
+
+/* ── Media thumbnail grid ──────────────────────────────────────────── */
+.mediaGrid {
+    margin-top: auto;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: var(--space-px);
+    padding-top: var(--space-l);
+}
+
+.mediaCell {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    background: var(--bg-surface-3);
+}
+
+.mediaCellAccent {
+    background: var(--accent-4);
+    opacity: 0.6;
+}
+
+.mediaCellEmpty {
+    background: var(--bg-surface);
+}
+
+/* Cell that holds a real image thumbnail. The cell is rendered as a
+   Button primitive so clicking it opens the MediaViewerWindow — these
+   overrides strip the default Button chrome (fixed height, padding,
+   gap, min-width) so the tile reads as a pure square thumbnail. The
+   <img> inside fills the cell with `object-fit: cover`; the rounded
+   corners + background match the decorative cells so a partial fill
+   (fewer than 16 thumbs) blends with the decorative remainder. */
+.mediaCellThumb {
+    aspect-ratio: 1;
+    height: auto;
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    gap: 0;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--bg-surface);
+    transition: transform 120ms ease;
+}
+
+.mediaCellThumb:hover {
+    transform: scale(1.04);
+}
+
+.mediaCellThumbImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}

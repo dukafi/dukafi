@@ -1,0 +1,225 @@
+/**
+ * DateTimePicker — calendar grid + time spinner card.
+ *
+ * Achromatic per the editor's design-token policy. The only chromatic
+ * accents are the canvas/selection tints already used elsewhere in the
+ * admin (selected day + today highlight).
+ */
+
+.root {
+    display: flex;
+    flex-direction: column;
+    width: 380px;
+    background: var(--bg-surface);
+    border: 1px solid var(--overlay-10);
+    border-radius: var(--panel-radius);
+    box-shadow: var(--shadow-panel);
+    color: var(--text);
+    font-size: var(--text-m);
+    overflow: hidden;
+}
+
+/* ── Two-pane split ──────────────────────────────────────────────── */
+
+.split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 110px;
+    gap: 0;
+    padding: var(--space-l);
+    border-bottom: 1px solid var(--overlay-10);
+}
+
+/* ── Calendar pane ───────────────────────────────────────────────── */
+
+.calendar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-s);
+    min-width: 0;
+    padding-right: var(--space-l);
+    border-right: 1px solid var(--overlay-10);
+}
+
+.monthHeader {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-3xs);
+}
+
+.monthLabel {
+    font-weight: 600;
+    color: var(--text-bright);
+    text-align: center;
+    font-size: var(--text-s);
+    user-select: none;
+}
+
+.weekdayRow {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--space-4xs);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--text-disabled);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.weekdayLabel {
+    text-align: center;
+}
+
+.dayGrid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--space-4xs);
+}
+
+.dayCell {
+    /* Borderless square cell. Day numbers center-aligned. The
+       calendar isn't laid out as a Button primitive because the
+       day-grid pattern is a structured CSS-grid cell with custom
+       roles and selection semantics — see §8 allowlist entry. */
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: var(--text-s);
+    height: 28px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition:
+        background 120ms ease,
+        color 120ms ease;
+}
+
+.dayCell:hover:not([data-disabled="true"]) {
+    background: var(--overlay-10);
+}
+
+.dayCellOutside {
+    color: var(--text-disabled);
+}
+
+.dayCellToday {
+    color: var(--accent-3);
+    font-weight: 600;
+}
+
+.dayCellSelected {
+    background: var(--accent-3);
+    color: var(--bg-body);
+    font-weight: 600;
+}
+
+.dayCellSelected:hover {
+    background: var(--accent-3);
+}
+
+.dayCellDisabled {
+    opacity: 0.32;
+    cursor: not-allowed;
+}
+
+/* ── Time pane ───────────────────────────────────────────────────── */
+
+.timeColumn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-s);
+    padding-left: var(--space-l);
+}
+
+.timeLabel {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-subtle);
+    align-self: flex-start;
+}
+
+.timeSpinners {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-top: var(--space-3xs);
+}
+
+.timeColon {
+    font-family: var(--font-mono);
+    font-size: var(--text-xl);
+    color: var(--text-bright);
+    font-weight: 600;
+    padding-bottom: var(--space-xs);
+}
+
+.spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4xs);
+}
+
+.spinnerInput {
+    appearance: none;
+    border: 1px solid var(--overlay-20);
+    background: transparent;
+    border-radius: var(--input-radius);
+    color: var(--text-bright);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xl);
+    font-weight: 600;
+    text-align: center;
+    width: 40px;
+    height: 32px;
+    padding: 0;
+    outline: none;
+    transition:
+        border-color 120ms ease,
+        box-shadow 120ms ease;
+}
+
+.spinnerInput:focus {
+    border-color: var(--overlay-50);
+    box-shadow: var(--shadow-input-focus);
+}
+
+.timeHelp {
+    margin: var(--space-3xs) 0 0;
+    font-size: var(--text-2xs);
+    color: var(--text-disabled);
+    text-align: center;
+    line-height: 1.3;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────── */
+
+.footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-l);
+    padding: var(--space-m) var(--space-l);
+    background: var(--bg-surface);
+}
+
+.summary {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.footerActions {
+    display: flex;
+    gap: var(--space-xs);
+    flex-shrink: 0;
+}

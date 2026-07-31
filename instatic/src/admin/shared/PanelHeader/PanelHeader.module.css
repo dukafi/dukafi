@@ -1,0 +1,44 @@
+/* PanelHeader — shared 36px header for all floating editor panels */
+/* Guideline #357: Header height 36px, Compact UI Density */
+
+/* ── Header drag handle ───────────────────────────────────────────────────── */
+.header {
+    display: flex;
+    align-items: center;
+    height: 36px;
+    padding-left: var(--space-l);
+    padding-right: var(--space-xs);
+    flex-shrink: 0;
+    user-select: none;
+    gap: var(--space-3xs);
+}
+
+.header[data-draggable="true"] {
+    cursor: grab;
+}
+
+.header[data-draggable="true"]:active {
+    cursor: grabbing;
+}
+
+/* ── Panel title ──────────────────────────────────────────────────────────── */
+.title {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    font-size: var(--text-s);
+    font-weight: 700;
+    color: var(--text);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Extra actions slot ───────────────────────────────────────────────────── */
+.actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4xs);
+    flex-shrink: 0;
+}

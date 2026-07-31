@@ -1,0 +1,12 @@
+/* Manual mode — single row of name / min / max, full width */
+.manualList {
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.manualRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-xs);
+}

@@ -1,0 +1,60 @@
+.wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: separate;
+    border-spacing: 0 1px;
+}
+
+.compactTable {
+    border-spacing: 0 1px;
+}
+
+.headerCell {
+    padding: 0 var(--space-l) var(--space-3xs);
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: left;
+}
+
+.cell {
+    padding: var(--space-l);
+    background: var(--bg-surface-2);
+    color: var(--text);
+    font-size: var(--text-s);
+    line-height: 1.45;
+    vertical-align: middle;
+    transition: background-color 120ms ease;
+}
+
+.compactTable .headerCell {
+    padding: 0 var(--space-m) var(--space-3xs);
+}
+
+.compactTable .cell {
+    padding: var(--space-s) var(--space-m);
+}
+
+.cell:first-child {
+    border-top-left-radius: var(--panel-radius);
+    border-bottom-left-radius: var(--panel-radius);
+}
+
+.cell:last-child {
+    border-top-right-radius: var(--panel-radius);
+    border-bottom-right-radius: var(--panel-radius);
+}
+
+.row {
+    min-width: 0;
+}
+
+.row:hover .cell {
+    background: var(--bg-surface-3);
+}

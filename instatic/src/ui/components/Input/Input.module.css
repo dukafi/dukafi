@@ -1,0 +1,268 @@
+/* Shared form field primitive. */
+
+.input {
+    width: 100%;
+    box-sizing: border-box;
+    background: transparent;
+    border: 1px solid var(--overlay-20);
+    border-radius: var(--input-radius);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-weight: 500;
+    outline: none;
+}
+
+.input:hover {
+    border-color: var(--overlay-30);
+}
+
+.input:focus,
+.input:focus-within {
+    background: transparent;
+    border-color: var(--overlay-50);
+}
+
+.input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.input::placeholder {
+    color: var(--text-disabled);
+}
+
+.input[data-emphasis="strong"] {
+    font-weight: 700;
+}
+
+.monospace {
+    font-family: var(--font-mono);
+    letter-spacing: 0;
+}
+
+.size-xs {
+    min-height: 24px;
+    padding: var(--space-4xs) var(--space-xs);
+    font-size: var(--text-xs);
+}
+
+.size-sm {
+    min-height: 28px;
+    padding: var(--space-2xs) var(--space-s);
+    font-size: var(--text-xs);
+}
+
+.size-md {
+    min-height: 32px;
+    padding: var(--space-xs) var(--space-m);
+    font-size: var(--text-s);
+}
+
+.textarea {
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.textarea[data-resize="none"] {
+    resize: none;
+}
+
+.textarea[data-resize="both"] {
+    resize: both;
+}
+
+.invalid {
+    border-color: var(--danger);
+}
+
+/* ─── Affix wrapper (used when `unit` and/or `numberSpinner` are present) ──
+ * The wrapper inherits the same border + size tokens as the bare input so
+ * the unit / spinner controls read as part of the field. The actual
+ * `<input>` inside the wrapper drops its own border to avoid double frames.
+ */
+
+.inputWrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: stretch;
+    width: 100%;
+    box-sizing: border-box;
+    background: transparent;
+    border: 1px solid var(--overlay-20);
+    border-radius: var(--input-radius);
+    color: var(--text);
+    font-family: var(--font-sans);
+    overflow: hidden;
+    /* Override the size-class padding (the wrapper inherits .size-* for its
+     * min-height + font-size, but the inner input owns the visual padding).
+     * Without this the wrapper applies padding *and* the input applies
+     * padding — nesting them and bumping the field's effective height. */
+    padding: 0;
+    transition: border-color 120ms ease;
+}
+
+.inputWrapper:hover {
+    border-color: var(--overlay-30);
+}
+
+.inputWrapper:focus-within {
+    background: transparent;
+    border-color: var(--overlay-50);
+}
+
+.inputWrapper[data-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.inputWithAffix {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+    /* Wrapper drives the field height — null out the size-class min-height
+     * here so the input does not push the wrapper taller than a bare
+     * Input of the same size class. */
+    min-height: 0;
+    height: auto;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    /* The wrapper owns the focus ring + hover styles; its child must not
+     * add an extra border on focus. */
+}
+
+.inputWithAffix:hover,
+.inputWithAffix:focus,
+.inputWithAffix:focus-within {
+    background: transparent;
+    border: 0;
+}
+
+/* Prefix label — `--`, `$`, `@` etc. Inside the leading edge of
+ * the wrapper, vertically centered with the input value. We pad the left
+ * edge here and zero out the input's left padding (via `.inputWithAffix`)
+ * so the prefix sits flush against the value with no double-padding. */
+.prefix {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    /* Left inset matches a normal input's text inset so the prefix sits where
+       the value would start; no right padding — the input's own small left
+       padding (.inputWithAffix[data-prefixed]) supplies one space to the
+       value, so prefix + value read as one continuous string. */
+    padding: 0 0 0 var(--space-s);
+    color: var(--text-subtle);
+    font-size: inherit;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* A single space between the prefix and the value / placeholder. */
+.inputWithAffix[data-prefixed='true'] {
+    padding-left: var(--space-3xs);
+}
+
+/* Unit suffix label — `px`, `rem`, `%` etc. Inside the trailing edge of
+ * the wrapper, vertically centered with the input value. The input itself
+ * owns its right-padding so the value already has breathing room before
+ * the unit; we only add a small right-padding here as a buffer to the
+ * spinner column or the wrapper's right edge. */
+.unit {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    padding: 0 var(--space-xs) 0 0;
+    color: var(--text-subtle);
+    font-size: inherit;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Generic trailing slot — caller-provided affordance rendered inside the
+ * trailing edge of the wrapper (e.g. an enter-key submit icon button on a
+ * picker input). Stays vertically centered and inherits muted text color
+ * so plain icons read consistently with prefix / unit. The slot itself is
+ * a wrapper, not a control — it still allows pointer events on its
+ * children so embedded buttons remain clickable. */
+.trailingSlot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    padding: 0 var(--space-3xs) 0 0;
+    color: var(--text-subtle);
+}
+
+/* Custom number-input spinner — replaces the browser-default ugly arrows
+ * with two compact chevron buttons stacked vertically on the trailing
+ * edge. Uses our editor tokens so it matches the rest of the chrome. */
+.spinner {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    border-left: 1px solid var(--overlay-20);
+    background: var(--overlay-5);
+}
+
+.inputWrapper:focus-within .spinner {
+    border-left-color: var(--overlay-50);
+}
+
+.spinnerButton {
+    appearance: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    width: 18px;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-subtle);
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease;
+}
+
+/* The increase button reuses the (down) chevron-2 glyph, flipped. */
+.spinnerIconUp {
+    transform: rotate(180deg);
+}
+
+.spinnerButton + .spinnerButton {
+    border-top: 1px solid var(--overlay-20);
+}
+
+.inputWrapper:focus-within .spinnerButton + .spinnerButton {
+    border-top-color: var(--overlay-50);
+}
+
+.spinnerButton:hover {
+    background: var(--overlay-5);
+    color: var(--text);
+}
+
+.spinnerButton:active {
+    background: var(--overlay-10);
+}
+
+.spinnerButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+/* Hide the browser-native number-input spinner so our custom one is the
+ * only set of controls visible. */
+.numberNoSpinner {
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.numberNoSpinner::-webkit-outer-spin-button,
+.numberNoSpinner::-webkit-inner-spin-button {
+    appearance: none;
+    -webkit-appearance: none;
+    margin: 0;
+}

@@ -1,0 +1,68 @@
+/**
+ * Public surface of the data repository.
+ *
+ * Split into four modules by responsibility:
+ *
+ *   shared.ts   — shared mapper helpers (userRefAt, join-column types)
+ *   versions.ts — version-number allocation for data_row_versions
+ *   tables.ts   — data_tables CRUD
+ *   rows/       — data_rows repository, split by responsibility (read, search,
+ *                 filter, mutations, bulk, schedule, import); see rows/index.ts
+ *   publish.ts  — publish persistence + redirects + public-route lookups
+ *                 (the publish ORCHESTRATION — lock, artefacts, cache bump —
+ *                 lives in server/publish/publishRow.ts)
+ *
+ * Domain types (`DataRow`, `DataTable`, `PublishedDataRow`, `DataRowRedirect`,
+ * `DataRowVersion`, `DataUserReference`) are TypeBox schemas in
+ * `@core/data/schemas` — import them from there.
+ * Row shapes and mappers stay co-located with the queries that produce them.
+ */
+
+export {
+  listDataTables,
+  listDataTablesWithCounts,
+  getDataTable,
+  getDataTableBySlug,
+  createDataTable,
+  updateDataTable,
+  softDeleteDataTable,
+} from './tables'
+
+export {
+  listDataRows,
+  listDataRowIdSlugs,
+  listDataRowSeqs,
+  listChangedDataRowRefsSince,
+  listDataRowsWithFilter,
+  searchDataRows,
+  getDataRow,
+  getDataRowMany,
+  getDataRowBySlug,
+  countDataRows,
+  listDataAuthorOptions,
+  createDataRow,
+  createDataRowMany,
+  saveDataRowDraft,
+  upsertDataRowDraft,
+  updateDataRowDraftCells,
+  saveDataRowDraftMany,
+  softDeleteDataRow,
+  softDeleteDataRowMany,
+  updateDataRowTable,
+  updateDataRowStatus,
+  updateDataRowAuthor,
+  scheduleDataRowPublish,
+  cancelScheduledPublish,
+  listDuePublishSchedules,
+  applyDataRowChanges,
+  applyDataRowChangesInTx,
+} from './rows'
+
+export type { ApplyDataRowChangesInput, DataRowWrite } from './rows'
+
+export {
+  getPublishedDataRowByRoute,
+  getDataRowRedirectByRoute,
+} from './publish'
+
+export { nextDataRowVersionNumber } from './versions'

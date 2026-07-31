@@ -1,0 +1,333 @@
+{
+  "id": "site-roundtrip-1",
+  "name": "Round-Trip Fixture",
+  "createdAt": 1700000000000,
+  "updatedAt": 1700000001000,
+  "explorer": {
+    "pages": { "expandedFolders": [], "emptyFolders": [], "rowOrder": [] },
+    "styles": { "expandedFolders": [], "emptyFolders": [], "rowOrder": [] },
+    "scripts": { "expandedFolders": [], "emptyFolders": [], "rowOrder": [] },
+    "templates": { "folders": [], "items": [] },
+    "components": { "folders": [], "items": [] }
+  },
+  "breakpoints": [
+    { "id": "mobile",  "label": "Mobile",  "width": 375,  "mediaQuery": "(max-width: 375px)",  "icon": "smartphone" },
+    { "id": "desktop", "label": "Desktop", "width": 1440, "mediaQuery": "(max-width: 1440px)", "icon": "monitor"    }
+  ],
+  "pages": [
+    {
+      "id": "page-home",
+      "slug": "index",
+      "title": "Home",
+      "rootNodeId": "root",
+      "nodes": {
+        "root": {
+          "id": "root",
+          "moduleId": "base.body",
+          "props": {},
+          "breakpointOverrides": {},
+          "children": ["heading-1"],
+          "classIds": [],
+          "label": "Root Container",
+          "locked": false,
+          "parentId": null
+        },
+        "heading-1": {
+          "id": "heading-1",
+          "moduleId": "base.text",
+          "props": {
+            "text": "Hello World",
+            "richtext": "<p><strong>Bold</strong> and <em>italic</em></p>"
+          },
+          "breakpointOverrides": {
+            "mobile": { "text": "Hi" }
+          },
+          "children": [],
+          "classIds": ["class-1"],
+          "propBindings": {
+            "text":  { "paramId": "param-title" },
+            "extra": { "paramId": "param-desc" }
+          },
+          "parentId": "root"
+        }
+      },
+      "template": {
+        "enabled": true,
+        "target": { "kind": "postTypes", "tableSlugs": ["posts"] },
+        "priority": 10
+      }
+    },
+    {
+      "id": "page-about",
+      "slug": "about",
+      "title": "About",
+      "rootNodeId": "root-2",
+      "nodes": {
+        "root-2": {
+          "id": "root-2",
+          "moduleId": "base.body",
+          "props": {},
+          "breakpointOverrides": {},
+          "children": [],
+          "classIds": [],
+          "parentId": null
+        }
+      }
+    }
+  ],
+  "visualComponents": [
+    {
+      "id": "vc-1",
+      "name": "MyCard",
+      "tree": {
+        "rootNodeId": "vc-root",
+        "nodes": {
+          "vc-root": {
+            "id": "vc-root",
+            "moduleId": "base.container",
+            "props": {
+              "richtext": "<em>Default content</em>"
+            },
+            "breakpointOverrides": {},
+            "children": ["vc-child-1"],
+            "classIds": [],
+            "propBindings": {
+              "richtext": { "paramId": "param-content" }
+            },
+            "parentId": null
+          },
+          "vc-child-1": {
+            "id": "vc-child-1",
+            "moduleId": "base.text",
+            "props": { "text": "Inner text" },
+            "breakpointOverrides": {},
+            "children": [],
+            "classIds": [],
+            "parentId": "vc-root"
+          }
+        }
+      },
+      "params": [
+        {
+          "id": "param-content",
+          "name": "content",
+          "type": "richText",
+          "defaultValue": "",
+          "required": false
+        }
+      ],
+      "classIds": [],
+      "createdAt": 1700000000000
+    }
+  ],
+  "files": [
+    {
+      "id": "file-1",
+      "path": "src/components/MyButton.tsx",
+      "type": "component",
+      "content": "export default function MyButton() { return <button>Click</button> }",
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000000000
+    }
+  ],
+  "styleRules": {
+    "class-1": {
+      "id": "class-1",
+      "name": "heading-style",
+      "kind": "class",
+      "selector": ".heading-style",
+      "order": 0,
+      "styles": { "fontSize": "2rem", "fontWeight": "700" },
+      "contextStyles": { "mobile": { "fontSize": "1.5rem" } },
+      "tags": ["heading", "typography"],
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000000000
+    },
+    "class-color": {
+      "id": "class-color",
+      "name": "text-primary",
+      "kind": "class",
+      "selector": ".text-primary",
+      "order": 0,
+      "styles": { "color": "var(--primary)" },
+      "contextStyles": {},
+      "generated": {
+        "origin": "framework",
+        "family": "color",
+        "sourceId": "primary-token",
+        "utility": "text",
+        "tokenName": "primary",
+        "locked": true
+      },
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000000000
+    },
+    "class-typography": {
+      "id": "class-typography",
+      "name": "text-m",
+      "kind": "class",
+      "selector": ".text-m",
+      "order": 0,
+      "styles": { "fontSize": "clamp(1rem, 2vw, 1.2rem)" },
+      "contextStyles": {},
+      "generated": {
+        "origin": "framework",
+        "family": "typography",
+        "sourceId": "body-group",
+        "generatorId": "gen-1",
+        "tokenName": "text",
+        "step": "m",
+        "locked": true
+      },
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000000000
+    },
+    "class-spacing": {
+      "id": "class-spacing",
+      "name": "space-m",
+      "kind": "class",
+      "selector": ".space-m",
+      "order": 0,
+      "styles": { "padding": "clamp(0.5rem, 2vw, 1rem)" },
+      "contextStyles": {},
+      "generated": {
+        "origin": "framework",
+        "family": "spacing",
+        "sourceId": "space-group",
+        "generatorId": "gen-2",
+        "tokenName": "space",
+        "step": "m",
+        "locked": true
+      },
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000000000
+    }
+  },
+  "settings": {
+    "metaTitle": "My Round-Trip Site",
+    "metaDescription": "Testing round-trips",
+    "language": "en",
+    "shortcuts": { "save": "ctrl+s" },
+    "framework": {
+      "colors": {
+        "tokens": [
+          {
+            "id": "primary-token",
+            "category": "Brand",
+            "slug": "primary",
+            "lightValue": "hsla(238, 100%, 62%, 1)",
+            "darkValue": "hsla(238, 70%, 45%, 1)",
+            "darkModeEnabled": true,
+            "generateUtilities": {
+              "text": true,
+              "background": true,
+              "border": false,
+              "fill": false
+            },
+            "generateTransparent": false,
+            "generateShades": { "enabled": true, "count": 4 },
+            "generateTints": { "enabled": false, "count": 0 },
+            "order": 0,
+            "createdAt": 1700000000000,
+            "updatedAt": 1700000000000
+          }
+        ]
+      },
+      "typography": {
+        "groups": [
+          {
+            "id": "body-group",
+            "name": "Body",
+            "namingConvention": "text",
+            "mode": "fluid",
+            "min": { "fontSize": 14, "scaleRatio": 1.125 },
+            "max": { "fontSize": 16, "scaleRatio": 1.25 },
+            "steps": "xs,s,m,l,xl",
+            "baseScaleIndex": 2,
+            "order": 0,
+            "createdAt": 1700000000000,
+            "updatedAt": 1700000000000
+          }
+        ],
+        "classes": [
+          {
+            "id": "gen-1",
+            "name": "text-{step}",
+            "property": ["font-size", "line-height"],
+            "tabId": "body-group"
+          }
+        ]
+      },
+      "spacing": {
+        "groups": [
+          {
+            "id": "space-group",
+            "name": "Space",
+            "namingConvention": "space",
+            "mode": "fluid",
+            "min": { "size": 4, "scaleRatio": 1.25 },
+            "max": { "size": 8, "scaleRatio": 1.414 },
+            "steps": "xs,s,m,l,xl",
+            "baseScaleIndex": 2,
+            "order": 0,
+            "createdAt": 1700000000000,
+            "updatedAt": 1700000000000
+          }
+        ],
+        "classes": [
+          {
+            "id": "gen-2",
+            "name": "space-{step}",
+            "property": ["padding"],
+            "tabId": "space-group"
+          }
+        ]
+      },
+      "preferences": {
+        "rootFontSize": 10,
+        "minScreenWidth": 320,
+        "maxScreenWidth": 1400,
+        "isRem": true,
+        "treeShakeGeneratedFrameworkUtilities": true
+      }
+    }
+  },
+  "packageJson": {
+    "dependencies": {
+      "three": "^0.160.0"
+    },
+    "devDependencies": {}
+  },
+  "runtime": {
+    "dependencyLock": {
+      "version": 1,
+      "packages": {
+        "three": {
+          "name": "three",
+          "requested": "^0.160.0",
+          "version": "0.160.0",
+          "resolvedAt": 1700000000000
+        }
+      },
+      "updatedAt": 1700000000000
+    },
+    "scripts": {
+      "script-1": {
+        "enabled": true,
+        "runInCanvas": false,
+        "format": "module",
+        "placement": "body-end",
+        "timing": "dom-ready",
+        "scope": { "type": "all-pages" },
+        "priority": 100
+      }
+    },
+    "styles": {
+      "style-1": {
+        "enabled": true,
+        "scope": { "type": "pages", "pageIds": ["page-home"] },
+        "priority": 50
+      }
+    }
+  }
+}

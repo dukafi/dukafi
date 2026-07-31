@@ -1,0 +1,65 @@
+/**
+ * BreakpointFrame — fixed-width viewport container for one breakpoint.
+ * Uses design tokens from globals.css (no hardcoded colours).
+ *
+ * Dynamic width is driven via the --bp-width CSS custom property set
+ * inline on the wrapper element (breakpoint.width changes per frame).
+ */
+
+.frameWrapper {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    opacity: 1;
+    transition:
+        opacity 140ms ease,
+        filter 140ms ease;
+    /* Isolate each frame as its own layout + paint containment box so paint
+       invalidation and (implicit) compositing don't propagate across frames or
+       into the editor chrome — reduces the oversized-layer pressure behind the
+       blank-content bug. NOTE: paint containment clips the frame's drop shadow
+       to the wrapper box; if that reads poorly, drop `paint` and keep `layout`. */
+    contain: layout paint;
+}
+
+.frameWrapperDimmed {
+    filter: saturate(0.72);
+    opacity: 0.42;
+}
+
+.frameWrapperDimmed:hover {
+    opacity: 0.68;
+}
+
+/**
+ * Frame chrome row — sits above the viewport and matches its width.
+ * Holds the breakpoint label button. Preview-mode chrome (status pill +
+ * Refresh) lives in CanvasPreviewSurface, not here.
+ */
+.labelRow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    width: var(--bp-width);
+}
+
+/* Label button takes most of the row; shrinks just enough to make room for the pill. */
+.labelBtn {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Pixel-count badge inside label button */
+.pxBadge {
+    opacity: 0.6;
+}
+
+/* Viewport frame — width driven by --bp-width CSS var */
+.viewport {
+    width: var(--bp-width);
+    min-height: 100vh;
+    background: var(--overlay);
+    box-shadow: 0 2px 12px var(--scrim-30);
+    overflow: hidden;
+    position: relative;
+}

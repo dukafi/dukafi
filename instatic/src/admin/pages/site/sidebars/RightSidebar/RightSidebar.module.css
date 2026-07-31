@@ -1,0 +1,47 @@
+.sidebar {
+    position: relative;
+    z-index: 85;
+    display: flex;
+    --right-sidebar-panel-width: 0px;
+    --right-sidebar-panel-layout-width: var(--right-sidebar-panel-width);
+    --right-sidebar-panel-render-width: min(var(--right-sidebar-panel-width), 100vw);
+    --right-sidebar-panel-render-layout-width: min(var(--right-sidebar-panel-layout-width), 100vw);
+    flex: 0 0 var(--right-sidebar-panel-render-width);
+    width: var(--right-sidebar-panel-render-width);
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--bg-body);
+    /* Width transition for user-driven open/close — same model as the
+       left sidebar. The transition only fires when the user toggles
+       collapsed/expanded; it does NOT fire on page load because the
+       sidebar's width is derived from synchronous site editor state. */
+    transition:
+        flex-basis 180ms ease,
+        width 180ms ease;
+}
+
+.panelSlot {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: var(--right-sidebar-panel-render-layout-width);
+    min-height: 0;
+    overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sidebar {
+        transition: none;
+    }
+}
+
+@media (max-width: 760px) {
+    .sidebar {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+    }
+}

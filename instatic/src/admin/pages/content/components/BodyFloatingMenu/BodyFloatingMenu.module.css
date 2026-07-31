@@ -1,0 +1,28 @@
+/* "+" button anchored to the editor's left gutter (left of the prose
+ * surface, inside the `--gutter` padding the .document reserves). Only
+ * `top` is JS-computed (caret-line tracking); `left` is a fixed offset. */
+
+.gutterButton {
+    position: absolute;
+    left: -36px;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-body);
+    color: var(--text-muted);
+    aspect-ratio: 1 / 1;
+    z-index: 5;
+    transition: color 80ms ease, border-color 80ms ease, background 80ms ease,
+                opacity 100ms ease;
+}
+
+.gutterButton:hover,
+.gutterButton:focus-visible {
+    color: var(--text);
+    border-color: var(--text-subtle);
+    background: var(--bg-surface-3);
+}

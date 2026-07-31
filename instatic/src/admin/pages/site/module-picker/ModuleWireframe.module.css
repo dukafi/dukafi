@@ -1,0 +1,275 @@
+.frame {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    overflow: hidden;
+}
+
+.node {
+    --wire-flex: 0;
+    --wire-w: auto;
+    --wire-h: auto;
+    --wire-gap: var(--space-2xs);
+    --wire-pad: 0;
+
+    flex-grow: var(--wire-flex);
+    flex-shrink: 1;
+    flex-basis: auto;
+    width: var(--wire-w);
+    min-width: 0;
+}
+
+.kindRow,
+.kindCol,
+.kindBox {
+    --wire-w: 100%;
+
+    display: flex;
+    gap: var(--wire-gap);
+    padding: var(--wire-pad);
+    min-width: 0;
+}
+
+.kindRow {
+    flex-direction: row;
+}
+
+.kindCol,
+.kindBox {
+    flex-direction: column;
+}
+
+.kindBox {
+    height: var(--wire-h);
+    min-height: 0;
+    border: 1px solid color-mix(in srgb, var(--text-subtle) 26%, transparent);
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--text-subtle) 5%, transparent);
+}
+
+.dashed {
+    border-style: dashed;
+}
+
+.card {
+    border: 1px solid color-mix(in srgb, var(--text-subtle) 20%, transparent);
+    background: color-mix(in srgb, var(--text-subtle) 7%, transparent);
+}
+
+.center {
+    align-items: center;
+    justify-content: center;
+}
+
+.alignCenter {
+    align-items: center;
+}
+
+.alignEnd {
+    align-items: flex-end;
+}
+
+.alignStart {
+    align-items: flex-start;
+}
+
+.kindLines {
+    --wire-w: 100%;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+    width: var(--wire-w);
+    min-width: 0;
+}
+
+.line {
+    display: block;
+    width: 100%;
+    height: 5px;
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--text-bright) 16%, transparent);
+}
+
+.kindLines .line:nth-child(2) {
+    width: 82%;
+}
+
+.kindLines .line:nth-child(3) {
+    width: 62%;
+}
+
+.big .line {
+    height: 8px;
+    background: color-mix(in srgb, var(--text-bright) 28%, transparent);
+}
+
+.mono .line {
+    height: 4px;
+    border-radius: 0;
+    background: repeating-linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--text-bright) 22%, transparent) 0 6px,
+        transparent 6px 9px
+    );
+}
+
+.link .line {
+    background: color-mix(in srgb, var(--accent-3) 70%, transparent);
+}
+
+.kindImage {
+    --wire-w: 100%;
+
+    position: relative;
+    width: var(--wire-w);
+    height: var(--wire-h);
+    min-height: 20px;
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in srgb, var(--text-bright) 8%, transparent);
+    background: var(--canvas-placeholder-bg);
+    overflow: hidden;
+}
+
+.avatar {
+    width: var(--wire-w);
+    min-width: var(--wire-w);
+    border-radius: var(--input-radius);
+}
+
+.play {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 18px;
+    height: 18px;
+    border-radius: var(--input-radius);
+    background: color-mix(in srgb, var(--bg-body) 54%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 26%, transparent);
+}
+
+.kindField {
+    --wire-w: 100%;
+
+    position: relative;
+    width: var(--wire-w);
+    min-height: var(--wire-h);
+    border: 1px solid color-mix(in srgb, var(--text-subtle) 24%, transparent);
+    border-radius: var(--input-radius);
+    background: color-mix(in srgb, var(--text-subtle) 7%, transparent);
+}
+
+.caret {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    width: 5px;
+    height: 5px;
+    border-right: 1px solid color-mix(in srgb, var(--text-subtle) 42%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--text-subtle) 42%, transparent);
+    transform: translateY(-65%) rotate(45deg);
+}
+
+.kindButton {
+    width: var(--wire-w);
+    height: 13px;
+    border-radius: var(--input-radius);
+    border: 1px solid color-mix(in srgb, var(--text-subtle) 28%, transparent);
+    background: color-mix(in srgb, var(--text-bright) 12%, transparent);
+}
+
+.solid {
+    background: color-mix(in srgb, var(--text-bright) 34%, transparent);
+}
+
+.kindPill {
+    width: var(--wire-w);
+    height: 11px;
+    border-radius: var(--input-radius);
+    background: color-mix(in srgb, var(--text-bright) 10%, transparent);
+}
+
+.kindIcon {
+    width: 11px;
+    height: 11px;
+    border-radius: var(--radius-sm);
+    border: 0;
+    background: color-mix(in srgb, var(--text-bright) 20%, transparent);
+}
+
+.kindIcon.big {
+    width: 18px;
+    height: 18px;
+}
+
+.kindDot,
+.kindCheck,
+.kindRadio {
+    width: 8px;
+    height: 8px;
+    min-width: 8px;
+    background: color-mix(in srgb, var(--text-bright) 32%, transparent);
+}
+
+.kindCheck,
+.kindRadio {
+    background: transparent;
+    border: 1px solid color-mix(in srgb, var(--text-bright) 30%, transparent);
+}
+
+.kindDot {
+    border-radius: var(--input-radius);
+}
+
+.kindCheck {
+    border-radius: var(--radius-sm);
+}
+
+.kindRadio {
+    border-radius: var(--input-radius);
+}
+
+.kindRule {
+    height: 1px;
+    min-height: 1px;
+    background: color-mix(in srgb, var(--text-bright) 14%, transparent);
+}
+
+.kindRule.vertical {
+    width: 2px;
+    height: auto;
+    min-height: 28px;
+    background: var(--moduleInserterAccent);
+    opacity: 0.7;
+}
+
+.kindGap {
+    display: block;
+    height: var(--wire-h);
+}
+
+.bar {
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--text-bright) 4%, transparent);
+}
+
+.code {
+    background: color-mix(in srgb, var(--bg-body) 35%, transparent);
+}
+
+.logo {
+    width: 24px;
+    height: 24px;
+}
+
+.message {
+    border-style: solid;
+}
+
+.tip {
+    border-radius: var(--radius-sm);
+}

@@ -1,0 +1,130 @@
+/* Users page body — sits inside AdminPageLayout, which provides the
+   scroll container, max-width, and page header. We just stack the
+   per-section blocks (Users / Roles / Audit). User and role edits are
+   shown via the shared <Dialog/> primitive (portaled to body). */
+.body {
+    display: grid;
+    gap: var(--space-6xl);
+}
+
+.sectionHeader {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-3xl);
+}
+
+.sectionHeader h2 {
+    margin: 0;
+    color: var(--text-bright);
+    letter-spacing: 0;
+    font-size: var(--text-2xl);
+    line-height: 1.25;
+}
+
+.sectionHeader p,
+.identity span,
+.identity small,
+.secondaryText {
+    margin: 0;
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+    line-height: 1.45;
+}
+
+.badges,
+.auditDetails,
+.groupActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-s);
+}
+
+.section {
+    display: grid;
+    gap: var(--space-2xl);
+}
+
+.actionsHeader,
+.actionsCell {
+    text-align: right;
+}
+
+.actionsCell {
+    justify-content: flex-end;
+}
+
+.identityRow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-l);
+    min-width: 0;
+}
+
+.identity {
+    display: grid;
+    gap: var(--space-2xs);
+    min-width: 0;
+}
+
+.identity strong,
+.tableTitle,
+.auditTitle {
+    color: var(--text-bright);
+    font-size: var(--text-l);
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.identity strong,
+.identity span,
+.identity small {
+    overflow-wrap: anywhere;
+}
+
+/* Role dialog identity row (Name + Slug). The capability picker itself now
+   lives in the shared `@admin/shared/CapabilityPicker`. */
+.roleIdentityGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    gap: var(--space-l);
+}
+
+.emptyState,
+.error {
+    margin: 0;
+    font-size: var(--text-s);
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.emptyState {
+    color: var(--text-subtle);
+}
+
+.error {
+    color: var(--danger);
+}
+
+@media (max-width: 960px) {
+    .sectionHeader {
+        grid-template-columns: 1fr;
+        align-items: start;
+    }
+
+    .actionsHeader,
+    .actionsCell {
+        text-align: left;
+    }
+
+    .actionsCell {
+        justify-content: flex-start;
+    }
+}
+
+
+@media (max-width: 620px) {
+    .roleIdentityGrid {
+        grid-template-columns: 1fr;
+    }
+}

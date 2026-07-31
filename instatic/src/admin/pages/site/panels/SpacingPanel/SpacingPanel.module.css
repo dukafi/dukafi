@@ -1,0 +1,275 @@
+/* Per-step preview rendered via the spacing adapter's `renderPreview`
+ * callback (used as a fallback when the chart isn't rendered). Inlined into
+ * the FrameworkScalePanel step rows. */
+.previewBar {
+    display: inline-block;
+    height: 6px;
+    border-radius: var(--radius-sm);
+    background: var(--text);
+    opacity: 0.7;
+    max-width: 100%;
+}
+
+/* ─── Bar chart (DIV-based, 1px = 1px) ──────────────────────────────────── */
+
+/* Single-column grid (bars span the full width). The device icons are pulled
+ * out of the flow and pinned to the two left corners — top-left (desktop) and
+ * bottom-left (mobile) — which sit in dead space because the short left-hand
+ * bars are anchored to the centerline (desktop grows up, mobile grows down).
+ *
+ * Rows (top → bottom):
+ *   1. desktop bar row — each bar column stacks [label, bar] anchored to the
+ *      centerline, so the value label rides the bar's tip wherever it lands.
+ *   2. centerline — step labels (xs, s, m, …) live here; +/− edge buttons.
+ *   3. mobile bar row — each column stacks [bar, label] anchored to the
+ *      centerline (mirror of desktop).
+ */
+.barChart {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0;
+    padding: var(--space-3xs) 0 0;
+}
+
+.barChartIcon {
+    position: absolute;
+    left: var(--space-3xs);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.barChartIcon[data-side="desktop"] {
+    top: 0;
+    color: var(--chart-series-max);
+}
+
+.barChartIcon[data-side="mobile"] {
+    bottom: 0;
+    color: var(--chart-series-min);
+}
+
+/* Each row owns its full px-tall area. The SVG below fills the bar half
+ * (the part of the row NOT reserved for the value label), and the label
+ * overlay is absolutely positioned over the same area so the labels can
+ * be translated to ride each bar's tip. */
+.barChartRow {
+    grid-column: 1;
+    position: relative;
+    width: 100%;
+    padding: 0 var(--space-3xs);
+    min-height: 4px;
+}
+
+.barChartRow[data-side="desktop"] {
+    grid-row: 1;
+}
+
+.barChartRow[data-side="mobile"] {
+    grid-row: 3;
+}
+
+/* Baseline-step highlight — a single vertical bar in the base step's
+ * column that spans the FULL chart height (desktop row + center + mobile
+ * row). Acts as a soft background mark for the base size so the eye can
+ * find the anchor at a glance. The cell has the same width as a bar
+ * (same `flex: 1` + 3px gap + 4px side padding template) but uses a
+ * 12px border-radius, NOT the full pill the bars themselves use.
+ *
+ * Implementation: a flex row of stretch children inside a grid item
+ * spanning all chart rows. Flex with `align-items: stretch` makes each
+ * cell fill the container's full height — a CSS-grid implicit row would
+ * collapse to 0 because the cells are empty spans.
+ *
+ * Sits BEHIND everything else (rendered first in DOM, no z-index needed). */
+.barChartBaseHighlight {
+    grid-column: 1;
+    /* Span all three explicit chart rows (desktop, center, mobile). We use
+     * `span 3` instead of `1 / -1` because `.barChart` has no
+     * `grid-template-rows`, so its row tracks are implicit and `-1` would
+     * resolve to the end of just the first explicit track (= row 1 only). */
+    grid-row: 1 / span 3;
+    align-self: stretch;
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-4xs);
+    padding: 0 var(--space-3xs);
+    pointer-events: none;
+}
+
+.barChartBaseHighlightCell {
+    flex: 1;
+    min-width: 0;
+}
+
+.barChartBaseHighlightCell[data-base="true"] {
+    /* Overlay (additive) rather than a surface tone so the base marker stays
+       visible when the Home card lifts its background on hover. */
+    background: var(--overlay-10);
+    border-radius: 12px;
+}
+
+/* Bar grid — one column per step, equal-width, anchored to the
+ * centerline-side of the row so each bar's tip points outward (desktop:
+ * up, mobile: down). The label-reserve gap (12px) stays on the outer
+ * edge of the row. Bars are simple CSS pills with `border-radius: 999px`
+ * and a small inter-bar gap. The grid template matches the label
+ * overlay so labels and bars share columns 1:1. */
+.barChartBars {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    height: calc(100% - 12px); /* leave VALUE_LABEL_RESERVE_PX for labels */
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: var(--space-4xs);
+    pointer-events: none;
+}
+
+.barChartRow[data-side="desktop"] .barChartBars {
+    bottom: 0;
+    align-items: end;
+}
+
+.barChartRow[data-side="mobile"] .barChartBars {
+    top: 0;
+    align-items: start;
+}
+
+.barChartBar {
+    width: 100%;
+    border-radius: 12px;
+}
+
+.barChartBarMax {
+    background: var(--chart-series-max);
+}
+
+.barChartBarMin {
+    background: var(--chart-series-min);
+}
+
+/* Floating value labels overlay — one cell per bar column, equally spaced
+ * across the row's width, label inside is translated by the bar's height
+ * so it lands right at the bar tip. The grid template (incl. gap) MUST
+ * match `.barChartBars` so each label cell sits over its bar. */
+.barChartLabelOverlay {
+    position: absolute;
+    inset: 0 4px;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: var(--space-4xs);
+    pointer-events: none;
+}
+
+.barChartLabelCell {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.barChartRow[data-side="desktop"] .barChartLabelCell {
+    align-items: flex-start;
+}
+
+.barChartRow[data-side="mobile"] .barChartLabelCell {
+    align-items: flex-end;
+    /* Mobile labels sit at the bottom of the row by default; per-bar
+     * translateY pushes them up to ride the bar tip. */
+}
+
+/* Base value labels read brighter / bolder so the eye finds the anchor. */
+.barValueLabel[data-base="true"][data-series="max"] {
+    color: var(--chart-series-max);
+    font-weight: 700;
+}
+
+.barValueLabel[data-base="true"][data-series="min"] {
+    color: var(--chart-series-min);
+    font-weight: 700;
+}
+
+.barValueLabel {
+    overflow: hidden;
+    color: var(--text-subtle);
+    font-size: var(--text-3xs);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+.barValueLabel[data-series="max"] {
+    color: color-mix(
+        in srgb,
+        var(--chart-series-max) 70%,
+        var(--text-subtle)
+    );
+}
+
+.barValueLabel[data-series="min"] {
+    color: color-mix(
+        in srgb,
+        var(--chart-series-min) 70%,
+        var(--text-subtle)
+    );
+}
+
+/* Centerline — spans the full chart width but lays its inner content out
+ * with the SAME 24px + 1fr template as the parent. That way the step labels
+ * sit in col 2 and use the same per-column grid as the bar rows, so each
+ * label lines up exactly under its bar column. The horizontal divider line
+ * is rendered as a `::before` pseudo-element so it cannot push the label
+ * grid around. */
+.barChartCenter {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    margin: var(--space-4xs) 0;
+}
+
+/* Same grid template as the bar rows (1fr per column, 3px gap, 4px side
+ * padding) — keeps the step labels aligned with the bars above/below. */
+.barChartStepLabels {
+    grid-column: 1;
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-4xs);
+    padding: 0 var(--space-3xs);
+}
+
+.barChartStepLabel {
+    padding: 0 var(--space-3xs);
+    color: var(--text-subtle);
+    font-size: var(--text-3xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1.4;
+    text-align: center;
+    text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.barChartStepLabel[data-base="true"] {
+    color: var(--text);
+    font-weight: 800;
+}
