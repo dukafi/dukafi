@@ -112,7 +112,7 @@ Goal: the editor builds real store pages.
   - [x] `store.cart-badge` — ALWAYS a fragment
 - [x] Loop prefetch: bake.rb resolves collection items into plain hashes before
       render (walker stays pure/synchronous)
-- [ ] Product-page template: one template document + per-product data binding
+- [x] Product-page template: one template document + per-product data binding
       (`currentEntry.title` etc.); bake every published product to
       `/products/<slug>.html`
 - [ ] Collection pages baked to `/collections/<slug>.html`; page 1 baked,

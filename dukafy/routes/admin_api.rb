@@ -263,7 +263,8 @@ class AdminApi < Roda
 
       r.get("pages") do
         require_admin!
-        { rows: Page.where(kind: "page").order(:id).map { |page| data_row(page) } }
+        ProductTemplate.ensure!
+        { rows: Page.order(:kind, :id).map { |page| data_row(page) } }
       end
 
       r.get("components") { require_admin!; { rows: [] } }

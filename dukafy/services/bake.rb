@@ -3,23 +3,26 @@ require "securerandom"
 
 class Bake
   Result = Data.define(:version, :page_count, :slot)
+  Entry = Data.define(:path, :title, :rendered)
   SAFE_SLUG = /\A[a-zA-Z0-9][a-zA-Z0-9_\/-]*\z/
 
   def self.call(
     state: SiteState.first,
     pages: Page.where(kind: "page", status: "published").order(:id).all,
+    product_template: Page.where(kind: "template", status: "published").order(:id).first,
     output_root: File.expand_path("../published", __dir__),
     registry: Dukafy::Publisher::REGISTRY,
     use_draft: false,
     commit: nil,
     tailwind_compiler: TailwindCompiler
   )
-    new(state:, pages:, output_root:, registry:, use_draft:, commit:, tailwind_compiler:).call
+    new(state:, pages:, product_template:, output_root:, registry:, use_draft:, commit:, tailwind_compiler:).call
   end
 
-  def initialize(state:, pages:, output_root:, registry:, use_draft:, commit:, tailwind_compiler:)
+  def initialize(state:, pages:, product_template:, output_root:, registry:, use_draft:, commit:, tailwind_compiler:)
     @state = state
     @pages = pages
+    @product_template = product_template
     @output_root = File.expand_path(output_root)
     @registry = registry
     @use_draft = use_draft
@@ -39,12 +42,13 @@ class Bake
     prepare_slot(slot_path)
 
     begin
-      rendered_pages = @pages.map { |page| [page, render_page(page)] }
-      tailwind_html = rendered_pages.map do |_page, rendered|
-        %(<body class="#{rendered.body_classes.join(' ')}">#{rendered.html}</body>)
+      prefetched = CommercePrefetcher.call
+      entries = page_entries(prefetched) + product_entries(prefetched)
+      tailwind_html = entries.map do |entry|
+        %(<body class="#{entry.rendered.body_classes.join(' ')}">#{entry.rendered.html}</body>)
       end.join("\n")
       tailwind_css = @tailwind_compiler.call(html: tailwind_html)
-      rendered_pages.each { |page, rendered| bake_page(page, rendered, tailwind_css, slot_path) }
+      entries.each { |entry| bake_entry(entry, tailwind_css, slot_path) }
       flip_current(slot_name)
       flipped = true
       if @commit
@@ -58,7 +62,7 @@ class Bake
       raise
     end
 
-    Result.new(version: version, page_count: @pages.length, slot: slot_name)
+    Result.new(version: version, page_count: entries.length, slot: slot_name)
   end
 
   private
@@ -69,24 +73,41 @@ class Bake
     FileUtils.mkdir_p(File.join(slot_path, "assets"))
   end
 
-  def render_page(page)
+  def page_entries(prefetched)
+    @pages.map do |page|
+      Entry.new(path: page.slug, title: page.title, rendered: render_page(page, prefetched:))
+    end
+  end
+
+  def product_entries(prefetched)
+    return [] unless @product_template
+
+    prefetched.fetch("products", {}).values.map do |product|
+      Entry.new(
+        path: "products/#{product.fetch('slug')}", title: product.fetch("title"),
+        rendered: render_page(@product_template, prefetched:, current_entry: product)
+      )
+    end
+  end
+
+  def render_page(page, prefetched:, current_entry: nil)
     document = @use_draft ? page.document_data : (page.published_document_data || page.document_data)
     Dukafy::Publisher::RenderPage.call(
-      document:, registry: @registry, site: @state.site, prefetched: CommercePrefetcher.call
+      document:, registry: @registry, site: @state.site, prefetched:, current_entry:
     )
   end
 
-  def bake_page(page, rendered, tailwind_css, slot_path)
-    relative_html = html_path(page.slug)
+  def bake_entry(entry, tailwind_css, slot_path)
+    relative_html = html_path(entry.path)
     collector = Dukafy::Publisher::CssCollector.new
-    collector.add("page-modules", rendered.css)
+    collector.add("page-modules", entry.rendered.css)
     framework = Dukafy::Publisher::FrameworkCss.call(@state.site)
     bundle = collector.bundle(framework_css: framework, tailwind_css: tailwind_css)
 
     File.write(File.join(slot_path, "assets", bundle.filename), bundle.content)
     destination = File.join(slot_path, relative_html)
     FileUtils.mkdir_p(File.dirname(destination))
-    File.write(destination, html_document(page, rendered, bundle.filename))
+    File.write(destination, html_document(entry.title, entry.rendered, bundle.filename))
   end
 
   def html_path(slug)
@@ -97,9 +118,9 @@ class Bake
     value == "index" ? "index.html" : "#{value}.html"
   end
 
-  def html_document(page, rendered, css_filename)
+  def html_document(entry_title, rendered, css_filename)
     language = @state.site.dig("settings", "language") || "en"
-    title = @state.site.dig("settings", "metaTitle") || page.title
+    title = @state.site.dig("settings", "metaTitle") || entry_title
     description = @state.site.dig("settings", "metaDescription")
     Dukafy::Publisher::HtmlDocument.call(
       title:, body: rendered.html, body_classes: rendered.body_classes,

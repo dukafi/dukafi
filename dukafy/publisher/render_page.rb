@@ -5,18 +5,19 @@ class Dukafy
     class RenderPage
       Result = Data.define(:html, :css, :body_classes)
 
-      def self.call(document:, registry:, prefetched: {}, breakpoint_id: nil, site: nil, query_params: {})
-        new(document, registry, prefetched, breakpoint_id, site, query_params).call
+      def self.call(document:, registry:, prefetched: {}, breakpoint_id: nil, site: nil, query_params: {}, current_entry: nil)
+        new(document, registry, prefetched, breakpoint_id, site, query_params, current_entry).call
       end
 
-      def initialize(document, registry, prefetched, breakpoint_id, site, query_params)
+      def initialize(document, registry, prefetched, breakpoint_id, site, query_params, current_entry)
         @document = document
         @registry = registry
         @prefetched = prefetched
         @breakpoint_id = breakpoint_id
         @site = site
         @query_params = query_params
-        @current_product = nil
+        @current_entry = current_entry
+        @current_product = current_entry
         @css = CssCollector.new
         @visiting = {}
         @body_classes = []
@@ -43,7 +44,7 @@ class Dukafy
         return render_collection_loop(node, definition) if definition.id == "store.collection-loop"
 
         children = node.fetch("children", []).map { |child_id| render_node(child_id) }
-        props = escaped_props(resolved_props(node, definition), definition.schema)
+        props = escaped_props(resolve_dynamic_bindings(node, resolved_props(node, definition)), definition.schema)
         output = definition.render(props, children, prefetched: @prefetched, node: node, current_product: @current_product)
         html = output.fetch(:html)
         classes = class_names(node)
@@ -59,7 +60,7 @@ class Dukafy
       end
 
       def render_collection_loop(node, definition)
-        props = escaped_props(resolved_props(node, definition), definition.schema)
+        props = escaped_props(resolve_dynamic_bindings(node, resolved_props(node, definition)), definition.schema)
         collection = @prefetched.dig("collections", props["collectionSlug"]) || {}
         products = collection.fetch("products", [])
         per_page = [[Integer(props["perPage"] || 12), 1].max, 100].min
@@ -75,11 +76,14 @@ class Dukafy
           next "" if variants.empty?
 
           previous = @current_product
+          previous_entry = @current_entry
           @current_product = product
+          @current_entry = product
           begin
             render_node(variants[(offset + index) % variants.length])
           ensure
             @current_product = previous
+            @current_entry = previous_entry
           end
         end.join
         pagination = StoreModules.collection_pagination(parameter, page, page_count)
@@ -88,6 +92,23 @@ class Dukafy
         html = inject_classes(html, classes) if classes.any?
         @css.add(definition.id, definition.render(props, [], prefetched: @prefetched)[:css])
         html
+      end
+
+      def resolve_dynamic_bindings(node, props)
+        node.fetch("dynamicBindings", {}).each_with_object(props.dup) do |(key, binding), resolved|
+          source = binding["source"]
+          entry = source == "currentEntry" ? @current_entry : nil
+          next unless entry.is_a?(Hash)
+
+          value = binding["field"].to_s.split(".").reduce(entry) do |current, field|
+            current.is_a?(Hash) ? current[field] : nil
+          end
+          if value.nil?
+            resolved[key] = "" if binding["fallback"] == "empty"
+          else
+            resolved[key] = value
+          end
+        end
       end
 
       def resolved_props(node, definition)

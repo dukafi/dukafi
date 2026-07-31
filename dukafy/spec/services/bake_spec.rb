@@ -2,6 +2,13 @@ require_relative "../spec_helper"
 
 class BakeSpec < Minitest::Test
   def setup
+    PageDependency.dataset.delete
+    CartItem.dataset.delete
+    Cart.dataset.delete
+    CollectionProduct.dataset.delete
+    Collection.dataset.delete
+    Variant.dataset.delete
+    Product.dataset.delete
     Page.dataset.delete
     SiteState.dataset.delete
     @output_root = Dir.mktmpdir("dukafy-bake-")
@@ -97,5 +104,30 @@ class BakeSpec < Minitest::Test
     assert_includes css, ".p-4{"
     refute_includes css, ".hidden{"
     refute_includes css, ".grid{"
+  end
+
+  def test_bakes_each_active_product_from_the_shared_product_template
+    Page.create(slug: "index", title: "Home", kind: "page", status: "published", document: document(text: "Store"))
+    template = ProductTemplate.ensure!
+    product = Product.create(
+      title: "Canvas & Carry Bag", slug: "canvas-bag", status: "active",
+      description_document: "", created_at: Time.now, updated_at: Time.now
+    )
+    Variant.create(
+      product_id: product.id, sku: "BAG", title: "Default", price_cents: 12_900,
+      currency: "USD", stock: 5, position: 0
+    )
+
+    result = Bake.call(
+      state: @state, product_template: template, output_root: @output_root, use_draft: true
+    )
+
+    assert_equal 2, result.page_count
+    html = File.read(File.join(@output_root, "current", "products", "canvas-bag.html"))
+    assert_includes html, "<title>Canvas &amp; Carry Bag</title>"
+    assert_includes html, "<h1>Canvas &amp; Carry Bag</h1>"
+    assert_includes html, '<span class="dukafy-price" data-product="canvas-bag">$129.00</span>'
+    assert_includes html, 'name="product_slug" value="canvas-bag"'
+    assert_includes html, 'hx-get="/fragments/stock?product_slug=canvas-bag'
   end
 end
