@@ -54,7 +54,7 @@ SQLite by hand to prove it).
 
 Goal: a saved document becomes a static HTML file on disk, served fast.
 
-- [ ] `render_page.rb` walker: bottom-up recursion, breakpoint prop resolution,
+- [x] `render_page.rb` walker: bottom-up recursion, breakpoint prop resolution,
       escape-at-boundary, module dispatch via registry
 - [ ] `css_collector.rb`: dedupe by moduleId; assemble reset + framework +
       module + page CSS; hash-named bundle files

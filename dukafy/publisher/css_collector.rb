@@ -6,7 +6,9 @@ class Dukafy
       end
 
       def add(module_id, css)
-        @rules[module_id] ||= css unless css.nil? || css.empty?
+        return if css.nil? || css.empty? || @rules.key?(module_id)
+
+        @rules[module_id] = css.gsub(%r{</style}i, '<\\/style')
       end
 
       def to_s
