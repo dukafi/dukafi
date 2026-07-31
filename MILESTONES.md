@@ -56,9 +56,9 @@ Goal: a saved document becomes a static HTML file on disk, served fast.
 
 - [x] `render_page.rb` walker: bottom-up recursion, breakpoint prop resolution,
       escape-at-boundary, module dispatch via registry
-- [ ] `css_collector.rb`: dedupe by moduleId; assemble reset + framework +
+- [x] `css_collector.rb`: dedupe by moduleId; assemble reset + framework +
       module + page CSS; hash-named bundle files
-- [ ] Port Instatic's reset CSS + a minimal framework CSS (tokens as CSS vars)
+- [x] Port Instatic's reset CSS + a minimal framework CSS (tokens as CSS vars)
 - [ ] Phlex/plain-Ruby modules with golden tests: `base.container`, `base.text`,
       `base.image`, `base.button`, `base.link`, `base.list`
 - [ ] Visual parity pass: rendered output vs editor canvas for the same document
