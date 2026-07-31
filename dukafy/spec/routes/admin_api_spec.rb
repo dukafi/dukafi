@@ -12,6 +12,7 @@ class AdminApiSpec < Minitest::Test
 
   def setup
     @uploaded_paths = []
+    UserPreference.dataset.delete
     Page.dataset.delete
     SiteState.dataset.delete
     Admin.dataset.delete
@@ -78,6 +79,38 @@ class AdminApiSpec < Minitest::Test
 
     assert_equal 401, last_response.status, last_response.body
     assert_equal "unauthorized", json.dig("error", "code")
+  end
+
+  def test_user_preferences_round_trip_and_reset
+    setup_and_login
+
+    get "/admin/api/cms/me/preferences/module-inserter"
+    assert_equal 200, last_response.status
+    assert_nil json.fetch("value")
+
+    value = { favorites: [{ kind: "module", id: "base.text" }] }
+    put "/admin/api/cms/me/preferences/module-inserter", JSON.generate({ value: value }),
+        "CONTENT_TYPE" => "application/json"
+    assert_equal 200, last_response.status, last_response.body
+    assert_equal JSON.parse(JSON.generate(value)), json.fetch("value")
+
+    get "/admin/api/cms/me/preferences/module-inserter"
+    assert_equal "base.text", json.dig("value", "favorites", 0, "id")
+
+    delete "/admin/api/cms/me/preferences/module-inserter"
+    assert_equal 200, last_response.status
+    assert_nil json.fetch("value")
+  end
+
+  def test_user_preferences_reject_unknown_keys_and_invalid_values
+    setup_and_login
+
+    get "/admin/api/cms/me/preferences/not-allowed"
+    assert_equal 400, last_response.status
+
+    put "/admin/api/cms/me/preferences/module-inserter", JSON.generate({ value: { favorites: [{ kind: "bad", id: "x" }] } }),
+        "CONTENT_TYPE" => "application/json"
+    assert_equal 422, last_response.status
   end
 
   def test_media_upload_list_and_delete

@@ -16,6 +16,9 @@ class AdminApi < Roda
     pages.edit site.content.edit site.structure.edit site.style.edit system
   ].freeze
 
+  USER_PREFERENCE_KEYS = %w[dashboard-layout module-inserter].freeze
+  MODULE_INSERTER_KINDS = %w[module savedLayout component].freeze
+
   def error_payload(code, message)
     { error: { code: code, message: message } }
   end
@@ -31,6 +34,28 @@ class AdminApi < Roda
 
   def require_admin!
     current_admin || halt_json(401, "unauthorized", "Authentication required")
+  end
+
+  def valid_user_preference?(key, value)
+    return false unless value.is_a?(Hash)
+
+    case key
+    when "module-inserter"
+      favorites = value["favorites"]
+      favorites.is_a?(Array) && favorites.length <= 12 && favorites.all? do |item|
+        item.is_a?(Hash) && MODULE_INSERTER_KINDS.include?(item["kind"]) &&
+          item["id"].is_a?(String)
+      end
+    when "dashboard-layout"
+      items = value["items"]
+      value.key?("onboardingDismissed") && [true, false].include?(value["onboardingDismissed"]) &&
+        items.is_a?(Array) && items.all? do |item|
+          item.is_a?(Hash) && item["id"].is_a?(String) && item["size"].is_a?(Numeric) &&
+            %w[rows col row].all? { |field| !item.key?(field) || item[field].is_a?(Numeric) }
+        end && (!value.key?("libraryHeight") || value["libraryHeight"].is_a?(Numeric))
+    else
+      false
+    end
   end
 
   def user_payload(admin)
@@ -131,6 +156,33 @@ class AdminApi < Roda
       r.get("me") do
         admin = require_admin!
         { user: user_payload(admin), role: user_payload(admin)[:role], capabilities: CAPABILITIES }
+      end
+
+
+      r.on("me", "preferences", String) do |key|
+        admin = require_admin!
+        halt_json(400, "invalid_preference_key", "Unknown user preference") unless USER_PREFERENCE_KEYS.include?(key)
+
+        preference = UserPreference.first(admin_id: admin.id, key: key)
+        r.get { { value: preference&.value } }
+        r.put do
+          value = r.params["value"]
+          halt_json(422, "invalid_preference", "Invalid user preference value") unless valid_user_preference?(key, value)
+
+          if preference
+            preference.value = value
+            preference.save
+          else
+            preference = UserPreference.new(admin_id: admin.id, key: key)
+            preference.value = value
+            preference.save
+          end
+          { value: preference.value }
+        end
+        r.delete do
+          preference&.destroy
+          { value: nil }
+        end
       end
 
       r.get("site") do
