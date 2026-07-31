@@ -66,4 +66,46 @@ class AdminStoreSpec < Minitest::Test
     assert_equal 422, last_response.status
     assert_includes last_response.body, "already been taken"
   end
+
+  def test_variant_create_update_order_and_delete
+    login
+    product = Product.create(title: "Canvas Bag", slug: "canvas-bag", status: "active")
+
+    post "/admin/store/products/#{product.id}/variants",
+      sku: "BAG-BLACK", title: "Black", price_cents: "12900", currency: "usd", stock: "8", position: "2"
+    variant = product.variants_dataset.first
+    assert_equal 302, last_response.status
+    assert_equal 12_900, variant.price_cents
+    assert_equal "USD", variant.currency
+    assert_equal 8, variant.stock
+
+    get "/admin/store/products/#{product.id}"
+    assert_includes last_response.body, "BAG-BLACK"
+    assert_includes last_response.body, "Price (cents)"
+
+    post "/admin/store/products/#{product.id}/variants/#{variant.id}/update",
+      sku: "BAG-BLACK", title: "Midnight", price_cents: "13900", currency: "USD", stock: "5", position: "0"
+    assert_equal 302, last_response.status
+    assert_equal "Midnight", variant.refresh.title
+    assert_equal 0, variant.position
+
+    post "/admin/store/products/#{product.id}/variants/#{variant.id}/delete"
+    assert_equal 302, last_response.status
+    assert_nil Variant[variant.id]
+  end
+
+  def test_variant_rejects_negative_values_and_duplicate_product_sku
+    login
+    product = Product.create(title: "Canvas Bag", slug: "canvas-bag", status: "active")
+    other = Product.create(title: "Other Bag", slug: "other-bag", status: "active")
+    product.add_variant(sku: "BAG-1", title: "Default", price_cents: 1000, currency: "USD", stock: 1, position: 0)
+    other.add_variant(sku: "BAG-1", title: "Allowed on another product", price_cents: 1000, currency: "USD", stock: 1, position: 0)
+
+    post "/admin/store/products/#{product.id}/variants",
+      sku: "BAG-1", title: "Duplicate", price_cents: "-1", currency: "USD", stock: "-2", position: "-1"
+
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, "has already been used for this product"
+    assert_equal 1, product.variants_dataset.count
+  end
 end

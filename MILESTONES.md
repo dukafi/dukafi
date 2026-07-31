@@ -83,7 +83,7 @@ Goal: merchants manage a real catalog without touching the canvas.
 
 - [x] Product CRUD screens (server-rendered Phlex + HTMX inside /admin shell or
       a dedicated /admin/store area — decide and document)
-- [ ] Variants: inline editor per product (sku, price_cents, stock, position)
+- [x] Variants: inline editor per product (sku, price_cents, stock, position)
 - [ ] Collections CRUD + drag-order product membership
 - [ ] Product description as an editor document (reuse the canvas for rich
       product content) OR rich-text field for v1 — decide, record in VISION.md
