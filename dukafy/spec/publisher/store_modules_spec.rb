@@ -215,4 +215,17 @@ class StoreModulesSpec < Minitest::Test
     assert_includes second_page.html, 'href="/products/third"'
     assert_includes second_page.html, 'Page 2 of 2'
   end
+
+  def test_stock_badge_always_renders_a_fragment_placeholder
+    definition = Dukafy::Publisher::REGISTRY.fetch("store.stock-badge")
+    output = definition.render(
+      { "productSlug" => "canvas-bag", "variantSku" => "BAG-L", "lowStockThreshold" => 4 },
+      [], prefetched: { "products" => {} }
+    )
+
+    assert_equal :fragment, Dukafy::Publisher::DYNAMIC_MAP.fetch("store.stock-badge")
+    assert_equal File.read(File.expand_path("../golden/stock_badge.html", __dir__)).chomp, output.fetch(:html)
+    assert_includes output.fetch(:css), ".dukafy-stock-badge{"
+    refute_includes output.fetch(:html), "data-stock="
+  end
 end

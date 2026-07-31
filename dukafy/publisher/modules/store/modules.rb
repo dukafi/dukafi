@@ -16,6 +16,9 @@ class Dukafy
       COLLECTION_LOOP_CSS = <<~CSS
         .dukafy-collection-loop{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr));gap:1rem}.dukafy-collection-loop__pagination{display:flex;grid-column:1/-1;align-items:center;justify-content:center;gap:1rem}.dukafy-collection-loop__pagination a{color:inherit}
       CSS
+      STOCK_BADGE_CSS = <<~CSS
+        .dukafy-stock-badge{display:inline-flex;align-items:center;gap:.375rem;font-size:.875rem}.dukafy-stock-badge::before{content:"";width:.5rem;height:.5rem;border-radius:999px;background:currentColor}.dukafy-stock-badge--in-stock{color:#15803d}.dukafy-stock-badge--low{color:#a16207}.dukafy-stock-badge--sold-out{color:#b91c1c}.dukafy-stock-badge--loading{opacity:.6}
+      CSS
 
       module_function
 
@@ -116,6 +119,17 @@ class Dukafy
           defaults: { "collectionSlug" => "", "perPage" => 12 },
         ) do |_props, children, _context|
           { html: %(<div class="dukafy-collection-loop">#{children.join}</div>), css: COLLECTION_LOOP_CSS }
+        end
+        registry.register(
+          "store.stock-badge",
+          defaults: { "productSlug" => "", "variantSku" => "", "lowStockThreshold" => 5 },
+        ) do |props, _children, context|
+          product = bound_product(props, context)
+          product_slug = bound_product_slug(props, product)
+          threshold = [[Integer(props["lowStockThreshold"] || 5), 0].max, 100_000].min
+          query = "product_slug=#{CGI.escape(product_slug)}&variant_sku=#{CGI.escape(props['variantSku'].to_s)}&low_stock_threshold=#{threshold}"
+          html = %(<span class="dukafy-stock-badge dukafy-stock-badge--loading" hx-get="/fragments/stock?#{CGI.escapeHTML(query)}" hx-trigger="revealed" hx-swap="outerHTML" aria-live="polite">Checking availability…</span>)
+          { html:, css: STOCK_BADGE_CSS }
         end
       end
 

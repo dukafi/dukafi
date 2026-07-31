@@ -55,4 +55,25 @@ class FragmentsSpec < Minitest::Test
     assert_equal 422, last_response.status
     assert_equal 0, CartItem.count
   end
+
+  def test_stock_fragment_reports_variant_and_product_inventory
+    get "/fragments/stock", product_slug: "canvas-bag", variant_sku: "BAG-L", low_stock_threshold: "3"
+
+    assert_equal 200, last_response.status
+    assert_equal "no-store", last_response.headers.fetch("cache-control")
+    assert_includes last_response.body, 'data-stock="3"'
+    assert_includes last_response.body, "Only 3 left"
+
+    @variant.update(stock: 8)
+    get "/fragments/stock", product_slug: "canvas-bag", low_stock_threshold: "3"
+    assert_includes last_response.body, "In stock"
+  end
+
+  def test_stock_fragment_returns_sold_out_for_missing_inventory_without_leaking_details
+    get "/fragments/stock", product_slug: "missing", variant_sku: "BAD"
+
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, "Sold out"
+    refute_includes last_response.body, "missing"
+  end
 end

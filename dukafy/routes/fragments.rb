@@ -18,7 +18,34 @@ class Fragments < Roda
     %(<div id="dukafy-cart-summary" class="dukafy-buy-result dukafy-cart-summary" data-cart-count="#{count}">#{message}<span>#{count} #{count == 1 ? 'item' : 'items'} in cart</span></div>)
   end
 
+  def stock_fragment(product, variant_sku, threshold)
+    variants = product&.variants || []
+    variant = variant_sku.empty? ? nil : variants.find { |item| item.sku == variant_sku }
+    quantity = variant ? variant.stock : variants.sum(&:stock)
+    state, label = if quantity <= 0
+      ["sold-out", "Sold out"]
+    elsif quantity <= threshold
+      ["low", "Only #{quantity} left"]
+    else
+      ["in-stock", "In stock"]
+    end
+    %(<span class="dukafy-stock-badge dukafy-stock-badge--#{state}" data-stock="#{quantity}" aria-live="polite">#{label}</span>)
+  end
+
   route do |r|
+    r.get("stock") do
+      product = Product.first(slug: r.params["product_slug"].to_s, status: "active")
+      variant_sku = r.params["variant_sku"].to_s
+      threshold = Integer(r.params.fetch("low_stock_threshold", "5"), exception: false)
+      threshold = [[threshold || 5, 0].max, 100_000].min
+      response["Content-Type"] = "text/html; charset=utf-8"
+      response["Cache-Control"] = "no-store"
+      next stock_fragment(nil, variant_sku, threshold) unless product
+      next stock_fragment(nil, variant_sku, threshold) if !variant_sku.empty? && product.variants.none? { |item| item.sku == variant_sku }
+
+      stock_fragment(product, variant_sku, threshold)
+    end
+
     r.on("cart") do
       r.post("items") do
         product = Product.first(slug: r.params["product_slug"].to_s, status: "active")
