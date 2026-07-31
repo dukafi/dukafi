@@ -9,20 +9,23 @@ class Bake
   def self.call(
     state: SiteState.first,
     pages: Page.where(kind: "page", status: "published").order(:id).all,
-    product_template: Page.where(kind: "template", status: "published").order(:id).first,
+    product_template: nil,
+    collection_template: nil,
     output_root: File.expand_path("../published", __dir__),
     registry: Dukafy::Publisher::REGISTRY,
     use_draft: false,
     commit: nil,
     tailwind_compiler: TailwindCompiler
   )
-    new(state:, pages:, product_template:, output_root:, registry:, use_draft:, commit:, tailwind_compiler:).call
+    new(state:, pages:, product_template:, collection_template:, output_root:, registry:, use_draft:, commit:, tailwind_compiler:).call
   end
 
-  def initialize(state:, pages:, product_template:, output_root:, registry:, use_draft:, commit:, tailwind_compiler:)
+  def initialize(state:, pages:, product_template:, collection_template:, output_root:, registry:, use_draft:, commit:, tailwind_compiler:)
     @state = state
     @pages = pages
-    @product_template = product_template
+    published_templates = Page.where(kind: "template", status: "published").order(:id).all
+    @product_template = product_template || template_for(published_templates, "products")
+    @collection_template = collection_template || template_for(published_templates, "collections")
     @output_root = File.expand_path(output_root)
     @registry = registry
     @use_draft = use_draft
@@ -43,7 +46,7 @@ class Bake
 
     begin
       prefetched = CommercePrefetcher.call
-      entries = page_entries(prefetched) + product_entries(prefetched)
+      entries = page_entries(prefetched) + product_entries(prefetched) + collection_entries(prefetched)
       tailwind_html = entries.map do |entry|
         %(<body class="#{entry.rendered.body_classes.join(' ')}">#{entry.rendered.html}</body>)
       end.join("\n")
@@ -67,6 +70,12 @@ class Bake
 
   private
 
+  def template_for(templates, table_slug)
+    templates.find do |template|
+      template.document_data.dig("template", "target", "tableSlugs")&.include?(table_slug)
+    end
+  end
+
   def prepare_slot(slot_path)
     FileUtils.mkdir_p(@output_root)
     FileUtils.rm_rf(slot_path)
@@ -86,6 +95,17 @@ class Bake
       Entry.new(
         path: "products/#{product.fetch('slug')}", title: product.fetch("title"),
         rendered: render_page(@product_template, prefetched:, current_entry: product)
+      )
+    end
+  end
+
+  def collection_entries(prefetched)
+    return [] unless @collection_template
+
+    prefetched.fetch("collections", {}).values.map do |collection|
+      Entry.new(
+        path: "collections/#{collection.fetch('slug')}", title: collection.fetch("title"),
+        rendered: render_page(@collection_template, prefetched:, current_entry: collection)
       )
     end
   end

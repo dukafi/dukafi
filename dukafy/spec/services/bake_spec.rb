@@ -130,4 +130,34 @@ class BakeSpec < Minitest::Test
     assert_includes html, 'name="product_slug" value="canvas-bag"'
     assert_includes html, 'hx-get="/fragments/stock?product_slug=canvas-bag'
   end
+
+  def test_bakes_page_one_for_each_collection_from_the_shared_template
+    Page.create(slug: "index", title: "Home", kind: "page", status: "published", document: document(text: "Store"))
+    template = CollectionTemplate.ensure!
+    template_document = template.document_data
+    template_document["nodes"]["collection-products"]["props"]["perPage"] = 2
+    template.update(document: template_document)
+    collection = Collection.create(title: "Featured Bags", slug: "featured", description: "Our picks", sort_order: 0)
+    3.times do |index|
+      product = Product.create(
+        title: "Bag #{index + 1}", slug: "bag-#{index + 1}", status: "active",
+        description_document: "", created_at: Time.now, updated_at: Time.now
+      )
+      Variant.create(product_id: product.id, sku: "BAG-#{index + 1}", title: "Default", price_cents: 1_000, currency: "USD", stock: 2, position: 0)
+      CollectionProduct.dataset.insert(collection_id: collection.id, product_id: product.id, position: index)
+    end
+
+    result = Bake.call(
+      state: @state, collection_template: template, output_root: @output_root, use_draft: true
+    )
+
+    assert_equal 2, result.page_count
+    html = File.read(File.join(@output_root, "current", "collections", "featured.html"))
+    assert_includes html, "<title>Featured Bags</title>"
+    assert_includes html, "<h1>Featured Bags</h1>"
+    assert_includes html, 'href="/products/bag-1"'
+    assert_includes html, 'href="/products/bag-2"'
+    refute_includes html, 'href="/products/bag-3"'
+    assert_includes html, '?loop_collection-products_page=2'
+  end
 end

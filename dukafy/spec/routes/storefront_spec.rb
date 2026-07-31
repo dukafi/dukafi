@@ -10,6 +10,11 @@ class StorefrontSpec < Minitest::Test
   end
 
   def setup
+    PageDependency.dataset.delete
+    CollectionProduct.dataset.delete
+    Collection.dataset.delete
+    Variant.dataset.delete
+    Product.dataset.delete
     SlugRedirect.dataset.delete
     Page.dataset.delete
     SiteState.dataset.delete
@@ -113,5 +118,29 @@ class StorefrontSpec < Minitest::Test
     get "/collections/old-bags"
     assert_equal 301, last_response.status
     assert_equal "/collections/new-bags", last_response.headers.fetch("location")
+  end
+
+  def test_collection_pagination_query_renders_the_shared_template_live
+    template = CollectionTemplate.ensure!
+    template_document = template.document_data
+    template_document["nodes"]["collection-products"]["props"]["perPage"] = 1
+    template.update(document: template_document, status: "published", published_document: JSON.generate(template_document))
+    collection = Collection.create(title: "Featured", slug: "featured", description: "", sort_order: 0)
+    2.times do |index|
+      product = Product.create(
+        title: "Product #{index + 1}", slug: "product-#{index + 1}", status: "active",
+        description_document: "", created_at: Time.now, updated_at: Time.now
+      )
+      Variant.create(product_id: product.id, sku: "SKU-#{index + 1}", title: "Default", price_cents: 1_000, currency: "USD", stock: 1, position: 0)
+      CollectionProduct.dataset.insert(collection_id: collection.id, product_id: product.id, position: index)
+    end
+
+    get "/collections/featured?loop_collection-products_page=2"
+
+    assert_equal 200, last_response.status
+    assert_equal "live", last_response.headers.fetch("x-dukafy-render")
+    assert_includes last_response.body, 'href="/products/product-2"'
+    refute_includes last_response.body, 'href="/products/product-1"'
+    assert_includes last_response.body, "Page 2 of 2"
   end
 end

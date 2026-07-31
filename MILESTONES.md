@@ -115,7 +115,7 @@ Goal: the editor builds real store pages.
 - [x] Product-page template: one template document + per-product data binding
       (`currentEntry.title` etc.); bake every published product to
       `/products/<slug>.html`
-- [ ] Collection pages baked to `/collections/<slug>.html`; page 1 baked,
+- [x] Collection pages baked to `/collections/<slug>.html`; page 1 baked,
       `?loop_x_page=N` renders live (cache in M6)
 - [ ] `dependency_tracker.rb`: record page_path ⇄ product_id during bake
 - [ ] Partial re-bake: product save re-bakes its page + containing collection

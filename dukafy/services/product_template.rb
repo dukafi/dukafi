@@ -1,8 +1,14 @@
 class ProductTemplate
   SLUG = "_product-template"
 
+  def self.find
+    Page.where(kind: "template").order(:id).all.find do |page|
+      page.document_data.dig("template", "target", "tableSlugs")&.include?("products")
+    end
+  end
+
   def self.ensure!
-    Page.where(kind: "template").order(:id).first || Page.create(
+    find || Page.create(
       slug: SLUG, title: "Product template", kind: "template", status: "draft", document: document
     )
   end

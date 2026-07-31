@@ -61,6 +61,36 @@ class Storefront < Roda
     )
   end
 
+  def live_collection(slug, query_params)
+    template = CollectionTemplate.find
+    return unless template&.status == "published"
+    document = template.published_document_data
+    return unless document
+    prefetched = CommercePrefetcher.call
+    collection = prefetched.dig("collections", slug)
+    return unless collection
+
+    state = SiteState.first
+    return unless state
+
+    rendered = Dukafy::Publisher::RenderPage.call(
+      document:, registry: Dukafy::Publisher::REGISTRY, site: state.site,
+      prefetched:, current_entry: collection, query_params:
+    )
+    tailwind_html = %(<body class="#{rendered.body_classes.join(' ')}">#{rendered.html}</body>)
+    collector = Dukafy::Publisher::CssCollector.new
+    collector.add("page-modules", rendered.css)
+    css = collector.bundle(
+      framework_css: Dukafy::Publisher::FrameworkCss.call(state.site),
+      tailwind_css: TailwindCompiler.call(html: tailwind_html)
+    ).content
+    Dukafy::Publisher::HtmlDocument.call(
+      title: collection.fetch("title"), language: state.site.dig("settings", "language") || "en",
+      description: collection["description"], body: rendered.html,
+      body_classes: rendered.body_classes, css:
+    )
+  end
+
   route do |r|
     r.get do
       path = r.remaining_path
@@ -84,6 +114,16 @@ class Storefront < Roda
           response["Content-Type"] = "text/html; charset=utf-8"
           response["X-Dukafy-Render"] = "disk"
           next baked
+        end
+      end
+
+      if slug&.start_with?("collections/") && !canonical_query_empty?(r.params)
+        collection_html = live_collection(slug.delete_prefix("collections/"), r.params)
+        if collection_html
+          response["Content-Type"] = "text/html; charset=utf-8"
+          response["Cache-Control"] = "no-cache"
+          response["X-Dukafy-Render"] = "live"
+          next collection_html
         end
       end
 

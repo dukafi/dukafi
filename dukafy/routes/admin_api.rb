@@ -264,6 +264,7 @@ class AdminApi < Roda
       r.get("pages") do
         require_admin!
         ProductTemplate.ensure!
+        CollectionTemplate.ensure!
         { rows: Page.order(:kind, :id).map { |page| data_row(page) } }
       end
 
