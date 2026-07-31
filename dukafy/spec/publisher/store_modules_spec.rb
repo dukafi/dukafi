@@ -148,4 +148,29 @@ class StoreModulesSpec < Minitest::Test
     assert_includes output.fetch(:html), 'name="variant" disabled'
     assert_includes output.fetch(:html), '&lt;Choose &quot;one&quot;&gt;'
   end
+
+  def test_buy_button_matches_golden_output_for_an_in_stock_variant
+    definition = Dukafy::Publisher::REGISTRY.fetch("store.buy-button")
+    output = definition.render(
+      { "productSlug" => "canvas-bag", "variantSku" => "BAG-L", "label" => "Add bag", "quantity" => 2 }, [],
+      prefetched: { "products" => { "canvas-bag" => { "variants" => [
+        { "sku" => "BAG-L", "stock" => 3, "position" => 0 },
+      ] } } }
+    )
+
+    assert_equal File.read(File.expand_path("../golden/buy_button.html", __dir__)).chomp, output.fetch(:html)
+    assert_includes output.fetch(:css), ".dukafy-buy-button{"
+  end
+
+  def test_buy_button_disables_when_the_variant_is_unavailable
+    definition = Dukafy::Publisher::REGISTRY.fetch("store.buy-button")
+    output = definition.render(
+      { "productSlug" => "canvas-bag", "variantSku" => "BAG-S", "label" => "Add", "quantity" => 1 }, [],
+      prefetched: { "products" => { "canvas-bag" => { "variants" => [
+        { "sku" => "BAG-S", "stock" => 0, "position" => 0 },
+      ] } } }
+    )
+
+    assert_includes output.fetch(:html), '<button class="dukafy-buy-button" type="submit" disabled>Sold out</button>'
+  end
 end

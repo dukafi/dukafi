@@ -13,7 +13,7 @@ class Dukafy
           ""
         end
         class_attr = body_classes.empty? ? "" : %( class="#{body_classes.map { |name| CGI.escapeHTML(name) }.join(' ')}")
-        %(<!doctype html><html lang="#{CGI.escapeHTML(language)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>#{CGI.escapeHTML(title)}</title>#{description_tag}#{stylesheet}</head><body#{class_attr}>#{body}</body></html>)
+        %(<!doctype html><html lang="#{CGI.escapeHTML(language)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>#{CGI.escapeHTML(title)}</title>#{description_tag}#{stylesheet}<script src="/js/htmx.min.js" defer></script></head><body#{class_attr}>#{body}</body></html>)
       end
     end
   end

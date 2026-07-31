@@ -10,6 +10,9 @@ class Dukafy
       VARIANT_PICKER_CSS = <<~CSS
         .dukafy-variant-picker{display:grid;gap:.375rem}.dukafy-variant-picker__label{font-weight:600}.dukafy-variant-picker__select{width:100%;min-height:2.75rem;padding:.625rem .75rem;border:1px solid currentColor;border-radius:.375rem;background:inherit;color:inherit;font:inherit}
       CSS
+      BUY_BUTTON_CSS = <<~CSS
+        .dukafy-buy-form{display:grid;gap:.5rem}.dukafy-buy-button{display:inline-flex;align-items:center;justify-content:center;min-height:2.75rem;padding:.625rem 1rem;border:1px solid currentColor;border-radius:.375rem;background:#18181b;color:#fff;font:inherit;font-weight:600;cursor:pointer}.dukafy-buy-button:disabled{cursor:not-allowed;opacity:.5}
+      CSS
 
       module_function
 
@@ -81,6 +84,24 @@ class Dukafy
           disabled = variants.empty? ? " disabled" : ""
           html = %(<label class="dukafy-variant-picker" data-product="#{CGI.escapeHTML(props['productSlug'].to_s)}"><span class="dukafy-variant-picker__label">#{CGI.escapeHTML(props['label'].to_s)}</span><select class="dukafy-variant-picker__select" name="#{safe_field_name(props['name'])}"#{disabled}>#{options}</select></label>)
           { html:, css: VARIANT_PICKER_CSS }
+        end
+        registry.register(
+          "store.buy-button",
+          defaults: { "productSlug" => "", "variantSku" => "", "label" => "Add to cart", "quantity" => 1 },
+        ) do |props, _children, context|
+          product = context[:prefetched].dig("products", props["productSlug"]) || {}
+          variants = product.fetch("variants", []).sort_by { |item| item.fetch("position", 0) }
+          variant = if props["variantSku"].to_s.empty?
+            variants.find { |item| item.fetch("stock", 0).positive? }
+          else
+            variants.find { |item| item["sku"] == props["variantSku"] }
+          end
+          disabled = !variant || !variant.fetch("stock", 0).positive?
+          sku = variant&.fetch("sku", props["variantSku"]).to_s
+          label = disabled ? "Sold out" : props["label"].to_s
+          quantity = [Integer(props["quantity"] || 1), 1].max
+          html = %(<form class="dukafy-buy-form" method="post" action="/fragments/cart/items" hx-post="/fragments/cart/items" hx-target="find .dukafy-buy-result" hx-swap="outerHTML"><input type="hidden" name="product_slug" value="#{CGI.escapeHTML(props['productSlug'].to_s)}"><input type="hidden" name="variant_sku" value="#{CGI.escapeHTML(sku)}"><input type="hidden" name="quantity" value="#{quantity}"><button class="dukafy-buy-button" type="submit"#{disabled ? ' disabled' : ''}>#{CGI.escapeHTML(label)}</button><output class="dukafy-buy-result" aria-live="polite"></output></form>)
+          { html:, css: BUY_BUTTON_CSS }
         end
       end
 
