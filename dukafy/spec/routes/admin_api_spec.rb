@@ -53,6 +53,8 @@ class AdminApiSpec < Minitest::Test
 
     assert_equal 200, last_response.status
     assert_equal "owner@example.com", json.dig("user", "email")
+    assert_includes json.fetch("capabilities"), "pages.publish"
+    assert_includes json.fetch("capabilities"), "site.read"
   end
 
   def test_site_load_and_save_round_trip

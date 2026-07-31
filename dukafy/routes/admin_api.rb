@@ -13,7 +13,7 @@ class AdminApi < Roda
   CAPABILITIES = %w[
     content.create content.edit.any content.manage content.publish.any
     data.custom.tables.read data.system.tables.read media.delete media.read media.replace media.write
-    pages.edit site.content.edit site.structure.edit site.style.edit system
+    pages.edit pages.publish site.read site.content.edit site.structure.edit site.style.edit system
   ].freeze
 
   USER_PREFERENCE_KEYS = %w[dashboard-layout module-inserter].freeze
