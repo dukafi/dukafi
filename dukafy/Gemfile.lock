@@ -4,6 +4,7 @@ GEM
     base64 (0.3.0)
     bcrypt (3.1.22)
     bigdecimal (4.1.2)
+    csv (3.3.6)
     drb (2.2.3)
     ffi (1.17.4-aarch64-linux-gnu)
     ffi (1.17.4-aarch64-linux-musl)
@@ -91,6 +92,7 @@ PLATFORMS
 
 DEPENDENCIES
   bcrypt
+  csv
   foreman
   json_schemer
   minitest

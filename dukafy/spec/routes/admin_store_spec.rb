@@ -1,5 +1,6 @@
 require_relative "../spec_helper"
 require "rack/test"
+require "tempfile"
 require_relative "../../app"
 
 class AdminStoreSpec < Minitest::Test
@@ -183,5 +184,53 @@ class AdminStoreSpec < Minitest::Test
     assert_equal "newest-bag", SlugRedirect.first(resource_type: "product", old_slug: "old-bag").destination_slug
     assert_equal "newest-bag", SlugRedirect.first(resource_type: "product", old_slug: "new-bag").destination_slug
     assert_equal "new-bags", SlugRedirect.first(resource_type: "collection", old_slug: "old-bags").destination_slug
+  end
+
+  def test_csv_import_creates_and_updates_products_and_variants
+    login
+    csv = <<~CSV
+      product_title,product_slug,vendor,status,description_html,sku,variant_title,price_cents,currency,stock,position
+      Canvas Bag,canvas-bag,Dukafy,active,<p>Strong bag</p>,BAG-BLACK,Black,12900,usd,8,0
+      Canvas Bag,canvas-bag,Dukafy,active,<p>Strong bag</p>,BAG-NATURAL,Natural,13900,USD,5,1
+    CSV
+    file = Tempfile.new(["products", ".csv"])
+    file.write(csv)
+    file.rewind
+
+    post "/admin/store/imports/products", file: Rack::Test::UploadedFile.new(file.path, "text/csv")
+    product = Product.first(slug: "canvas-bag")
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, "Imported 1 products and 2 variants"
+    assert_equal %w[BAG-BLACK BAG-NATURAL], product.variants.map(&:sku)
+
+    file.rewind
+    changed = csv.sub("12900,usd,8", "14900,usd,3")
+    file.write(changed)
+    file.truncate(file.pos)
+    file.rewind
+    post "/admin/store/imports/products", file: Rack::Test::UploadedFile.new(file.path, "text/csv")
+    assert_equal 14_900, product.variants_dataset.first(sku: "BAG-BLACK").price_cents
+    assert_equal 2, product.variants_dataset.count
+  ensure
+    file&.close!
+  end
+
+  def test_csv_import_rolls_back_the_whole_file_on_invalid_row
+    login
+    csv = <<~CSV
+      product_title,product_slug,vendor,status,description_html,sku,variant_title,price_cents,currency,stock,position
+      Valid,valid,Dukafy,active,,VALID-1,Default,1000,USD,2,0
+      Broken,broken,Dukafy,active,,BROKEN-1,Default,not-money,USD,2,0
+    CSV
+    file = Tempfile.new(["products", ".csv"])
+    file.write(csv)
+    file.rewind
+
+    post "/admin/store/imports/products", file: Rack::Test::UploadedFile.new(file.path, "text/csv")
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, "Row 3"
+    assert_equal 0, Product.dataset.count
+  ensure
+    file&.close!
   end
 end

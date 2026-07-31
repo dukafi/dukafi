@@ -163,6 +163,20 @@ class AdminStore < Roda
       %(<form method="post" action="/admin/store/collections/#{collection.id}/delete" hx-post="/admin/store/collections/#{collection.id}/delete" hx-confirm="Delete #{e(collection.title)}?"><button class="danger" type="submit">Delete collection</button></form>)
   end
 
+  def csv_import_page(message: nil, error: nil)
+    <<~HTML
+      <h1>Import products</h1>
+      #{message ? %(<p>#{e(message)}</p>) : ""}
+      #{error ? %(<p class="error">#{e(error)}</p>) : ""}
+      <p>Upload a CSV containing products and their variants. The entire file is validated before it is committed.</p>
+      <form method="post" action="/admin/store/imports/products" enctype="multipart/form-data">
+        <label>Product CSV<input type="file" name="file" accept=".csv,text/csv" required></label>
+        <button type="submit">Import CSV</button>
+      </form>
+      <p><a href="/admin/store">Back to products</a></p>
+    HTML
+  end
+
   route do |r|
     require_admin!
 
@@ -172,7 +186,24 @@ class AdminStore < Roda
           <tr id="product-#{product.id}"><td><a href="/admin/store/products/#{product.id}">#{e(product.title)}</a></td><td>#{e(product.slug)}</td><td>#{e(product.vendor)}</td><td>#{e(product.status)}</td></tr>
         ROW
       end.join
-      layout("Products", %(<div class="actions"><h1 style="flex:1">Products</h1><a class="button" href="/admin/store/products/new">Add product</a></div><table><thead><tr><th>Title</th><th>Slug</th><th>Vendor</th><th>Status</th></tr></thead><tbody>#{rows}</tbody></table>))
+      layout("Products", %(<div class="actions"><h1 style="flex:1">Products</h1><a class="button secondary" href="/admin/store/imports/products">Import CSV</a><a class="button" href="/admin/store/products/new">Add product</a></div><table><thead><tr><th>Title</th><th>Slug</th><th>Vendor</th><th>Status</th></tr></thead><tbody>#{rows}</tbody></table>))
+    end
+
+
+    r.on("imports", "products") do
+      r.get { layout("Import products", csv_import_page) }
+      r.post do
+        upload = request.params["file"]
+        tempfile = upload.is_a?(Hash) && (upload[:tempfile] || upload["tempfile"])
+        request.halt([422, { "content-type" => "text/html" }, [layout("Import products", csv_import_page(error: "Choose a CSV file"))]]) unless tempfile
+        csv = tempfile.read(5_000_001)
+        raise ProductCsvImporter::Error, "CSV must be 5 MB or smaller" if csv.bytesize > 5_000_000
+        result = ProductCsvImporter.call(csv)
+        layout("Import products", csv_import_page(message: "Imported #{result.products} products and #{result.variants} variants."))
+      rescue ProductCsvImporter::Error => error
+        response.status = 422
+        layout("Import products", csv_import_page(error: error.message))
+      end
     end
 
     r.on("products") do

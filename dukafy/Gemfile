@@ -10,6 +10,7 @@ gem "bcrypt"
 gem "rack-session"
 gem "rackup"
 gem "stripe"
+gem "csv"
 
 group :development do
   gem "rerun"
