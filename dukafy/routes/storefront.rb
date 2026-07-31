@@ -41,7 +41,8 @@ class Storefront < Roda
 
     document = page.published_document_data || page.document_data
     rendered = Dukafy::Publisher::RenderPage.call(
-      document:, registry: Dukafy::Publisher::REGISTRY, site: state.site
+      document:, registry: Dukafy::Publisher::REGISTRY, site: state.site,
+      prefetched: CommercePrefetcher.call
     )
     tailwind_html = %(<body class="#{rendered.body_classes.join(' ')}">#{rendered.html}</body>)
     tailwind_css = TailwindCompiler.call(html: tailwind_html)

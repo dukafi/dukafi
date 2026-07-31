@@ -101,7 +101,7 @@ the admin UI.
 Goal: the editor builds real store pages.
 
 - [ ] Canvas (React) + publisher (Ruby) pairs, each with golden tests:
-  - [ ] `store.product-card` (image, title, price)
+  - [x] `store.product-card` (image, title, price)
   - [ ] `store.price` (variant-aware, currency formatting)
   - [ ] `store.image-gallery`
   - [ ] `store.variant-picker`

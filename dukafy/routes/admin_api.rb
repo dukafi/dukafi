@@ -219,6 +219,12 @@ class AdminApi < Roda
       r.get("components") { require_admin!; { rows: [] } }
       r.get("layouts") { require_admin!; { rows: [] } }
 
+      r.get("commerce", "products", String) do |slug|
+        require_admin!
+        product = CommercePrefetcher.call.dig("products", slug) || halt_json(404, "product_not_found", "Product not found")
+        { product: product }
+      end
+
       r.put("site-document") do
         require_admin!
         state = SiteState.first || halt_json(404, "site_not_found", "Site has not been created")

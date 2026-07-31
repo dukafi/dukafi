@@ -71,7 +71,9 @@ class Bake
 
   def render_page(page)
     document = @use_draft ? page.document_data : (page.published_document_data || page.document_data)
-    Dukafy::Publisher::RenderPage.call(document:, registry: @registry, site: @state.site)
+    Dukafy::Publisher::RenderPage.call(
+      document:, registry: @registry, site: @state.site, prefetched: CommercePrefetcher.call
+    )
   end
 
   def bake_page(page, rendered, tailwind_css, slot_path)

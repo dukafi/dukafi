@@ -12,6 +12,10 @@ class AdminApiSpec < Minitest::Test
 
   def setup
     @uploaded_paths = []
+    CollectionProduct.dataset.delete
+    Collection.dataset.delete
+    Variant.dataset.delete
+    Product.dataset.delete
     UserPreference.dataset.delete
     Page.dataset.delete
     SiteState.dataset.delete
@@ -154,6 +158,19 @@ class AdminApiSpec < Minitest::Test
     assert_includes json.fetch("css"), ".flex{display:flex}"
     assert_includes json.fetch("css"), ".p-4{"
     refute_includes json.fetch("css"), ".hidden{"
+  end
+
+  def test_returns_catalog_product_preview_for_commerce_modules
+    setup_and_login
+    product = Product.create(title: "Canvas Bag", slug: "canvas-bag", status: "active")
+    product.add_variant(sku: "BAG-1", title: "Default", price_cents: 12_900, currency: "USD", stock: 3, position: 0)
+
+    get "/admin/api/cms/commerce/products/canvas-bag"
+
+    assert_equal 200, last_response.status
+    assert_equal "Canvas Bag", json.dig("product", "title")
+    assert_equal 12_900, json.dig("product", "priceCents")
+    assert_equal "/products/canvas-bag", json.dig("product", "href")
   end
 
   def test_media_upload_list_and_delete
