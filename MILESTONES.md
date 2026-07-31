@@ -63,7 +63,7 @@ Goal: a saved document becomes a static HTML file on disk, served fast.
       `base.image`, `base.button`, `base.link`, `base.list`
 - [ ] Visual parity pass: rendered output vs editor canvas for the same document
       (manual first; screenshot-diff harness is M8)
-- [ ] `services/bake.rb`: render every published page → `published/slot_x/` →
+- [x] `services/bake.rb`: render every published page → `published/slot_x/` →
       atomic symlink flip of `published/current` → bump publish_version
 - [ ] `routes/storefront.rb`: disk fast-path (`published/current/<path>.html`
       when canonical query is empty) → live render fallback → 404 page

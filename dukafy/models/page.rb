@@ -25,8 +25,15 @@ class Page < Sequel::Model
     @document_data ||= JSON.parse(document)
   end
 
+  def published_document_data
+    return nil unless published_document
+
+    @published_document_data ||= JSON.parse(published_document)
+  end
+
   def after_refresh
     @document_data = nil
+    @published_document_data = nil
     super
   end
 end
