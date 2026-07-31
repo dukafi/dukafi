@@ -100,7 +100,7 @@ the admin UI.
 
 Goal: the editor builds real store pages.
 
-- [ ] Canvas (React) + publisher (Ruby) pairs, each with golden tests:
+- [x] Canvas (React) + publisher (Ruby) pairs, each with golden tests:
   - [x] `store.product-card` (image, title, price)
   - [x] `store.price` (variant-aware, currency formatting)
   - [x] `store.image-gallery`
@@ -109,7 +109,7 @@ Goal: the editor builds real store pages.
   - [x] `store.collection-loop` (port of base.loop, source = collection,
         round-robin variants, pagination param `loop_<id>_page`)
   - [x] `store.stock-badge` — ALWAYS a fragment (dynamic_map)
-  - [ ] `store.cart-badge` — ALWAYS a fragment
+  - [x] `store.cart-badge` — ALWAYS a fragment
 - [x] Loop prefetch: bake.rb resolves collection items into plain hashes before
       render (walker stays pure/synchronous)
 - [ ] Product-page template: one template document + per-product data binding
@@ -135,7 +135,7 @@ Goal: money moves.
 - [x] Session cart model (cart + cart_items tables; anonymous by session id)
 - [ ] Fragment endpoints (`routes/fragments.rb`): cart badge, cart drawer,
       add/remove/update-qty — all HTMX swaps, no full page loads
-- [ ] `hx-trigger="revealed"` skeleton pattern for baked-page fragments
+- [x] `hx-trigger="revealed"` skeleton pattern for baked-page fragments
 - [ ] Stock check at add-to-cart and again at checkout (race-safe: single
       SQLite writer + transaction)
 - [ ] Discount codes: percentage + fixed, validity window, usage limit

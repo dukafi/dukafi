@@ -11,6 +11,11 @@ class Fragments < Roda
     )
   end
 
+  def current_cart
+    key = session["cart_key"]
+    key && Cart.first(session_key: key, status: "active")
+  end
+
   def cart_fragment(cart, notice: nil)
     items = CartItem.where(cart_id: cart.id).all
     count = items.sum(&:quantity)
@@ -30,6 +35,14 @@ class Fragments < Roda
       ["in-stock", "In stock"]
     end
     %(<span class="dukafy-stock-badge dukafy-stock-badge--#{state}" data-stock="#{quantity}" aria-live="polite">#{label}</span>)
+  end
+
+  def cart_badge_fragment(cart, label, href)
+    count = cart ? CartItem.where(cart_id: cart.id).sum(:quantity).to_i : 0
+    safe_label = CGI.escapeHTML(label)
+    valid_href = href.match?(%r{\A/[a-zA-Z0-9_/?=&%.-]*\z}) ? href : "/cart"
+    query = "label=#{CGI.escape(label)}&href=#{CGI.escape(valid_href)}"
+    %(<a class="dukafy-cart-badge" href="#{CGI.escapeHTML(valid_href)}" hx-get="/fragments/cart/badge?#{CGI.escapeHTML(query)}" hx-trigger="revealed, dukafy:cart-updated from:body" hx-swap="outerHTML" aria-label="#{safe_label}: #{count} #{count == 1 ? 'item' : 'items'}">#{safe_label} <span class="dukafy-cart-badge__count">#{count}</span></a>)
   end
 
   route do |r|
@@ -71,7 +84,8 @@ class Fragments < Roda
 
       r.get("badge") do
         response["Content-Type"] = "text/html; charset=utf-8"
-        cart_fragment(active_cart)
+        response["Cache-Control"] = "no-store"
+        cart_badge_fragment(current_cart, r.params.fetch("label", "Cart").to_s[0, 80], r.params.fetch("href", "/cart").to_s)
       end
     end
 

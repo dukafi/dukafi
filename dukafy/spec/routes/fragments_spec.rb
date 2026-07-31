@@ -76,4 +76,28 @@ class FragmentsSpec < Minitest::Test
     assert_includes last_response.body, "Sold out"
     refute_includes last_response.body, "missing"
   end
+
+  def test_cart_badge_tracks_the_session_and_does_not_create_empty_carts
+    get "/fragments/cart/badge", label: "Basket", href: "/basket"
+
+    assert_equal 200, last_response.status
+    assert_equal "no-store", last_response.headers.fetch("cache-control")
+    assert_includes last_response.body, '>0</span>'
+    assert_includes last_response.body, 'href="/basket"'
+    assert_equal 0, Cart.count
+
+    post "/fragments/cart/items", product_slug: "canvas-bag", variant_sku: "BAG-L", quantity: "2"
+    get "/fragments/cart/badge", label: "Basket", href: "/basket"
+
+    assert_includes last_response.body, '>2</span>'
+    assert_includes last_response.body, "Basket: 2 items"
+  end
+
+  def test_cart_badge_sanitizes_its_label_and_href
+    get "/fragments/cart/badge", label: '<Bad "label">', href: 'javascript:alert(1)'
+
+    refute_includes last_response.body, "javascript:"
+    assert_includes last_response.body, 'href="/cart"'
+    assert_includes last_response.body, '&lt;Bad &quot;label&quot;&gt;'
+  end
 end

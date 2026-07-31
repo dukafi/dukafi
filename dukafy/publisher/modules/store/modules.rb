@@ -19,6 +19,9 @@ class Dukafy
       STOCK_BADGE_CSS = <<~CSS
         .dukafy-stock-badge{display:inline-flex;align-items:center;gap:.375rem;font-size:.875rem}.dukafy-stock-badge::before{content:"";width:.5rem;height:.5rem;border-radius:999px;background:currentColor}.dukafy-stock-badge--in-stock{color:#15803d}.dukafy-stock-badge--low{color:#a16207}.dukafy-stock-badge--sold-out{color:#b91c1c}.dukafy-stock-badge--loading{opacity:.6}
       CSS
+      CART_BADGE_CSS = <<~CSS
+        .dukafy-cart-badge{display:inline-flex;align-items:center;gap:.5rem;color:inherit;text-decoration:none}.dukafy-cart-badge__count{display:inline-grid;min-width:1.5rem;height:1.5rem;padding:0 .375rem;place-items:center;border-radius:999px;background:#18181b;color:#fff;font-size:.75rem;font-weight:700}.dukafy-cart-badge--loading{opacity:.6}
+      CSS
 
       module_function
 
@@ -130,6 +133,15 @@ class Dukafy
           query = "product_slug=#{CGI.escape(product_slug)}&variant_sku=#{CGI.escape(props['variantSku'].to_s)}&low_stock_threshold=#{threshold}"
           html = %(<span class="dukafy-stock-badge dukafy-stock-badge--loading" hx-get="/fragments/stock?#{CGI.escapeHTML(query)}" hx-trigger="revealed" hx-swap="outerHTML" aria-live="polite">Checking availability…</span>)
           { html:, css: STOCK_BADGE_CSS }
+        end
+        registry.register(
+          "store.cart-badge",
+          schema: { "href" => { type: :url } },
+          defaults: { "label" => "Cart", "href" => "/cart" },
+        ) do |props, _children, _context|
+          query = "label=#{CGI.escape(props['label'].to_s)}&href=#{CGI.escape(props['href'].to_s)}"
+          html = %(<a class="dukafy-cart-badge dukafy-cart-badge--loading" href="#{BaseHelpers.safe_url(props['href'])}" hx-get="/fragments/cart/badge?#{CGI.escapeHTML(query)}" hx-trigger="revealed, dukafy:cart-updated from:body" hx-swap="outerHTML" aria-label="#{CGI.escapeHTML(props['label'].to_s)}: loading">#{CGI.escapeHTML(props['label'].to_s)} <span class="dukafy-cart-badge__count">…</span></a>)
+          { html:, css: CART_BADGE_CSS }
         end
       end
 
