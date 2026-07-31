@@ -1,6 +1,0 @@
-.variantPreview {
-    display: flex;
-    min-width: 0;
-    gap: var(--space-3xs);
-    overflow: hidden;
-}

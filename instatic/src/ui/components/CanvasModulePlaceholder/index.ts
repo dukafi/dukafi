@@ -1,1 +1,0 @@
-export { CanvasModulePlaceholder } from './CanvasModulePlaceholder'

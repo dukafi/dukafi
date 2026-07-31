@@ -15,3 +15,7 @@ instatic/dist/
 node_modules/
 .env
 dukafy/vendor/tailwindcss
+
+# The Instatic editor is maintained outside this repository. Keep the local
+# working copy available for development, but never include it in Dukafy pushes.
+/instatic/

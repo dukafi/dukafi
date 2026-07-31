@@ -1,1 +1,0 @@
-export { DependenciesPanel } from './DependenciesPanel'
