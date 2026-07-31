@@ -59,7 +59,7 @@ Goal: a saved document becomes a static HTML file on disk, served fast.
 - [x] `css_collector.rb`: dedupe by moduleId; assemble reset + framework +
       module + page CSS; hash-named bundle files
 - [x] Port Instatic's reset CSS + a minimal framework CSS (tokens as CSS vars)
-- [ ] Phlex/plain-Ruby modules with golden tests: `base.container`, `base.text`,
+- [x] Phlex/plain-Ruby modules with golden tests: `base.container`, `base.text`,
       `base.image`, `base.button`, `base.link`, `base.list`
 - [ ] Visual parity pass: rendered output vs editor canvas for the same document
       (manual first; screenshot-diff harness is M8)
