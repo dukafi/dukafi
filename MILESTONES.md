@@ -61,7 +61,7 @@ Goal: a saved document becomes a static HTML file on disk, served fast.
 - [x] Port Instatic's reset CSS + a minimal framework CSS (tokens as CSS vars)
 - [x] Phlex/plain-Ruby modules with golden tests: `base.container`, `base.text`,
       `base.image`, `base.button`, `base.link`, `base.list`
-- [ ] Visual parity pass: rendered output vs editor canvas for the same document
+- [x] Visual parity pass: rendered output vs editor canvas for the same document
       (manual first; screenshot-diff harness is M8)
 - [x] `services/bake.rb`: render every published page → `published/slot_x/` →
       atomic symlink flip of `published/current` → bump publish_version
@@ -81,7 +81,7 @@ response is served off disk (log line proves no render happened).
 
 Goal: merchants manage a real catalog without touching the canvas.
 
-- [ ] Product CRUD screens (server-rendered Phlex + HTMX inside /admin shell or
+- [x] Product CRUD screens (server-rendered Phlex + HTMX inside /admin shell or
       a dedicated /admin/store area — decide and document)
 - [ ] Variants: inline editor per product (sku, price_cents, stock, position)
 - [ ] Collections CRUD + drag-order product membership
