@@ -1,0 +1,2 @@
+web:    bundle exec rerun --dir . --dir ../instatic/src -- rackup -p 9292
+editor: sh -c "cd ../instatic && bun run dev"

@@ -1,0 +1,288 @@
+{
+  "type": "object",
+  "required": [
+    "nodes",
+    "rootNodeId",
+    "id",
+    "slug",
+    "title"
+  ],
+  "properties": {
+    "nodes": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "type": "object",
+          "required": [
+            "id",
+            "moduleId",
+            "props",
+            "breakpointOverrides",
+            "children",
+            "classIds"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "moduleId": {
+              "type": "string"
+            },
+            "props": {
+              "type": "object",
+              "patternProperties": {
+                "^(.*)$": {}
+              }
+            },
+            "breakpointOverrides": {
+              "type": "object",
+              "patternProperties": {
+                "^(.*)$": {
+                  "type": "object",
+                  "patternProperties": {
+                    "^(.*)$": {}
+                  }
+                }
+              }
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "parentId": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "label": {
+              "type": "string"
+            },
+            "locked": {
+              "type": "boolean"
+            },
+            "hidden": {
+              "type": "boolean"
+            },
+            "classIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "inlineStyles": {
+              "type": "object",
+              "patternProperties": {
+                "^(.*)$": {}
+              }
+            },
+            "propBindings": {
+              "type": "object",
+              "patternProperties": {
+                "^(.*)$": {
+                  "type": "object",
+                  "required": [
+                    "paramId"
+                  ],
+                  "properties": {
+                    "paramId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "dynamicBindings": {
+              "type": "object",
+              "patternProperties": {
+                "^(.*)$": {
+                  "type": "object",
+                  "required": [
+                    "source",
+                    "field"
+                  ],
+                  "properties": {
+                    "source": {
+                      "anyOf": [
+                        {
+                          "const": "currentEntry",
+                          "type": "string"
+                        },
+                        {
+                          "const": "parentEntry",
+                          "type": "string"
+                        },
+                        {
+                          "const": "page",
+                          "type": "string"
+                        },
+                        {
+                          "const": "site",
+                          "type": "string"
+                        },
+                        {
+                          "const": "route",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "field": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "format": {
+                      "anyOf": [
+                        {
+                          "const": "plain",
+                          "type": "string"
+                        },
+                        {
+                          "const": "html",
+                          "type": "string"
+                        },
+                        {
+                          "const": "url",
+                          "type": "string"
+                        },
+                        {
+                          "const": "media",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "fallback": {
+                      "anyOf": [
+                        {
+                          "const": "static",
+                          "type": "string"
+                        },
+                        {
+                          "const": "empty",
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "rootNodeId": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "ownerUserId": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "createdByUserId": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "updatedByUserId": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "template": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "target",
+        "priority"
+      ],
+      "properties": {
+        "enabled": {
+          "const": true,
+          "type": "boolean"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "everywhere",
+                  "type": "string"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "tableSlugs"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "postTypes",
+                  "type": "string"
+                },
+                "tableSlugs": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "notFound",
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        },
+        "priority": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

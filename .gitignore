@@ -2,9 +2,9 @@ db/*.sqlite3
 db/*.sqlite3-*
 dukafy/db/*.sqlite3
 dukafy/db/*.sqlite3-*
-published/
-uploads/
-public/admin/
+/published/
+/uploads/
+/public/admin/
 dukafy/published/*
 !dukafy/published/.keep
 dukafy/uploads/*

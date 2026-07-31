@@ -1,0 +1,106 @@
+{
+  "type": "object",
+  "required": [
+    "nodes",
+    "rootNodeId"
+  ],
+  "properties": {
+    "nodes": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "type": "object",
+          "required": [
+            "id",
+            "moduleId",
+            "props",
+            "breakpointOverrides",
+            "children",
+            "classIds"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "moduleId": {
+              "type": "string"
+            },
+            "props": {
+              "type": "object",
+              "patternProperties": {
+                "^(.*)$": {}
+              }
+            },
+            "breakpointOverrides": {
+              "type": "object",
+              "patternProperties": {
+                "^(.*)$": {
+                  "type": "object",
+                  "patternProperties": {
+                    "^(.*)$": {}
+                  }
+                }
+              }
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "parentId": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "label": {
+              "type": "string"
+            },
+            "locked": {
+              "type": "boolean"
+            },
+            "hidden": {
+              "type": "boolean"
+            },
+            "classIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "inlineStyles": {
+              "type": "object",
+              "patternProperties": {
+                "^(.*)$": {}
+              }
+            },
+            "propBindings": {
+              "type": "object",
+              "patternProperties": {
+                "^(.*)$": {
+                  "type": "object",
+                  "required": [
+                    "paramId"
+                  ],
+                  "properties": {
+                    "paramId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "rootNodeId": {
+      "type": "string"
+    }
+  }
+}
