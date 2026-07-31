@@ -1,10 +1,11 @@
 # Store administration surface
 
-Dukafy uses a dedicated server-rendered `/admin/store` area for commerce data.
-The visual editor remains a vendored React application under `/admin/site` and
-is responsible only for page composition. Products, variants, collections,
-orders, and discounts use Ruby-rendered HTML enhanced with HTMX.
+Dukafy uses a dedicated **Commerce workspace inside the Instatic admin shell**
+at `/admin/commerce`. Products, variants, collections, imports, and eventually
+orders and discounts are managed beside Site and Media rather than through a
+separate Ruby-rendered admin application.
 
-This keeps catalog operations available without adding commerce screens to the
-vendored editor or introducing a second frontend build. All routes share the
-same authenticated admin session.
+Ruby exposes authenticated JSON endpoints under `/admin/api/cms/commerce`; it
+does not expose a merchant-facing `/admin/store` application. The public host
+is reserved for the storefront, static assets, and the API consumed by the CMS.
+HTMX remains the storefront interaction layer for cart, stock, and checkout.

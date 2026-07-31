@@ -1,6 +1,6 @@
 # Product CSV import
 
-Open **Store → Products → Import CSV**. Imports are atomic: if any row is
+Open **Commerce → Import CSV** in the editor. Imports are atomic: if any row is
 invalid, no products or variants from the file are saved.
 
 Required columns:

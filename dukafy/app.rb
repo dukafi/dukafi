@@ -20,7 +20,6 @@ class Dukafy < Roda
 
     r.on("admin") do
       r.on("api") { r.run AdminApi }
-      r.on("store") { r.run AdminStore }
       r.root { r.redirect "/admin/site" }
       r.get do
         File.read(File.expand_path("public/admin/index.html", __dir__))

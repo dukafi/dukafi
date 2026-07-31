@@ -36,7 +36,8 @@ Commerce admin ─────────────┘                    ├
 | --- | --- | --- |
 | Application | Ruby 3.4, Roda, Puma | Single-process HTTP application |
 | Persistence | SQLite, Sequel | Catalog, content, sessions, and commerce data |
-| Admin interactions | Server-rendered HTML, HTMX 2 | Fast commerce management without an SPA backend |
+| Admin interactions | Instatic React workspace | Products, variants, collections, media, and visual editing in one CMS shell |
+| Storefront interactions | Server-rendered HTML, HTMX 2 | Small dynamic fragments for cart, stock, and checkout |
 | Visual editor | Instatic, React 19, Vite, Bun | Build-time visual page editing |
 | Publisher | Plain Ruby renderers | Pure document-to-HTML rendering |
 | Styling | Tailwind CSS 4 standalone | Used-utility-only CSS generated during publish |
@@ -69,7 +70,7 @@ See [MILESTONES.md](MILESTONES.md) for detailed progress and
 dukafy/                  Ruby application
   db/migrations/         SQLite schema migrations
   models/                Sequel models
-  routes/                Admin API, commerce admin, and storefront routes
+  routes/                Admin API and storefront routes
   publisher/             Pure Ruby page renderer and module registry
   services/              Baking, publishing, imports, and support services
   spec/                  Minitest suite and golden publisher tests
@@ -143,14 +144,14 @@ The command installs the pinned Tailwind compiler when needed, runs database
 migrations, and starts both processes:
 
 - Visual editor: <http://localhost:5173/admin/>
-- Ruby storefront and commerce admin: <http://localhost:9292/>
-- Commerce admin: <http://localhost:9292/admin/store>
+- Ruby storefront and API: <http://localhost:9292/>
+- Commerce workspace: <http://localhost:5173/admin/commerce>
 
 Stop both processes with `Ctrl-C`.
 
 ## Product CSV import
 
-Open **Store → Products → Import CSV**. The import supports multiple variants
+Open **Commerce → Import CSV** in the editor. The import supports multiple variants
 per product and updates existing records by product slug and SKU. Imports are
 transactional: one invalid row rolls back the entire file.
 

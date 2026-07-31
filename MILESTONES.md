@@ -81,8 +81,8 @@ response is served off disk (log line proves no render happened).
 
 Goal: merchants manage a real catalog without touching the canvas.
 
-- [x] Product CRUD screens (server-rendered Phlex + HTMX inside /admin shell or
-      a dedicated /admin/store area — decide and document)
+- [x] Product CRUD screens inside the authenticated Instatic Commerce workspace
+      (the storefront host exposes no separate merchant administration UI)
 - [x] Variants: inline editor per product (sku, price_cents, stock, position)
 - [x] Collections CRUD + drag-order product membership
 - [x] Product description as an editor document (reuse the canvas for rich

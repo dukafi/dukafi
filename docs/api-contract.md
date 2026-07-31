@@ -47,6 +47,22 @@ shape. `PUT /site-document` is atomic and is the primary canvas save path.
 Folder mutation, soft-delete/restore, binary replacement, and storage-adapter
 screens are deferred and their entry points are not part of the M1 navigation.
 
+## Commerce workspace
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET/POST | `/commerce/products` | List or create products |
+| GET/PATCH/DELETE | `/commerce/products/:id` | Read, update, or delete a product |
+| POST | `/commerce/products/:id/variants` | Create a variant |
+| PATCH/DELETE | `/commerce/products/:id/variants/:variant_id` | Update or delete a variant |
+| GET/POST | `/commerce/collections` | List or create collections |
+| PATCH/DELETE | `/commerce/collections/:id` | Update or delete a collection |
+| PUT | `/commerce/collections/:id/products` | Replace ordered product membership |
+| POST | `/commerce/import` | Import a product/variant CSV |
+
+These endpoints require the authenticated CMS session. Storefront routes never
+serve commerce administration HTML.
+
 ## Errors
 
 Every Ruby API failure uses:
