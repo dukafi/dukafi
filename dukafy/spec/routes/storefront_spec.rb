@@ -10,6 +10,7 @@ class StorefrontSpec < Minitest::Test
   end
 
   def setup
+    SlugRedirect.dataset.delete
     Page.dataset.delete
     SiteState.dataset.delete
     @published_root = Dir.mktmpdir("dukafy-storefront-")
@@ -99,5 +100,18 @@ class StorefrontSpec < Minitest::Test
 
     assert_equal 404, last_response.status
     assert_equal "Asset not found", last_response.body
+  end
+
+  def test_redirects_old_product_and_collection_slugs_permanently
+    SlugRedirect.create(resource_type: "product", old_slug: "old-bag", destination_slug: "new-bag")
+    SlugRedirect.create(resource_type: "collection", old_slug: "old-bags", destination_slug: "new-bags")
+
+    get "/products/old-bag"
+    assert_equal 301, last_response.status
+    assert_equal "/products/new-bag", last_response.headers.fetch("location")
+
+    get "/collections/old-bags"
+    assert_equal 301, last_response.status
+    assert_equal "/collections/new-bags", last_response.headers.fetch("location")
   end
 end

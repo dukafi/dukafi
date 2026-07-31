@@ -87,7 +87,7 @@ Goal: merchants manage a real catalog without touching the canvas.
 - [x] Collections CRUD + drag-order product membership
 - [x] Product description as an editor document (reuse the canvas for rich
       product content) OR rich-text field for v1 — decide, record in VISION.md
-- [ ] Slug uniqueness + redirect table for renamed slugs
+- [x] Slug uniqueness + redirect table for renamed slugs
 - [ ] CSV import for products/variants (merchant onboarding path)
 - [ ] Seed script: demo store (12 products, 3 collections) for dev/demo
 

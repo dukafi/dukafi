@@ -26,6 +26,15 @@ class Storefront < Roda
     File.file?(path) ? File.binread(path) : nil
   end
 
+  def slug_redirect(slug)
+    match = slug.match(%r{\A(products|collections)/([a-z0-9]+(?:-[a-z0-9]+)*)\z})
+    return unless match
+
+    resource_type = match[1] == "products" ? "product" : "collection"
+    redirect = SlugRedirect.first(resource_type:, old_slug: match[2])
+    "/#{match[1]}/#{redirect.destination_slug}" if redirect
+  end
+
   def live_page(page)
     state = SiteState.first
     return nil unless state
@@ -65,6 +74,9 @@ class Storefront < Roda
       end
 
       slug = request_slug(path)
+      if slug && (destination = slug_redirect(slug))
+        r.redirect(destination, 301)
+      end
       if slug && canonical_query_empty?(r.params)
         baked = disk_page(slug)
         if baked

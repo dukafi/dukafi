@@ -10,6 +10,7 @@ class AdminStoreSpec < Minitest::Test
   end
 
   def setup
+    SlugRedirect.dataset.delete
     Variant.dataset.delete
     CollectionProduct.dataset.delete
     Collection.dataset.delete
@@ -168,5 +169,19 @@ class AdminStoreSpec < Minitest::Test
     post "/admin/store/collections/#{collection.id}/reorder", product_ids: "999999"
     assert_equal 422, last_response.status
     assert_equal [product.id], collection.products_dataset.all.map(&:id)
+  end
+
+  def test_product_and_collection_slug_renames_record_collapsed_redirects
+    login
+    product = Product.create(title: "Bag", slug: "old-bag", status: "active")
+    collection = Collection.create(title: "Bags", slug: "old-bags", sort_order: 0)
+
+    post "/admin/store/products/#{product.id}/update", title: "Bag", slug: "new-bag", vendor: "", status: "active"
+    post "/admin/store/products/#{product.id}/update", title: "Bag", slug: "newest-bag", vendor: "", status: "active"
+    post "/admin/store/collections/#{collection.id}/update", title: "Bags", slug: "new-bags", description: "", sort_order: "0"
+
+    assert_equal "newest-bag", SlugRedirect.first(resource_type: "product", old_slug: "old-bag").destination_slug
+    assert_equal "newest-bag", SlugRedirect.first(resource_type: "product", old_slug: "new-bag").destination_slug
+    assert_equal "new-bags", SlugRedirect.first(resource_type: "collection", old_slug: "old-bags").destination_slug
   end
 end

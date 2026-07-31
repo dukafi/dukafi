@@ -199,9 +199,12 @@ class AdminStore < Roda
           layout(product.title, product_page(product))
         end
         r.post("update") do
-          if product.update(product_attributes)
-            r.redirect("/admin/store/products/#{id}")
+          old_slug = product.slug
+          DB.transaction do
+            product.update(product_attributes)
+            SlugRedirect.record(resource_type: "product", old_slug:, destination_slug: product.slug)
           end
+          r.redirect("/admin/store/products/#{id}")
         rescue Sequel::ValidationFailed, Sequel::UniqueConstraintViolation => error
           response.status = 422
           layout(product.title, product_form(product, error: error.message))
@@ -258,7 +261,11 @@ class AdminStore < Roda
         collection = Collection[id.to_i] || request.halt([404, { "content-type" => "text/plain" }, ["Collection not found"]])
         r.get { layout(collection.title, collection_page(collection)) }
         r.post("update") do
-          collection.update(collection_attributes)
+          old_slug = collection.slug
+          DB.transaction do
+            collection.update(collection_attributes)
+            SlugRedirect.record(resource_type: "collection", old_slug:, destination_slug: collection.slug)
+          end
           r.redirect("/admin/store/collections/#{id}")
         rescue Sequel::ValidationFailed, Sequel::UniqueConstraintViolation => error
           response.status = 422
