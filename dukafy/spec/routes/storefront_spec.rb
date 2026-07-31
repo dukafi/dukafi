@@ -85,4 +85,19 @@ class StorefrontSpec < Minitest::Test
     assert_equal 404, last_response.status
     assert_includes last_response.body, "Nothing here"
   end
+
+  def test_invalid_slug_path_returns_a_valid_rack_404_response
+    get "/favicon.ico"
+
+    assert_equal 404, last_response.status
+    assert_includes last_response.headers.fetch("content-type"), "text/html"
+    assert_includes last_response.body, "Page not found"
+  end
+
+  def test_invalid_asset_path_returns_a_valid_rack_404_response
+    get "/assets/not-a-hashed-bundle.css"
+
+    assert_equal 404, last_response.status
+    assert_equal "Asset not found", last_response.body
+  end
 end

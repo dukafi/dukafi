@@ -22,7 +22,11 @@ class Dukafy < Roda
       r.on("api") { r.run AdminApi }
       r.on("store") { r.run AdminStore }
       r.root { r.redirect "/admin/site" }
-      r.get { File.read(File.expand_path("public/admin/index.html", __dir__)) rescue r.halt(404) }
+      r.get do
+        File.read(File.expand_path("public/admin/index.html", __dir__))
+      rescue Errno::ENOENT
+        request.halt([404, { "content-type" => "text/plain" }, ["Admin build not found"]])
+      end
     end
 
     r.on("fragments") { r.run Fragments }

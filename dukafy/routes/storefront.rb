@@ -56,17 +56,16 @@ class Storefront < Roda
       path = r.remaining_path
       if path.start_with?("/assets/")
         filename = path.delete_prefix("/assets/")
-        r.halt(404) unless filename.match?(SAFE_ASSET)
+        request.halt([404, { "content-type" => "text/plain" }, ["Asset not found"]]) unless filename.match?(SAFE_ASSET)
         asset = File.join(published_root, "current", "assets", filename)
-        r.halt(404) unless File.file?(asset)
+        request.halt([404, { "content-type" => "text/plain" }, ["Asset not found"]]) unless File.file?(asset)
         response["Content-Type"] = "text/css; charset=utf-8"
         response["Cache-Control"] = "public, max-age=31536000, immutable"
         next File.binread(asset)
       end
 
       slug = request_slug(path)
-      r.halt(404) unless slug
-      if canonical_query_empty?(r.params)
+      if slug && canonical_query_empty?(r.params)
         baked = disk_page(slug)
         if baked
           response["Content-Type"] = "text/html; charset=utf-8"
@@ -75,7 +74,7 @@ class Storefront < Roda
         end
       end
 
-      page = Page.first(slug: slug, kind: "page", status: "published")
+      page = slug && Page.first(slug: slug, kind: "page", status: "published")
       if page
         response["Content-Type"] = "text/html; charset=utf-8"
         response["Cache-Control"] = "no-cache"
