@@ -1,4 +1,3 @@
-require "cgi"
 require "fileutils"
 require "securerandom"
 
@@ -82,8 +81,9 @@ class Bake
     language = @state.site.dig("settings", "language") || "en"
     title = @state.site.dig("settings", "metaTitle") || page.title
     description = @state.site.dig("settings", "metaDescription")
-    description_tag = description ? %(<meta name="description" content="#{CGI.escapeHTML(description)}">) : ""
-    %(<!doctype html><html lang="#{CGI.escapeHTML(language)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>#{CGI.escapeHTML(title)}</title>#{description_tag}<link rel="stylesheet" href="/assets/#{bundle_name(css_filename)}"></head><body>#{body}</body></html>)
+    Dukafy::Publisher::HtmlDocument.call(
+      title:, body:, language:, description:, css_href: "/assets/#{bundle_name(css_filename)}"
+    )
   end
 
   def bundle_name(filename)

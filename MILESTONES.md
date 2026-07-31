@@ -65,11 +65,11 @@ Goal: a saved document becomes a static HTML file on disk, served fast.
       (manual first; screenshot-diff harness is M8)
 - [x] `services/bake.rb`: render every published page → `published/slot_x/` →
       atomic symlink flip of `published/current` → bump publish_version
-- [ ] `routes/storefront.rb`: disk fast-path (`published/current/<path>.html`
+- [x] `routes/storefront.rb`: disk fast-path (`published/current/<path>.html`
       when canonical query is empty) → live render fallback → 404 page
 - [ ] Publish endpoint: `POST /admin/api/publish` runs the bake; editor's publish
       button wired to it
-- [ ] Junk-param canonicalization (utm_* etc. collapse to bare path → disk hit)
+- [x] Junk-param canonicalization (utm_* etc. collapse to bare path → disk hit)
 
 **DEMO:** build a landing page in the editor, click Publish, open the site in a
 fresh browser: view-source shows clean HTML + hashed CSS links, zero JS, and the
