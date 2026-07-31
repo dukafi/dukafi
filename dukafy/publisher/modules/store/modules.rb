@@ -27,6 +27,21 @@ class Dukafy
           html = %(<a class="dukafy-product-card" href="#{href}">#{image}<span class="dukafy-product-card__body"><strong class="dukafy-product-card__title">#{title}</strong><span class="dukafy-product-card__price">#{price}</span></span></a>)
           { html:, css: PRODUCT_CARD_CSS }
         end
+        registry.register(
+          "store.price",
+          defaults: { "productSlug" => "", "variantSku" => "", "priceCents" => 0, "currency" => "USD" },
+        ) do |props, _children, context|
+          product = context[:prefetched].dig("products", props["productSlug"]) || {}
+          variants = product.fetch("variants", [])
+          variant = if props["variantSku"].to_s.empty?
+            variants.min_by { |item| item.fetch("position", 0) }
+          else
+            variants.find { |item| item["sku"] == props["variantSku"] }
+          end
+          cents = Integer(variant&.fetch("priceCents", nil) || product["priceCents"] || props["priceCents"] || 0)
+          currency = variant&.fetch("currency", nil) || product["currency"] || props["currency"]
+          { html: %(<span class="dukafy-price" data-product="#{CGI.escapeHTML(props['productSlug'].to_s)}"#{props['variantSku'].to_s.empty? ? '' : %( data-variant="#{CGI.escapeHTML(props['variantSku'].to_s)}")}>#{format_price(cents, currency.to_s.upcase)}</span>) }
+        end
       end
 
       def format_price(cents, currency)
