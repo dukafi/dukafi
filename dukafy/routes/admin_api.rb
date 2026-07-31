@@ -151,6 +151,10 @@ class AdminApi < Roda
     }
   end
 
+  def rebake_product(product, old_slug: nil)
+    PartialBake.call(product:, old_slug:).page_count
+  end
+
   def save_page!(raw)
     id = raw.fetch("id").to_s
     page = Page[id.to_i]
@@ -290,7 +294,7 @@ class AdminApi < Roda
             r.post do
               product = Product.create(commerce_product_attributes(r.params))
               response.status = 201
-              { product: commerce_product_payload(product) }
+              { product: commerce_product_payload(product), rebakedPages: rebake_product(product) }
             rescue Sequel::ValidationFailed, Sequel::UniqueConstraintViolation => error
               halt_json(422, "invalid_product", error.message)
             end
@@ -308,6 +312,7 @@ class AdminApi < Roda
             product = Product[identifier.to_i] || halt_json(404, "product_not_found", "Product not found")
             r.post("variants") do
               variant = product.add_variant(commerce_variant_attributes(r.params))
+              rebake_product(product)
               response.status = 201
               { variant: commerce_product_payload(product)[:variants].find { |item| item[:id] == variant.id } }
             rescue Sequel::ValidationFailed, ArgumentError => error
@@ -317,11 +322,12 @@ class AdminApi < Roda
               variant = product.variants_dataset.first(id: variant_id.to_i) || halt_json(404, "variant_not_found", "Variant not found")
               r.patch do
                 variant.update(commerce_variant_attributes(r.params))
+                rebake_product(product)
                 { variant: commerce_product_payload(product)[:variants].find { |item| item[:id] == variant.id } }
               rescue Sequel::ValidationFailed, ArgumentError => error
                 halt_json(422, "invalid_variant", error.message)
               end
-              r.delete { variant.destroy; response.status = 204; "" }
+              r.delete { variant.destroy; rebake_product(product); response.status = 204; "" }
             end
             r.patch do
               old_slug = product.slug
@@ -329,7 +335,7 @@ class AdminApi < Roda
                 product.update(commerce_product_attributes(r.params))
                 SlugRedirect.record(resource_type: "product", old_slug:, destination_slug: product.slug)
               end
-              { product: commerce_product_payload(product) }
+              { product: commerce_product_payload(product), rebakedPages: rebake_product(product, old_slug:) }
             rescue Sequel::ValidationFailed, Sequel::UniqueConstraintViolation => error
               halt_json(422, "invalid_product", error.message)
             end
