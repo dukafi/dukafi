@@ -68,6 +68,21 @@ class AdminStoreSpec < Minitest::Test
     assert_includes last_response.body, "already been taken"
   end
 
+  def test_product_rich_text_description_is_saved_and_sanitized
+    login
+    post "/admin/store/products", title: "Canvas Bag", slug: "canvas-bag", vendor: "Dukafy", status: "active",
+      description_document: '<h2>Built well</h2><p>A <strong>durable</strong> bag.</p><script>alert(1)</script><a href="javascript:alert(2)">bad</a>'
+
+    product = Product.first
+    assert_includes product.description_document, "<strong>durable</strong>"
+    refute_includes product.description_document, "<script"
+    refute_includes product.description_document, "javascript:"
+
+    get "/admin/store/products/#{product.id}"
+    assert_includes last_response.body, '<h2>Built well</h2>'
+    assert_includes last_response.body, "Description formatting"
+  end
+
   def test_variant_create_update_order_and_delete
     login
     product = Product.create(title: "Canvas Bag", slug: "canvas-bag", status: "active")

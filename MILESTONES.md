@@ -85,7 +85,7 @@ Goal: merchants manage a real catalog without touching the canvas.
       a dedicated /admin/store area — decide and document)
 - [x] Variants: inline editor per product (sku, price_cents, stock, position)
 - [x] Collections CRUD + drag-order product membership
-- [ ] Product description as an editor document (reuse the canvas for rich
+- [x] Product description as an editor document (reuse the canvas for rich
       product content) OR rich-text field for v1 — decide, record in VISION.md
 - [ ] Slug uniqueness + redirect table for renamed slugs
 - [ ] CSV import for products/variants (merchant onboarding path)

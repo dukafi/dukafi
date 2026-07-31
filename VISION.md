@@ -123,3 +123,10 @@ HTMX 2 · Stripe Checkout · Puma (single worker, threaded) · Litestream ·
 Docker one-image deploy · Editor: vendored Instatic (React 19 + Vite,
 build-time only) · Tailwind CSS 4 standalone compiler (publish-time, used
 utilities only). Attribution: Instatic © David Babinec, MIT.
+
+## Recorded v1 decisions
+
+- Product descriptions use a focused rich-text field in the commerce admin,
+  stored as sanitized semantic HTML in `products.description_document`. The
+  visual canvas remains responsible for product-page layout and data binding;
+  merchants do not open a separate canvas document for every catalog item.
