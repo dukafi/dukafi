@@ -61,11 +61,14 @@ class BakeSpec < Minitest::Test
     File.symlink("slot_0", File.join(@output_root, "current"))
     Page.create(slug: "index", title: "Broken", kind: "page", status: "published", document: document(text: "Before"))
     Page.first.update(document: document(text: "After").tap { |doc| doc["nodes"]["text"]["moduleId"] = "missing.module" })
+    product = Product.create(title: "Existing", slug: "existing", status: "active", description_document: "", created_at: Time.now, updated_at: Time.now)
+    PageDependency.dataset.insert(page_path: "/existing", product_id: product.id)
 
     assert_raises(KeyError) { Bake.call(state: @state, output_root: @output_root) }
     assert_equal "slot_0", File.readlink(File.join(@output_root, "current"))
     assert_equal "live", File.read(File.join(@output_root, "current", "sentinel"))
     assert_equal 0, @state.refresh.publish_version
+    assert_equal [["/existing", product.id]], PageDependency.select_map(%i[page_path product_id])
   end
 
   def test_rejects_traversal_slug
@@ -129,6 +132,7 @@ class BakeSpec < Minitest::Test
     assert_includes html, '<span class="dukafy-price" data-product="canvas-bag">$129.00</span>'
     assert_includes html, 'name="product_slug" value="canvas-bag"'
     assert_includes html, 'hx-get="/fragments/stock?product_slug=canvas-bag'
+    assert_equal [["/products/canvas-bag", product.id]], PageDependency.select_map(%i[page_path product_id])
   end
 
   def test_bakes_page_one_for_each_collection_from_the_shared_template
@@ -159,5 +163,10 @@ class BakeSpec < Minitest::Test
     assert_includes html, 'href="/products/bag-2"'
     refute_includes html, 'href="/products/bag-3"'
     assert_includes html, '?loop_collection-products_page=2'
+    assert_equal [
+      ["/collections/featured", Product.first(slug: "bag-1").id],
+      ["/collections/featured", Product.first(slug: "bag-2").id],
+      ["/collections/featured", Product.first(slug: "bag-3").id],
+    ], PageDependency.order(:product_id).select_map(%i[page_path product_id])
   end
 end

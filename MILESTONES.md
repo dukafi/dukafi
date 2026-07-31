@@ -117,7 +117,7 @@ Goal: the editor builds real store pages.
       `/products/<slug>.html`
 - [x] Collection pages baked to `/collections/<slug>.html`; page 1 baked,
       `?loop_x_page=N` renders live (cache in M6)
-- [ ] `dependency_tracker.rb`: record page_path ⇄ product_id during bake
+- [x] `dependency_tracker.rb`: record page_path ⇄ product_id during bake
 - [ ] Partial re-bake: product save re-bakes its page + containing collection
       pages only (spec: editing 1 of 500 products re-bakes ≤ N pages)
 - [ ] Media variants: resize on upload (libvips via image_processing gem),

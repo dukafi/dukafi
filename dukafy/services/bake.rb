@@ -3,7 +3,7 @@ require "securerandom"
 
 class Bake
   Result = Data.define(:version, :page_count, :slot)
-  Entry = Data.define(:path, :title, :rendered)
+  Entry = Data.define(:path, :title, :rendered, :product_ids)
   SAFE_SLUG = /\A[a-zA-Z0-9][a-zA-Z0-9_\/-]*\z/
 
   def self.call(
@@ -54,10 +54,13 @@ class Bake
       entries.each { |entry| bake_entry(entry, tailwind_css, slot_path) }
       flip_current(slot_name)
       flipped = true
-      if @commit
-        @commit.call(version)
-      else
-        @state.update(publish_version: version)
+      DB.transaction do
+        DependencyTracker.replace!(entries.to_h { |entry| [dependency_path(entry.path), entry.product_ids] })
+        if @commit
+          @commit.call(version)
+        else
+          @state.update(publish_version: version)
+        end
       end
     rescue StandardError
       restore_current(previous_slot) if flipped
@@ -69,6 +72,10 @@ class Bake
   end
 
   private
+
+  def dependency_path(path)
+    path == "index" ? "/" : "/#{path}"
+  end
 
   def template_for(templates, table_slug)
     templates.find do |template|
@@ -84,7 +91,12 @@ class Bake
 
   def page_entries(prefetched)
     @pages.map do |page|
-      Entry.new(path: page.slug, title: page.title, rendered: render_page(page, prefetched:))
+      document = render_document(page)
+      Entry.new(
+        path: page.slug, title: page.title,
+        rendered: render_document_data(document, prefetched:),
+        product_ids: DependencyTracker.product_ids(document:, prefetched:)
+      )
     end
   end
 
@@ -94,7 +106,10 @@ class Bake
     prefetched.fetch("products", {}).values.map do |product|
       Entry.new(
         path: "products/#{product.fetch('slug')}", title: product.fetch("title"),
-        rendered: render_page(@product_template, prefetched:, current_entry: product)
+        rendered: render_page(@product_template, prefetched:, current_entry: product),
+        product_ids: DependencyTracker.product_ids(
+          document: render_document(@product_template), prefetched:, current_entry: product
+        )
       )
     end
   end
@@ -105,13 +120,23 @@ class Bake
     prefetched.fetch("collections", {}).values.map do |collection|
       Entry.new(
         path: "collections/#{collection.fetch('slug')}", title: collection.fetch("title"),
-        rendered: render_page(@collection_template, prefetched:, current_entry: collection)
+        rendered: render_page(@collection_template, prefetched:, current_entry: collection),
+        product_ids: DependencyTracker.product_ids(
+          document: render_document(@collection_template), prefetched:, current_entry: collection
+        )
       )
     end
   end
 
   def render_page(page, prefetched:, current_entry: nil)
-    document = @use_draft ? page.document_data : (page.published_document_data || page.document_data)
+    render_document_data(render_document(page), prefetched:, current_entry:)
+  end
+
+  def render_document(page)
+    @use_draft ? page.document_data : (page.published_document_data || page.document_data)
+  end
+
+  def render_document_data(document, prefetched:, current_entry: nil)
     Dukafy::Publisher::RenderPage.call(
       document:, registry: @registry, site: @state.site, prefetched:, current_entry:
     )
