@@ -35,14 +35,14 @@ class Storefront < Roda
     "/#{match[1]}/#{redirect.destination_slug}" if redirect
   end
 
-  def live_page(page)
+  def live_page(page, query_params = {})
     state = SiteState.first
     return nil unless state
 
     document = page.published_document_data || page.document_data
     rendered = Dukafy::Publisher::RenderPage.call(
       document:, registry: Dukafy::Publisher::REGISTRY, site: state.site,
-      prefetched: CommercePrefetcher.call
+      prefetched: CommercePrefetcher.call, query_params:
     )
     tailwind_html = %(<body class="#{rendered.body_classes.join(' ')}">#{rendered.html}</body>)
     tailwind_css = TailwindCompiler.call(html: tailwind_html)
@@ -92,7 +92,7 @@ class Storefront < Roda
         response["Content-Type"] = "text/html; charset=utf-8"
         response["Cache-Control"] = "no-cache"
         response["X-Dukafy-Render"] = "live"
-        next live_page(page)
+        next live_page(page, r.params)
       end
 
       response.status = 404

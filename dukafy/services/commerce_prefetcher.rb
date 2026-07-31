@@ -16,6 +16,13 @@ class CommercePrefetcher
         end,
       }]
     end
-    { "products" => products }
+    collections = Collection.eager(:products).all.to_h do |collection|
+      items = collection.products.filter_map { |product| products[product.slug] }
+      [collection.slug, {
+        "id" => collection.id, "slug" => collection.slug, "title" => collection.title,
+        "description" => collection.description.to_s, "products" => items,
+      }]
+    end
+    { "products" => products, "collections" => collections }
   end
 end

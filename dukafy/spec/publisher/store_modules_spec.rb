@@ -173,4 +173,46 @@ class StoreModulesSpec < Minitest::Test
 
     assert_includes output.fetch(:html), '<button class="dukafy-buy-button" type="submit" disabled>Sold out</button>'
   end
+
+  def test_collection_loop_matches_golden_output_and_round_robins_children
+    document = {
+      "rootNodeId" => "featured-loop",
+      "nodes" => {
+        "featured-loop" => {
+          "id" => "featured-loop", "moduleId" => "store.collection-loop",
+          "children" => %w[card price], "classIds" => [], "breakpointOverrides" => {},
+          "props" => { "collectionSlug" => "featured", "perPage" => 2 },
+        },
+        "card" => {
+          "id" => "card", "moduleId" => "store.product-card", "children" => [], "classIds" => [],
+          "breakpointOverrides" => {}, "props" => { "productSlug" => "" },
+        },
+        "price" => {
+          "id" => "price", "moduleId" => "store.price", "children" => [], "classIds" => [],
+          "breakpointOverrides" => {}, "props" => { "productSlug" => "" },
+        },
+      },
+    }
+    prefetched = {
+      "collections" => {
+        "featured" => { "products" => [
+          { "slug" => "first", "title" => "First", "href" => "/products/first", "imageUrl" => "", "priceCents" => 1_000, "currency" => "USD", "variants" => [] },
+          { "slug" => "second", "title" => "Second", "href" => "/products/second", "imageUrl" => "", "priceCents" => 2_000, "currency" => "USD", "variants" => [] },
+          { "slug" => "third", "title" => "Third", "href" => "/products/third", "imageUrl" => "", "priceCents" => 3_000, "currency" => "USD", "variants" => [] },
+        ] },
+      },
+    }
+
+    result = Dukafy::Publisher::RenderPage.call(document:, registry: Dukafy::Publisher::REGISTRY, prefetched:)
+
+    assert_equal File.read(File.expand_path("../golden/collection_loop.html", __dir__)).chomp, result.html
+    assert_includes result.css, ".dukafy-collection-loop{"
+
+    second_page = Dukafy::Publisher::RenderPage.call(
+      document:, registry: Dukafy::Publisher::REGISTRY, prefetched:,
+      query_params: { "loop_featured-loop_page" => "2" }
+    )
+    assert_includes second_page.html, 'href="/products/third"'
+    assert_includes second_page.html, 'Page 2 of 2'
+  end
 end

@@ -106,11 +106,11 @@ Goal: the editor builds real store pages.
   - [x] `store.image-gallery`
   - [x] `store.variant-picker`
   - [x] `store.buy-button` (posts to cart fragment endpoint)
-  - [ ] `store.collection-loop` (port of base.loop, source = collection,
+  - [x] `store.collection-loop` (port of base.loop, source = collection,
         round-robin variants, pagination param `loop_<id>_page`)
   - [ ] `store.stock-badge` — ALWAYS a fragment (dynamic_map)
   - [ ] `store.cart-badge` — ALWAYS a fragment
-- [ ] Loop prefetch: bake.rb resolves collection items into plain hashes before
+- [x] Loop prefetch: bake.rb resolves collection items into plain hashes before
       render (walker stays pure/synchronous)
 - [ ] Product-page template: one template document + per-product data binding
       (`currentEntry.title` etc.); bake every published product to
