@@ -32,16 +32,21 @@ class Storefront < Roda
 
     document = page.published_document_data || page.document_data
     rendered = Dukafy::Publisher::RenderPage.call(
-      document:, registry: Dukafy::Publisher::REGISTRY
+      document:, registry: Dukafy::Publisher::REGISTRY, site: state.site
     )
+    tailwind_html = %(<body class="#{rendered.body_classes.join(' ')}">#{rendered.html}</body>)
+    tailwind_css = TailwindCompiler.call(html: tailwind_html)
     collector = Dukafy::Publisher::CssCollector.new
     collector.add("page-modules", rendered.css)
-    css = collector.bundle(framework_css: Dukafy::Publisher::FrameworkCss.call(state.site)).content
+    css = collector.bundle(
+      framework_css: Dukafy::Publisher::FrameworkCss.call(state.site), tailwind_css: tailwind_css
+    ).content
     Dukafy::Publisher::HtmlDocument.call(
       title: state.site.dig("settings", "metaTitle") || page.title,
       description: state.site.dig("settings", "metaDescription"),
       language: state.site.dig("settings", "language") || "en",
       body: rendered.html,
+      body_classes: rendered.body_classes,
       css: css,
     )
   end

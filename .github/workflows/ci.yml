@@ -19,6 +19,12 @@ jobs:
         working-directory: instatic
       - run: bun run scripts/export-schemas.ts
         working-directory: instatic
+      - uses: actions/cache@v4
+        with:
+          path: dukafy/vendor/tailwindcss
+          key: tailwindcss-4.3.0-linux-x64
+      - run: bundle exec ruby scripts/install_tailwind.rb
+        working-directory: dukafy
       - run: bundle exec rake test
         working-directory: dukafy
       - run: bun run build

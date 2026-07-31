@@ -71,4 +71,31 @@ class BakeSpec < Minitest::Test
     end
     refute File.exist?(File.join(File.dirname(@output_root), "escape.html"))
   end
+
+  def test_bakes_only_tailwind_classes_used_on_published_nodes
+    site = @state.site
+    site["styleRules"] = {
+      "utility-flex" => { "name" => "flex" },
+      "utility-padding" => { "name" => "p-4" },
+      "unused" => { "name" => "hidden" },
+    }
+    @state.update(site: site)
+    page_document = document(text: "The word grid is prose, not a class.")
+    page_document["nodes"]["text"]["classIds"] = %w[utility-flex utility-padding]
+    Page.create(
+      slug: "index", title: "Tailwind", kind: "page", status: "published",
+      document: page_document,
+    )
+
+    Bake.call(state: @state, output_root: @output_root)
+
+    html = File.read(File.join(@output_root, "current", "index.html"))
+    assert_includes html, 'class="flex p-4"'
+    css_name = html[%r{/assets/(site-[0-9a-f]{12}\.css)}, 1]
+    css = File.read(File.join(@output_root, "current", "assets", css_name))
+    assert_includes css, ".flex{display:flex}"
+    assert_includes css, ".p-4{"
+    refute_includes css, ".hidden{"
+    refute_includes css, ".grid{"
+  end
 end

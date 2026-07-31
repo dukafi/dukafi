@@ -76,4 +76,26 @@ class RenderPageSpec < Minitest::Test
       Dukafy::Publisher::RenderPage.call(document: cyclic, registry: registry)
     end
   end
+
+  def test_resolves_site_class_names_onto_node_roots_and_body
+    document = {
+      "rootNodeId" => "root",
+      "nodes" => {
+        "root" => node("root", "base.body", children: ["box"]).merge("classIds" => ["body-class"]),
+        "box" => node("box", "base.box").merge("classIds" => %w[flex padding]),
+      },
+    }
+    site = {
+      "styleRules" => {
+        "body-class" => { "name" => "bg-white" },
+        "flex" => { "name" => "flex" },
+        "padding" => { "name" => "p-4" },
+      },
+    }
+
+    result = Dukafy::Publisher::RenderPage.call(document: document, registry: registry, site: site)
+
+    assert_includes result.html, '<section class="flex p-4"'
+    assert_equal ["bg-white"], result.body_classes
+  end
 end

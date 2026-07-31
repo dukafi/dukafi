@@ -3,5 +3,6 @@ set -euo pipefail
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project_root/dukafy"
+bundle exec ruby scripts/install_tailwind.rb
 bundle exec ruby scripts/migrate.rb
 exec bundle exec foreman start -f Procfile.dev

@@ -14,3 +14,4 @@ dukafy/public/admin/*
 instatic/dist/
 node_modules/
 .env
+dukafy/vendor/tailwindcss

@@ -80,6 +80,29 @@ interface ClassStyleInjectorProps {
 const STYLE_TAG_ID = 'mc-classes'
 const PREVIEW_STYLE_TAG_ID = 'mc-classes-preview'
 const FORCE_STATE_STYLE_TAG_ID = 'mc-classes-force-state'
+const TAILWIND_STYLE_TAG_ID = 'dukafy-tailwind'
+
+let tailwindCache: { signature: string; promise: Promise<string> } | null = null
+
+function compiledTailwindCss(classNames: string[]): Promise<string> {
+  const signature = [...classNames].sort().join('\n')
+  if (tailwindCache?.signature === signature) return tailwindCache.promise
+  const promise = signature
+    ? fetch('/admin/api/cms/tailwind/compile', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ classes: signature.split('\n') }),
+      }).then(async (response) => {
+        if (!response.ok) throw new Error(`Tailwind preview compile failed (${response.status})`)
+        const payload = await response.json() as { css?: unknown }
+        if (typeof payload.css !== 'string') throw new Error('Tailwind preview returned invalid CSS')
+        return payload.css
+      })
+    : Promise.resolve('')
+  tailwindCache = { signature, promise }
+  return promise
+}
 
 /**
  * Stable empty array used as the ?? fallback for breakpoints selector.
@@ -120,6 +143,9 @@ export function ClassStyleInjector({ targetDocument, viewport }: ClassStyleInjec
     classes ?? EMPTY_STYLE_RULES,
     usedClassIdSignature,
   )
+  const tailwindClassNames = Object.values(canvasClasses)
+    .filter((rule) => (rule.kind ?? 'class') === 'class')
+    .map((rule) => rule.name)
   const backgroundPaths = [
     ...collectSiteStyleBackgroundImagePaths({ styleRules: canvasClasses }),
     ...collectBackgroundImagePaths(previewClassStyles?.styles.backgroundImage),
@@ -185,6 +211,24 @@ export function ClassStyleInjector({ targetDocument, viewport }: ClassStyleInjec
     responsiveMediaAssets,
     responsiveMediaSignature,
   ])
+
+  useEffect(() => {
+    const targetDoc = targetDocument ?? document
+    let cancelled = false
+    let styleEl = targetDoc.getElementById(TAILWIND_STYLE_TAG_ID) as HTMLStyleElement | null
+    if (!styleEl) {
+      styleEl = targetDoc.createElement('style')
+      styleEl.id = TAILWIND_STYLE_TAG_ID
+      styleEl.setAttribute('data-source', 'DukafyTailwind')
+      targetDoc.head.appendChild(styleEl)
+    }
+    void compiledTailwindCss(tailwindClassNames).then((css) => {
+      if (!cancelled && styleEl) styleEl.textContent = css || '/* no Tailwind utilities */'
+    }).catch((error: unknown) => {
+      if (!cancelled) console.warn('[tailwind-preview] compile failed:', error)
+    })
+    return () => { cancelled = true }
+  }, [targetDocument, tailwindClassNames.join('\n')])
 
   // Preview overlay — a higher-specificity rule emitted while a user is
   // hovering a suggestion in a property control (e.g. spacing token

@@ -121,4 +121,5 @@ that would survive the company behind Dukafy disappearing.
 Ruby 3.4 · Roda · Sequel · SQLite (WAL, single writer) · Phlex ·
 HTMX 2 · Stripe Checkout · Puma (single worker, threaded) · Litestream ·
 Docker one-image deploy · Editor: vendored Instatic (React 19 + Vite,
-build-time only). Attribution: Instatic © David Babinec, MIT.
+build-time only) · Tailwind CSS 4 standalone compiler (publish-time, used
+utilities only). Attribution: Instatic © David Babinec, MIT.

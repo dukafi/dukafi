@@ -3,19 +3,21 @@ require "cgi"
 class Dukafy
   module Publisher
     class RenderPage
-      Result = Data.define(:html, :css)
+      Result = Data.define(:html, :css, :body_classes)
 
-      def self.call(document:, registry:, prefetched: {}, breakpoint_id: nil)
-        new(document, registry, prefetched, breakpoint_id).call
+      def self.call(document:, registry:, prefetched: {}, breakpoint_id: nil, site: nil)
+        new(document, registry, prefetched, breakpoint_id, site).call
       end
 
-      def initialize(document, registry, prefetched, breakpoint_id)
+      def initialize(document, registry, prefetched, breakpoint_id, site)
         @document = document
         @registry = registry
         @prefetched = prefetched
         @breakpoint_id = breakpoint_id
+        @site = site
         @css = CssCollector.new
         @visiting = {}
+        @body_classes = []
       end
 
       def call
@@ -23,7 +25,7 @@ class Dukafy
         root_id = @document.fetch("rootNodeId")
         raise ArgumentError, "root node #{root_id.inspect} is missing" unless nodes.key?(root_id)
 
-        Result.new(html: render_node(root_id), css: @css.to_s)
+        Result.new(html: render_node(root_id), css: @css.to_s, body_classes: @body_classes)
       end
 
       private
@@ -40,6 +42,12 @@ class Dukafy
         props = escaped_props(resolved_props(node, definition), definition.schema)
         output = definition.render(props, children, prefetched: @prefetched, node: node)
         html = output.fetch(:html)
+        classes = class_names(node)
+        if definition.id == "base.body"
+          @body_classes = classes
+        elsif classes.any?
+          html = inject_classes(html, classes)
+        end
         @css.add(definition.id, output[:css])
         html
       ensure
@@ -66,6 +74,27 @@ class Dukafy
             value
           end
           [key, safe_value]
+        end
+      end
+
+      def class_names(node)
+        rules = @site && @site["styleRules"]
+        return [] unless rules.is_a?(Hash)
+
+        node.fetch("classIds", []).filter_map do |id|
+          name = rules.dig(id, "name")
+          name if name.is_a?(String) && !name.empty?
+        end
+      end
+
+      def inject_classes(html, classes)
+        escaped = classes.map { |name| CGI.escapeHTML(name) }.join(" ")
+        html.sub(/<([a-zA-Z][\w-]*)([^>]*)>/) do |tag|
+          if tag.match?(/\bclass="[^"]*"/)
+            tag.sub(/\bclass="([^"]*)"/, %(class="#{escaped} \\1"))
+          else
+            tag.sub(/\A<([a-zA-Z][\w-]*)/, %(<\\1 class="#{escaped}"))
+          end
         end
       end
     end

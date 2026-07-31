@@ -11,18 +11,20 @@ class Bake
     output_root: File.expand_path("../published", __dir__),
     registry: Dukafy::Publisher::REGISTRY,
     use_draft: false,
-    commit: nil
+    commit: nil,
+    tailwind_compiler: TailwindCompiler
   )
-    new(state:, pages:, output_root:, registry:, use_draft:, commit:).call
+    new(state:, pages:, output_root:, registry:, use_draft:, commit:, tailwind_compiler:).call
   end
 
-  def initialize(state:, pages:, output_root:, registry:, use_draft:, commit:)
+  def initialize(state:, pages:, output_root:, registry:, use_draft:, commit:, tailwind_compiler:)
     @state = state
     @pages = pages
     @output_root = File.expand_path(output_root)
     @registry = registry
     @use_draft = use_draft
     @commit = commit
+    @tailwind_compiler = tailwind_compiler
   end
 
   def call
@@ -37,7 +39,12 @@ class Bake
     prepare_slot(slot_path)
 
     begin
-      @pages.each { |page| bake_page(page, slot_path) }
+      rendered_pages = @pages.map { |page| [page, render_page(page)] }
+      tailwind_html = rendered_pages.map do |_page, rendered|
+        %(<body class="#{rendered.body_classes.join(' ')}">#{rendered.html}</body>)
+      end.join("\n")
+      tailwind_css = @tailwind_compiler.call(html: tailwind_html)
+      rendered_pages.each { |page, rendered| bake_page(page, rendered, tailwind_css, slot_path) }
       flip_current(slot_name)
       flipped = true
       if @commit
@@ -62,19 +69,22 @@ class Bake
     FileUtils.mkdir_p(File.join(slot_path, "assets"))
   end
 
-  def bake_page(page, slot_path)
-    relative_html = html_path(page.slug)
+  def render_page(page)
     document = @use_draft ? page.document_data : (page.published_document_data || page.document_data)
-    rendered = Dukafy::Publisher::RenderPage.call(document:, registry: @registry)
+    Dukafy::Publisher::RenderPage.call(document:, registry: @registry, site: @state.site)
+  end
+
+  def bake_page(page, rendered, tailwind_css, slot_path)
+    relative_html = html_path(page.slug)
     collector = Dukafy::Publisher::CssCollector.new
     collector.add("page-modules", rendered.css)
     framework = Dukafy::Publisher::FrameworkCss.call(@state.site)
-    bundle = collector.bundle(framework_css: framework)
+    bundle = collector.bundle(framework_css: framework, tailwind_css: tailwind_css)
 
     File.write(File.join(slot_path, "assets", bundle.filename), bundle.content)
     destination = File.join(slot_path, relative_html)
     FileUtils.mkdir_p(File.dirname(destination))
-    File.write(destination, html_document(page, rendered.html, bundle.filename))
+    File.write(destination, html_document(page, rendered, bundle.filename))
   end
 
   def html_path(slug)
@@ -85,12 +95,13 @@ class Bake
     value == "index" ? "index.html" : "#{value}.html"
   end
 
-  def html_document(page, body, css_filename)
+  def html_document(page, rendered, css_filename)
     language = @state.site.dig("settings", "language") || "en"
     title = @state.site.dig("settings", "metaTitle") || page.title
     description = @state.site.dig("settings", "metaDescription")
     Dukafy::Publisher::HtmlDocument.call(
-      title:, body:, language:, description:, css_href: "/assets/#{bundle_name(css_filename)}"
+      title:, body: rendered.html, body_classes: rendered.body_classes,
+      language:, description:, css_href: "/assets/#{bundle_name(css_filename)}"
     )
   end
 

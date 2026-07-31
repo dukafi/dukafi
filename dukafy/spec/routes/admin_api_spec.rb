@@ -145,6 +145,17 @@ class AdminApiSpec < Minitest::Test
     assert_equal false, json.fetch("draftMatchesPublished")
   end
 
+  def test_compiles_tailwind_classes_for_editor_preview
+    setup_and_login
+
+    post_json "/admin/api/cms/tailwind/compile", { classes: %w[flex p-4] }
+
+    assert_equal 200, last_response.status, last_response.body
+    assert_includes json.fetch("css"), ".flex{display:flex}"
+    assert_includes json.fetch("css"), ".p-4{"
+    refute_includes json.fetch("css"), ".hidden{"
+  end
+
   def test_media_upload_list_and_delete
     setup_and_login
     source = Tempfile.new(["dukafy-upload", ".txt"])

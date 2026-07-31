@@ -194,6 +194,17 @@ class AdminApi < Roda
         end
       end
 
+      r.post("tailwind", "compile") do
+        require_admin!
+        classes = r.params["classes"]
+        valid = classes.is_a?(Array) && classes.length <= 500 && classes.all? do |name|
+          name.is_a?(String) && name.length.between?(1, 200) && !name.match?(/\s/)
+        end
+        halt_json(422, "invalid_tailwind_classes", "Tailwind classes must be an array of at most 500 class tokens") unless valid
+
+        { css: TailwindCompiler.call(classes: classes) }
+      end
+
       r.get("site") do
         require_admin!
         state = SiteState.first || halt_json(404, "site_not_found", "Site has not been created")

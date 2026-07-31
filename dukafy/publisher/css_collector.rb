@@ -19,8 +19,8 @@ class Dukafy
         @rules.values.join("\n")
       end
 
-      def bundle(framework_css: "", page_css: "")
-        content = [RESET_CSS, framework_css, to_s, sanitize(page_css)].reject(&:empty?).join("\n")
+      def bundle(framework_css: "", tailwind_css: "", page_css: "")
+        content = [RESET_CSS, framework_css, sanitize(tailwind_css), to_s, sanitize(page_css)].reject(&:empty?).join("\n")
         hash = Digest::SHA256.hexdigest(content).slice(0, 12)
         Bundle.new(filename: "site-#{hash}.css", hash: hash, content: content)
       end
