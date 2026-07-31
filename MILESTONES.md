@@ -30,19 +30,19 @@ storefront answers on :9292.
 
 Goal: the vendored editor persists documents to SQLite through the Ruby API.
 
-- [ ] Catalogue the editor's API surface: grep `instatic/src/admin` for fetch
+- [x] Catalogue the editor's API surface: grep `instatic/src/admin` for fetch
       calls; write `docs/api-contract.md` listing every endpoint + payload shape
       the editor actually uses (cross-check against `reference/instatic-server`)
-- [ ] Auth: `POST /admin/api/auth/login`, session cookie, `GET /admin/api/auth/me`;
+- [x] Auth: `POST /admin/api/auth/login`, session cookie, `GET /admin/api/auth/me`;
       bcrypt against `admins`; seed script for first admin
-- [ ] Site/document endpoints: load site shell + page document, save draft
+- [x] Site/document endpoints: load site shell + page document, save draft
       document (validate → write `pages.document`)
-- [ ] Page CRUD: list, create (with starter document), rename, delete, slug edit
-- [ ] Media endpoints: upload to `uploads/`, list, delete; store row in
+- [x] Page CRUD: list, create (with starter document), rename, delete, slug edit
+- [x] Media endpoints: upload to `uploads/`, list, delete; store row in
       `media_assets` (variants deferred to M4)
-- [ ] Trim editor features that call endpoints we won't ship in v1 (site transfer,
+- [x] Trim editor features that call endpoints we won't ship in v1 (site transfer,
       spotlight actions touching missing APIs) — delete the UI, don't stub 500s
-- [ ] Error contract: consistent JSON error envelope; editor surfaces failures
+- [x] Error contract: consistent JSON error envelope; editor surfaces failures
 
 **DEMO:** log into the editor, drag a container + text onto the canvas, hit
 save, restart Ruby, reload — the edit is still there (read it back out of

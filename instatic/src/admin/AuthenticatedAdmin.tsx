@@ -48,7 +48,7 @@
  * + compiles all workspace page chunks. The difference is the SCHEDULE:
  * active first, others in idle time. Total wire bytes are unchanged.
  */
-import { lazy, Suspense, useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import type { CmsCurrentUser } from '@core/persistence'
 import { AppLoadingScreen } from './AppLoadingScreen'
 import type { AdminWorkspace } from './workspace'
@@ -58,46 +58,17 @@ import { canAccessWorkspace, firstAccessibleWorkspace, workspacePath } from './a
 import { Navigate, useInRouterContext } from './lib/routing'
 import { SpotlightRoot } from './spotlight'
 import { prewarmedLazy } from './lib/prewarmedLazy'
-import { useAdminUi } from './state/adminUi'
 import styles from './AdminEntry.module.css'
 
 // The 10 workspace pages — pre-warmed AND synchronously-renderable once
 // loaded. See file header for the rationale.
-const DashboardPage = prewarmedLazy(
-  () => import('./pages/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })),
-  { displayName: 'DashboardPage' },
-)
 const SitePage = prewarmedLazy(
   () => import('./pages/site/SitePage').then((m) => ({ default: m.SitePage })),
   { displayName: 'SitePage' },
 )
-const ContentPage = prewarmedLazy(
-  () => import('./pages/content/ContentPage').then((m) => ({ default: m.ContentPage })),
-  { displayName: 'ContentPage' },
-)
 const MediaPage = prewarmedLazy(
   () => import('./pages/media/MediaPage').then((m) => ({ default: m.MediaPage })),
   { displayName: 'MediaPage' },
-)
-const UsersPage = prewarmedLazy(
-  () => import('./pages/users/UsersPage').then((m) => ({ default: m.UsersPage })),
-  { displayName: 'UsersPage' },
-)
-const AccountPage = prewarmedLazy(
-  () => import('./pages/account/AccountPage').then((m) => ({ default: m.AccountPage })),
-  { displayName: 'AccountPage' },
-)
-const DataPage = prewarmedLazy(
-  () => import('./pages/data/DataPage').then((m) => ({ default: m.DataPage })),
-  { displayName: 'DataPage' },
-)
-
-const SiteImportModal = lazy(() =>
-  import('./modals/SiteImport').then((m) => ({ default: m.SiteImportModal })),
-)
-
-const SiteExportModal = lazy(() =>
-  import('./modals/SiteExport').then((m) => ({ default: m.SiteExportModal })),
 )
 
 // Plugin runtime (globalThis.__instatic) is now installed LAZILY by
@@ -136,12 +107,8 @@ if (typeof window !== 'undefined') {
   const pathname = window.location.pathname
   const activePage =
     pathname.startsWith('/admin/site') ? SitePage :
-    pathname.startsWith('/admin/content') ? ContentPage :
-    pathname.startsWith('/admin/data') ? DataPage :
     pathname.startsWith('/admin/media') ? MediaPage :
-    pathname.startsWith('/admin/users') ? UsersPage :
-    pathname.startsWith('/admin/account') ? AccountPage :
-    DashboardPage
+    SitePage
   void activePage.preload().catch(() => {
     // Cold-render retry will re-fire preload via prewarmedLazy's throw.
   })
@@ -161,31 +128,20 @@ interface AuthenticatedAdminProps {
 // robin, this puts the most-likely-next pages first.
 const ALL_WORKSPACE_PAGES = [
   SitePage,
-  ContentPage,
-  DataPage,
-  DashboardPage,
   MediaPage,
-  UsersPage,
-  AccountPage,
 ]
 
 function pageForSection(section: AdminWorkspace) {
   return (
     section === 'site' ? SitePage :
-    section === 'content' ? ContentPage :
-    section === 'data' ? DataPage :
     section === 'media' ? MediaPage :
-    section === 'users' ? UsersPage :
-    section === 'account' ? AccountPage :
-    DashboardPage
+    SitePage
   )
 }
 
 export default function AuthenticatedAdmin({ section, currentUser }: AuthenticatedAdminProps) {
   const inRouter = useInRouterContext()
   const fallbackWorkspace = firstAccessibleWorkspace(currentUser)
-  const siteImportOpen = useAdminUi((s) => s.siteImportOpen)
-  const siteExportOpen = useAdminUi((s) => s.siteExport !== null)
 
   // Schedule background preloads for non-active workspace pages AFTER
   // the active page has rendered + painted. `useEffect` fires after
@@ -287,25 +243,8 @@ export default function AuthenticatedAdmin({ section, currentUser }: Authenticat
                   legitimately lazy because the editor surfaces are large and
                   shouldn't ship until needed. */}
           <Suspense fallback={<AppLoadingScreen />}>
-            {section === 'dashboard' ? <DashboardPage /> :
-              section === 'site' ? <SitePage /> :
-              section === 'content' ? <ContentPage /> :
-              section === 'data' ? <DataPage /> :
-              section === 'media' ? <MediaPage /> :
-              section === 'users' ? <UsersPage /> :
-              section === 'account' ? <AccountPage /> :
-              <DashboardPage />}
+            {section === 'media' ? <MediaPage /> : <SitePage />}
           </Suspense>
-          {siteImportOpen && (
-            <Suspense fallback={null}>
-              <SiteImportModal />
-            </Suspense>
-          )}
-          {siteExportOpen && (
-            <Suspense fallback={null}>
-              <SiteExportModal />
-            </Suspense>
-          )}
         </SpotlightRoot>
       </StepUpProvider>
     </AdminSessionProvider>

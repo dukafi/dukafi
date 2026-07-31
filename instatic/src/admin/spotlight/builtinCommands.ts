@@ -17,8 +17,6 @@
  */
 
 import type { Command } from './types'
-import { getNavigationCommands } from './commands/navigation'
-import { getAccountCommands } from './commands/account'
 import { getEditorCommands } from './commands/editor'
 import { getLayersCommands } from './commands/layers'
 import { getPanelsCommands } from './commands/panels'
@@ -26,17 +24,9 @@ import { getSettingsCommands } from './commands/settings'
 import { getHelpCommands } from './commands/help'
 import { getPagesCommands } from './commands/pages'
 import { getBreakpointsCommands } from './commands/breakpoints'
-import { getContentCommands } from './commands/content'
 import { getMediaCommands } from './commands/media'
-import { getDataCommands } from './commands/data'
 import { getFrameworkCommands } from './commands/framework'
-import { getVisualComponentsCommands } from './commands/visualComponents'
-import { getBuiltInPluginCommands, getPluginsCommands } from './commands/plugins'
-import { getUsersCommands } from './commands/users'
 import { getPreviewCommands } from './commands/preview'
-import { getImportHtmlCommands } from './commands/importHtml'
-import { getSiteImportCommands } from './commands/siteImport'
-import { getSiteExportCommands } from './commands/siteExport'
 
 /**
  * Module-level cache of the STATIC built-in command list. Each
@@ -64,27 +54,17 @@ let CACHED_STATIC_COMMANDS: Command[] | null = null
 export function getAllCommands(): Command[] {
   if (CACHED_STATIC_COMMANDS === null) {
     CACHED_STATIC_COMMANDS = [
-      ...getNavigationCommands(),
       ...getEditorCommands(),
       ...getLayersCommands(),
       ...getPanelsCommands(),
       ...getPagesCommands(),
       ...getBreakpointsCommands(),
-      ...getContentCommands(),
       ...getMediaCommands(),
-      ...getDataCommands(),
       ...getFrameworkCommands(),
-      ...getVisualComponentsCommands(),
-      ...getBuiltInPluginCommands(),
-      ...getUsersCommands(),
-      ...getAccountCommands(),
       ...getSettingsCommands(),
       ...getPreviewCommands(),
-      ...getImportHtmlCommands(),
-      ...getSiteImportCommands(),
-      ...getSiteExportCommands(),
       ...getHelpCommands(),
     ]
   }
-  return [...CACHED_STATIC_COMMANDS, ...getPluginsCommands()]
+  return CACHED_STATIC_COMMANDS
 }

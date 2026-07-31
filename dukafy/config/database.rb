@@ -8,4 +8,5 @@ DB.run "PRAGMA foreign_keys = ON"
 DB.run "PRAGMA cache_size = -64000"
 Sequel::Model.db = DB
 Sequel::Model.plugin :timestamps, update_on_create: true
+Sequel::Model.plugin :validation_helpers
 Sequel.extension :migration

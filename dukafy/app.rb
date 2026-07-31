@@ -1,5 +1,6 @@
 require_relative "config/environment"
 require "roda"
+require "rack/files"
 
 Dir[File.expand_path("routes/*.rb", __dir__)].sort.each { |f| require f }
 
@@ -13,8 +14,13 @@ class Dukafy < Roda
   route do |r|
     r.public
 
+    r.on("uploads") do
+      r.run Rack::Files.new(File.expand_path("uploads", __dir__))
+    end
+
     r.on("admin") do
       r.on("api") { r.run AdminApi }
+      r.root { r.redirect "/admin/site" }
       r.get { File.read(File.expand_path("public/admin/index.html", __dir__)) rescue r.halt(404) }
     end
 
