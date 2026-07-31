@@ -104,7 +104,7 @@ Goal: the editor builds real store pages.
   - [x] `store.product-card` (image, title, price)
   - [x] `store.price` (variant-aware, currency formatting)
   - [x] `store.image-gallery`
-  - [ ] `store.variant-picker`
+  - [x] `store.variant-picker`
   - [ ] `store.buy-button` (posts to cart fragment endpoint)
   - [ ] `store.collection-loop` (port of base.loop, source = collection,
         round-robin variants, pagination param `loop_<id>_page`)

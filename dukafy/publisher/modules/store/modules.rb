@@ -7,6 +7,9 @@ class Dukafy
       IMAGE_GALLERY_CSS = <<~CSS
         .dukafy-image-gallery{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:.75rem}.dukafy-image-gallery__item{display:block;width:100%;height:100%;aspect-ratio:1/1;object-fit:cover;background:#f4f4f5}.dukafy-image-gallery__item:first-child{grid-row:span 2}.dukafy-image-gallery--empty{display:block;min-height:12rem;background:#f4f4f5}@media(max-width:640px){.dukafy-image-gallery{grid-template-columns:1fr}.dukafy-image-gallery__item:first-child{grid-row:auto}}
       CSS
+      VARIANT_PICKER_CSS = <<~CSS
+        .dukafy-variant-picker{display:grid;gap:.375rem}.dukafy-variant-picker__label{font-weight:600}.dukafy-variant-picker__select{width:100%;min-height:2.75rem;padding:.625rem .75rem;border:1px solid currentColor;border-radius:.375rem;background:inherit;color:inherit;font:inherit}
+      CSS
 
       module_function
 
@@ -62,10 +65,43 @@ class Dukafy
           modifier = items.empty? ? " dukafy-image-gallery--empty" : ""
           { html: %(<div class="dukafy-image-gallery#{modifier}" data-product="#{CGI.escapeHTML(props['productSlug'].to_s)}">#{items}</div>), css: IMAGE_GALLERY_CSS }
         end
+        registry.register(
+          "store.variant-picker",
+          defaults: { "productSlug" => "", "label" => "Choose an option", "name" => "variant", "selectedSku" => "" },
+        ) do |props, _children, context|
+          product = context[:prefetched].dig("products", props["productSlug"]) || {}
+          variants = product.fetch("variants", []).sort_by { |item| item.fetch("position", 0) }
+          selected_sku = props["selectedSku"].to_s
+          selected_sku = variants.find { |item| item.fetch("stock", 0).positive? }&.fetch("sku", "").to_s if selected_sku.empty?
+          options = if variants.empty?
+            '<option value="" disabled selected>No variants available</option>'
+          else
+            variants.map { |variant| variant_option(variant, selected_sku) }.join
+          end
+          disabled = variants.empty? ? " disabled" : ""
+          html = %(<label class="dukafy-variant-picker" data-product="#{CGI.escapeHTML(props['productSlug'].to_s)}"><span class="dukafy-variant-picker__label">#{CGI.escapeHTML(props['label'].to_s)}</span><select class="dukafy-variant-picker__select" name="#{safe_field_name(props['name'])}"#{disabled}>#{options}</select></label>)
+          { html:, css: VARIANT_PICKER_CSS }
+        end
       end
 
       def authored_images(value, alt)
         value.to_s.lines.map(&:strip).reject(&:empty?).map { |url| { "url" => url, "alt" => alt } }
+      end
+
+      def variant_option(variant, selected_sku)
+        sku = variant.fetch("sku", "").to_s
+        stock = Integer(variant.fetch("stock", 0))
+        title = variant.fetch("title", sku).to_s
+        price = format_price(Integer(variant.fetch("priceCents", 0)), variant.fetch("currency", "USD").to_s.upcase)
+        suffix = stock.positive? ? " — #{price}" : " — Sold out"
+        selected = sku == selected_sku ? " selected" : ""
+        disabled = stock.positive? ? "" : " disabled"
+        %(<option value="#{CGI.escapeHTML(sku)}" data-price-cents="#{Integer(variant.fetch('priceCents', 0))}" data-currency="#{CGI.escapeHTML(variant.fetch('currency', 'USD').to_s.upcase)}"#{selected}#{disabled}>#{CGI.escapeHTML(title)}#{suffix}</option>)
+      end
+
+      def safe_field_name(value)
+        name = value.to_s
+        name.match?(/\A[a-zA-Z][a-zA-Z0-9_.-]*\z/) ? name : "variant"
       end
 
       def format_price(cents, currency)
