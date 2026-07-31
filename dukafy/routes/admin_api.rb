@@ -185,6 +185,15 @@ class AdminApi < Roda
         end
       end
 
+      r.on("publish") do
+        require_admin!
+        r.get("status") { PublishSite.status }
+        r.post do
+          result = PublishSite.call
+          { publishedPages: result.published_pages }
+        end
+      end
+
       r.get("site") do
         require_admin!
         state = SiteState.first || halt_json(404, "site_not_found", "Site has not been created")
@@ -224,6 +233,11 @@ class AdminApi < Roda
           page = Page[id.to_i] || halt_json(404, "page_not_found", "Page not found")
           r.patch do
             attrs = r.params.slice("slug", "title").transform_keys(&:to_sym)
+            document = page.document_data.merge(
+              "slug" => attrs.fetch(:slug, page.slug),
+              "title" => attrs.fetch(:title, page.title),
+            )
+            attrs[:document] = document
             page.update(attrs)
             { row: data_row(page) }
           end

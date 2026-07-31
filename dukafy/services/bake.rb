@@ -9,16 +9,20 @@ class Bake
     state: SiteState.first,
     pages: Page.where(kind: "page", status: "published").order(:id).all,
     output_root: File.expand_path("../published", __dir__),
-    registry: Dukafy::Publisher::REGISTRY
+    registry: Dukafy::Publisher::REGISTRY,
+    use_draft: false,
+    commit: nil
   )
-    new(state:, pages:, output_root:, registry:).call
+    new(state:, pages:, output_root:, registry:, use_draft:, commit:).call
   end
 
-  def initialize(state:, pages:, output_root:, registry:)
+  def initialize(state:, pages:, output_root:, registry:, use_draft:, commit:)
     @state = state
     @pages = pages
     @output_root = File.expand_path(output_root)
     @registry = registry
+    @use_draft = use_draft
+    @commit = commit
   end
 
   def call
@@ -36,7 +40,11 @@ class Bake
       @pages.each { |page| bake_page(page, slot_path) }
       flip_current(slot_name)
       flipped = true
-      @state.update(publish_version: version)
+      if @commit
+        @commit.call(version)
+      else
+        @state.update(publish_version: version)
+      end
     rescue StandardError
       restore_current(previous_slot) if flipped
       FileUtils.rm_rf(slot_path)
@@ -56,7 +64,7 @@ class Bake
 
   def bake_page(page, slot_path)
     relative_html = html_path(page.slug)
-    document = page.published_document_data || page.document_data
+    document = @use_draft ? page.document_data : (page.published_document_data || page.document_data)
     rendered = Dukafy::Publisher::RenderPage.call(document:, registry: @registry)
     collector = Dukafy::Publisher::CssCollector.new
     collector.add("page-modules", rendered.css)

@@ -17,6 +17,7 @@ class Page < Sequel::Model
     raise Sequel::ValidationFailed, "document does not match page schema: #{errors.first.inspect}" unless errors.empty?
 
     super(json)
+    @document_data = parsed
   rescue JSON::ParserError => e
     raise Sequel::ValidationFailed, "document is not valid JSON: #{e.message}"
   end

@@ -17,10 +17,14 @@ class AdminApiSpec < Minitest::Test
     SiteState.dataset.delete
     Admin.dataset.delete
     clear_cookies
+    @published_root = Dir.mktmpdir("dukafy-admin-publish-")
+    ENV["DUKAFY_PUBLISHED_ROOT"] = @published_root
   end
 
   def teardown
     @uploaded_paths.each { |path| File.delete(path) if File.file?(path) }
+    ENV.delete("DUKAFY_PUBLISHED_ROOT")
+    FileUtils.remove_entry(@published_root) if File.exist?(@published_root)
   end
 
   def json
@@ -111,6 +115,32 @@ class AdminApiSpec < Minitest::Test
     put "/admin/api/cms/me/preferences/module-inserter", JSON.generate({ value: { favorites: [{ kind: "bad", id: "x" }] } }),
         "CONTENT_TYPE" => "application/json"
     assert_equal 422, last_response.status
+  end
+
+  def test_publish_snapshots_drafts_bakes_site_and_reports_freshness
+    setup_and_login
+
+    get "/admin/api/cms/publish/status"
+    assert_equal false, json.fetch("hasPublishedVersion")
+    assert_equal false, json.fetch("draftMatchesPublished")
+
+    post "/admin/api/cms/publish"
+    assert_equal 200, last_response.status, last_response.body
+    assert_equal 1, json.fetch("publishedPages")
+    assert File.file?(File.join(@published_root, "current", "index.html"))
+
+    get "/admin/api/cms/publish/status"
+    assert_equal true, json.fetch("hasPublishedVersion")
+    assert_equal true, json.fetch("draftMatchesPublished")
+    assert_equal 1, json.fetch("publishedPages")
+    refute_nil json["lastPublishedAt"]
+
+    page = Page.first
+    patch "/admin/api/cms/pages/#{page.id}", JSON.generate({ title: "Changed through API" }),
+          "CONTENT_TYPE" => "application/json"
+    assert_equal 200, last_response.status
+    get "/admin/api/cms/publish/status"
+    assert_equal false, json.fetch("draftMatchesPublished")
   end
 
   def test_media_upload_list_and_delete

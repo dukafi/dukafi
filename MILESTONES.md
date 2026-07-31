@@ -67,7 +67,7 @@ Goal: a saved document becomes a static HTML file on disk, served fast.
       atomic symlink flip of `published/current` → bump publish_version
 - [x] `routes/storefront.rb`: disk fast-path (`published/current/<path>.html`
       when canonical query is empty) → live render fallback → 404 page
-- [ ] Publish endpoint: `POST /admin/api/publish` runs the bake; editor's publish
+- [x] Publish endpoint: `POST /admin/api/publish` runs the bake; editor's publish
       button wired to it
 - [x] Junk-param canonicalization (utm_* etc. collapse to bare path → disk hit)
 
