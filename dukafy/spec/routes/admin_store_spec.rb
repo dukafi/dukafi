@@ -12,6 +12,7 @@ class AdminStoreSpec < Minitest::Test
   def setup
     Variant.dataset.delete
     CollectionProduct.dataset.delete
+    Collection.dataset.delete
     Product.dataset.delete
     Page.dataset.delete
     SiteState.dataset.delete
@@ -107,5 +108,50 @@ class AdminStoreSpec < Minitest::Test
     assert_equal 422, last_response.status
     assert_includes last_response.body, "has already been used for this product"
     assert_equal 1, product.variants_dataset.count
+  end
+
+  def test_collection_crud_membership_and_drag_order_endpoint
+    login
+    first = Product.create(title: "First", slug: "first", status: "active")
+    second = Product.create(title: "Second", slug: "second", status: "active")
+
+    post "/admin/store/collections", title: "Featured", slug: "featured", description: "Homepage picks", sort_order: "1"
+    collection = Collection.first
+    assert_equal 302, last_response.status
+
+    post "/admin/store/collections/#{collection.id}/products", product_id: first.id.to_s
+    post "/admin/store/collections/#{collection.id}/products", product_id: second.id.to_s
+    assert_equal [first.id, second.id], collection.products.map(&:id)
+
+    get "/admin/store/collections/#{collection.id}"
+    assert_includes last_response.body, "draggable=\"true\""
+    assert_includes last_response.body, "Homepage picks"
+
+    post "/admin/store/collections/#{collection.id}/reorder", product_ids: "#{second.id},#{first.id}"
+    assert_equal 204, last_response.status
+    assert_equal [second.id, first.id], collection.products_dataset.all.map(&:id)
+
+    post "/admin/store/collections/#{collection.id}/products/#{first.id}/delete"
+    assert_equal [second.id], collection.products_dataset.all.map(&:id)
+
+    post "/admin/store/collections/#{collection.id}/update", title: "New Featured", slug: "new-featured", description: "Changed", sort_order: "0"
+    assert_equal "New Featured", collection.refresh.title
+
+    post "/admin/store/collections/#{collection.id}/delete"
+    assert_nil Collection[collection.id]
+  end
+
+  def test_collection_rejects_invalid_slug_and_foreign_reorder_ids
+    login
+    product = Product.create(title: "First", slug: "first", status: "active")
+    collection = Collection.create(title: "Featured", slug: "featured", sort_order: 0)
+    CollectionProduct.dataset.insert(collection_id: collection.id, product_id: product.id, position: 0)
+
+    post "/admin/store/collections", title: "Bad", slug: "../bad", description: "", sort_order: "0"
+    assert_equal 422, last_response.status
+
+    post "/admin/store/collections/#{collection.id}/reorder", product_ids: "999999"
+    assert_equal 422, last_response.status
+    assert_equal [product.id], collection.products_dataset.all.map(&:id)
   end
 end
