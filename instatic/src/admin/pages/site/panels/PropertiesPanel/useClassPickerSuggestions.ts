@@ -43,6 +43,18 @@ const SUFFICIENT_HISTORY_THRESHOLD = CLASS_USAGE_RECENT_LIMIT
 /** Bound mounted picker rows while retaining full-registry exact-name lookup. */
 export const CLASS_PICKER_RESULT_LIMIT = 100
 
+/** Parse pasted Tailwind-style utility lists without stealing CSS selectors. */
+export function parseUtilityClassList(raw: string): string[] | null {
+  const tokens = [...new Set(raw.trim().split(/\s+/))]
+  if (tokens.length < 2) return null
+  // A dot/hash/combinator identifies selector syntax. Tailwind variants,
+  // arbitrary values, fractions and modifiers intentionally remain valid.
+  return tokens.every((token) => {
+    const outsideArbitraryValue = token.replace(/\[[^\]]*\]/g, '[]')
+    return token.length > 0 && !/[.#,>+~]/.test(outsideArbitraryValue)
+  }) ? tokens : null
+}
+
 interface ClassPickerSuggestionsInput {
   /** Every user-visible class in the site, regardless of node assignment. */
   allClasses: readonly StyleRule[]
@@ -100,6 +112,7 @@ interface ClassPickerSuggestionsResult {
   exactMatchAlreadyAssigned: boolean
   exactMatchedSelectorItem: SelectorSuggestionItem | null
   createIntent: SelectorCreateInput
+  utilityClassList: string[] | null
   createValidationError: string | null
   canCreateNew: boolean
 
@@ -127,6 +140,7 @@ export function useClassPickerSuggestions(
   const trimmedQuery = trimmedQueryRaw.toLowerCase()
   const isEmptyQuery = trimmedQuery.length === 0
   const createIntent = classifySelectorCreateInput(trimmedQueryRaw)
+  const utilityClassList = parseUtilityClassList(trimmedQueryRaw)
 
   const candidates = allClasses.filter((c) => !assignedIds.includes(c.id))
   const candidatesById = new Map(candidates.map((c) => [c.id, c]))
@@ -199,7 +213,9 @@ export function useClassPickerSuggestions(
   const exactMatchedSelectorItem = !isEmptyQuery && createIntent.kind === 'ambient'
     ? selectorItems.find((item) => styleRuleSelector(item.rule) === createIntent.selector) ?? null
     : null
-  const createValidationError = createIntent.kind === 'ambient' && !isValidCssSelector(createIntent.selector)
+  const createValidationError = utilityClassList === null
+    && createIntent.kind === 'ambient'
+    && !isValidCssSelector(createIntent.selector)
     ? `Invalid CSS selector: ${createIntent.selector}`
     : null
   const canCreateNew =
@@ -229,6 +245,7 @@ export function useClassPickerSuggestions(
     trimmedQueryRaw,
     exactMatchedClass,
     exactMatchAlreadyAssigned,
+    utilityClassList,
   })
 
   return {
@@ -253,6 +270,7 @@ export function useClassPickerSuggestions(
     exactMatchAlreadyAssigned,
     exactMatchedSelectorItem,
     createIntent,
+    utilityClassList,
     createValidationError,
     canCreateNew,
     hasSubmittableQuery,
@@ -311,6 +329,7 @@ function deriveSubmitTooltip(args: {
   trimmedQueryRaw: string
   exactMatchedClass: StyleRule | null
   exactMatchAlreadyAssigned: boolean
+  utilityClassList: string[] | null
 }): string {
   const {
     hasArrowSelection,
@@ -323,7 +342,9 @@ function deriveSubmitTooltip(args: {
     trimmedQueryRaw,
     exactMatchedClass,
     exactMatchAlreadyAssigned,
+    utilityClassList,
   } = args
+  if (utilityClassList) return `Add ${utilityClassList.length} classes`
   if (createValidationError) return createValidationError
   if (hasArrowSelection && highlightedName) return `Add class “${highlightedName}”`
   if (hasArrowSelection && highlightedSelectorItem) {

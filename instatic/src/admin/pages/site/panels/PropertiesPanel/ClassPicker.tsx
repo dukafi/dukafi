@@ -30,6 +30,7 @@ import {
 import { classPickerUiReducer, initialClassPickerUiState } from './classPickerUiState'
 import { escapeCssAttributeValue } from '@site/canvas/canvasNodeLookup'
 import { useClassPickerDerivedState } from './useClassPickerDerivedState'
+import { parseUtilityClassList } from './useClassPickerSuggestions'
 import { PillContextMenuPortal } from './ClassPillContextMenu'
 import { ClassRenameDialog } from './ClassRenameDialog'
 import styles from './ClassPicker.module.css'
@@ -166,10 +167,26 @@ export function ClassPicker({ nodeId, trailingAction, ref }: ClassPickerProps) {
   }
 
   const handleCreateAndAdd = () => {
+    const utilityTokens = parseUtilityClassList(query)
+
     const intent = classifySelectorCreateInput(query)
     if (intent.kind === 'empty') return
     try {
-      if (intent.kind === 'class') {
+      if (utilityTokens) {
+        setUnmatchedSelectorNotice(null)
+        let lastClassId: string | null = null
+        for (const token of utilityTokens) {
+          const existing = Object.values(site?.styleRules ?? {}).find(
+            (rule) => (!rule.kind || rule.kind === 'class') && rule.name === token,
+          )
+          const classRule = existing ?? createClass(token)
+          addNodeClass(nodeId, classRule.id)
+          recordClassUsage(classRule.id)
+          lastClassId = classRule.id
+        }
+        if (lastClassId) setActiveClass(lastClassId)
+        clearPreviewNodeClass(nodeId)
+      } else if (intent.kind === 'class') {
         setUnmatchedSelectorNotice(null)
         const newClass = createClass(intent.name)
         addNodeClass(nodeId, newClass.id)

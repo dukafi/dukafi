@@ -137,6 +137,9 @@ export type SelectorCreateInput =
   | { kind: 'empty' }
 
 const SINGLE_CLASS_INPUT_RE = /^\.?[a-zA-Z_-][a-zA-Z0-9_-]*$/
+const TAILWIND_ARBITRARY_UTILITY_RE = /^(?![.#])\S*\[.+\]\S*$/
+const TAILWIND_FRACTION_UTILITY_RE = /^!?-?[a-zA-Z][a-zA-Z0-9_-]*-[^\s/]+\/[^\s/]+$/
+const TAILWIND_VARIANT_RE = /^(?:sm|md|lg|xl|2xl|dark|hover|focus|focus-within|focus-visible|active|visited|target|first|last|only|odd|even|first-of-type|last-of-type|only-of-type|empty|disabled|enabled|checked|indeterminate|default|required|valid|invalid|in-range|out-of-range|placeholder-shown|autofill|read-only|open|before|after|first-letter|first-line|marker|selection|file|backdrop|placeholder|motion-safe|motion-reduce|contrast-more|contrast-less|print|portrait|landscape|rtl|ltr|forced-colors|\[.+\]|(?:group|peer|data|aria|supports|has|not|in|nth)-.+)$/
 
 // Bare words are class-first. Heading tags are the common exception authors
 // expect to behave as element selectors rather than new class names.
@@ -161,7 +164,19 @@ export function classifySelectorCreateInput(raw: string): SelectorCreateInput {
   const value = raw.trim()
   if (!value) return { kind: 'empty' }
 
-  if (SINGLE_CLASS_INPUT_RE.test(value) && !HEADING_TAG_NAMES.has(value.toLowerCase())) {
+  const variantParts = value.split(':')
+  const baseUtility = variantParts.at(-1) ?? ''
+  const hasTailwindVariants = variantParts.length > 1
+    && variantParts.slice(0, -1).every((variant) => TAILWIND_VARIANT_RE.test(variant))
+    && (SINGLE_CLASS_INPUT_RE.test(baseUtility)
+      || TAILWIND_ARBITRARY_UTILITY_RE.test(baseUtility)
+      || TAILWIND_FRACTION_UTILITY_RE.test(baseUtility))
+  const isTailwindArbitrary = TAILWIND_ARBITRARY_UTILITY_RE.test(value)
+    || TAILWIND_FRACTION_UTILITY_RE.test(value)
+
+  if ((SINGLE_CLASS_INPUT_RE.test(value) && !HEADING_TAG_NAMES.has(value.toLowerCase()))
+    || hasTailwindVariants
+    || isTailwindArbitrary) {
     return { kind: 'class', name: value.startsWith('.') ? value.slice(1) : value }
   }
 

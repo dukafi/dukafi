@@ -202,6 +202,24 @@ describe('ClassPicker — search + create', () => {
     expect(node.classIds).toContain(cls.id)
   })
 
+  it('creates and assigns a space-separated list of Tailwind utilities', async () => {
+    const user = userEvent.setup()
+    const { nodeId } = loadSiteWithNode()
+    const existing = useEditorStore.getState().createClass('p-8')
+    render(<ClassPicker nodeId={nodeId} />)
+
+    const input = screen.getByPlaceholderText('Add or create selector…')
+    await user.click(input)
+    await user.type(input, 'p-8 px-8 md:px-12 hover:bg-blue-600')
+    await user.keyboard('{Enter}')
+
+    const state = useEditorStore.getState()
+    const node = state.site!.pages[0].nodes[nodeId]
+    const classNames = node.classIds.map((id) => state.site!.styleRules[id]?.name)
+    expect(classNames).toEqual(['p-8', 'px-8', 'md:px-12', 'hover:bg-blue-600'])
+    expect(node.classIds.filter((id) => id === existing.id)).toHaveLength(1)
+  })
+
   it('Escape on a non-empty query closes the suggestions dropdown', async () => {
     const user = userEvent.setup()
     const { nodeId } = loadSiteWithNode()
