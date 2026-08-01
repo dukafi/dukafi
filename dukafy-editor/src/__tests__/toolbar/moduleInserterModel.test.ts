@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'bun:test'
 import {
   DEFAULT_MODULE_INSERTER_FAVORITES,
+  buildModuleInserterItems,
   composeLayoutsSection,
   dedupeModuleInserterRefs,
   getSavedLayoutItems,
@@ -101,6 +102,44 @@ describe('module inserter model', () => {
       { kind: 'savedLayout', id: 'user-layout-1' },
       { kind: 'module', id: 'base.image' },
     ])
+  })
+
+  it('hides the retired card/loop modules in every context, even though they stay registered', () => {
+    const modules = [
+      mod('store.product-card', 'Commerce', 'Product card'),
+      mod('store.image-gallery', 'Commerce', 'Image gallery'),
+      mod('store.collection-loop', 'Commerce', 'Collection loop'),
+      mod('store.relationship-loop', 'Commerce', 'Relationship loop'),
+      mod('store.price', 'Commerce', 'Price'),
+    ]
+
+    for (const ctx of [PAGE_CTX, TEMPLATE_CTX, VC_CTX]) {
+      const ids = getVisibleModuleItems(modules, ctx).map((item) => item.id)
+      expect(ids).not.toContain('store.product-card')
+      expect(ids).not.toContain('store.image-gallery')
+      expect(ids).not.toContain('store.collection-loop')
+      expect(ids).toContain('store.relationship-loop')
+      expect(ids).toContain('store.price')
+    }
+  })
+
+  it('includes the three commerce scaffold items in buildModuleInserterItems, wired for insertion', () => {
+    const built = buildModuleInserterItems({
+      modules: [],
+      context: PAGE_CTX,
+      savedLayouts: [],
+      visualComponents: [],
+    })
+
+    expect(built.commerceScaffoldItems.map((item) => item.scaffoldId).sort()).toEqual([
+      'product',
+      'products-loop',
+      'variants-loop',
+    ])
+    expect(built.commerceScaffoldItems.every((item) => item.kind === 'commerceScaffold')).toBe(true)
+    for (const item of built.commerceScaffoldItems) {
+      expect(built.allItems).toContain(item)
+    }
   })
 
   it('resolves favorite refs against insertable items and skips missing refs', () => {

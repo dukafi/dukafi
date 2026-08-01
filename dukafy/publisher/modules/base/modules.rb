@@ -54,7 +54,7 @@ class Dukafy
           dimensions = %w[width height].filter_map { |key| media[key] ? %( #{key}="#{Integer(media[key])}") : nil }.join
           variants = media.fetch("variants", [])
           srcset = variants.filter_map do |variant|
-            url = BaseHelpers.safe_url(variant["url"])
+            url = BaseHelpers.safe_url(variant["path"])
             %(#{url} #{Integer(variant["width"])}w) unless url.empty? || url == "#"
           end.join(", ")
           responsive = srcset.empty? ? "" : %( srcset="#{srcset}" sizes="auto, 100vw")

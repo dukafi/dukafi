@@ -103,15 +103,24 @@ the admin UI.
 Goal: the editor builds real store pages.
 
 - [x] Canvas (React) + publisher (Ruby) pairs, each with golden tests:
-  - [x] `store.product-card` (image, title, price)
   - [x] `store.price` (variant-aware, currency formatting)
-  - [x] `store.image-gallery`
   - [x] `store.variant-picker`
   - [x] `store.buy-button` (posts to cart fragment endpoint)
-  - [x] `store.collection-loop` (port of base.loop, source = collection,
-        round-robin variants, pagination param `loop_<id>_page`)
+  - [x] `store.relationship-loop` (generalized `store.collection-loop`: same
+        round-robin/pagination mechanism, but `relationship: "products" |
+        "variants"` instead of collection-only — walks a collection's
+        products or a product's own variants with a freeform child subtree)
   - [x] `store.stock-badge` — ALWAYS a fragment (dynamic_map)
   - [x] `store.cart-badge` — ALWAYS a fragment
+- [x] **Revised after M4**: `store.product-card` and `store.image-gallery`
+      were replaced by a composable scaffold — a plain `base.container`/
+      `base.link` wrapping bound `base.image`/`base.text` children (the same
+      `dynamicBindings`/`currentEntry` mechanism the product title already
+      used), inserted via new "Insert product"/"Insert collection"/"Insert
+      variant list" picker items instead of one opaque card component. Both
+      retired modules (plus the original `store.collection-loop` id) stay
+      registered and render correctly for already-published documents, but
+      are hidden from the module picker for new inserts.
 - [x] Loop prefetch: bake.rb resolves collection items into plain hashes before
       render (walker stays pure/synchronous)
 - [x] Product-page template: one template document + per-product data binding

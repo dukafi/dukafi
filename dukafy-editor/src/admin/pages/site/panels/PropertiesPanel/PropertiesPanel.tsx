@@ -137,6 +137,7 @@ export function PropertiesPanel({ variant = 'floating' }: PropertiesPanelProps) 
     dynamicBindingsEnabled: data.dynamicBindingsEnabled,
     enclosingLoopSource: data.enclosingLoopSource,
     enclosingLoopTableId: data.enclosingLoopTableId,
+    commerceEntityKind: data.commerceEntityKind,
     handleChange: data.handleChange,
     handlePatch: data.handlePatch,
     onSetDynamicBinding: data.handleSetDynamicBinding,

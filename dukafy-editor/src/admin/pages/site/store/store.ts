@@ -16,6 +16,7 @@ import { createSitePanelSlice } from './slices/sitePanelSlice'
 import { createClipboardSlice } from './slices/clipboardSlice'
 import { createInlineEditSlice } from './slices/inlineEditSlice'
 import { createLayoutsSlice } from './slices/layoutsSlice'
+import { createCommerceScaffoldSlice } from './slices/commerceScaffoldSlice'
 import { initCollabBinding } from './slices/site/collabBinding'
 import { bindPluginRuntimeStoreApi } from '@core/plugins/runtime'
 import { useAdminUi } from '@admin/state/adminUi'
@@ -39,6 +40,7 @@ import { restoreStoredSiteEditorLayout } from '@site/layout/siteEditorLayoutPers
  *   - clipboardSlice:      copy / cut / paste of layer subtrees, persisted editor-wide
  *   - inlineEditSlice:     canvas inline text edit session (double-click to edit)
  *   - layoutsSlice:        user-saved layouts (save / insert / rename / delete)
+ *   - commerceScaffoldSlice: code-defined "Insert product"/"Insert collection" scaffolds
  *
  * The combined `EditorStore` type lives in `./types` so each slice can import
  * it without going through this module — that's how the historical
@@ -73,6 +75,7 @@ export const useEditorStore = create<EditorStore>()(
         ...createClipboardSlice(...args),
         ...createInlineEditSlice(...args),
         ...createLayoutsSlice(...args),
+        ...createCommerceScaffoldSlice(...args),
       }),
       { enableAutoFreeze: true },
     )

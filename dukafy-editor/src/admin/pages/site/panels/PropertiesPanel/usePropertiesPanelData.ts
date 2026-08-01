@@ -18,6 +18,12 @@ import { useEditorStore, selectSelectedNode } from '@site/store/store'
 import { registry } from '@core/module-engine'
 import { getAncestors, resolveProps } from '@core/page-tree'
 import { loopSourceRegistry } from '@core/loops/registry'
+import { primaryTemplateTableSlug } from '@core/templates'
+import {
+  COMMERCE_ENTITY_FIELDS,
+  COMMERCE_ENTITY_LABELS,
+  type CommerceEntityKind,
+} from '../../property-controls/DynamicBindingControl/commerceEntry'
 import { buildClassTokenUsageMap, buildSelectorUsageMap, resolveSelectorUsage } from '../selectorUsage'
 import type {
   AnyModuleDefinition,
@@ -29,11 +35,23 @@ import type {
   PageNode,
 } from '@core/page-tree'
 import type { VisualComponent } from '@core/visualComponents'
-import type { LoopEntitySource } from '@core/loops/types'
+import type { LoopSourceField } from '@core/loops/types'
 import type { ActiveDocument, PanelState, FocusedPanel, PanelMode } from '../../store/slices/uiSlice'
 
 const DEFAULT_WIDTH = 360
 const MIN_WIDTH = 280
+
+/**
+ * Structural subset of `LoopEntitySource` — all `PropertyControlRenderer`'s
+ * dynamic-binding wiring actually reads is `label` + `fields`. Narrowed so
+ * synthesized commerce sources (products/variants/collections, which have
+ * no `base.loop` registry entry at all) don't need to fake the rest of the
+ * `LoopEntitySource` contract (`fetch`/`preview`/`filterSchema`/…).
+ */
+interface EnclosingBindingSource {
+  label: string
+  fields: LoopSourceField[]
+}
 
 /**
  * Everything PropertiesPanel needs to render. Field order intentionally
@@ -68,8 +86,9 @@ interface PropertiesPanelData {
   selectedSelectorUsage: string | null
 
   // ─── Loop / dynamic-binding context ────────────────────────────────────
-  enclosingLoopSource: LoopEntitySource | undefined
+  enclosingLoopSource: EnclosingBindingSource | undefined
   enclosingLoopTableId: string | null
+  commerceEntityKind: CommerceEntityKind | null
   dynamicBindingsEnabled: boolean
 
   // ─── Panel chrome state ────────────────────────────────────────────────
@@ -171,11 +190,12 @@ export function usePropertiesPanelData(): PropertiesPanelData {
   // Dynamic bindings are available whenever the selected node sits inside a
   // scope that produces a `currentEntry` at render time:
   //   - on a single-entry template page (the page itself injects an entry), OR
-  //   - inside a `base.loop` subtree (the loop pushes an iteration item per render).
-  // For nodes with a `base.loop` ancestor we expose the same `currentEntry`
+  //   - inside a `base.loop` or `store.relationship-loop` subtree (the loop
+  //     pushes an iteration item per render).
+  // For nodes with such an ancestor we expose the same `currentEntry`
   // bindings — they resolve to the loop's iteration item via the publisher's
   // entry-stack semantics.
-  const { enclosingLoopSource, enclosingLoopTableId } = resolveEnclosingLoopContext(
+  const { enclosingLoopSource, enclosingLoopTableId, commerceEntityKind } = resolveEnclosingLoopContext(
     activePage,
     selectedNodeId,
   )
@@ -258,6 +278,7 @@ export function usePropertiesPanelData(): PropertiesPanelData {
 
     enclosingLoopSource,
     enclosingLoopTableId,
+    commerceEntityKind,
     dynamicBindingsEnabled,
 
     panelState,
@@ -303,8 +324,23 @@ function resolveOverrideKeys(
 }
 
 interface EnclosingLoopContext {
-  enclosingLoopSource: LoopEntitySource | undefined
+  enclosingLoopSource: EnclosingBindingSource | undefined
   enclosingLoopTableId: string | null
+  commerceEntityKind: CommerceEntityKind | null
+}
+
+const EMPTY_ENCLOSING_CONTEXT: EnclosingLoopContext = {
+  enclosingLoopSource: undefined,
+  enclosingLoopTableId: null,
+  commerceEntityKind: null,
+}
+
+function commerceBindingSource(kind: CommerceEntityKind): EnclosingLoopContext {
+  return {
+    enclosingLoopSource: { label: COMMERCE_ENTITY_LABELS[kind], fields: COMMERCE_ENTITY_FIELDS[kind] },
+    enclosingLoopTableId: null,
+    commerceEntityKind: kind,
+  }
 }
 
 function resolveEnclosingLoopContext(
@@ -312,31 +348,50 @@ function resolveEnclosingLoopContext(
   selectedNodeId: string | null,
 ): EnclosingLoopContext {
   if (!activePage || !selectedNodeId) {
-    return { enclosingLoopSource: undefined, enclosingLoopTableId: null }
+    return EMPTY_ENCLOSING_CONTEXT
   }
 
   const ancestors = getAncestors(activePage, selectedNodeId)
-  // Closest enclosing loop wins — that's the one whose source defines the
-  // available fields for `currentEntry` bindings inside this subtree.
-  const enclosingLoopNode = [...ancestors]
-    .reverse()
-    .find((a) => a.moduleId === 'base.loop')
+  const reversedAncestors = [...ancestors].reverse()
 
-  if (!enclosingLoopNode) {
-    return { enclosingLoopSource: undefined, enclosingLoopTableId: null }
+  // Closest enclosing relationship loop wins — a product-relationship loop
+  // nested inside a collection-relationship loop (unusual, but not
+  // disallowed) should offer product fields, not collection fields.
+  const relationshipLoopNode = reversedAncestors.find(
+    (a) => a.moduleId === 'store.relationship-loop',
+  )
+  if (relationshipLoopNode) {
+    const kind: CommerceEntityKind = relationshipLoopNode.props.relationship === 'variants'
+      ? 'variant'
+      : 'product'
+    return commerceBindingSource(kind)
   }
 
-  const enclosingLoopSourceId = typeof enclosingLoopNode.props.sourceId === 'string'
-    ? enclosingLoopNode.props.sourceId
-    : null
-  const enclosingLoopSource = enclosingLoopSourceId
-    ? loopSourceRegistry.get(enclosingLoopSourceId)
-    : undefined
+  // Instatic-era generic loop — kept for any pre-existing document still
+  // using it (hidden from the module picker for new inserts).
+  const enclosingLoopNode = reversedAncestors.find((a) => a.moduleId === 'base.loop')
+  if (enclosingLoopNode) {
+    const enclosingLoopSourceId = typeof enclosingLoopNode.props.sourceId === 'string'
+      ? enclosingLoopNode.props.sourceId
+      : null
+    const enclosingLoopSource = enclosingLoopSourceId
+      ? loopSourceRegistry.get(enclosingLoopSourceId)
+      : undefined
 
-  return {
-    enclosingLoopSource,
-    enclosingLoopTableId: extractLoopTableId(enclosingLoopNode, enclosingLoopSourceId),
+    return {
+      enclosingLoopSource,
+      enclosingLoopTableId: extractLoopTableId(enclosingLoopNode, enclosingLoopSourceId),
+      commerceEntityKind: null,
+    }
   }
+
+  // No enclosing loop — the product/collection template page itself injects
+  // a `currentEntry` (the product or collection the page is rendering for).
+  const templateTableSlug = primaryTemplateTableSlug(activePage)
+  if (templateTableSlug === 'products') return commerceBindingSource('product')
+  if (templateTableSlug === 'collections') return commerceBindingSource('collection')
+
+  return EMPTY_ENCLOSING_CONTEXT
 }
 
 // Loop bound to a specific data table — pass its tableId down so the binding

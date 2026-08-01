@@ -56,6 +56,38 @@ class PartialBakeSpec < Minitest::Test
     assert_equal 2, @state.refresh.publish_version
   end
 
+  def test_editing_a_collection_directly_rebakes_only_its_own_page
+    collection = Collection.create(title: "Featured", slug: "featured", description: "", sort_order: 0)
+    product = Product.create(
+      title: "Bag", slug: "bag", status: "active", description_document: "", created_at: Time.now, updated_at: Time.now
+    )
+    Variant.create(product_id: product.id, sku: "BAG-1", title: "Default", price_cents: 1_000, currency: "USD", stock: 10, position: 0)
+    CollectionProduct.dataset.insert(collection_id: collection.id, product_id: product.id, position: 0)
+    Bake.call(state: @state, output_root: @output_root)
+    unrelated_path = File.join(@output_root, "current", "products", "bag.html")
+    unrelated_content = File.read(unrelated_path)
+
+    collection.update(title: "Featured Picks")
+    result = PartialBake.call(collection:, state: @state, output_root: @output_root)
+
+    assert_equal ["/collections/featured"], result.paths
+    assert_equal unrelated_content, File.read(unrelated_path)
+    assert_equal 2, @state.refresh.publish_version
+  end
+
+  def test_renaming_a_collections_slug_deletes_the_old_file_and_bakes_the_new_one
+    collection = Collection.create(title: "Featured", slug: "featured", description: "", sort_order: 0)
+    Bake.call(state: @state, output_root: @output_root)
+    old_path = File.join(@output_root, "current", "collections", "featured.html")
+    assert File.file?(old_path)
+
+    collection.update(slug: "featured-picks")
+    PartialBake.call(collection:, old_slug: "featured", state: @state, output_root: @output_root)
+
+    refute File.file?(old_path)
+    assert File.file?(File.join(@output_root, "current", "collections", "featured-picks.html"))
+  end
+
   private
 
   def page_document

@@ -74,7 +74,7 @@ describe('ModuleInserterDialog favorites', () => {
       ).toBeTruthy()
     })
 
-    for (const name of ['Container', 'Loop', 'Text', 'List', 'Content Outlet', 'Image']) {
+    for (const name of ['Container', 'Text', 'List', 'Content Outlet', 'Image']) {
       const toggle = screen.getByRole('button', {
         name: `Add ${name} to notch favorites`,
       })

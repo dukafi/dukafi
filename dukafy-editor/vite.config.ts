@@ -8,7 +8,18 @@ import {
   shouldBufferLargeDevProxyRequest,
 } from './scripts/lib/largeBodyDevProxy'
 
-const CMS_DEV_SERVER_ORIGIN = `http://localhost:${process.env.PORT ?? '3001'}`
+// Dukafy's dev Ruby server is fixed at port 9292 — Procfile.dev hardcodes
+// `rackup -p 9292` unconditionally, ignoring any ambient PORT env var
+// entirely, and the /admin/api proxy entry below already hardcodes 9292
+// directly rather than reading this. This used to be `process.env.PORT ??
+// '3001'` (3001 being the original upstream Instatic Bun CMS server's
+// port), which meant an unrelated PORT value already set in a developer's
+// shell (for some other project — nothing in Dukafy's own tooling sets
+// PORT) silently pointed /uploads, /_instatic, and the large-body/
+// public-site dev-proxy helpers at the wrong server. Hardcoded now so nothing
+// in the environment can override it, matching the /admin/api entry.
+const CMS_DEV_PORT = '9292'
+const CMS_DEV_SERVER_ORIGIN = `http://localhost:${CMS_DEV_PORT}`
 const FILE_EXTENSION_RE = /\.[a-zA-Z0-9]+$/
 
 function isEditorAppPath(pathname: string): boolean {
@@ -261,7 +272,7 @@ export default defineConfig({
     // Inlined from the same source as the proxy target so the two can never
     // disagree, rather than introducing an operator-facing env var. Production
     // builds are same-origin and never read it.
-    'import.meta.env.VITE_CMS_DEV_PORT': JSON.stringify(process.env.PORT ?? '3001'),
+    'import.meta.env.VITE_CMS_DEV_PORT': JSON.stringify(CMS_DEV_PORT),
   },
   server: {
     port: 5173,

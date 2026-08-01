@@ -1,11 +1,24 @@
 /**
  * Shared types for the Commerce workspace.
  *
- * Dialect-naive — no React imports, no API client imports. Shared across the
- * page shell, the section components, and the data hook.
+ * No API client imports — shared across the page shell, the section
+ * components, and the data hook.
  */
+import type { ReactNode } from 'react'
 
-export type CommerceSection = 'products' | 'collections' | 'import'
+export type CommerceSection = 'products' | 'collections' | 'import' | 'settings'
+
+export interface CommerceSettings {
+  currency: string
+  lowStockThreshold: number
+}
+
+export interface RowActionMenuItem {
+  label: string
+  icon: ReactNode
+  danger?: boolean
+  onSelect: () => void
+}
 
 export interface Variant {
   id: number
@@ -17,6 +30,13 @@ export interface Variant {
   position: number
 }
 
+export interface ProductImage {
+  id: number
+  publicPath: string
+  width: number | null
+  height: number | null
+}
+
 export interface Product {
   id: number
   title: string
@@ -25,6 +45,7 @@ export interface Product {
   status: 'draft' | 'active'
   descriptionHtml: string
   variants: Variant[]
+  images: ProductImage[]
 }
 
 export interface Collection {

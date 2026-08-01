@@ -1,27 +1,32 @@
 /**
  * Commerce → Collections.
  *
- * Same master-detail shape as Products. The detail canvas adds an ordered
- * product-membership list — the same order a `store.collection-loop` module
- * walks when it renders the collection on the storefront (see
- * `docs/architecture/publishing.md`).
+ * Same table + pagination + dialogs shape as Products. Ordered product
+ * membership — the order a `store.relationship-loop` module walks when it
+ * renders the collection on the storefront (see
+ * `docs/architecture/publishing.md`) — lives in its own `MembershipDialog`,
+ * not inline.
  */
 import { useState, type FormEvent } from 'react'
 import { Button } from '@ui/components/Button'
+import { DataTable, DataTableBody, DataTableCell, DataTableHead, DataTableHeader, DataTableRow } from '@ui/components/DataTable'
 import { Dialog } from '@ui/components/Dialog'
 import { EmptyState } from '@ui/components/EmptyState'
+import { FormField } from '@ui/components/FormField'
 import { Input } from '@ui/components/Input'
 import { SearchBar } from '@ui/components/SearchBar'
 import { Select } from '@ui/components/Select'
 import { getErrorMessage } from '@core/utils/errorMessage'
 import { ArrowDownIcon } from 'pixel-art-icons/icons/arrow-down'
 import { ArrowUpIcon } from 'pixel-art-icons/icons/arrow-up'
-import { BoxStackSolidIcon } from 'pixel-art-icons/icons/box-stack-solid'
-import { PackageSolidIcon } from 'pixel-art-icons/icons/package-solid'
+import { EditSolidIcon } from 'pixel-art-icons/icons/edit-solid'
+import { ListBoxSolidIcon } from 'pixel-art-icons/icons/list-box-solid'
 import { PlusIcon } from 'pixel-art-icons/icons/plus'
 import { SaveSolidIcon } from 'pixel-art-icons/icons/save-solid'
 import { TrashSolidIcon } from 'pixel-art-icons/icons/trash-solid'
 import { commerceApi } from '../api'
+import { Pagination } from '../components/Pagination'
+import { RowActionMenu } from '../components/RowActionMenu'
 import type { CommerceData } from '../hooks/useCommerceData'
 import type { Collection, Product } from '../types'
 import styles from '../CommercePage.module.css'
@@ -29,14 +34,13 @@ import styles from '../CommercePage.module.css'
 export function CollectionsSection({ data }: { data: CommerceData }) {
   const { collections, products, error, setError, refresh } = data
   const [query, setQuery] = useState('')
-  const [selectedId, setSelectedId] = useState<number | 'new' | null>(null)
-  const [busy, setBusy] = useState(false)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
+  const [dialogMode, setDialogMode] = useState<'create' | 'edit' | null>(null)
+  const [editingCollection, setEditingCollection] = useState<Collection | null>(null)
+  const [membershipCollection, setMembershipCollection] = useState<Collection | null>(null)
   const [removeCandidate, setRemoveCandidate] = useState<Collection | null>(null)
-
-  const selected = selectedId === 'new' || selectedId === null
-    ? null
-    : collections.find((collection) => collection.id === selectedId) ?? null
-  const creating = selectedId === 'new'
+  const [busy, setBusy] = useState(false)
 
   const filtered = query.trim()
     ? collections.filter((collection) => {
@@ -44,6 +48,24 @@ export function CollectionsSection({ data }: { data: CommerceData }) {
       return collection.title.toLowerCase().includes(q) || collection.slug.toLowerCase().includes(q)
     })
     : collections
+  const pageCount = Math.max(Math.ceil(filtered.length / pageSize), 1)
+  const clampedPage = Math.min(page, pageCount)
+  const pageItems = filtered.slice((clampedPage - 1) * pageSize, clampedPage * pageSize)
+
+  function openCreate() {
+    setEditingCollection(null)
+    setDialogMode('create')
+  }
+
+  function openEdit(collection: Collection) {
+    setEditingCollection(collection)
+    setDialogMode('edit')
+  }
+
+  function closeDialog() {
+    setDialogMode(null)
+    setEditingCollection(null)
+  }
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -57,11 +79,13 @@ export function CollectionsSection({ data }: { data: CommerceData }) {
     setBusy(true)
     setError(null)
     try {
-      const result = creating
-        ? await commerceApi.createCollection(input)
-        : await commerceApi.updateCollection((selected as Collection).id, input)
+      if (dialogMode === 'create') {
+        await commerceApi.createCollection(input)
+      } else if (editingCollection) {
+        await commerceApi.updateCollection(editingCollection.id, input)
+      }
       await refresh()
-      setSelectedId(result.collection.id)
+      closeDialog()
     } catch (err) {
       setError(getErrorMessage(err, 'Could not save collection'))
     } finally {
@@ -75,7 +99,6 @@ export function CollectionsSection({ data }: { data: CommerceData }) {
     try {
       await commerceApi.deleteCollection(collection.id)
       setRemoveCandidate(null)
-      setSelectedId(null)
       await refresh()
     } catch (err) {
       setError(getErrorMessage(err, 'Could not delete collection'))
@@ -84,79 +107,84 @@ export function CollectionsSection({ data }: { data: CommerceData }) {
     }
   }
 
-  async function setMembers(collection: Collection, productIds: number[]) {
-    setBusy(true)
-    setError(null)
-    try {
-      await commerceApi.setCollectionMembers(collection.id, productIds)
-      await refresh()
-    } catch (err) {
-      setError(getErrorMessage(err, 'Could not update collection membership'))
-    } finally {
-      setBusy(false)
-    }
-  }
-
   return (
-    <div className={styles.settingsWorkspace}>
-      <div className={styles.settingsBrowser}>
-        <div className={styles.settingsBrowserHeader}>
-          <h2>Collections</h2>
-          <Button type="button" variant="primary" size="sm" onClick={() => setSelectedId('new')}>
-            <PlusIcon size={14} aria-hidden="true" />
-            <span>New collection</span>
-          </Button>
-        </div>
-        <SearchBar value={query} onValueChange={setQuery} placeholder="Search collections…" aria-label="Search collections" />
-        {error && <p className={styles.settingsBrowserError} role="alert">{error}</p>}
-        <div className={styles.settingsList} role="listbox" aria-label="Collections">
-          {filtered.map((collection) => (
-            <button
-              key={collection.id}
-              type="button"
-              className={styles.settingsListItem}
-              data-active={selectedId === collection.id ? 'true' : undefined}
-              onClick={() => setSelectedId(collection.id)}
-            >
-              <span className={styles.settingsItemIcon}><BoxStackSolidIcon size={16} aria-hidden="true" /></span>
-              <span className={styles.settingsListIdentity}>
-                <span className={styles.settingsListLabel}>{collection.title || 'Untitled collection'}</span>
-                <span className={styles.settingsListMeta}>
-                  {collection.slug} · {collection.productIds.length} product{collection.productIds.length === 1 ? '' : 's'}
-                </span>
-              </span>
-            </button>
-          ))}
-          {filtered.length === 0 && (
-            <EmptyState
-              compact
-              title={collections.length === 0 ? 'No collections yet.' : 'No collections match your search.'}
-              description={collections.length === 0 ? 'Group products into a collection to feature them on the storefront.' : undefined}
-            />
-          )}
-        </div>
+    <div className={styles.section}>
+      <div className={styles.toolbar}>
+        <SearchBar value={query} onValueChange={(value) => { setQuery(value); setPage(1) }} placeholder="Search collections…" aria-label="Search collections" />
+        <Button type="button" variant="primary" size="sm" onClick={openCreate}>
+          <PlusIcon size={14} aria-hidden="true" />
+          <span>New collection</span>
+        </Button>
       </div>
 
-      <div className={styles.settingsDetailCanvas}>
-        {selected || creating ? (
-          <CollectionDetail
-            key={creating ? 'new' : (selected as Collection).id}
-            collection={creating ? null : (selected as Collection)}
-            products={products}
-            busy={busy}
-            onSave={handleSave}
-            onRequestDelete={() => selected && setRemoveCandidate(selected)}
-            onSetMembers={(ids) => selected && void setMembers(selected, ids)}
-          />
-        ) : (
-          <EmptyState
-            variant="centered"
-            icon={<BoxStackSolidIcon size={22} aria-hidden="true" />}
-            title="Select a collection"
-            description="Choose a collection from the list, or create a new one."
-          />
-        )}
-      </div>
+      {error && <p className={styles.error} role="alert">{error}</p>}
+
+      {pageItems.length === 0 ? (
+        <EmptyState
+          title={collections.length === 0 ? 'No collections yet.' : 'No collections match your search.'}
+          description={collections.length === 0 ? 'Group products into a collection to feature them on the storefront.' : undefined}
+        />
+      ) : (
+        <DataTable aria-label="Collections" density="compact">
+          <DataTableHead>
+            <DataTableRow>
+              <DataTableHeader scope="col">Title</DataTableHeader>
+              <DataTableHeader scope="col">Slug</DataTableHeader>
+              <DataTableHeader scope="col">Products</DataTableHeader>
+              <DataTableHeader scope="col">Sort order</DataTableHeader>
+              <DataTableHeader scope="col" className={styles.actionsHeader}>Actions</DataTableHeader>
+            </DataTableRow>
+          </DataTableHead>
+          <DataTableBody>
+            {pageItems.map((collection) => (
+              <DataTableRow key={collection.id} aria-label={`Collection ${collection.title}`}>
+                <DataTableCell><strong>{collection.title || 'Untitled collection'}</strong></DataTableCell>
+                <DataTableCell>{collection.slug}</DataTableCell>
+                <DataTableCell>{collection.productIds.length}</DataTableCell>
+                <DataTableCell>{collection.sortOrder}</DataTableCell>
+                <DataTableCell className={styles.actionsCell}>
+                  <RowActionMenu
+                    triggerLabel={`Actions for ${collection.title}`}
+                    menuLabel={`Collection actions for ${collection.title}`}
+                    items={[
+                      { label: 'Edit', icon: <EditSolidIcon size={12} aria-hidden="true" />, onSelect: () => openEdit(collection) },
+                      { label: 'Manage products', icon: <ListBoxSolidIcon size={12} aria-hidden="true" />, onSelect: () => setMembershipCollection(collection) },
+                      { label: 'Delete', icon: <TrashSolidIcon size={12} aria-hidden="true" />, danger: true, onSelect: () => setRemoveCandidate(collection) },
+                    ]}
+                  />
+                </DataTableCell>
+              </DataTableRow>
+            ))}
+          </DataTableBody>
+        </DataTable>
+      )}
+
+      <Pagination
+        page={clampedPage}
+        pageSize={pageSize}
+        total={filtered.length}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+      />
+
+      {dialogMode && (
+        <CollectionDialog
+          mode={dialogMode}
+          collection={editingCollection}
+          busy={busy}
+          onSave={handleSave}
+          onClose={closeDialog}
+        />
+      )}
+
+      {membershipCollection && (
+        <MembershipDialog
+          collection={collections.find((collection) => collection.id === membershipCollection.id) ?? membershipCollection}
+          products={products}
+          refresh={refresh}
+          onClose={() => setMembershipCollection(null)}
+        />
+      )}
 
       <Dialog
         open={removeCandidate !== null}
@@ -184,132 +212,134 @@ export function CollectionsSection({ data }: { data: CommerceData }) {
   )
 }
 
-function CollectionDetail({
+const COLLECTION_FORM_ID = 'commerce-collection-form'
+
+function CollectionDialog({
+  mode,
   collection,
-  products,
   busy,
   onSave,
-  onRequestDelete,
-  onSetMembers,
+  onClose,
 }: {
+  mode: 'create' | 'edit'
   collection: Collection | null
-  products: Product[]
   busy: boolean
   onSave: (event: FormEvent<HTMLFormElement>) => void
-  onRequestDelete: () => void
-  onSetMembers: (productIds: number[]) => void
+  onClose: () => void
 }) {
-  const memberIds = collection?.productIds ?? []
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={mode === 'create' ? 'New collection' : 'Edit collection'}
+      size="lg"
+      footer={
+        <>
+          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={busy}>
+            <span>Cancel</span>
+          </Button>
+          <Button type="submit" form={COLLECTION_FORM_ID} variant="primary" size="sm" disabled={busy}>
+            <SaveSolidIcon size={14} aria-hidden="true" />
+            <span>{mode === 'create' ? 'Create this collection' : 'Save collection'}</span>
+          </Button>
+        </>
+      }
+    >
+      <form id={COLLECTION_FORM_ID} className={styles.dialogForm} onSubmit={onSave}>
+        <FormField label="Title" htmlFor="collection-title">
+          <Input id="collection-title" name="title" required defaultValue={collection?.title} />
+        </FormField>
+        <FormField label="Slug" htmlFor="collection-slug">
+          <Input id="collection-slug" name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" defaultValue={collection?.slug} monospace />
+        </FormField>
+        <FormField label="Description" htmlFor="collection-description">
+          <Input id="collection-description" name="description" defaultValue={collection?.description} />
+        </FormField>
+        <FormField label="Sort order" htmlFor="collection-sort-order">
+          <Input id="collection-sort-order" name="sortOrder" type="number" min={0} defaultValue={collection?.sortOrder ?? 0} />
+        </FormField>
+      </form>
+    </Dialog>
+  )
+}
+
+function MembershipDialog({
+  collection,
+  products,
+  refresh,
+  onClose,
+}: {
+  collection: Collection
+  products: Product[]
+  refresh: () => Promise<void>
+  onClose: () => void
+}) {
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const memberIds = collection.productIds
   const members = memberIds.map((id) => products.find((product) => product.id === id)).filter((p): p is Product => Boolean(p))
   const availableProducts = products.filter((product) => !memberIds.includes(product.id))
 
+  async function setMembers(ids: number[]) {
+    setBusy(true)
+    setError(null)
+    try {
+      await commerceApi.setCollectionMembers(collection.id, ids)
+      await refresh()
+    } catch (err) {
+      setError(getErrorMessage(err, 'Could not update collection membership'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   function move(index: number, direction: -1 | 1) {
-    const next = [...memberIds]
+    const ids = [...memberIds]
     const target = index + direction
-    if (target < 0 || target >= next.length) return
-    ;[next[index], next[target]] = [next[target], next[index]]
-    onSetMembers(next)
+    if (target < 0 || target >= ids.length) return
+    ;[ids[index], ids[target]] = [ids[target], ids[index]]
+    void setMembers(ids)
   }
 
   return (
-    <div className={styles.settingsDetail}>
-      <div className={styles.settingsDetailHeader}>
-        <span className={styles.settingsHeroIcon}><BoxStackSolidIcon size={28} aria-hidden="true" /></span>
-        <div className={styles.settingsDetailIdentity}>
-          <h2>{collection ? collection.title || 'Untitled collection' : 'New collection'}</h2>
-          <p>{collection ? `/collections/${collection.slug}` : 'Fill in the details, then add products.'}</p>
-        </div>
-      </div>
-
-      <form className={styles.detailSection} onSubmit={onSave}>
-        <div className={styles.settingsFormRow}>
-          <label htmlFor="collection-title">Title</label>
-          <div>
-            <Input id="collection-title" name="title" required defaultValue={collection?.title} />
-          </div>
-        </div>
-        <div className={styles.settingsFormRow}>
-          <label htmlFor="collection-slug">Slug</label>
-          <div>
-            <Input
-              id="collection-slug"
-              name="slug"
-              required
-              pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-              defaultValue={collection?.slug}
-              monospace
-            />
-          </div>
-        </div>
-        <div className={styles.settingsFormRow}>
-          <label htmlFor="collection-description">Description</label>
-          <div>
-            <Input id="collection-description" name="description" defaultValue={collection?.description} />
-          </div>
-        </div>
-        <div className={styles.settingsFormRow}>
-          <label htmlFor="collection-sort-order">Sort order</label>
-          <div>
-            <Input id="collection-sort-order" name="sortOrder" type="number" min={0} defaultValue={collection?.sortOrder ?? 0} />
-          </div>
-        </div>
-        <div className={styles.settingsDetailActions}>
-          <Button type="submit" variant="primary" size="sm" disabled={busy}>
-            <SaveSolidIcon size={14} aria-hidden="true" />
-            <span>Save collection</span>
-          </Button>
-        </div>
-      </form>
-
-      {collection && (
-        <div className={styles.detailSection}>
-          <div className={styles.detailSectionHeader}>
-            <h3>Products</h3>
-          </div>
-          {members.length === 0 ? (
-            <p className={styles.detailEmpty}>No products in this collection yet.</p>
-          ) : (
-            <ul className={styles.memberList}>
-              {members.map((product, index) => (
-                <li key={product.id} className={styles.memberRow}>
-                  <span className={styles.settingsItemIcon}><PackageSolidIcon size={14} aria-hidden="true" /></span>
-                  <span className={styles.settingsListLabel}>{product.title}</span>
-                  <Button type="button" variant="ghost" size="xs" iconOnly aria-label={`Move ${product.title} up`} disabled={index === 0} onClick={() => move(index, -1)}>
-                    <ArrowUpIcon size={12} aria-hidden="true" />
-                  </Button>
-                  <Button type="button" variant="ghost" size="xs" iconOnly aria-label={`Move ${product.title} down`} disabled={index === members.length - 1} onClick={() => move(index, 1)}>
-                    <ArrowDownIcon size={12} aria-hidden="true" />
-                  </Button>
-                  <Button type="button" variant="ghost" tone="danger" size="xs" iconOnly aria-label={`Remove ${product.title}`} onClick={() => onSetMembers(memberIds.filter((id) => id !== product.id))}>
-                    <TrashSolidIcon size={12} aria-hidden="true" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {availableProducts.length > 0 && (
-            <Select
-              aria-label="Add product to collection"
-              placeholder="Add a product…"
-              value=""
-              options={availableProducts.map((product) => ({ value: String(product.id), label: product.title, textValue: product.title }))}
-              onChange={(event) => onSetMembers([...memberIds, Number(event.currentTarget.value)])}
-            />
-          )}
-        </div>
+    <Dialog
+      open
+      onClose={onClose}
+      title={`Products — ${collection.title}`}
+      size="md"
+      footer={<Button type="button" variant="secondary" size="sm" onClick={onClose}><span>Close</span></Button>}
+    >
+      {error && <p className={styles.error} role="alert">{error}</p>}
+      {members.length === 0 ? (
+        <p className={styles.emptyInline}>No products in this collection yet.</p>
+      ) : (
+        <ul className={styles.memberList}>
+          {members.map((product, index) => (
+            <li key={product.id} className={styles.memberRow}>
+              <span className={styles.identityLabel}>{product.title}</span>
+              <Button type="button" variant="ghost" size="xs" iconOnly aria-label={`Move ${product.title} up`} disabled={index === 0 || busy} onClick={() => move(index, -1)}>
+                <ArrowUpIcon size={12} aria-hidden="true" />
+              </Button>
+              <Button type="button" variant="ghost" size="xs" iconOnly aria-label={`Move ${product.title} down`} disabled={index === members.length - 1 || busy} onClick={() => move(index, 1)}>
+                <ArrowDownIcon size={12} aria-hidden="true" />
+              </Button>
+              <Button type="button" variant="ghost" tone="danger" size="xs" iconOnly aria-label={`Remove ${product.title}`} disabled={busy} onClick={() => void setMembers(memberIds.filter((id) => id !== product.id))}>
+                <TrashSolidIcon size={12} aria-hidden="true" />
+              </Button>
+            </li>
+          ))}
+        </ul>
       )}
-
-      {collection && (
-        <div className={styles.detailSection}>
-          <div className={styles.credentialDangerZone}>
-            <Button type="button" variant="ghost" tone="danger" size="sm" onClick={onRequestDelete}>
-              <TrashSolidIcon size={14} aria-hidden="true" />
-              <span>Delete collection</span>
-            </Button>
-            <p>This permanently deletes the collection. Member products are unaffected.</p>
-          </div>
-        </div>
+      {availableProducts.length > 0 && (
+        <Select
+          aria-label="Add product to collection"
+          placeholder="Add a product…"
+          value=""
+          disabled={busy}
+          options={availableProducts.map((product) => ({ value: String(product.id), label: product.title, textValue: product.title }))}
+          onChange={(event) => void setMembers([...memberIds, Number(event.currentTarget.value)])}
+        />
       )}
-    </div>
+    </Dialog>
   )
 }

@@ -16,6 +16,10 @@ import React from 'react'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { DynamicBindingControl } from '@site/property-controls/DynamicBindingControl'
 import { clearDataMetaCache } from '@site/property-controls/DynamicBindingControl/cache'
+import {
+  clearCommercePreviewCache,
+  COMMERCE_ENTITY_FIELDS,
+} from '@site/property-controls/DynamicBindingControl/commerceEntry'
 import { useEditorStore } from '@site/store/store'
 import { makeNode, makePage, makeSite } from '../fixtures'
 import type { DynamicPropBinding } from '@core/page-tree'
@@ -64,6 +68,25 @@ const mockDataMeta = {
   meta: { tables: [postsTable, productsTable] },
 }
 
+const mockCommerceProducts = {
+  products: [
+    {
+      id: 1, title: 'Canvas Tote', slug: 'canvas-tote', vendor: 'Dukafy', status: 'active',
+      descriptionHtml: '<p>Handwoven canvas</p>',
+      variants: [
+        { id: 1, sku: 'TOTE-1', title: 'Default', priceCents: 4_800, currency: 'USD', stock: 3, position: 0 },
+      ],
+      images: [{ id: 1, publicPath: '/uploads/tote.jpg', width: 400, height: 300 }],
+    },
+  ],
+}
+
+const mockCommerceCollections = {
+  collections: [
+    { id: 1, title: 'Featured', slug: 'featured', description: 'Our picks', sortOrder: 0, productIds: [1] },
+  ],
+}
+
 // ---------------------------------------------------------------------------
 // Test setup / teardown
 // ---------------------------------------------------------------------------
@@ -72,6 +95,7 @@ const originalFetch = globalThis.fetch
 
 beforeEach(() => {
   clearDataMetaCache()
+  clearCommercePreviewCache()
   localStorage.clear()
   useEditorStore.setState({
     site: null,
@@ -89,8 +113,15 @@ beforeEach(() => {
   } as Parameters<typeof useEditorStore.setState>[0])
 
   globalThis.fetch = (async (input: RequestInfo | URL) => {
-    if (String(input).includes('/data/_meta')) {
+    const url = String(input)
+    if (url.includes('/data/_meta')) {
       return new Response(JSON.stringify(mockDataMeta), { status: 200 })
+    }
+    if (url.includes('/commerce/products')) {
+      return new Response(JSON.stringify(mockCommerceProducts), { status: 200 })
+    }
+    if (url.includes('/commerce/collections')) {
+      return new Response(JSON.stringify(mockCommerceCollections), { status: 200 })
     }
     return new Response(JSON.stringify({ error: 'not found' }), { status: 404 })
   }) as typeof fetch
@@ -99,6 +130,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   clearDataMetaCache()
+  clearCommercePreviewCache()
   globalThis.fetch = originalFetch
 })
 
@@ -312,6 +344,112 @@ describe('DynamicBindingControl picker', () => {
     // And the synthetic fields are individually clickable rows.
     expect(screen.getByText('Post title')).toBeDefined()
     expect(screen.getByText('Post slug')).toBeDefined()
+  })
+
+  it('offers commerce product text fields with a live preview value inside a relationship loop', async () => {
+    render(
+      <DynamicBindingControl
+        propKey="text"
+        label="Text"
+        control={{ type: 'textarea', label: 'Text' }}
+        onSet={() => {}}
+        onClear={() => {}}
+        availableFields={COMMERCE_ENTITY_FIELDS.product}
+        sourceLabel="Product"
+        commerceEntityKind="product"
+      >
+        <input aria-label="Text" />
+      </DynamicBindingControl>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /bind text/i }))
+    await waitFor(() => expect(screen.getByRole('menu', { name: /bind text/i })).toBeDefined())
+
+    await waitFor(() => expect(screen.getByText(/Product fields/i)).toBeDefined())
+    expect(screen.getByText('Title')).toBeDefined()
+    expect(screen.getByText('Price')).toBeDefined()
+    // Image (media) and Description (html) aren't compatible with a plain
+    // text control — the picker only offers fields the control can accept.
+    expect(screen.queryByText('Image')).toBeNull()
+    expect(screen.queryByText('Description')).toBeNull()
+
+    // Live preview: the real (mocked) product's title, not a blank.
+    await waitFor(() => expect(screen.getByText('Canvas Tote')).toBeDefined())
+  })
+
+  it('still shows commerce fields when the generic data-meta endpoint does not exist (real Dukafy has no data_tables system)', async () => {
+    // Dukafy never implements the Instatic-era `/data/_meta` route — this
+    // reproduces that 404 explicitly rather than relying on the shared
+    // beforeEach mock, which happens to answer it. A commerce scope must
+    // not depend on that endpoint at all.
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/data/_meta')) {
+        return new Response(
+          JSON.stringify({ error: { code: 'not_found', message: 'API endpoint not found' } }),
+          { status: 404 },
+        )
+      }
+      if (url.includes('/commerce/products')) {
+        return new Response(JSON.stringify(mockCommerceProducts), { status: 200 })
+      }
+      if (url.includes('/commerce/collections')) {
+        return new Response(JSON.stringify(mockCommerceCollections), { status: 200 })
+      }
+      return new Response(JSON.stringify({ error: 'not found' }), { status: 404 })
+    }) as typeof fetch
+
+    render(
+      <DynamicBindingControl
+        propKey="text"
+        label="Text"
+        control={{ type: 'textarea', label: 'Text' }}
+        onSet={() => {}}
+        onClear={() => {}}
+        availableFields={COMMERCE_ENTITY_FIELDS.product}
+        sourceLabel="Product"
+        commerceEntityKind="product"
+      >
+        <input aria-label="Text" />
+      </DynamicBindingControl>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /bind text/i }))
+    await waitFor(() => expect(screen.getByRole('menu', { name: /bind text/i })).toBeDefined())
+
+    await waitFor(() => expect(screen.getByText(/Product fields/i)).toBeDefined())
+    expect(screen.getByText('Title')).toBeDefined()
+    expect(screen.queryByText('Could not load tables')).toBeNull()
+    expect(screen.queryByText(/API endpoint not found/i)).toBeNull()
+  })
+
+  it('offers only the Image field for an image control and commits a currentEntry binding', async () => {
+    let picked: DynamicPropBinding | undefined
+    render(
+      <DynamicBindingControl
+        propKey="src"
+        label="Image"
+        control={{ type: 'image', label: 'Image' }}
+        onSet={(b) => { picked = b }}
+        onClear={() => {}}
+        availableFields={COMMERCE_ENTITY_FIELDS.product}
+        sourceLabel="Product"
+        commerceEntityKind="product"
+      >
+        <input aria-label="Image" />
+      </DynamicBindingControl>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /bind image/i }))
+    await waitFor(() => expect(screen.getByText(/Product fields/i)).toBeDefined())
+
+    // Only the media-compatible field is offered.
+    expect(screen.queryByText('Title')).toBeNull()
+    expect(screen.getByText('Image')).toBeDefined()
+    // Live preview: the real (mocked) product's image path.
+    await waitFor(() => expect(screen.getByText('/uploads/tote.jpg')).toBeDefined())
+
+    const imageBtn = screen.getAllByRole('button').find((b) => b.textContent?.includes('Image'))
+    fireEvent.click(imageBtn!)
+
+    expect(picked).toEqual({ source: 'currentEntry', field: 'imageUrl', format: 'media' })
   })
 
   it('toggles the popover closed when the affordance button is clicked again', async () => {

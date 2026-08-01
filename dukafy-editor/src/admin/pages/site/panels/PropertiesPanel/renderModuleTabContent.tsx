@@ -31,7 +31,8 @@ import type {
   Page,
   PageNode,
 } from '@core/page-tree'
-import type { LoopEntitySource } from '@core/loops/types'
+import type { LoopSourceField } from '@core/loops/types'
+import type { CommerceEntityKind } from '../../property-controls/DynamicBindingControl/commerceEntry'
 import type { ActiveDocument } from '../../store/slices/uiSlice'
 import { LoopPropertiesView } from './LoopPropertiesView'
 import { ParamPromotableRow } from './ParamPromotableRow'
@@ -49,8 +50,9 @@ interface ModuleTabContentArgs {
   activeDocument: ActiveDocument | null
   activePage: Page | null
   dynamicBindingsEnabled: boolean
-  enclosingLoopSource: LoopEntitySource | undefined
+  enclosingLoopSource: { label: string; fields: LoopSourceField[] } | undefined
   enclosingLoopTableId: string | null
+  commerceEntityKind: CommerceEntityKind | null
   handleChange: (propKey: string, value: unknown) => void
   handlePatch: (patch: Record<string, unknown>) => void
   onSetDynamicBinding: (propKey: string, binding: DynamicPropBinding) => void
@@ -69,6 +71,7 @@ export function renderModuleTabContent(args: ModuleTabContentArgs): React.ReactN
     dynamicBindingsEnabled,
     enclosingLoopSource,
     enclosingLoopTableId,
+    commerceEntityKind,
     handleChange: updateModuleProp,
     handlePatch: patchModuleProps,
     onSetDynamicBinding,
@@ -147,6 +150,7 @@ export function renderModuleTabContent(args: ModuleTabContentArgs): React.ReactN
               availableFields: enclosingLoopSource?.fields,
               sourceLabel: enclosingLoopSource?.label,
               loopTableId: enclosingLoopTableId,
+              commerceEntityKind,
             } : undefined}
           />
         )

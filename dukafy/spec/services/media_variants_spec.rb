@@ -21,8 +21,10 @@ class MediaVariantsSpec < Minitest::Test
     assert_equal [1_000, 750], result.values_at(:width, :height)
     assert_equal [320, 640, 960], result[:variants].map { |variant| variant.fetch("width") }
     result[:variants].each do |variant|
-      assert File.file?(File.join(root, variant.fetch("url")))
-      assert_equal "image/webp", variant.fetch("mime")
+      variant_path = File.join(root, variant.fetch("path"))
+      assert File.file?(variant_path)
+      assert_equal "webp", variant.fetch("format")
+      assert_equal File.size(variant_path), variant.fetch("sizeBytes")
     end
   ensure
     FileUtils.remove_entry(root) if root && File.exist?(root)

@@ -17,4 +17,53 @@ class DependencyTrackerSpec < Minitest::Test
 
     assert_equal [7, 9], DependencyTracker.product_ids(document:, prefetched:)
   end
+
+  def test_relationship_loop_tracks_a_pinned_collections_products
+    document = {
+      "nodes" => {
+        "loop" => {
+          "moduleId" => "store.relationship-loop",
+          "props" => { "relationship" => "products", "sourceSlug" => "featured" },
+        },
+      },
+    }
+    prefetched = { "collections" => { "featured" => { "products" => [{ "id" => 3 }, { "id" => 4 }] } } }
+
+    assert_equal [3, 4], DependencyTracker.product_ids(document:, prefetched:)
+  end
+
+  def test_relationship_loop_tracks_a_pinned_products_variants
+    document = {
+      "nodes" => {
+        "loop" => {
+          "moduleId" => "store.relationship-loop",
+          "props" => { "relationship" => "variants", "sourceSlug" => "bag" },
+        },
+      },
+    }
+    prefetched = { "products" => { "bag" => { "id" => 11 } } }
+
+    assert_equal [11], DependencyTracker.product_ids(document:, prefetched:)
+  end
+
+  def test_relationship_loop_tracks_the_current_products_variants_when_unpinned
+    document = {
+      "nodes" => {
+        "loop" => { "moduleId" => "store.relationship-loop", "props" => { "relationship" => "variants" } },
+      },
+    }
+
+    assert_equal [11], DependencyTracker.product_ids(document:, prefetched: {}, current_entry: { "id" => 11, "variants" => [] })
+  end
+
+  def test_relationship_loop_with_no_collection_and_no_entry_tracks_every_product
+    document = {
+      "nodes" => {
+        "loop" => { "moduleId" => "store.relationship-loop", "props" => { "relationship" => "products" } },
+      },
+    }
+    prefetched = { "products" => { "bag" => { "id" => 3 }, "hat" => { "id" => 5 } } }
+
+    assert_equal [3, 5], DependencyTracker.product_ids(document:, prefetched:)
+  end
 end

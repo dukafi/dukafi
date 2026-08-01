@@ -216,6 +216,261 @@ class StoreModulesSpec < Minitest::Test
     assert_includes second_page.html, 'Page 2 of 2'
   end
 
+  # store.collection-loop is a deprecated alias — the test above already
+  # proves it still renders through the generalized render_relationship_loop
+  # path byte-for-byte. The tests below prove the new store.relationship-loop
+  # id: a plain composable child row (no product-card) repeating per item,
+  # and iterating a product's variants instead of a collection's products.
+  def test_relationship_loop_matches_golden_output_with_a_composable_child_row
+    document = {
+      "rootNodeId" => "featured-loop",
+      "nodes" => {
+        "featured-loop" => {
+          "id" => "featured-loop", "moduleId" => "store.relationship-loop",
+          "children" => %w[row], "classIds" => [], "breakpointOverrides" => {},
+          "props" => { "relationship" => "products", "sourceSlug" => "featured", "perPage" => 2 },
+        },
+        "row" => {
+          "id" => "row", "moduleId" => "base.container", "children" => %w[row-image row-title row-price],
+          "classIds" => [], "breakpointOverrides" => {}, "props" => {},
+        },
+        "row-image" => {
+          "id" => "row-image", "moduleId" => "base.image", "children" => [], "classIds" => [],
+          "breakpointOverrides" => {}, "props" => {},
+          "dynamicBindings" => { "src" => { "source" => "currentEntry", "field" => "imageUrl", "format" => "media", "fallback" => "empty" } },
+        },
+        "row-title" => {
+          "id" => "row-title", "moduleId" => "base.text", "children" => [], "classIds" => [],
+          "breakpointOverrides" => {}, "props" => { "tag" => "h3", "text" => "Product title" },
+          "dynamicBindings" => { "text" => { "source" => "currentEntry", "field" => "title", "format" => "plain", "fallback" => "static" } },
+        },
+        "row-price" => {
+          "id" => "row-price", "moduleId" => "base.text", "children" => [], "classIds" => [],
+          "breakpointOverrides" => {}, "props" => { "tag" => "span", "text" => "$0.00" },
+          "dynamicBindings" => { "text" => { "source" => "currentEntry", "field" => "priceDisplay", "format" => "plain", "fallback" => "static" } },
+        },
+      },
+    }
+    prefetched = {
+      "collections" => {
+        "featured" => { "products" => [
+          { "slug" => "first", "title" => "First", "imageUrl" => "/uploads/first.jpg", "priceDisplay" => "$10.00" },
+          { "slug" => "second", "title" => "Second", "imageUrl" => "/uploads/second.jpg", "priceDisplay" => "$20.00" },
+          { "slug" => "third", "title" => "Third", "imageUrl" => "/uploads/third.jpg", "priceDisplay" => "$30.00" },
+        ] },
+      },
+    }
+
+    result = Dukafy::Publisher::RenderPage.call(document:, registry: Dukafy::Publisher::REGISTRY, prefetched:)
+
+    assert_equal File.read(File.expand_path("../golden/relationship_loop_products.html", __dir__)).chomp, result.html
+    assert_includes result.css, ".dukafy-collection-loop{"
+  end
+
+  def test_relationship_loop_iterates_a_products_variants
+    document = {
+      "rootNodeId" => "variant-loop",
+      "nodes" => {
+        "variant-loop" => {
+          "id" => "variant-loop", "moduleId" => "store.relationship-loop",
+          "children" => %w[row], "classIds" => [], "breakpointOverrides" => {},
+          "props" => { "relationship" => "variants", "sourceSlug" => "canvas-bag", "perPage" => 5 },
+        },
+        "row" => {
+          "id" => "row", "moduleId" => "base.text", "children" => [], "classIds" => [],
+          "breakpointOverrides" => {}, "props" => { "tag" => "span", "text" => "" },
+          "dynamicBindings" => {
+            "text" => { "source" => "currentEntry", "field" => "title", "format" => "plain", "fallback" => "static" },
+          },
+        },
+      },
+    }
+    prefetched = {
+      "products" => {
+        "canvas-bag" => {
+          "variants" => [
+            { "sku" => "BAG-S", "title" => "Small", "priceDisplay" => "$100.00" },
+            { "sku" => "BAG-L", "title" => "Large", "priceDisplay" => "$139.50" },
+          ],
+        },
+      },
+    }
+
+    result = Dukafy::Publisher::RenderPage.call(document:, registry: Dukafy::Publisher::REGISTRY, prefetched:)
+
+    assert_equal(
+      '<div class="dukafy-collection-loop" data-collection="canvas-bag" data-page="1"><span>Small</span><span>Large</span></div>',
+      result.html,
+    )
+  end
+
+  def test_relationship_loop_orders_by_price_and_direction
+    document = {
+      "rootNodeId" => "featured-loop",
+      "nodes" => {
+        "featured-loop" => {
+          "id" => "featured-loop", "moduleId" => "store.relationship-loop",
+          "children" => %w[row], "classIds" => [], "breakpointOverrides" => {},
+          "props" => { "relationship" => "products", "sourceSlug" => "featured", "perPage" => 10, "orderBy" => "price", "direction" => "desc" },
+        },
+        "row" => {
+          "id" => "row", "moduleId" => "base.text", "children" => [], "classIds" => [],
+          "breakpointOverrides" => {}, "props" => { "tag" => "span", "text" => "" },
+          "dynamicBindings" => { "text" => { "source" => "currentEntry", "field" => "title", "format" => "plain", "fallback" => "static" } },
+        },
+      },
+    }
+    prefetched = {
+      "collections" => {
+        "featured" => { "products" => [
+          { "slug" => "first", "title" => "First", "priceCents" => 1_000 },
+          { "slug" => "second", "title" => "Second", "priceCents" => 3_000 },
+          { "slug" => "third", "title" => "Third", "priceCents" => 2_000 },
+        ] },
+      },
+    }
+
+    result = Dukafy::Publisher::RenderPage.call(document:, registry: Dukafy::Publisher::REGISTRY, prefetched:)
+
+    assert_equal(
+      '<div class="dukafy-collection-loop" data-collection="featured" data-page="1"><span>Second</span><span>Third</span><span>First</span></div>',
+      result.html,
+    )
+  end
+
+  def test_relationship_loop_orders_by_title_ascending_by_default
+    document = {
+      "rootNodeId" => "featured-loop",
+      "nodes" => {
+        "featured-loop" => {
+          "id" => "featured-loop", "moduleId" => "store.relationship-loop",
+          "children" => %w[row], "classIds" => [], "breakpointOverrides" => {},
+          "props" => { "relationship" => "products", "sourceSlug" => "featured", "perPage" => 10, "orderBy" => "title" },
+        },
+        "row" => {
+          "id" => "row", "moduleId" => "base.text", "children" => [], "classIds" => [],
+          "breakpointOverrides" => {}, "props" => { "tag" => "span", "text" => "" },
+          "dynamicBindings" => { "text" => { "source" => "currentEntry", "field" => "title", "format" => "plain", "fallback" => "static" } },
+        },
+      },
+    }
+    prefetched = {
+      "collections" => {
+        "featured" => { "products" => [
+          { "slug" => "z", "title" => "Zeta" },
+          { "slug" => "a", "title" => "Alpha" },
+          { "slug" => "m", "title" => "Mid" },
+        ] },
+      },
+    }
+
+    result = Dukafy::Publisher::RenderPage.call(document:, registry: Dukafy::Publisher::REGISTRY, prefetched:)
+
+    assert_equal(
+      '<div class="dukafy-collection-loop" data-collection="featured" data-page="1"><span>Alpha</span><span>Mid</span><span>Zeta</span></div>',
+      result.html,
+    )
+  end
+
+  def test_relationship_loop_offset_skips_leading_items_after_ordering
+    document = {
+      "rootNodeId" => "featured-loop",
+      "nodes" => {
+        "featured-loop" => {
+          "id" => "featured-loop", "moduleId" => "store.relationship-loop",
+          "children" => %w[row], "classIds" => [], "breakpointOverrides" => {},
+          "props" => { "relationship" => "products", "sourceSlug" => "featured", "perPage" => 10, "orderBy" => "price", "offset" => 1 },
+        },
+        "row" => {
+          "id" => "row", "moduleId" => "base.text", "children" => [], "classIds" => [],
+          "breakpointOverrides" => {}, "props" => { "tag" => "span", "text" => "" },
+          "dynamicBindings" => { "text" => { "source" => "currentEntry", "field" => "title", "format" => "plain", "fallback" => "static" } },
+        },
+      },
+    }
+    prefetched = {
+      "collections" => {
+        "featured" => { "products" => [
+          { "slug" => "first", "title" => "First", "priceCents" => 1_000 },
+          { "slug" => "second", "title" => "Second", "priceCents" => 3_000 },
+          { "slug" => "third", "title" => "Third", "priceCents" => 2_000 },
+        ] },
+      },
+    }
+
+    result = Dukafy::Publisher::RenderPage.call(document:, registry: Dukafy::Publisher::REGISTRY, prefetched:)
+
+    assert_equal(
+      '<div class="dukafy-collection-loop" data-collection="featured" data-page="1"><span>Third</span><span>Second</span></div>',
+      result.html,
+    )
+  end
+
+  def test_relationship_loop_orderby_manual_or_absent_keeps_stored_order_unchanged
+    document = {
+      "rootNodeId" => "featured-loop",
+      "nodes" => {
+        "featured-loop" => {
+          "id" => "featured-loop", "moduleId" => "store.relationship-loop",
+          "children" => %w[row], "classIds" => [], "breakpointOverrides" => {},
+          "props" => { "relationship" => "products", "sourceSlug" => "featured", "perPage" => 10, "orderBy" => "manual" },
+        },
+        "row" => {
+          "id" => "row", "moduleId" => "base.text", "children" => [], "classIds" => [],
+          "breakpointOverrides" => {}, "props" => { "tag" => "span", "text" => "" },
+          "dynamicBindings" => { "text" => { "source" => "currentEntry", "field" => "title", "format" => "plain", "fallback" => "static" } },
+        },
+      },
+    }
+    prefetched = {
+      "collections" => {
+        "featured" => { "products" => [
+          { "slug" => "z", "title" => "Zeta" },
+          { "slug" => "a", "title" => "Alpha" },
+        ] },
+      },
+    }
+
+    result = Dukafy::Publisher::RenderPage.call(document:, registry: Dukafy::Publisher::REGISTRY, prefetched:)
+
+    assert_equal(
+      '<div class="dukafy-collection-loop" data-collection="featured" data-page="1"><span>Zeta</span><span>Alpha</span></div>',
+      result.html,
+    )
+  end
+
+  def test_relationship_loop_with_no_slug_pulls_from_every_product_across_every_collection
+    document = {
+      "rootNodeId" => "any-loop",
+      "nodes" => {
+        "any-loop" => {
+          "id" => "any-loop", "moduleId" => "store.relationship-loop",
+          "children" => %w[row], "classIds" => [], "breakpointOverrides" => {},
+          "props" => { "relationship" => "products", "sourceSlug" => "", "perPage" => 10 },
+        },
+        "row" => {
+          "id" => "row", "moduleId" => "base.text", "children" => [], "classIds" => [],
+          "breakpointOverrides" => {}, "props" => { "tag" => "span", "text" => "" },
+          "dynamicBindings" => { "text" => { "source" => "currentEntry", "field" => "title", "format" => "plain", "fallback" => "static" } },
+        },
+      },
+    }
+    prefetched = {
+      "products" => {
+        "bag" => { "slug" => "bag", "title" => "Bag" },
+        "hat" => { "slug" => "hat", "title" => "Hat" },
+      },
+      "collections" => {},
+    }
+
+    result = Dukafy::Publisher::RenderPage.call(document:, registry: Dukafy::Publisher::REGISTRY, prefetched:)
+
+    assert_equal(
+      '<div class="dukafy-collection-loop" data-collection="" data-page="1"><span>Bag</span><span>Hat</span></div>',
+      result.html,
+    )
+  end
+
   def test_stock_badge_always_renders_a_fragment_placeholder
     definition = Dukafy::Publisher::REGISTRY.fetch("store.stock-badge")
     output = definition.render(

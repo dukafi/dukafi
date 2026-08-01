@@ -50,7 +50,11 @@ class ProductCsvImporter
       sku:,
       title: row["variant_title"].to_s.strip,
       price_cents: integer(row, "price_cents"),
-      currency: row["currency"].to_s.strip.upcase,
+      # v1 is single-currency — the store's configured currency always wins
+      # over whatever the CSV column says, so an import can't put variants
+      # out of sync with the rest of the catalog (see commerce_variant_attributes
+      # in admin_api.rb for the same rule on the manual-entry path).
+      currency: CommerceSettings.current.currency,
       stock: integer(row, "stock"),
       position: optional_integer(row, "position", index),
     )
@@ -58,7 +62,11 @@ class ProductCsvImporter
       variant.update(
         title: row["variant_title"].to_s.strip,
         price_cents: integer(row, "price_cents"),
-        currency: row["currency"].to_s.strip.upcase,
+        # v1 is single-currency — the store's configured currency always wins
+      # over whatever the CSV column says, so an import can't put variants
+      # out of sync with the rest of the catalog (see commerce_variant_attributes
+      # in admin_api.rb for the same rule on the manual-entry path).
+      currency: CommerceSettings.current.currency,
         stock: integer(row, "stock"),
         position: optional_integer(row, "position", index),
       )

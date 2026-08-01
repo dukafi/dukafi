@@ -1,11 +1,11 @@
 /**
  * CommercePage — `/admin/commerce`.
  *
- * The authenticated Commerce workspace: products, variants, collections, and
- * CSV import (see `docs/architecture/admin-store.md`). Laid out the same way
- * as the AI workspace — a fixed identity + section-nav sidebar via
- * `AdminPageLayout`'s `workspace` mode, with each section owning its own
- * master-detail canvas.
+ * The authenticated Commerce workspace: products, variants, collections, CSV
+ * import, and store-wide settings (see `docs/architecture/admin-store.md`).
+ * Left sidebar section nav (`AdminPageLayout`'s `workspace` mode, same shell
+ * shape as the AI workspace) — each section is a plain, paginated data
+ * table; create/edit happens in a `Dialog`, never inline.
  */
 import { useState } from 'react'
 import { Button } from '@ui/components/Button'
@@ -13,10 +13,12 @@ import { AdminPageLayout } from '@admin/layouts/AdminPageLayout'
 import { BoxStackSolidIcon } from 'pixel-art-icons/icons/box-stack-solid'
 import { CloudUploadSolidIcon } from 'pixel-art-icons/icons/cloud-upload-solid'
 import { PackageSolidIcon } from 'pixel-art-icons/icons/package-solid'
+import { Settings2SolidIcon } from 'pixel-art-icons/icons/settings-2-solid'
 import { useCommerceData } from './hooks/useCommerceData'
 import { CollectionsSection } from './sections/CollectionsSection'
 import { ImportSection } from './sections/ImportSection'
 import { ProductsSection } from './sections/ProductsSection'
+import { SettingsSection } from './sections/SettingsSection'
 import type { CommerceSection } from './types'
 import styles from './CommercePage.module.css'
 
@@ -24,15 +26,17 @@ const SECTION_LABELS: Record<CommerceSection, string> = {
   products: 'Products',
   collections: 'Collections',
   import: 'Import',
+  settings: 'Settings',
 }
 
 const SECTION_ICONS = {
   products: PackageSolidIcon,
   collections: BoxStackSolidIcon,
   import: CloudUploadSolidIcon,
+  settings: Settings2SolidIcon,
 } satisfies Record<CommerceSection, typeof PackageSolidIcon>
 
-const SECTIONS: CommerceSection[] = ['products', 'collections', 'import']
+const SECTIONS: CommerceSection[] = ['products', 'collections', 'import', 'settings']
 
 export function CommercePage() {
   const [section, setSection] = useState<CommerceSection>('products')
@@ -76,6 +80,7 @@ export function CommercePage() {
           {section === 'products' && <ProductsSection data={data} />}
           {section === 'collections' && <CollectionsSection data={data} />}
           {section === 'import' && <ImportSection data={data} />}
+          {section === 'settings' && <SettingsSection />}
         </div>
       </div>
     </AdminPageLayout>

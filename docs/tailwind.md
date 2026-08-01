@@ -15,6 +15,16 @@ Tailwind class names can be used as class-rule names in the visual editor, for
 example `flex`, `grid`, `p-4`, `md:grid-cols-2`, or `bg-[#316ff6]`. Classes used
 on any published page are available across that published site version.
 
+Spacing utilities are not restricted to one form: `p-8`, `px-8`, `py-8`,
+`pt-8`, `pr-8`, `pb-8`, `pl-8`, margins, gaps, widths, and other standard
+Tailwind utilities are generated when used. Variant tokens remain intact, so
+`sm:px-8`, `hover:bg-black`, and similar classes compile correctly.
+
+Because discovery is based on rendered HTML, a class mentioned only in prose,
+an unpublished/draft-only page, or an editor control is intentionally absent
+from the storefront bundle. Publish the page/template containing the class to
+make it part of that release.
+
 ## Compiler installation
 
 `./bin/dev` installs the pinned standalone compiler on first run and verifies
@@ -25,3 +35,7 @@ The bundled installer currently targets Linux x86-64. On another platform,
 install Tailwind CSS 4.3.0's standalone executable and set `TAILWINDCSS_BIN` to
 its absolute path. Production images should run `scripts/install_tailwind.rb`
 during their image build.
+
+The editor can also call the authenticated `/admin/api/cms/tailwind/compile`
+preview endpoint with up to 500 whitespace-free class tokens. The publish path
+remains authoritative for customer-facing CSS.

@@ -46,6 +46,24 @@ class RenderPageSpec < Minitest::Test
     assert_equal ".text{}\n.box{}", result.css
   end
 
+  def test_interpolates_current_entry_tokens_embedded_in_string_props
+    document = {
+      "rootNodeId" => "root",
+      "nodes" => {
+        "root" => node("root", "base.body", children: %w[title stock]),
+        "title" => node("title", "base.text", props: { "text" => "{currentEntry.title} - {currentEntry.priceDisplay}" }),
+        "stock" => node("stock", "base.text", props: { "text" => "Stock: {currentEntry.stock|N/A}" }),
+      },
+    }
+
+    result = Dukafy::Publisher::RenderPage.call(
+      document: document, registry: registry,
+      current_entry: { "title" => "Canvas & Bag", "priceDisplay" => "$48.00" },
+    )
+
+    assert_equal "<p>Canvas &amp; Bag - $48.00</p><p>Stock: N/A</p>", result.html
+  end
+
   def test_only_approved_breakpoint_props_override_base_content
     document = {
       "rootNodeId" => "box",

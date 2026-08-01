@@ -6,6 +6,7 @@ import type { IconComponent } from 'pixel-art-icons/types'
 import { BracesIcon } from 'pixel-art-icons/icons/braces'
 import { HandGrabSolidIcon } from 'pixel-art-icons/icons/hand-grab-solid'
 import { LayoutSolidIcon } from 'pixel-art-icons/icons/layout-solid'
+import { PackageSolidIcon } from 'pixel-art-icons/icons/package-solid'
 import { PlusIcon } from 'pixel-art-icons/icons/plus'
 import { StarSolidIcon } from 'pixel-art-icons/icons/star-solid'
 import { ModuleIcon } from '@site/ui/ModuleIcon'
@@ -173,6 +174,9 @@ function ItemIcon({ item }: { item: ModuleInserterItem }) {
   }
   if (item.kind === 'component') {
     return <BracesIcon size={13} aria-hidden="true" />
+  }
+  if (item.kind === 'commerceScaffold') {
+    return <PackageSolidIcon size={13} aria-hidden="true" />
   }
   const _exhaustive: never = item
   return _exhaustive

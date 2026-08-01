@@ -1,9 +1,9 @@
 class ProductTemplate
-  SLUG = "_product-template"
+  SLUG = "product-template"
 
   def self.find
     Page.where(kind: "template").order(:id).all.find do |page|
-      page.document_data.dig("template", "target", "tableSlugs")&.include?("products")
+      page.slug == SLUG || page.document_data.dig("template", "target", "tableSlugs")&.include?("products")
     end
   end
 
@@ -16,14 +16,18 @@ class ProductTemplate
   def self.document
     nodes = {
       "product-body" => node("product-body", "base.body", ["product-main"]),
-      "product-main" => node("product-main", "base.container", %w[product-title product-gallery product-price product-variants product-stock product-buy]),
+      "product-main" => node("product-main", "base.container", %w[product-title product-image product-price product-variants product-stock product-buy]),
       "product-title" => node("product-title", "base.text", [], { "tag" => "h1", "text" => "Product title" }).merge(
         "dynamicBindings" => { "text" => { "source" => "currentEntry", "field" => "title", "format" => "plain", "fallback" => "static" } }
       ),
-      "product-gallery" => node("product-gallery", "store.image-gallery"),
-      "product-price" => node("product-price", "store.price"),
+      "product-image" => node("product-image", "base.image").merge(
+        "dynamicBindings" => { "src" => { "source" => "currentEntry", "field" => "imageUrl", "format" => "media", "fallback" => "empty" } }
+      ),
+      "product-price" => node("product-price", "base.text", [], { "tag" => "span", "text" => "$0.00" }).merge(
+        "dynamicBindings" => { "text" => { "source" => "currentEntry", "field" => "priceDisplay", "format" => "plain", "fallback" => "static" } }
+      ),
       "product-variants" => node("product-variants", "store.variant-picker"),
-      "product-stock" => node("product-stock", "store.stock-badge"),
+      "product-stock" => node("product-stock", "store.stock-badge", [], { "lowStockThreshold" => CommerceSettings.current.low_stock_threshold }),
       "product-buy" => node("product-buy", "store.buy-button"),
     }
     {

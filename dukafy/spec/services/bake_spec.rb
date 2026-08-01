@@ -129,7 +129,7 @@ class BakeSpec < Minitest::Test
     html = File.read(File.join(@output_root, "current", "products", "canvas-bag.html"))
     assert_includes html, "<title>Canvas &amp; Carry Bag</title>"
     assert_includes html, "<h1>Canvas &amp; Carry Bag</h1>"
-    assert_includes html, '<span class="dukafy-price" data-product="canvas-bag">$129.00</span>'
+    assert_includes html, "<span>$129.00</span>"
     assert_includes html, 'name="product_slug" value="canvas-bag"'
     assert_includes html, 'hx-get="/fragments/stock?product_slug=canvas-bag'
     assert_equal [["/products/canvas-bag", product.id]], PageDependency.select_map(%i[page_path product_id])

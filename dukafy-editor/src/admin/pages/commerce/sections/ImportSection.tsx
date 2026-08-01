@@ -42,7 +42,7 @@ export function ImportSection({ data }: { data: CommerceData }) {
       </div>
 
       <Card padding={32} className={styles.importCard}>
-        <span className={styles.settingsHeroIcon}><CloudUploadSolidIcon size={28} aria-hidden="true" /></span>
+        <span className={styles.heroIcon}><CloudUploadSolidIcon size={28} aria-hidden="true" /></span>
         <div>
           <h3>Import products from CSV</h3>
           <p>

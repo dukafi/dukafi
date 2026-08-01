@@ -119,7 +119,13 @@ class Dukafy
           { html:, css: BUY_BUTTON_CSS }
         end
         registry.register(
-          "store.collection-loop",
+          "store.relationship-loop",
+          defaults: { "relationship" => "products", "sourceSlug" => "", "perPage" => 12 },
+        ) do |_props, children, _context|
+          { html: %(<div class="dukafy-collection-loop">#{children.join}</div>), css: COLLECTION_LOOP_CSS }
+        end
+        registry.register(
+          "store.collection-loop", # deprecated alias — kept so already-published documents keep rendering
           defaults: { "collectionSlug" => "", "perPage" => 12 },
         ) do |_props, children, _context|
           { html: %(<div class="dukafy-collection-loop">#{children.join}</div>), css: COLLECTION_LOOP_CSS }
@@ -158,7 +164,7 @@ class Dukafy
       def responsive_image_attributes(image)
         variants = image.fetch("variants", [])
         srcset = variants.filter_map do |variant|
-          url = BaseHelpers.safe_url(variant["url"])
+          url = BaseHelpers.safe_url(variant["path"])
           %(#{url} #{Integer(variant['width'])}w) unless url.empty? || url == "#"
         end.join(", ")
         dimensions = %w[width height].filter_map { |key| image[key] ? %( #{key}="#{Integer(image[key])}") : nil }.join

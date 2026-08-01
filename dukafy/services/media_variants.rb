@@ -38,12 +38,15 @@ class MediaVariants
       variant_relative = "#{extensionless}-w#{candidate}.webp"
       variant_path = File.expand_path(variant_relative, storage_root)
       dimensions = processor.call(source:, destination: variant_path, width: candidate)
-      { "url" => "/#{variant_relative}", "width" => dimensions.fetch(:width), "height" => dimensions.fetch(:height), "mime" => "image/webp" }
+      {
+        "path" => "/#{variant_relative}", "width" => dimensions.fetch(:width), "height" => dimensions.fetch(:height),
+        "format" => "webp", "sizeBytes" => File.file?(variant_path) ? File.size(variant_path) : 0,
+      }
     end
     { width:, height:, variants: }
   rescue StandardError => error
     variants&.each do |variant|
-      path = File.expand_path(variant.fetch("url").delete_prefix("/"), storage_root)
+      path = File.expand_path(variant.fetch("path").delete_prefix("/"), storage_root)
       File.delete(path) if File.file?(path)
     end
     raise if error.is_a?(Unavailable)

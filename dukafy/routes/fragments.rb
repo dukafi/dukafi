@@ -49,8 +49,9 @@ class Fragments < Roda
     r.get("stock") do
       product = Product.first(slug: r.params["product_slug"].to_s, status: "active")
       variant_sku = r.params["variant_sku"].to_s
-      threshold = Integer(r.params.fetch("low_stock_threshold", "5"), exception: false)
-      threshold = [[threshold || 5, 0].max, 100_000].min
+      default_threshold = CommerceSettings.current.low_stock_threshold
+      threshold = Integer(r.params.fetch("low_stock_threshold", default_threshold.to_s), exception: false)
+      threshold = [[threshold || default_threshold, 0].max, 100_000].min
       response["Content-Type"] = "text/html; charset=utf-8"
       response["Cache-Control"] = "no-store"
       next stock_fragment(nil, variant_sku, threshold) unless product

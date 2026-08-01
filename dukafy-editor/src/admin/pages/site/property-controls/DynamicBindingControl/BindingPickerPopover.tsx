@@ -46,6 +46,12 @@ import { getCmsDataTable, previewCmsDataLoopItems } from '@core/persistence/cmsD
 import { dataTablePreviewToLoopItem } from '@core/templates/templatePreviewData'
 import { primaryTemplateTableSlug } from '@core/templates'
 import {
+  _cachedCommercePreview,
+  commercePreviewItem,
+  loadCommercePreview,
+  type CommerceEntityKind,
+} from './commerceEntry'
+import {
   deriveFormat,
   formatPreviewValue,
   loopFieldFormat,
@@ -96,6 +102,7 @@ interface PickerPopoverProps {
   availableFields?: LoopSourceField[]
   sourceLabel?: string
   loopTableId?: string | null
+  commerceEntityKind?: CommerceEntityKind | null
   /**
    * Insert mode — clicks insert a `{source.field}` token and the popover
    * stays open so multiple tokens can be inserted in one session.
@@ -131,6 +138,7 @@ export function BindingPickerPopover({
   availableFields,
   sourceLabel,
   loopTableId,
+  commerceEntityKind,
   insertMode = false,
   anchorRef,
   triggerRef,
@@ -147,6 +155,11 @@ export function BindingPickerPopover({
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (_cachedMeta) return // already in state via lazy initializer
+    // A commerce scope never needs the generic DataMeta tables (Dukafy has
+    // no `data_tables`/`data_rows` system at all — see `commerceEntry.ts`'s
+    // header comment). Skipping the fetch avoids a guaranteed 404 and the
+    // loading flash on every commerce-scoped picker open.
+    if (commerceEntityKind) return
     let cancelled = false
     setMetaLoading(true)
     loadDataMeta()
@@ -164,6 +177,22 @@ export function BindingPickerPopover({
       cancelled = true
     }
   }, [])
+
+  // ─── Commerce preview fetching ─────────────────────────────────────────
+  // A single representative product/variant/collection, fetched once and
+  // cached module-level (mirrors the DataMeta cache above) so every field
+  // row for a commerce scope shows a real value instead of a blank.
+  const [commercePreview, setCommercePreview] = useState(() => _cachedCommercePreview)
+  useEffect(() => {
+    if (!commerceEntityKind || _cachedCommercePreview) return
+    let cancelled = false
+    loadCommercePreview().then((result) => {
+      if (!cancelled) setCommercePreview(result)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [commerceEntityKind])
 
   // ─── Active page template for auto-scope + frame data ─────────────────
   const activePageTableSlug = useEditorStore((s) => {
@@ -387,6 +416,9 @@ export function BindingPickerPopover({
       if (!frame) return undefined
       return (frame as unknown as Record<string, unknown>)[entry.field.id]
     }
+    if (commerceEntityKind) {
+      return commercePreviewItem(commerceEntityKind, commercePreview)?.[entry.field.id]
+    }
     return currentEntryItem?.fields[entry.field.id]
   }
 
@@ -520,7 +552,11 @@ export function BindingPickerPopover({
     if (metaLoading) {
       return <SkeletonBlock minHeight={200} ariaLabel="Loading data tables" />
     }
-    if (metaError) {
+    // A failed DataMeta fetch only blocks the whole picker when there's no
+    // other usable scope — a loop/commerce source's fields don't depend on
+    // DataMeta at all, so they still render fine underneath a table lookup
+    // that failed.
+    if (metaError && !hasLoopOnlyScope) {
       return (
         <div className={styles.pickerEmptyWrapper}>
           <EmptyState

@@ -3,10 +3,14 @@ require "json_schemer"
 
 class Page < Sequel::Model
   PAGE_SCHEMA_PATH = File.expand_path("../publisher/schemas/page.schema.json", __dir__)
+  SLUG_PATTERN = /\A[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*\z/
 
   def validate
     super
     validates_presence [:slug, :title, :document]
+    validates_format SLUG_PATTERN, :slug,
+      message: "must use lowercase letters, numbers, single hyphens, and optional single slashes"
+    validates_unique :slug
   end
 
   def document=(value)

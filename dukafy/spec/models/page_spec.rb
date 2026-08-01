@@ -25,6 +25,13 @@ class PageSpec < Minitest::Test
     assert_equal "body", page.document_data.fetch("rootNodeId")
   end
 
+  def test_rejects_a_slug_the_editor_cannot_load
+    page = Page.new(slug: "_invalid", title: "Invalid", document: valid_document)
+
+    refute page.valid?
+    assert_includes page.errors[:slug], "must use lowercase letters, numbers, single hyphens, and optional single slashes"
+  end
+
   def test_rejects_a_malformed_tree
     malformed = valid_document.merge("nodes" => [])
 

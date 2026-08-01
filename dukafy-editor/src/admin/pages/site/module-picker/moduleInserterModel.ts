@@ -7,6 +7,10 @@ import {
 import { wouldCreateCycle, type VisualComponent } from '@core/visualComponents'
 import { firstOutletId } from '@core/templates'
 import {
+  buildProductScaffoldSnapshot,
+  buildRelationshipLoopSnapshot,
+} from '@site/store/commerceScaffold'
+import {
   moduleWireForId,
   wireFromTree,
   type WireNode,
@@ -18,7 +22,7 @@ export type ModuleInserterSectionId =
   | 'layouts'
   | 'components'
   | 'recent'
-type ModuleInserterItemKind = 'module' | 'savedLayout' | 'component'
+type ModuleInserterItemKind = 'module' | 'savedLayout' | 'component' | 'commerceScaffold'
 type ModuleInserterRecentRef = ModuleInserterItemRef
 
 export interface RegistryModuleForInserter {
@@ -72,15 +76,36 @@ interface ModuleInserterComponentItem extends BaseInserterItem {
   uses: number
 }
 
+export type CommerceScaffoldId = 'product' | 'products-loop' | 'variants-loop'
+
+interface ModuleInserterCommerceScaffoldItem extends BaseInserterItem {
+  kind: 'commerceScaffold'
+  scaffoldId: CommerceScaffoldId
+}
+
 export type ModuleInserterItem =
   | ModuleInserterModuleItem
   | ModuleInserterSavedLayoutItem
   | ModuleInserterComponentItem
+  | ModuleInserterCommerceScaffoldItem
 
 const HIDDEN_MODULE_IDS = new Set([
   'base.body',
   'base.visual-component-ref',
   'base.slot-instance',
+  // Superseded by composable base.image/base.text scaffolds bound via
+  // dynamicBindings, and by store.relationship-loop — kept registered
+  // (Ruby + editor) so already-published documents keep rendering, but
+  // never offered for new inserts.
+  'store.product-card',
+  'store.image-gallery',
+  'store.collection-loop',
+  // Instatic-era generic loop: its `data.rows` source targets a generic
+  // data_tables/data_rows system Dukafy never implemented, and Ruby's
+  // publisher has no registered renderer for this id at all — inserting
+  // one doesn't just render empty, it raises an uncaught KeyError and
+  // crashes the bake. store.relationship-loop is the working replacement.
+  'base.loop',
 ])
 
 export const DEFAULT_MODULE_INSERTER_FAVORITES =
@@ -322,11 +347,58 @@ function getComponentItems(
   }))
 }
 
+/**
+ * Fixed "Insert product" / "Insert collection" / "Insert variant list" items.
+ * Each wraps a code-defined scaffold (`@site/store/commerceScaffold`) — a
+ * plain, composable node tree bound via `dynamicBindings`, not an opaque
+ * card component. Built once per call (cheap — three small literal trees);
+ * not context-gated like `moduleAvailability`, since a scaffold is just a
+ * plain subtree and is always insertable.
+ */
+function getCommerceScaffoldItems(): ModuleInserterCommerceScaffoldItem[] {
+  const definitions: Array<{ scaffoldId: CommerceScaffoldId; name: string; description: string; wire: WireNode }> = [
+    {
+      scaffoldId: 'product',
+      name: 'Insert product',
+      description: 'Bound image, title, and price — linked to the product page.',
+      wire: wireFromTree(toWireTree(buildProductScaffoldSnapshot())),
+    },
+    {
+      scaffoldId: 'products-loop',
+      name: 'Insert collection',
+      description: 'Repeats a product row for a collection’s products.',
+      wire: wireFromTree(toWireTree(buildRelationshipLoopSnapshot('products'))),
+    },
+    {
+      scaffoldId: 'variants-loop',
+      name: 'Insert variant list',
+      description: 'Repeats a title/price row for a product’s variants.',
+      wire: wireFromTree(toWireTree(buildRelationshipLoopSnapshot('variants'))),
+    },
+  ]
+  return definitions.map(({ scaffoldId, name, description, wire }) => ({
+    key: recentKey({ kind: 'commerceScaffold', id: scaffoldId }),
+    id: scaffoldId,
+    kind: 'commerceScaffold',
+    scaffoldId,
+    name,
+    description,
+    accent: moduleAccentForCategory('Commerce'),
+    wire,
+    searchText: searchText([name, scaffoldId, 'commerce', description]),
+  }))
+}
+
+function toWireTree(snapshot: { rootNodeIds: string[]; nodes: Record<string, import('@core/page-tree').PageNode> }) {
+  return { rootNodeId: snapshot.rootNodeIds[0], nodes: snapshot.nodes }
+}
+
 interface BuiltModuleInserterItems {
   moduleItems: ModuleInserterModuleItem[]
   /** User-saved layouts (`SavedLayout` rows) — the sole source of the Layouts section. */
   savedLayoutItems: ModuleInserterSavedLayoutItem[]
   componentItems: ModuleInserterComponentItem[]
+  commerceScaffoldItems: ModuleInserterCommerceScaffoldItem[]
   /** Every visible item — including disabled ones (carrying `disabledReason`). */
   allItems: ModuleInserterItem[]
 }
@@ -345,14 +417,17 @@ export function buildModuleInserterItems({
   const moduleItems = getVisibleModuleItems(modules, context)
   const savedLayoutItems = getSavedLayoutItems(savedLayouts, context, visualComponents)
   const componentItems = getComponentItems(visualComponents)
+  const commerceScaffoldItems = getCommerceScaffoldItems()
   return {
     moduleItems,
     savedLayoutItems,
     componentItems,
+    commerceScaffoldItems,
     allItems: [
       ...moduleItems,
       ...savedLayoutItems,
       ...componentItems,
+      ...commerceScaffoldItems,
     ],
   }
 }

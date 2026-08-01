@@ -5,12 +5,15 @@ class PartialBake
   Result = Data.define(:page_count, :paths, :slot)
   SAFE_PATH = %r{\A/(?:[a-zA-Z0-9_-]+/?)*\z}
 
-  def self.call(product:, old_slug: nil, state: SiteState.first, output_root: ENV.fetch("DUKAFY_PUBLISHED_ROOT", File.expand_path("../published", __dir__)))
-    new(product:, old_slug:, state:, output_root:).call
+  def self.call(product: nil, collection: nil, old_slug: nil, state: SiteState.first, output_root: ENV.fetch("DUKAFY_PUBLISHED_ROOT", File.expand_path("../published", __dir__)))
+    raise ArgumentError, "PartialBake needs exactly one of product: or collection:" if product.nil? == collection.nil?
+
+    new(product:, collection:, old_slug:, state:, output_root:).call
   end
 
-  def initialize(product:, old_slug:, state:, output_root:)
+  def initialize(product:, collection:, old_slug:, state:, output_root:)
     @product = product
+    @collection = collection
     @old_slug = old_slug
     @state = state
     @output_root = File.expand_path(output_root)
@@ -24,10 +27,7 @@ class PartialBake
     slot_name = "slot_#{version % 2}"
     slot_path = File.join(@output_root, slot_name)
     source_path = File.join(@output_root, source_slot)
-    affected = PageDependency.where(product_id: @product.id).select_map(:page_path)
-    old_product_path = "/products/#{@old_slug || @product.slug}"
-    affected << "/products/#{@product.slug}" if @product.status == "active"
-    affected = affected.uniq.select { |path| path.match?(SAFE_PATH) }
+    affected, old_path, current_path = affected_paths
     rendered_paths = []
 
     FileUtils.rm_rf(slot_path)
@@ -39,7 +39,7 @@ class PartialBake
       affected.each do |path|
         entry = render_path(path, prefetched)
         if entry
-          write_entry(path, entry, slot_path, source_path, fallback_path: old_product_path)
+          write_entry(path, entry, slot_path, source_path, fallback_path: old_path)
           dependencies[path] = entry.fetch(:product_ids)
           rendered_paths << path
         else
@@ -47,9 +47,9 @@ class PartialBake
           dependencies[path] = []
         end
       end
-      if old_product_path != "/products/#{@product.slug}"
-        delete_html(old_product_path, slot_path)
-        dependencies[old_product_path] = []
+      if old_path != current_path
+        delete_html(old_path, slot_path)
+        dependencies[old_path] = []
       end
 
       flip_current(slot_name)
@@ -73,6 +73,23 @@ class PartialBake
 
   def publish_available?(slot)
     @state && @state.publish_version.positive? && slot && File.directory?(File.join(@output_root, slot))
+  end
+
+  # Returns [affected_paths, old_path, current_path]. `old_path` is the
+  # slug-before-rename path (equal to `current_path` when nothing renamed) —
+  # used to delete the stale file when a product/collection slug changes.
+  def affected_paths
+    if @product
+      current_path = "/products/#{@product.slug}"
+      old_path = "/products/#{@old_slug || @product.slug}"
+      affected = PageDependency.where(product_id: @product.id).select_map(:page_path)
+      affected << current_path if @product.status == "active"
+    else
+      current_path = "/collections/#{@collection.slug}"
+      old_path = "/collections/#{@old_slug || @collection.slug}"
+      affected = [current_path]
+    end
+    [affected.uniq.select { |path| path.match?(SAFE_PATH) }, old_path, current_path]
   end
 
   def render_path(path, prefetched)

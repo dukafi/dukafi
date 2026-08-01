@@ -113,6 +113,9 @@ class AdminApi < Roda
           stock: variant.stock, position: variant.position,
         }
       end,
+      images: product.media_assets.map do |asset|
+        { id: asset.id, publicPath: "/#{asset.path}", width: asset.width, height: asset.height }
+      end,
     }
   end
 
@@ -139,7 +142,10 @@ class AdminApi < Roda
     {
       sku: params.fetch("sku", "").strip, title: params.fetch("title", "").strip,
       price_cents: Integer(params.fetch("priceCents", 0)),
-      currency: params.fetch("currency", "USD").strip.upcase,
+      # v1 is single-currency (VISION.md's post-1.0 parking lot defers
+      # multi-currency) — the store's configured currency always wins,
+      # regardless of what a caller posts, so every variant stays consistent.
+      currency: CommerceSettings.current.currency,
       stock: Integer(params.fetch("stock", 0)), position: Integer(params.fetch("position", 0)),
     }
   end
@@ -152,8 +158,36 @@ class AdminApi < Roda
     }
   end
 
+  def commerce_settings_payload
+    settings = CommerceSettings.current
+    { currency: settings.currency, lowStockThreshold: settings.low_stock_threshold }
+  end
+
+  def commerce_settings_attributes(params)
+    {
+      currency: params.fetch("currency", "USD").to_s.strip.upcase,
+      low_stock_threshold: Integer(params.fetch("lowStockThreshold", 5)),
+    }
+  end
+
   def rebake_product(product, old_slug: nil)
     PartialBake.call(product:, old_slug:).page_count
+  end
+
+  def rebake_collection(collection, old_slug: nil)
+    PartialBake.call(collection:, old_slug:).page_count
+  end
+
+  # v1 is single-currency: changing the store's configured currency must
+  # retag every existing variant too, not just ones written after the
+  # change (commerce_variant_attributes only enforces the invariant going
+  # forward). Re-bakes every affected product so already-published prices
+  # update immediately, the same way any other catalog edit does — no
+  # separate "Publish" step required.
+  def retag_variants_with_store_currency(_old_currency, new_currency)
+    product_ids = Variant.exclude(currency: new_currency).distinct.select_map(:product_id)
+    Variant.dataset.update(currency: new_currency)
+    Product.where(id: product_ids).each { |product| rebake_product(product) }
   end
 
   def save_page!(raw)
@@ -340,6 +374,39 @@ class AdminApi < Roda
             rescue Sequel::ValidationFailed, Sequel::UniqueConstraintViolation => error
               halt_json(422, "invalid_product", error.message)
             end
+            r.put("images") do
+              ids = r.params.fetch("mediaAssetIds", []).map { |value| Integer(value) }
+              valid_ids = MediaAsset.where(id: ids).select_map(:id)
+              halt_json(422, "invalid_images", "One or more media assets do not exist") unless ids.uniq.sort == valid_ids.sort
+              DB.transaction do
+                ProductImage.where(product_id: product.id).delete
+                ids.uniq.each_with_index do |media_asset_id, position|
+                  ProductImage.dataset.insert(product_id: product.id, media_asset_id:, position:)
+                end
+              end
+              { product: commerce_product_payload(product), rebakedPages: rebake_product(product) }
+            rescue ArgumentError
+              halt_json(422, "invalid_images", "Media asset IDs must be integers")
+            end
+            r.put("collections") do
+              ids = r.params.fetch("collectionIds", []).map { |value| Integer(value) }
+              valid_ids = Collection.where(id: ids).select_map(:id)
+              halt_json(422, "invalid_collections", "One or more collections do not exist") unless ids.uniq.sort == valid_ids.sort
+              current_ids = CollectionProduct.where(product_id: product.id).select_map(:collection_id)
+              to_add = ids.uniq - current_ids
+              to_remove = current_ids - ids.uniq
+              DB.transaction do
+                CollectionProduct.where(product_id: product.id, collection_id: to_remove).delete unless to_remove.empty?
+                to_add.each do |collection_id|
+                  next_position = (CollectionProduct.where(collection_id:).max(:position) || -1) + 1
+                  CollectionProduct.dataset.insert(collection_id:, product_id: product.id, position: next_position)
+                end
+              end
+              rebaked = (to_add + to_remove).sum { |collection_id| rebake_collection(Collection[collection_id]) }
+              { collectionIds: ids.uniq.sort, rebakedPages: rebaked }
+            rescue ArgumentError
+              halt_json(422, "invalid_collections", "Collection IDs must be integers")
+            end
             r.delete { product.destroy; response.status = 204; "" }
           end
         end
@@ -362,7 +429,7 @@ class AdminApi < Roda
                 collection.update(commerce_collection_attributes(r.params))
                 SlugRedirect.record(resource_type: "collection", old_slug:, destination_slug: collection.slug)
               end
-              { collection: commerce_collection_payload(collection) }
+              { collection: commerce_collection_payload(collection), rebakedPages: rebake_collection(collection, old_slug:) }
             rescue Sequel::ValidationFailed, Sequel::UniqueConstraintViolation, ArgumentError => error
               halt_json(422, "invalid_collection", error.message)
             end
@@ -377,10 +444,22 @@ class AdminApi < Roda
                   CollectionProduct.dataset.insert(collection_id: collection.id, product_id:, position:)
                 end
               end
-              { collection: commerce_collection_payload(collection) }
+              { collection: commerce_collection_payload(collection), rebakedPages: rebake_collection(collection) }
             rescue ArgumentError
               halt_json(422, "invalid_products", "Product IDs must be integers")
             end
+          end
+        end
+        r.on("settings") do
+          r.get { { settings: commerce_settings_payload } }
+          r.patch do
+            settings = CommerceSettings.current
+            old_currency = settings.currency
+            settings.update(commerce_settings_attributes(r.params))
+            retag_variants_with_store_currency(old_currency, settings.currency) if settings.currency != old_currency
+            { settings: commerce_settings_payload }
+          rescue Sequel::ValidationFailed, ArgumentError => error
+            halt_json(422, "invalid_settings", error.message)
           end
         end
       end
@@ -461,7 +540,7 @@ class AdminApi < Roda
             path = File.expand_path("../#{asset.path}", __dir__)
             File.delete(path) if File.file?(path)
             asset.variants.each do |variant|
-              variant_path = File.expand_path("../#{variant.fetch('url').delete_prefix('/')}", __dir__)
+              variant_path = File.expand_path("../#{variant.fetch('path').delete_prefix('/')}", __dir__)
               File.delete(variant_path) if File.file?(variant_path)
             end
             asset.destroy

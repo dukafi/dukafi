@@ -24,6 +24,8 @@ export function useInsertInserterItem() {
   const insertModule = useInsertModule()
 
   const insertLayoutAction = useEditorStore((s) => s.insertLayout)
+  const insertProductScaffold = useEditorStore((s) => s.insertProductScaffold)
+  const insertRelationshipLoop = useEditorStore((s) => s.insertRelationshipLoop)
 
   const insertVC = (vcId: string, explicitTarget?: InsertLocation): boolean => {
     if (!canvasPage) return false
@@ -50,7 +52,13 @@ export function useInsertInserterItem() {
           ? Boolean(insertLayoutAction(item.id, target))
           : item.kind === 'component'
             ? insertVC(item.id, target)
-            : false
+            : item.kind === 'commerceScaffold'
+              ? Boolean(
+                  item.scaffoldId === 'product'
+                    ? insertProductScaffold(target)
+                    : insertRelationshipLoop(item.scaffoldId === 'products-loop' ? 'products' : 'variants', target),
+                )
+              : false
 
     if (!inserted) return false
 

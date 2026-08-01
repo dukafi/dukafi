@@ -14,6 +14,8 @@ class AdminApiSpec < Minitest::Test
     @uploaded_paths = []
     CollectionProduct.dataset.delete
     Collection.dataset.delete
+    ProductImage.dataset.delete
+    MediaAsset.dataset.delete
     Variant.dataset.delete
     Product.dataset.delete
     UserPreference.dataset.delete

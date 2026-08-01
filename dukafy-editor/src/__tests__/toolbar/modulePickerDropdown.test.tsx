@@ -266,14 +266,14 @@ describe('ModulePickerDropdown — Visual Components', () => {
     render(<ModulePickerDropdown />)
     const dialog = openInserter()
 
-    const loopItem = dialog.querySelector('[data-module-id="base.loop"]') as HTMLElement
+    const imageItem = dialog.querySelector('[data-module-id="base.image"]') as HTMLElement
     const textItem = dialog.querySelector('[data-module-id="base.text"]') as HTMLElement
-    fireEvent.focus(loopItem)
-    await waitFor(() => expect(loopItem?.getAttribute('data-selected')).toBe('true'))
+    fireEvent.focus(imageItem)
+    await waitFor(() => expect(imageItem?.getAttribute('data-selected')).toBe('true'))
 
     fireEvent.mouseEnter(textItem)
 
-    expect(loopItem?.getAttribute('data-selected')).toBe('true')
+    expect(imageItem?.getAttribute('data-selected')).toBe('true')
     expect(textItem?.getAttribute('data-selected')).toBeNull()
   })
 
@@ -282,15 +282,15 @@ describe('ModulePickerDropdown — Visual Components', () => {
     render(<ModulePickerDropdown />)
     const dialog = openInserter()
 
-    const loopItem = dialog.querySelector('[data-module-id="base.loop"]') as HTMLElement
+    const imageItem = dialog.querySelector('[data-module-id="base.image"]') as HTMLElement
     const textItem = dialog.querySelector('[data-module-id="base.text"]') as HTMLElement
-    fireEvent.focus(loopItem)
-    await waitFor(() => expect(loopItem?.getAttribute('data-selected')).toBe('true'))
+    fireEvent.focus(imageItem)
+    await waitFor(() => expect(imageItem?.getAttribute('data-selected')).toBe('true'))
 
     fireEvent.pointerMove(textItem, { clientX: 120, clientY: 120 })
 
     expect(textItem?.getAttribute('data-selected')).toBe('true')
-    expect(loopItem?.getAttribute('data-selected')).toBeNull()
+    expect(imageItem?.getAttribute('data-selected')).toBeNull()
   })
 
   it('hides base.visual-component-ref from the picker in page mode', () => {

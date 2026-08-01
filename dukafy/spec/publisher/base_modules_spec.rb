@@ -52,8 +52,8 @@ class BaseModulesSpec < Minitest::Test
       [], prefetched: { "/uploads/hero.jpg" => {
         "width" => 1_200, "height" => 800,
         "variants" => [
-          { "url" => "/uploads/hero-w320.webp", "width" => 320 },
-          { "url" => "/uploads/hero-w640.webp", "width" => 640 },
+          { "path" => "/uploads/hero-w320.webp", "width" => 320 },
+          { "path" => "/uploads/hero-w640.webp", "width" => 640 },
         ],
       } }
     )

@@ -130,3 +130,29 @@ utilities only). Attribution: Instatic © David Babinec, MIT.
   stored as sanitized semantic HTML in `products.description_document`. The
   visual canvas remains responsible for product-page layout and data binding;
   merchants do not open a separate canvas document for every catalog item.
+
+- **Administration lives in the editor.** The authenticated Commerce workspace
+  owns products, variants, collections, imports, and future orders. The public
+  storefront contains no merchant administration routes or controls.
+- **Catalog layouts are shared templates.** One Product template and one
+  Collection template bind to the current catalog entry and generate all public
+  catalog URLs. Ordinary pages may pin commerce modules to explicit slugs.
+- **Tailwind is publish-time and usage-driven.** The standalone compiler sees
+  rendered class tokens and emits only used utilities into the hashed release
+  bundle; no CDN stylesheet or Tailwind runtime is permitted.
+- **Template slugs obey the public page contract.** Internal templates use
+  `product-template` and `collection-template`, not underscore-prefixed hidden
+  paths, because the editor validates every loaded page consistently.
+
+## Current implementation boundary (August 2026)
+
+The canvas-to-static publish loop, fixed catalog admin, commerce canvas modules,
+product/collection generation, dependency-aware partial rebakes, and responsive
+media variants are implemented. Anonymous carts currently support add-to-cart,
+stock hydration, and cart-count hydration.
+
+This is not yet a production commerce release. Cart editing, checkout, Stripe
+webhooks, orders, discounts, email, deployment images, backup automation,
+security hardening, and end-to-end browser coverage remain. The milestone file
+is the authoritative implementation checklist; aspirational sections above
+describe the finished product rather than claiming those features exist today.

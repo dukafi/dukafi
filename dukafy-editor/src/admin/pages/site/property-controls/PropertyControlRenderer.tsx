@@ -60,6 +60,12 @@ interface DynamicBindingRenderContext {
    * of listing every table in the workspace.
    */
   loopTableId?: string | null
+  /**
+   * Set when the enclosing scope is a commerce entity (product/variant/
+   * collection) rather than a generic data table — lets the picker fetch a
+   * live preview row from the Commerce API instead of DataMeta.
+   */
+  commerceEntityKind?: import('./DynamicBindingControl/commerceEntry').CommerceEntityKind | null
 }
 
 interface RenderControlOptions {
@@ -272,6 +278,7 @@ export function PropertyControlRenderer({
       availableFields={dynamicBinding.availableFields}
       sourceLabel={dynamicBinding.sourceLabel}
       loopTableId={dynamicBinding.loopTableId}
+      commerceEntityKind={dynamicBinding.commerceEntityKind}
     >
       {inner}
     </DynamicBindingControl>

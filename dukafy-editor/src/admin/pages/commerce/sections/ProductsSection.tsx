@@ -1,32 +1,37 @@
 /**
  * Commerce → Products.
  *
- * A nested master-detail layout (list on the left, detail canvas on the
- * right) matching the pattern established by the AI workspace's Providers
- * tab. Selecting a product loads its form into the detail canvas; "New
- * product" opens the same canvas with an empty draft. Variants are edited
- * inline in a table beneath the product form — each row keeps its own local
- * draft state and posts independently, so editing one variant's stock
- * doesn't require re-saving the whole product.
+ * Plain data table + pagination + dialogs — no master-detail canvas. "New
+ * product"/row "Edit" open `ProductDialog` (create and edit share one
+ * dialog, mirroring `users/components/UserDialog.tsx`); variants live in
+ * their own `VariantsDialog` opened from the row action menu, not inline.
  */
 import { useState, type FormEvent } from 'react'
 import { Button } from '@ui/components/Button'
+import { Checkbox } from '@ui/components/Checkbox'
 import { DataTable, DataTableBody, DataTableCell, DataTableHead, DataTableHeader, DataTableRow } from '@ui/components/DataTable'
 import { Dialog } from '@ui/components/Dialog'
 import { EmptyState } from '@ui/components/EmptyState'
 import { FormField } from '@ui/components/FormField'
 import { Input } from '@ui/components/Input'
+import { MediaPickerModal } from '@admin/pages/media/components/MediaPickerModal/MediaPickerModal'
 import { SearchBar } from '@ui/components/SearchBar'
 import { Select } from '@ui/components/Select'
 import { TagPill } from '@ui/components/TagPill'
 import { getErrorMessage } from '@core/utils/errorMessage'
-import { PackageSolidIcon } from 'pixel-art-icons/icons/package-solid'
+import { ArrowDownIcon } from 'pixel-art-icons/icons/arrow-down'
+import { ArrowUpIcon } from 'pixel-art-icons/icons/arrow-up'
+import { EditSolidIcon } from 'pixel-art-icons/icons/edit-solid'
+import { ImageSolidIcon } from 'pixel-art-icons/icons/image-solid'
+import { ListBoxSolidIcon } from 'pixel-art-icons/icons/list-box-solid'
 import { PlusIcon } from 'pixel-art-icons/icons/plus'
 import { SaveSolidIcon } from 'pixel-art-icons/icons/save-solid'
 import { TrashSolidIcon } from 'pixel-art-icons/icons/trash-solid'
 import { commerceApi } from '../api'
+import { Pagination } from '../components/Pagination'
+import { RowActionMenu } from '../components/RowActionMenu'
 import type { CommerceData } from '../hooks/useCommerceData'
-import type { Product, Variant, VariantFormState } from '../types'
+import type { Collection, Product, Variant, VariantFormState } from '../types'
 import { emptyVariantForm, variantFormFrom } from '../types'
 import styles from '../CommercePage.module.css'
 
@@ -35,17 +40,38 @@ const STATUS_OPTIONS = [
   { value: 'active', label: 'Active', textValue: 'Active' },
 ]
 
-export function ProductsSection({ data }: { data: CommerceData }) {
-  const { products, error, setError, refresh } = data
-  const [query, setQuery] = useState('')
-  const [selectedId, setSelectedId] = useState<number | 'new' | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [removeCandidate, setRemoveCandidate] = useState<Product | null>(null)
+// Mirrors Ruby's format_price (dukafy/publisher/modules/store/modules.rb) so
+// the admin table and the storefront agree: USD gets a $ prefix, everything
+// else (KES, EUR, ...) gets the code prefixed instead of a symbol we don't have.
+function formatCents(cents: number, currency: string) {
+  const amount = (cents / 100).toFixed(2)
+  return currency === 'USD' ? `$${amount}` : `${currency} ${amount}`
+}
 
-  const selected = selectedId === 'new' || selectedId === null
-    ? null
-    : products.find((product) => product.id === selectedId) ?? null
-  const creating = selectedId === 'new'
+function priceSummary(product: Product): string {
+  if (product.variants.length === 0) return '—'
+  const currency = product.variants[0].currency
+  const prices = product.variants.map((variant) => variant.priceCents)
+  const min = Math.min(...prices)
+  const max = Math.max(...prices)
+  return min === max ? formatCents(min, currency) : `${formatCents(min, currency)} – ${formatCents(max, currency)}`
+}
+
+function stockSummary(product: Product): number {
+  return product.variants.reduce((sum, variant) => sum + variant.stock, 0)
+}
+
+export function ProductsSection({ data }: { data: CommerceData }) {
+  const { products, collections, error, setError, refresh } = data
+  const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
+  const [dialogMode, setDialogMode] = useState<'create' | 'edit' | null>(null)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [variantsProduct, setVariantsProduct] = useState<Product | null>(null)
+  const [imagesProduct, setImagesProduct] = useState<Product | null>(null)
+  const [removeCandidate, setRemoveCandidate] = useState<Product | null>(null)
+  const [busy, setBusy] = useState(false)
 
   const filtered = query.trim()
     ? products.filter((product) => {
@@ -53,6 +79,24 @@ export function ProductsSection({ data }: { data: CommerceData }) {
       return product.title.toLowerCase().includes(q) || product.slug.toLowerCase().includes(q)
     })
     : products
+  const pageCount = Math.max(Math.ceil(filtered.length / pageSize), 1)
+  const clampedPage = Math.min(page, pageCount)
+  const pageItems = filtered.slice((clampedPage - 1) * pageSize, clampedPage * pageSize)
+
+  function openCreate() {
+    setEditingProduct(null)
+    setDialogMode('create')
+  }
+
+  function openEdit(product: Product) {
+    setEditingProduct(product)
+    setDialogMode('edit')
+  }
+
+  function closeDialog() {
+    setDialogMode(null)
+    setEditingProduct(null)
+  }
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -64,14 +108,19 @@ export function ProductsSection({ data }: { data: CommerceData }) {
       status: String(form.get('status') || 'draft'),
       descriptionHtml: String(form.get('descriptionHtml') || ''),
     }
+    const collectionIds = form.getAll('collectionIds').map((value) => Number(value))
     setBusy(true)
     setError(null)
     try {
-      const result = creating
-        ? await commerceApi.createProduct(input)
-        : await commerceApi.updateProduct((selected as Product).id, input)
+      if (dialogMode === 'create') {
+        const created = await commerceApi.createProduct(input)
+        await commerceApi.setProductCollections(created.product.id, collectionIds)
+      } else if (editingProduct) {
+        await commerceApi.updateProduct(editingProduct.id, input)
+        await commerceApi.setProductCollections(editingProduct.id, collectionIds)
+      }
       await refresh()
-      setSelectedId(result.product.id)
+      closeDialog()
     } catch (err) {
       setError(getErrorMessage(err, 'Could not save product'))
     } finally {
@@ -85,7 +134,6 @@ export function ProductsSection({ data }: { data: CommerceData }) {
     try {
       await commerceApi.deleteProduct(product.id)
       setRemoveCandidate(null)
-      setSelectedId(null)
       await refresh()
     } catch (err) {
       setError(getErrorMessage(err, 'Could not delete product'))
@@ -95,65 +143,101 @@ export function ProductsSection({ data }: { data: CommerceData }) {
   }
 
   return (
-    <div className={styles.settingsWorkspace}>
-      <div className={styles.settingsBrowser}>
-        <div className={styles.settingsBrowserHeader}>
-          <h2>Products</h2>
-          <Button type="button" variant="primary" size="sm" onClick={() => setSelectedId('new')}>
-            <PlusIcon size={14} aria-hidden="true" />
-            <span>New product</span>
-          </Button>
-        </div>
-        <SearchBar value={query} onValueChange={setQuery} placeholder="Search products…" aria-label="Search products" />
-        {error && <p className={styles.settingsBrowserError} role="alert">{error}</p>}
-        <div className={styles.settingsList} role="listbox" aria-label="Products">
-          {filtered.map((product) => (
-            <button
-              key={product.id}
-              type="button"
-              className={styles.settingsListItem}
-              data-active={selectedId === product.id ? 'true' : undefined}
-              onClick={() => setSelectedId(product.id)}
-            >
-              <span className={styles.settingsItemIcon}><PackageSolidIcon size={16} aria-hidden="true" /></span>
-              <span className={styles.settingsListIdentity}>
-                <span className={styles.settingsListLabel}>{product.title || 'Untitled product'}</span>
-                <span className={styles.settingsListMeta}>
-                  {product.slug} · {product.variants.length} variant{product.variants.length === 1 ? '' : 's'}
-                </span>
-              </span>
-              <TagPill label={product.status} muted={product.status === 'draft'} size="xs" />
-            </button>
-          ))}
-          {filtered.length === 0 && (
-            <EmptyState
-              compact
-              title={products.length === 0 ? 'No products yet.' : 'No products match your search.'}
-              description={products.length === 0 ? 'Create your first product to start selling.' : undefined}
-            />
-          )}
-        </div>
+    <div className={styles.section}>
+      <div className={styles.toolbar}>
+        <SearchBar value={query} onValueChange={(value) => { setQuery(value); setPage(1) }} placeholder="Search products…" aria-label="Search products" />
+        <Button type="button" variant="primary" size="sm" onClick={openCreate}>
+          <PlusIcon size={14} aria-hidden="true" />
+          <span>New product</span>
+        </Button>
       </div>
 
-      <div className={styles.settingsDetailCanvas}>
-        {selected || creating ? (
-          <ProductDetail
-            key={creating ? 'new' : (selected as Product).id}
-            product={creating ? null : (selected as Product)}
-            busy={busy}
-            onSave={handleSave}
-            onRequestDelete={() => selected && setRemoveCandidate(selected)}
-            refresh={refresh}
-          />
-        ) : (
-          <EmptyState
-            variant="centered"
-            icon={<PackageSolidIcon size={22} aria-hidden="true" />}
-            title="Select a product"
-            description="Choose a product from the list, or create a new one."
-          />
-        )}
-      </div>
+      {error && <p className={styles.error} role="alert">{error}</p>}
+
+      {pageItems.length === 0 ? (
+        <EmptyState
+          title={products.length === 0 ? 'No products yet.' : 'No products match your search.'}
+          description={products.length === 0 ? 'Create your first product to start selling.' : undefined}
+        />
+      ) : (
+        <DataTable aria-label="Products" density="compact">
+          <DataTableHead>
+            <DataTableRow>
+              <DataTableHeader scope="col">Name</DataTableHeader>
+              <DataTableHeader scope="col">Vendor</DataTableHeader>
+              <DataTableHeader scope="col">Status</DataTableHeader>
+              <DataTableHeader scope="col">Variants</DataTableHeader>
+              <DataTableHeader scope="col">Price</DataTableHeader>
+              <DataTableHeader scope="col">Stock</DataTableHeader>
+              <DataTableHeader scope="col" className={styles.actionsHeader}>Actions</DataTableHeader>
+            </DataTableRow>
+          </DataTableHead>
+          <DataTableBody>
+            {pageItems.map((product) => (
+              <DataTableRow key={product.id} aria-label={`Product ${product.title}`}>
+                <DataTableCell>
+                  <div className={styles.identity}>
+                    <strong>{product.title || 'Untitled product'}</strong>
+                    <span>{product.slug}</span>
+                  </div>
+                </DataTableCell>
+                <DataTableCell>{product.vendor || '—'}</DataTableCell>
+                <DataTableCell><TagPill label={product.status} muted={product.status === 'draft'} size="xs" /></DataTableCell>
+                <DataTableCell>{product.variants.length}</DataTableCell>
+                <DataTableCell>{priceSummary(product)}</DataTableCell>
+                <DataTableCell>{stockSummary(product)}</DataTableCell>
+                <DataTableCell className={styles.actionsCell}>
+                  <RowActionMenu
+                    triggerLabel={`Actions for ${product.title}`}
+                    menuLabel={`Product actions for ${product.title}`}
+                    items={[
+                      { label: 'Edit', icon: <EditSolidIcon size={12} aria-hidden="true" />, onSelect: () => openEdit(product) },
+                      { label: 'Manage variants', icon: <ListBoxSolidIcon size={12} aria-hidden="true" />, onSelect: () => setVariantsProduct(product) },
+                      { label: `Manage images (${product.images.length})`, icon: <ImageSolidIcon size={12} aria-hidden="true" />, onSelect: () => setImagesProduct(product) },
+                      { label: 'Delete', icon: <TrashSolidIcon size={12} aria-hidden="true" />, danger: true, onSelect: () => setRemoveCandidate(product) },
+                    ]}
+                  />
+                </DataTableCell>
+              </DataTableRow>
+            ))}
+          </DataTableBody>
+        </DataTable>
+      )}
+
+      <Pagination
+        page={clampedPage}
+        pageSize={pageSize}
+        total={filtered.length}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+      />
+
+      {dialogMode && (
+        <ProductDialog
+          mode={dialogMode}
+          product={editingProduct}
+          collections={collections}
+          busy={busy}
+          onSave={handleSave}
+          onClose={closeDialog}
+        />
+      )}
+
+      {variantsProduct && (
+        <VariantsDialog
+          product={products.find((product) => product.id === variantsProduct.id) ?? variantsProduct}
+          refresh={refresh}
+          onClose={() => setVariantsProduct(null)}
+        />
+      )}
+
+      {imagesProduct && (
+        <ImagesDialog
+          product={products.find((product) => product.id === imagesProduct.id) ?? imagesProduct}
+          refresh={refresh}
+          onClose={() => setImagesProduct(null)}
+        />
+      )}
 
       <Dialog
         open={removeCandidate !== null}
@@ -181,114 +265,104 @@ export function ProductsSection({ data }: { data: CommerceData }) {
   )
 }
 
-function ProductDetail({
+const PRODUCT_FORM_ID = 'commerce-product-form'
+
+function ProductDialog({
+  mode,
   product,
+  collections,
   busy,
   onSave,
-  onRequestDelete,
-  refresh,
+  onClose,
 }: {
+  mode: 'create' | 'edit'
   product: Product | null
+  collections: Collection[]
   busy: boolean
   onSave: (event: FormEvent<HTMLFormElement>) => void
-  onRequestDelete: () => void
-  refresh: () => Promise<void>
+  onClose: () => void
 }) {
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState(
+    () => new Set(product ? collections.filter((collection) => collection.productIds.includes(product.id)).map((collection) => collection.id) : []),
+  )
+
+  function toggleCollection(id: number, checked: boolean) {
+    setSelectedCollectionIds((current) => {
+      const next = new Set(current)
+      if (checked) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
+
   return (
-    <div className={styles.settingsDetail}>
-      <div className={styles.settingsDetailHeader}>
-        <span className={styles.settingsHeroIcon}><PackageSolidIcon size={28} aria-hidden="true" /></span>
-        <div className={styles.settingsDetailIdentity}>
-          <h2>{product ? product.title || 'Untitled product' : 'New product'}</h2>
-          <p>{product ? `/products/${product.slug}` : 'Fill in the details, then add at least one variant.'}</p>
-        </div>
-      </div>
-
-      <form className={styles.detailSection} onSubmit={onSave}>
-        <div className={styles.settingsFormRow}>
-          <label htmlFor="product-title">Title</label>
-          <div>
-            <Input id="product-title" name="title" required defaultValue={product?.title} />
-          </div>
-        </div>
-        <div className={styles.settingsFormRow}>
-          <label htmlFor="product-slug">Slug</label>
-          <div>
-            <Input
-              id="product-slug"
-              name="slug"
-              required
-              pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-              defaultValue={product?.slug}
-              monospace
-            />
-          </div>
-        </div>
-        <div className={styles.settingsFormRow}>
-          <label htmlFor="product-vendor">Vendor</label>
-          <div>
-            <Input id="product-vendor" name="vendor" defaultValue={product?.vendor} />
-          </div>
-        </div>
-        <div className={styles.settingsFormRow}>
-          <label htmlFor="product-status">Status</label>
-          <div>
-            <Select id="product-status" name="status" defaultValue={product?.status ?? 'draft'} options={STATUS_OPTIONS} />
-          </div>
-        </div>
-        <div className={styles.settingsFormRow}>
-          <label htmlFor="product-description">Description</label>
-          <div>
-            <FormField description="Sanitized semantic HTML, rendered on the product page.">
-              <textarea
-                id="product-description"
-                name="descriptionHtml"
-                className={styles.descriptionInput}
-                rows={4}
-                defaultValue={product?.descriptionHtml}
-              />
-            </FormField>
-          </div>
-        </div>
-        <div className={styles.settingsDetailActions}>
-          <Button type="submit" variant="primary" size="sm" disabled={busy}>
-            <SaveSolidIcon size={14} aria-hidden="true" />
-            <span>Save product</span>
+    <Dialog
+      open
+      onClose={onClose}
+      title={mode === 'create' ? 'New product' : 'Edit product'}
+      size="lg"
+      footer={
+        <>
+          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={busy}>
+            <span>Cancel</span>
           </Button>
-        </div>
+          <Button type="submit" form={PRODUCT_FORM_ID} variant="primary" size="sm" disabled={busy}>
+            <SaveSolidIcon size={14} aria-hidden="true" />
+            <span>{mode === 'create' ? 'Create this product' : 'Save product'}</span>
+          </Button>
+        </>
+      }
+    >
+      <form id={PRODUCT_FORM_ID} className={styles.dialogForm} onSubmit={onSave}>
+        <FormField label="Title" htmlFor="product-title">
+          <Input id="product-title" name="title" required defaultValue={product?.title} />
+        </FormField>
+        <FormField label="Slug" htmlFor="product-slug">
+          <Input id="product-slug" name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" defaultValue={product?.slug} monospace />
+        </FormField>
+        <FormField label="Vendor" htmlFor="product-vendor">
+          <Input id="product-vendor" name="vendor" defaultValue={product?.vendor} />
+        </FormField>
+        <FormField label="Status" htmlFor="product-status">
+          <Select id="product-status" name="status" defaultValue={product?.status ?? 'draft'} options={STATUS_OPTIONS} />
+        </FormField>
+        <FormField label="Description" htmlFor="product-description" description="Sanitized semantic HTML, rendered on the product page.">
+          <textarea id="product-description" name="descriptionHtml" className={styles.descriptionInput} rows={4} defaultValue={product?.descriptionHtml} />
+        </FormField>
+        <FormField label="Collections" description="Which collection pages this product shows up on.">
+          {collections.length === 0 ? (
+            <p className={styles.emptyInline}>No collections yet — create one under the Collections tab.</p>
+          ) : (
+            <ul className={styles.memberList}>
+              {collections.map((collection) => (
+                <li key={collection.id} className={styles.memberRow}>
+                  <label className={styles.checkboxRow}>
+                    <Checkbox
+                      boxSize="sm"
+                      name="collectionIds"
+                      value={String(collection.id)}
+                      checked={selectedCollectionIds.has(collection.id)}
+                      onCheckedChange={(checked) => toggleCollection(collection.id, checked)}
+                    />
+                    <span className={styles.identityLabel}>{collection.title}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+        </FormField>
       </form>
-
-      {product && (
-        <div className={styles.detailSection}>
-          <div className={styles.detailSectionHeader}>
-            <h3>Variants</h3>
-          </div>
-          <VariantsTable product={product} busy={busy} refresh={refresh} />
-        </div>
-      )}
-
-      {product && (
-        <div className={styles.detailSection}>
-          <div className={styles.credentialDangerZone}>
-            <Button type="button" variant="ghost" tone="danger" size="sm" onClick={onRequestDelete}>
-              <TrashSolidIcon size={14} aria-hidden="true" />
-              <span>Delete product</span>
-            </Button>
-            <p>This permanently deletes the product and all of its variants.</p>
-          </div>
-        </div>
-      )}
-    </div>
+    </Dialog>
   )
 }
 
-function VariantsTable({ product, busy, refresh }: { product: Product; busy: boolean; refresh: () => Promise<void> }) {
+function VariantsDialog({ product, refresh, onClose }: { product: Product; refresh: () => Promise<void>; onClose: () => void }) {
   const [error, setError] = useState<string | null>(null)
   const [creatingRow, setCreatingRow] = useState(false)
 
   return (
-    <div className={styles.variantsTable}>
-      {error && <p className={styles.settingsBrowserError} role="alert">{error}</p>}
+    <Dialog open onClose={onClose} title={`Variants — ${product.title}`} size="xl" footer={<Button type="button" variant="secondary" size="sm" onClick={onClose}><span>Close</span></Button>}>
+      {error && <p className={styles.error} role="alert">{error}</p>}
       <DataTable density="compact" aria-label={`Variants for ${product.title}`}>
         <DataTableHead>
           <DataTableRow>
@@ -316,7 +390,7 @@ function VariantsTable({ product, busy, refresh }: { product: Product; busy: boo
           ) : (
             <DataTableRow>
               <DataTableCell colSpan={6}>
-                <Button type="button" variant="ghost" size="xs" disabled={busy} onClick={() => setCreatingRow(true)}>
+                <Button type="button" variant="ghost" size="xs" onClick={() => setCreatingRow(true)}>
                   <PlusIcon size={12} aria-hidden="true" />
                   <span>Add variant</span>
                 </Button>
@@ -325,7 +399,78 @@ function VariantsTable({ product, busy, refresh }: { product: Product; busy: boo
           )}
         </DataTableBody>
       </DataTable>
-    </div>
+    </Dialog>
+  )
+}
+
+function ImagesDialog({ product, refresh, onClose }: { product: Product; refresh: () => Promise<void>; onClose: () => void }) {
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  async function persist(mediaAssetIds: string[]) {
+    setSaving(true)
+    setError(null)
+    try {
+      await commerceApi.setProductImages(product.id, mediaAssetIds)
+      await refresh()
+    } catch (err) {
+      setError(getErrorMessage(err, 'Could not update images'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function move(index: number, direction: -1 | 1) {
+    const ids = product.images.map((image) => String(image.id))
+    const target = index + direction
+    if (target < 0 || target >= ids.length) return
+    ;[ids[index], ids[target]] = [ids[target], ids[index]]
+    void persist(ids)
+  }
+
+  function remove(id: number) {
+    void persist(product.images.filter((image) => image.id !== id).map((image) => String(image.id)))
+  }
+
+  return (
+    <Dialog open onClose={onClose} title={`Images — ${product.title}`} size="md" footer={<Button type="button" variant="secondary" size="sm" onClick={onClose}><span>Close</span></Button>}>
+      {error && <p className={styles.error} role="alert">{error}</p>}
+      {product.images.length === 0 ? (
+        <p className={styles.emptyInline}>No images yet. The product page shows no picture until one is added.</p>
+      ) : (
+        <ul className={styles.memberList}>
+          {product.images.map((image, index) => (
+            <li key={image.id} className={styles.memberRow}>
+              <img src={image.publicPath} alt="" className={styles.imageThumb} />
+              <span className={styles.identityLabel}>{image.publicPath.split('/').pop()}</span>
+              <Button type="button" variant="ghost" size="xs" iconOnly aria-label="Move image up" disabled={index === 0 || saving} onClick={() => move(index, -1)}>
+                <ArrowUpIcon size={12} aria-hidden="true" />
+              </Button>
+              <Button type="button" variant="ghost" size="xs" iconOnly aria-label="Move image down" disabled={index === product.images.length - 1 || saving} onClick={() => move(index, 1)}>
+                <ArrowDownIcon size={12} aria-hidden="true" />
+              </Button>
+              <Button type="button" variant="ghost" tone="danger" size="xs" iconOnly aria-label="Remove image" disabled={saving} onClick={() => remove(image.id)}>
+                <TrashSolidIcon size={12} aria-hidden="true" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Button type="button" variant="ghost" size="xs" disabled={saving} onClick={() => setPickerOpen(true)}>
+        <PlusIcon size={12} aria-hidden="true" />
+        <span>Add image</span>
+      </Button>
+      <MediaPickerModal
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        mediaKind="image"
+        allowMultiple
+        currentValues={[]}
+        onPick={(asset) => void persist([...product.images.map((image) => String(image.id)), asset.id]).then(() => setPickerOpen(false))}
+        onPickMultiple={(assets) => void persist([...product.images.map((image) => String(image.id)), ...assets.map((asset) => asset.id)]).then(() => setPickerOpen(false))}
+      />
+    </Dialog>
   )
 }
 

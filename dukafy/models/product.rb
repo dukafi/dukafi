@@ -1,6 +1,8 @@
 class Product < Sequel::Model
   one_to_many :variants, order: :position
   many_to_many :collections, join_table: :collection_products, order: Sequel[:collection_products][:position]
+  one_to_many :product_images, order: :position
+  many_to_many :media_assets, join_table: :product_images, order: Sequel[:product_images][:position]
 
   def validate
     super

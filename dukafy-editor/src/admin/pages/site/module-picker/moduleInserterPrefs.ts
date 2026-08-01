@@ -16,6 +16,7 @@ const RecentKindSchema = Type.Union([
   Type.Literal('module'),
   Type.Literal('savedLayout'),
   Type.Literal('component'),
+  Type.Literal('commerceScaffold'),
 ])
 
 const RecentRefSchema = Type.Object({

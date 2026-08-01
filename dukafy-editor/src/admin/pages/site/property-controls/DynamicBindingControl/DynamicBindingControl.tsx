@@ -20,6 +20,7 @@ import type { PropertyControl } from '@core/module-engine'
 import type { DynamicPropBinding } from '@core/page-tree'
 import type { LoopSourceField } from '@core/loops/types'
 import type { DataMeta } from '@core/data/schemas'
+import type { CommerceEntityKind } from './commerceEntry'
 import { Button } from '@ui/components/Button'
 import { CloseIcon } from 'pixel-art-icons/icons/close'
 import { BracesIcon } from 'pixel-art-icons/icons/braces'
@@ -78,6 +79,12 @@ interface DynamicBindingControlProps {
    * directly, plus the loop's synthetic fields in a separate group.
    */
   loopTableId?: string | null
+  /**
+   * Set when the enclosing scope is a commerce entity (product/variant/
+   * collection). Lets the picker fetch a live preview row from the Commerce
+   * API for these fields instead of (or in addition to) DataMeta.
+   */
+  commerceEntityKind?: CommerceEntityKind | null
   children: ReactNode
 }
 
@@ -94,6 +101,7 @@ export function DynamicBindingControl({
   availableFields,
   sourceLabel,
   loopTableId,
+  commerceEntityKind,
   children,
 }: DynamicBindingControlProps) {
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -191,6 +199,7 @@ export function DynamicBindingControl({
           availableFields={availableFields}
           sourceLabel={sourceLabel}
           loopTableId={loopTableId}
+          commerceEntityKind={commerceEntityKind}
           insertMode={insertMode}
           anchorRef={wrapperRef}
           triggerRef={triggerRef}
