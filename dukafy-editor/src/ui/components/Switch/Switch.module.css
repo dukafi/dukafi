@@ -1,0 +1,95 @@
+/* High-contrast achromatic states: on = foreground track + dark thumb, off =
+ * raised gray track + light thumb, readable on every editor surface. */
+
+.switch {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+}
+
+.switch[data-hit-area="true"] {
+    min-width: 44px;
+    min-height: 44px;
+}
+
+.switch:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.track {
+    position: relative;
+    display: block;
+    width: 38px;
+    height: 22px;
+    border: 1px solid var(--overlay-20);
+    border-radius: 999px;
+    flex-shrink: 0;
+    transition: background-color 150ms ease;
+}
+
+.trackOn {
+    background: var(--overlay);
+    border-color: var(--overlay);
+}
+
+.trackOff {
+    background: var(--bg-surface-4);
+    border-color: var(--bg-surface-4);
+}
+
+.switch[data-hit-area="true"] .track {
+    width: 32px;
+    height: 16px;
+    padding: var(--space-4xs);
+    box-sizing: content-box;
+    border: 0;
+    border-radius: 10px;
+}
+
+.thumb {
+    position: absolute;
+    top: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    transition: left 150ms ease;
+}
+
+.thumbOn {
+    left: 18px;
+    background: var(--bg-surface);
+}
+
+.thumbOff {
+    left: 3px;
+    background: var(--text);
+}
+
+.switch[data-size="sm"] .track {
+    width: 28px;
+    height: 16px;
+}
+
+.switch[data-size="sm"] .thumb {
+    top: 2px;
+    width: 10px;
+    height: 10px;
+}
+
+.switch[data-size="sm"] .thumbOn {
+    left: 15px;
+}
+
+.switch[data-size="sm"] .thumbOff {
+    left: 3px;
+}
+
+.switch[data-hit-area="true"] .thumbOff {
+    left: 2px;
+}

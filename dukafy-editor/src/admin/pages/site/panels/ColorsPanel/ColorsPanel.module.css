@@ -1,0 +1,7 @@
+/* Panel shell + scrollable content area now owned by `@admin/shared/Panel`. */
+
+.rows {
+    display: grid;
+    align-content: start;
+    gap: var(--space-px);
+}

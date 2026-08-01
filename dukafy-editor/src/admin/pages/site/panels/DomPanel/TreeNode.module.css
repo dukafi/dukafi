@@ -1,0 +1,56 @@
+/* TreeNode — single row in the DOM tree / Layers panel (Guideline #318/#357/#234) */
+/* Visual style ported from Task #425 cleanup — React DevTools-inspired compact tree */
+
+/* Tag/class pill layout only; shared visuals live in TagPill. */
+.tagPill {
+    flex-shrink: 0;
+}
+
+.classChip {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+/* ── Rename input ────────────────────────────────────────────────────────── */
+.renameInput {
+    flex: 1;
+}
+
+/* ── Status indicators (locked, hidden) ──────────────────────────────────── */
+.indicator {
+    font-size: var(--text-2xs);
+    color: var(--text-disabled);
+    line-height: 1;
+}
+
+.hiddenIndicator {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    line-height: 0;
+}
+
+/* ── Slot-instance row — dimmer chrome to distinguish structural nodes ───── */
+/* slot-instance rows are structural VC placeholders; subtle tinting signals  */
+/* they are managed (not freely editable) without hiding them entirely.       */
+.slotInstanceRow {
+    opacity: 0.85;
+    background: var(--bg-surface-2);
+}
+
+/* ── Open container group highlight ─────────────────────────────────────── */
+.openContainerGroup {
+    border-radius: 8px;
+    background: var(--bg-surface);
+}
+
+.openContainerGroup > [role="treeitem"] {
+    border-radius: 8px;
+}
+
+/* ── Drag/drop state ─────────────────────────────────────────────────────── */
+.dragSource {
+    opacity: 0.46;
+}

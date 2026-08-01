@@ -1,0 +1,50 @@
+/*
+ * MultiSelectorInspector — body shown in the Properties panel when 1+ selectors
+ * are checked in the Selectors panel. Mirrors MultiSelectionInspector's layout
+ * (action bar over a scrollable list) so the bulk surfaces for layers and
+ * selectors feel like the same primitive.
+ */
+
+.root {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.actionBar {
+  padding: var(--space-xl);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+}
+
+.actionRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-xs);
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-3xs) var(--space-xs) var(--space-l);
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  gap: var(--space-xs);
+}
+
+.listHeader {
+  padding: var(--space-3xs) var(--space-xl) var(--space-s);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-disabled);
+  font-weight: 600;
+}

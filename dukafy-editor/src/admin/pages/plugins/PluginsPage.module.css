@@ -1,0 +1,260 @@
+/* Plugins page body — laid out by AdminPageLayout so this just adds the
+   gap rhythm between the permission-review banner, the list, and the
+   eventual modals. The layout provides the scroll container, max-width,
+   padding, and page header. */
+.pluginsBody {
+    display: grid;
+    gap: var(--space-3xl);
+}
+
+.fileInput {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.error,
+.emptyState {
+    margin: 0;
+    font-size: var(--text-s);
+    line-height: 1.5;
+}
+
+.error {
+    color: var(--danger);
+    white-space: pre-wrap;
+}
+
+.errorHint {
+    margin-top: var(--space-xs);
+    font-size: var(--text-s);
+    line-height: 1.5;
+    color: var(--text-subtle);
+}
+
+.errorHint a {
+    color: var(--text);
+    text-decoration: underline;
+}
+
+/* Failed-uninstall alert — error message plus the force-remove escape
+   hatch ("Remove anyway") and a dismiss action. */
+.removeFailure {
+    display: grid;
+    gap: var(--space-xs);
+    justify-items: start;
+}
+
+.removeFailureActions {
+    display: flex;
+    gap: var(--space-s);
+    margin-top: var(--space-3xs);
+}
+
+.emptyState {
+    padding: var(--space-6xl);
+    border: 1px dashed var(--overlay-10);
+    border-radius: 8px;
+    color: var(--text-subtle);
+    text-align: center;
+}
+
+.pluginsList {
+    display: grid;
+    gap: var(--space-px);
+}
+
+/* Plugin admin page body — same gap rhythm as the Plugins list. The
+   layout provides the page header (title + plugin name as description)
+   so the inner content goes straight to the substantive UI. */
+.pluginPageBody {
+    display: grid;
+    gap: var(--space-3xl);
+}
+
+.mapSurface {
+    position: relative;
+    min-height: min(560px, calc(100vh - 230px));
+    overflow: hidden;
+    border: 1px solid var(--overlay-10);
+    border-radius: 8px;
+    background:
+        linear-gradient(135deg, var(--plugins-hero-tint-a), var(--plugins-hero-tint-b)),
+        var(--bg-surface-2);
+}
+
+.mapGrid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(var(--overlay-10) 1px, transparent 1px),
+        linear-gradient(90deg, var(--overlay-10) 1px, transparent 1px);
+    background-size: 56px 56px;
+    opacity: 0.42;
+}
+
+.mapCenterLabel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: var(--space-s) var(--space-l);
+    border: 1px solid var(--overlay-10);
+    border-radius: 8px;
+    background: var(--bg-surface);
+    color: var(--text);
+    font-size: var(--text-s);
+    font-weight: 800;
+}
+
+.mapPin {
+    position: absolute;
+    left: var(--pin-x);
+    top: var(--pin-y);
+    display: grid;
+    gap: var(--space-4xs);
+    min-width: 120px;
+    max-width: 180px;
+    padding: var(--space-s) var(--space-m) var(--space-s) var(--space-5xl);
+    transform: translate(-14px, -14px);
+    border: 1px solid var(--overlay-10);
+    border-radius: 8px;
+    background: var(--bg-surface);
+    box-shadow: 0 18px 50px var(--scrim-30);
+}
+
+.mapPin > span {
+    position: absolute;
+    top: 10px;
+    left: 9px;
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    background: var(--overlay);
+}
+
+.mapPin strong {
+    overflow-wrap: anywhere;
+    font-size: var(--text-s);
+}
+
+.mapPin small {
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+}
+
+.markdownPanel {
+    display: grid;
+    gap: var(--space-l);
+    padding: var(--space-3xl);
+    border: 1px solid var(--overlay-10);
+    border-radius: 8px;
+    background: var(--bg-surface);
+}
+
+.markdownPanel p {
+    margin: 0;
+    color: var(--text);
+    font-size: var(--text-l);
+    line-height: 1.65;
+}
+
+.resourceLayout {
+    display: grid;
+    grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+    gap: var(--space-2xl);
+    align-items: start;
+}
+
+.resourceForm,
+.resourceRecord {
+    display: grid;
+    gap: var(--space-l);
+    padding: var(--space-xl);
+    border: 1px solid var(--overlay-10);
+    border-radius: 8px;
+    background: var(--bg-surface);
+}
+
+.resourceForm h2 {
+    margin: 0;
+    font-size: var(--text-xl);
+    line-height: 1.25;
+    letter-spacing: 0;
+}
+
+.resourceField {
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.resourceField span,
+.resourceRecord dt {
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    font-weight: 750;
+}
+
+.resourceField input:not([type="checkbox"]),
+.resourceField textarea {
+    width: 100%;
+    min-width: 0;
+    padding: var(--space-s) var(--space-m);
+    border: 1px solid var(--overlay-10);
+    border-radius: 7px;
+    background: var(--bg-surface-2);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--text-m);
+}
+
+.resourceField textarea {
+    min-height: 84px;
+    resize: vertical;
+}
+
+.resourceRecords {
+    display: grid;
+    gap: var(--space-m);
+}
+
+.resourceRecord {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+}
+
+.resourceRecord dl {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--space-l);
+    margin: 0;
+}
+
+.resourceRecord div {
+    display: grid;
+    gap: var(--space-3xs);
+    min-width: 0;
+}
+
+.resourceRecord dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--text);
+    font-size: var(--text-m);
+    line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+    .mapSurface {
+        min-height: 460px;
+    }
+
+    .resourceLayout,
+    .resourceRecord {
+        grid-template-columns: 1fr;
+    }
+}

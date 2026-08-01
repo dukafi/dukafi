@@ -1,0 +1,72 @@
+/* Shared tree drag/drop helpers. Keep these visual states consistent anywhere
+ * editor trees support reordering. */
+
+.dropBefore,
+.dropAfter,
+.dropInside,
+.dropInvalid,
+.dropRoot,
+.rootDropGap {
+    position: relative;
+}
+
+.dropBefore::before,
+.dropAfter::after,
+.dropRoot::after,
+.rootDropGapActive::after {
+    content: "";
+    position: absolute;
+    left: max(6px, var(--tree-row-pl));
+    right: 8px;
+    z-index: 2;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--tree-drop-line);
+    pointer-events: none;
+    box-shadow: 0 0 0 1px var(--tree-drop-line-shadow);
+}
+
+.dropBefore::before {
+    top: 0;
+}
+
+.dropAfter::after {
+    bottom: 0;
+}
+
+.dropRoot::after {
+    left: 8px;
+    bottom: 0;
+}
+
+.dropInside {
+    background: var(--tree-drop-inside-bg);
+    outline: 1px solid var(--tree-drop-inside-border);
+    outline-offset: -2px;
+}
+
+.dropInvalid {
+    cursor: not-allowed;
+    background: var(--tree-drop-invalid-bg);
+    outline: 1px solid var(--tree-drop-invalid-border);
+    outline-offset: -2px;
+}
+
+.rootDropGap {
+    flex: 0 0 auto;
+    height: 12px;
+    margin-block: calc(var(--space-xs) * -1);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.rootDropGapActive {
+    z-index: 3;
+}
+
+.rootDropGapActive::after {
+    top: 50%;
+    left: 8px;
+    right: 8px;
+    transform: translateY(-50%);
+}

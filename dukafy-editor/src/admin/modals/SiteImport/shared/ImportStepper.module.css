@@ -1,0 +1,52 @@
+/* ── Import wizard stepper — shared by Review + Import screens ────────────── */
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 0;
+  padding: var(--space-l) var(--space-2xl);
+  list-style: none;
+  background: var(--bg-surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.stepperItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-s);
+  color: var(--text-subtle);
+}
+.stepperItem:not(:last-child)::after {
+  content: '';
+  width: 22px;
+  height: 1px;
+  margin: 0 var(--space-m);
+  background: var(--border);
+}
+.stepperDot {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--bg-surface-4);
+  color: var(--text-subtle);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.stepperItem[data-state='done'] .stepperDot {
+  background: var(--accent-1);
+  color: var(--bg-body);
+}
+.stepperItem[data-state='current'] .stepperDot {
+  background: var(--text-bright);
+  color: var(--bg-body);
+}
+.stepperLabel {
+  font-size: var(--text-s);
+  font-weight: 500;
+}
+.stepperItem[data-state='current'] .stepperLabel {
+  color: var(--text-bright);
+}

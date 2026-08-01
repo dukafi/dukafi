@@ -1,0 +1,37 @@
+/* Class generator — one row per generator: pattern + property + on/off + delete.
+ * The visual card chrome was removed when this list moved inside the
+ * "Utilities" accordion Section; the Section header + content padding is the
+ * visual container now. */
+.classGenerator {
+    display: grid;
+    align-content: start;
+    gap: var(--space-xs);
+}
+
+.classGeneratorHint {
+    margin: 0;
+    max-width: 42ch;
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    line-height: 1.5;
+    text-wrap: pretty;
+}
+
+.classGeneratorActions {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.classGeneratorRows {
+    display: grid;
+    gap: var(--space-3xs);
+}
+
+.classGeneratorRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto auto;
+    grid-template-rows: auto auto;
+    column-gap: var(--space-xs);
+    row-gap: var(--space-3xs);
+    align-items: center;
+}

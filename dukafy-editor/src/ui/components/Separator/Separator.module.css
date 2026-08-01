@@ -1,0 +1,36 @@
+/* Shared separator primitive for panel chrome and menus. */
+
+.separator {
+    flex-shrink: 0;
+    background: var(--bg-surface-4);
+}
+
+.separator[data-orientation="horizontal"] {
+    width: 100%;
+    height: 1px;
+}
+
+.separator[data-orientation="vertical"] {
+    width: 1px;
+    align-self: stretch;
+}
+
+.separator[data-spacing="none"] {
+    margin: 0;
+}
+
+.separator[data-spacing="compact"][data-orientation="horizontal"] {
+    margin: var(--space-3xs) 0;
+}
+
+.separator[data-spacing="compact"][data-orientation="vertical"] {
+    margin: 0 var(--space-3xs);
+}
+
+.separator[data-spacing="normal"][data-orientation="horizontal"] {
+    margin: var(--space-2xl) 0;
+}
+
+.separator[data-spacing="normal"][data-orientation="vertical"] {
+    margin: 0 var(--space-2xl);
+}

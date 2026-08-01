@@ -1,0 +1,74 @@
+/**
+ * AdminWorkspaceCanvasLayout — workspace-only canvas affordances.
+ */
+
+.rightPanelNotchShell {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 25;
+    pointer-events: none;
+}
+
+.rightPanelNotch {
+    --workspace-right-notch-bg: var(--bg-body);
+    --workspace-right-notch-radius: 16px;
+    --workspace-right-notch-corner: 16px;
+    --workspace-right-notch-corner-cut: calc(var(--workspace-right-notch-corner) - 0.5px);
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-xs);
+    pointer-events: auto;
+    background: var(--workspace-right-notch-bg);
+    border: 0;
+    border-radius: 0 0 0 var(--workspace-right-notch-radius);
+    box-shadow: var(--shadow-panel-drop);
+}
+
+.rightPanelNotch > * {
+    position: relative;
+    z-index: 1;
+}
+
+.rightPanelNotch::before,
+.rightPanelNotch::after {
+    position: absolute;
+    z-index: 0;
+    width: var(--workspace-right-notch-corner);
+    height: var(--workspace-right-notch-corner);
+    pointer-events: none;
+    content: "";
+}
+
+.rightPanelNotch::before {
+    top: 0;
+    left: calc(1px - var(--workspace-right-notch-corner));
+    background: radial-gradient(
+        circle at 0 100%,
+        transparent var(--workspace-right-notch-corner-cut),
+        var(--workspace-right-notch-bg) var(--workspace-right-notch-corner)
+    );
+}
+
+.rightPanelNotch::after {
+    right: 0;
+    bottom: calc(1px - var(--workspace-right-notch-corner));
+    background: radial-gradient(
+        circle at 0 100%,
+        transparent var(--workspace-right-notch-corner-cut),
+        var(--workspace-right-notch-bg) var(--workspace-right-notch-corner)
+    );
+}
+
+.rightPanelNotchButton.rightPanelNotchButton {
+    background: var(--bg-surface-3);
+    color: var(--text-muted);
+}
+
+.rightPanelNotchButton.rightPanelNotchButton:hover {
+    background: var(--bg-surface-4);
+    color: var(--text);
+}

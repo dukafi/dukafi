@@ -1,0 +1,49 @@
+/* DocumentSwitcher — borderless, text-first document picker for the canvas
+ * floating controls. The current document is the trigger value (shown via the
+ * Select's placeholder); the menu lists the other documents, grouped. */
+
+.switcher {
+    /* Trigger width (value text + chevron), measured per document name. A
+     * default is set here so `var()` never needs a fallback. */
+    --doc-switcher-w: 96px;
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+}
+
+/* Borderless, box-free, sized to the current document name (capped). */
+.switcher .select.select {
+    width: var(--doc-switcher-w);
+    min-width: 0;
+    min-height: 0;
+    gap: var(--space-3xs);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text);
+    font-size: var(--text-s);
+    cursor: pointer;
+}
+
+.switcher .select.select:hover,
+.switcher .select.select:focus-within,
+.switcher .select.select[data-open="true"] {
+    background: transparent;
+    box-shadow: none;
+}
+
+/* The current document name lives in the placeholder — render it strong
+ * (bold/white), not as a muted placeholder, so it reads like a value. */
+.switcher .select input::placeholder {
+    color: var(--text);
+    font-weight: 700;
+    opacity: 1;
+}
+
+/* Hover affordance for the clickable text: a subtle opacity shift (no
+ * underline). */
+.switcher .select.select:hover input,
+.switcher .select.select:hover input::placeholder {
+    opacity: 0.7;
+}

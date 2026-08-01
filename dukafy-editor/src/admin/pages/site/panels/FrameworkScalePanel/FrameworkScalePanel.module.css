@@ -1,0 +1,18 @@
+/* Panel shell + scrollable content area now owned by `@admin/shared/Panel`. */
+
+.editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+    padding-top: var(--space-3xs);
+}
+
+/* Stacks the controls inside a Section's content area. Mirrors the gap the
+ * editor used to apply directly; lives on the body now that each major
+ * grouping (Scales, Utilities, Font settings) is wrapped in a Section. */
+.sectionBody {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-m);
+    padding-top: var(--space-3xs);
+}

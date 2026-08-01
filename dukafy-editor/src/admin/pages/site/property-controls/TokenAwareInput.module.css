@@ -1,0 +1,72 @@
+/* TokenAwareInput — single Input + autocomplete dropdown for framework
+ * variables (spacing scale, typography scale, etc).
+ *
+ * Visual model is intentionally minimal: the Input keeps its own chrome
+ * (handled by Input.module.css) and we just add the dropdown menu styles
+ * here. The wrapper exists for layout flexibility — callers can place
+ * the input in any grid cell and the dropdown still anchors to it via
+ * portal + matchAnchorWidth.
+ */
+
+.wrapper {
+    position: relative;
+    display: block;
+    width: 100%;
+    min-width: 0;
+}
+
+/* Overlay variant — the wrapper generates no box (display: contents) so the
+   caller can absolutely position the input against its own container (e.g.
+   the spacing box's per-side segments). The dropdown still anchors to the
+   input via portal + matchAnchorWidth, so no positioned wrapper is needed. */
+.wrapperOverlay {
+    display: contents;
+}
+
+.input {
+    width: 100%;
+    min-width: 0;
+}
+
+/* ── Dropdown menu — section headers + token rows ──────────────────────── */
+.menuHeader {
+    padding: var(--space-xs) var(--space-m) var(--space-3xs);
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    user-select: none;
+}
+
+/* Grid: token name (identifier, e.g. "4xs") is the row's primary label — it
+   takes its natural content width and does NOT truncate when there is
+   space. The CSS variable name (descriptor, e.g. "--space-1-4xs") is
+   secondary and uses 1fr + ellipsis so a very long var name can shrink
+   without crowding the identifier. Don't flip these — truncating the
+   identifier loses meaning; truncating the var name only loses a
+   redundant detail. Mirrors SpacingBoxControl's `.sideMenuItem` exactly
+   so the two token pickers stay visually consistent. */
+.menuItem {
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    gap: var(--space-s);
+    align-items: baseline;
+    padding: var(--space-xs) var(--space-m);
+}
+
+.menuToken {
+    color: var(--text);
+    font-size: var(--text-s);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.menuVar {
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

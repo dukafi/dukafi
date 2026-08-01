@@ -1,0 +1,274 @@
+/* Button — shared action button primitive (Task #462 / Task #458 Phase 2)
+ * Achromatic palette only (Guideline #376).
+ * No !important, no Tailwind, no inline styles (Constraints #402/#403).
+ * All colours via direct global design tokens tokens.
+ */
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    /* Default radius for size-sm/md/lg — matches `--input-radius` so buttons
+     * paired with Input/Select/SearchBar share corners. The smaller toolbar
+     * sizes (`.size-micro`, `.size-xs`) override this below. */
+    border-radius: var(--input-radius);
+    font-family: inherit;
+    font-size: var(--text-s);
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition:
+        color 150ms ease,
+        background-color 150ms ease,
+        border-color 150ms ease,
+        opacity 150ms ease;
+    /* Prevent text-overflow in tight toolbars */
+    flex-shrink: 0;
+}
+
+.btn:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+.btn:disabled {
+    opacity: 0.38;
+    cursor: default;
+    pointer-events: none;
+}
+
+/* aria-disabled: visually disabled but pointer-events allowed so tooltips fire on hover */
+.btn[aria-disabled="true"] {
+    opacity: 0.38;
+    cursor: default;
+}
+
+/* ── Sizes ────────────────────────────────────────────────────────────────── */
+.size-micro {
+    height: 18px;
+    padding: 0 var(--space-3xs);
+    gap: var(--space-4xs);
+    font-size: var(--text-2xs);
+    border-radius: 6px;
+}
+
+.size-xs {
+    height: 22px;
+    padding: 0 var(--space-xs);
+    border-radius: 8px;
+    gap: var(--space-3xs);
+    font-size: var(--text-2xs);
+}
+
+.size-sm {
+    height: 26px;
+    padding: 0 var(--space-s);
+    gap: var(--space-3xs);
+    font-size: var(--text-xs);
+}
+
+.size-md {
+    height: 32px;
+    padding: var(--space-xs) var(--space-xl);
+    gap: var(--space-2xs);
+    font-size: var(--text-s);
+}
+
+.size-lg {
+    height: 44px;
+    padding: 0 var(--space-2xl);
+    gap: var(--space-xs);
+    font-size: var(--text-m);
+}
+
+/* ── Icon-only (square) ───────────────────────────────────────────────────── */
+.iconOnly {
+    padding: 0;
+}
+.size-micro.iconOnly {
+    width: 18px;
+}
+.size-xs.iconOnly {
+    width: 26px;
+}
+.size-sm.iconOnly {
+    width: 28px;
+}
+.size-md.iconOnly {
+    width: 32px;
+}
+.size-lg.iconOnly {
+    width: 44px;
+}
+
+.fullWidth {
+    width: 100%;
+}
+
+.align-center {
+    justify-content: center;
+    text-align: center;
+}
+
+.align-start {
+    justify-content: flex-start;
+    text-align: left;
+}
+
+.align-between {
+    justify-content: space-between;
+    text-align: left;
+}
+
+.shape-pill {
+    border-radius: 999px;
+}
+
+.shape-flush {
+    border-radius: 0;
+}
+
+.numeric {
+    font-variant-numeric: tabular-nums;
+}
+
+.menuItem {
+    width: 100%;
+    height: auto;
+    min-height: 28px;
+    padding: var(--space-xs) var(--space-l);
+    gap: var(--space-s);
+    border-radius: 0;
+    justify-content: flex-start;
+    text-align: left;
+    font-size: var(--text-s);
+    font-weight: 500;
+}
+
+/* ── Variant: ghost ───────────────────────────────────────────────────────── */
+.variant-ghost {
+    background: transparent;
+    color: var(--text-muted);
+}
+
+.variant-ghost:hover {
+    background: var(--overlay-10);
+    color: var(--text);
+}
+
+.variant-ghost:active {
+    background: var(--overlay-20);
+    color: var(--text);
+}
+
+/* dangerHover: destructive icon affordance — brighten the icon on hover, no
+   background box. Pills carry their own tint, so a colored box/cross reads
+   poorly; a brighter foreground is the clearest affordance. */
+.variant-ghost[data-danger-hover="true"]:hover,
+.variant-ghost[data-danger-hover="true"]:active {
+    background: transparent;
+    color: var(--text);
+}
+
+/* tone="danger" on a ghost button: a constant slight red tint (foreground
+   only, no box) so inline destructive controls — e.g. the remove-scale trash —
+   read as dangerous at rest, then take a soft tinted background on hover. */
+.variant-ghost[data-tone="danger"] {
+    color: var(--danger);
+}
+
+.variant-ghost[data-tone="danger"]:hover,
+.variant-ghost[data-tone="danger"]:active {
+    background: var(--danger-10);
+    color: var(--danger-light);
+}
+
+/* ── Variant: primary ─────────────────────────────────────────────────────── */
+.variant-primary {
+    background: var(--overlay-20);
+    color: var(--text);
+}
+
+.variant-primary:hover {
+    background: var(--overlay-30);
+}
+
+.variant-primary:active {
+    background: var(--overlay-20);
+}
+
+/* ── Variant: secondary ───────────────────────────────────────────────────── */
+.variant-secondary {
+    background: var(--overlay-10);
+    color: var(--text-muted);
+}
+
+.variant-secondary:hover {
+    background: var(--overlay-20);
+    color: var(--text);
+}
+
+.variant-secondary:active {
+    background: var(--overlay-30);
+}
+
+.variant-secondary[data-active="true"],
+.variant-secondary[aria-pressed="true"] {
+    background: var(--overlay-20);
+    color: var(--text);
+}
+
+.variant-secondary[data-tone="danger"] {
+    background: var(--danger-10);
+    color: var(--danger);
+}
+
+.variant-secondary[data-tone="danger"]:hover {
+    background: var(--danger-10);
+    color: var(--danger-light);
+}
+
+/* ── Variant: destructive ─────────────────────────────────────────────────── */
+.variant-destructive {
+    background: var(--danger-10);
+    color: var(--danger);
+}
+
+.variant-destructive:hover {
+    opacity: 0.9;
+}
+
+.variant-destructive:active {
+    opacity: 0.8;
+}
+
+/* ── Navigation item chrome ──────────────────────────────────────────────── */
+.navItem {
+    width: 100%;
+    min-height: 44px;
+    height: auto;
+    padding: 0 var(--space-2xl);
+    gap: var(--space-m);
+    border: 0;
+    border-left: 2px solid transparent;
+    border-radius: 0;
+    justify-content: flex-start;
+    font-size: var(--text-m);
+    font-weight: 500;
+    text-align: left;
+    color: var(--text-subtle);
+}
+
+.navItem:hover {
+    color: var(--text-muted);
+    background: var(--overlay-5);
+}
+
+.navItem[data-active="true"] {
+    background: var(--overlay-5);
+    border-left-color: var(--text);
+    color: var(--text);
+}

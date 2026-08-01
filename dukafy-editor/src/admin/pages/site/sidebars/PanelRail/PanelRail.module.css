@@ -1,0 +1,90 @@
+.rail {
+    position: relative;
+    z-index: 55;
+    display: flex;
+    flex: 0 0 42px;
+    width: 42px;
+    min-width: 42px;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-s);
+    min-height: 0;
+    padding: var(--space-s) var(--space-2xs);
+}
+
+.primaryStack {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+    gap: var(--space-s);
+    overflow-y: auto;
+}
+
+.itemGroup {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+    align-items: center;
+}
+
+.globalGroup {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: var(--space-3xs);
+    align-items: center;
+    margin-top: auto;
+    padding-top: var(--space-s);
+}
+
+.railButton {
+    position: relative;
+    --rail-icon-tint: var(--accent-1);
+    --rail-icon-color: var(--rail-icon-tint);
+    --rail-icon-active-bg: color-mix(in oklab, var(--rail-icon-tint) 16%, transparent);
+    --rail-icon-hover-bg: color-mix(in oklab, var(--rail-icon-tint) 10%, transparent);
+    --rail-icon-glow: color-mix(in oklab, var(--rail-icon-tint) 28%, transparent);
+}
+
+.railButton.railButton:hover {
+    background: var(--rail-icon-hover-bg);
+}
+
+.railButton.railButton[aria-pressed="true"] {
+    background: var(--rail-icon-active-bg);
+}
+
+.railIcon {
+    color: var(--rail-icon-color);
+    filter: drop-shadow(0 0 5px var(--rail-icon-glow));
+    transition:
+        color 140ms ease,
+        filter 140ms ease;
+}
+
+.activeIndicator {
+    position: absolute;
+    left: -5px;
+    width: 2px;
+    height: 14px;
+    border-radius: 0 2px 2px 0;
+    background: var(--rail-icon-color);
+    opacity: 0;
+    transform: scaleY(0.6);
+    transition:
+        opacity 140ms ease,
+        transform 140ms ease;
+}
+
+.railButton[aria-pressed="true"] .activeIndicator {
+    opacity: 0.9;
+    transform: scaleY(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .railIcon,
+    .activeIndicator {
+        transition: none;
+    }
+}

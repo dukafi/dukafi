@@ -1,0 +1,80 @@
+/**
+ * DashboardPage — top-level styling for the admin dashboard. Wraps the
+ * `AdminPageLayout` body with the breadcrumb row, edit-mode banner, and
+ * the grid header.
+ */
+
+.crumbs {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    color: var(--text-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: calc(var(--space-2xl) * -1);
+    margin-top: calc(var(--space-s) * -1);
+}
+
+.crumbsCurrent {
+    color: var(--text-muted);
+}
+
+/* ── Grid header (Overview · NN blocks · time tabs · Add) ─────────── */
+.gridHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2xl);
+}
+
+.gridHeaderLeft {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-xl);
+}
+
+.gridHeaderLeft h2 {
+    font-size: var(--text-4xl);
+    letter-spacing: -0.01em;
+    color: var(--text-bright);
+    font-weight: 600;
+    margin: 0;
+}
+
+.gridCount {
+    font-size: var(--text-s);
+    color: var(--text-subtle);
+    font-family: var(--font-mono);
+}
+
+.gridHeaderRight {
+    display: flex;
+    gap: var(--space-s);
+    align-items: center;
+}
+
+@media (max-width: 760px) {
+    .gridHeader {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-l);
+    }
+
+    .gridHeaderLeft {
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--space-m);
+    }
+
+    .gridHeaderRight {
+        flex-wrap: wrap;
+        align-items: flex-start;
+    }
+
+    .gridHeaderRight > :first-child {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+}

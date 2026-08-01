@@ -1,0 +1,29 @@
+.body {
+  /* The Dialog component wraps children in a scrollable body div.
+     We remove extra padding here so the AnalyzeStep grid can reach the edges. */
+  padding: 0;
+}
+
+/* For the Review (analyze) step the navigator fills the modal edge-to-edge and
+   manages its own internal scrolling, so the dialog's body padding + scroll are
+   removed. DropStep keeps the dialog's default body; the Import step uses
+   `.importBody` below. */
+.analyzeBody {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Import step: edge-to-edge stepper (no padding) but keep the dialog body's
+   vertical scroll so a long import log can overflow gracefully. */
+.importBody {
+  padding: 0;
+}
+
+/* Left-floated summary note in the analyze footer (pushes the buttons right). */
+.footNote {
+  margin-right: auto;
+  align-self: center;
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
+}

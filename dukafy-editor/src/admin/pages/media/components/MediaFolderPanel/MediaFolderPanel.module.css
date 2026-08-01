@@ -1,0 +1,44 @@
+/* Layout chrome only — actual tree row visuals come from the shared
+   Tree primitives so density / hover / selection / focus all stay in
+   lockstep with the rest of the editor trees. */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4xs);
+  padding: var(--space-xs);
+}
+
+.tree {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-px);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-xs) var(--space-s) var(--space-4xs) var(--space-s);
+  margin-top: var(--space-xs);
+}
+
+.sectionLabel {
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-subtle);
+}
+
+.createRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding-right: var(--space-s);
+  padding-block: var(--space-3xs);
+}
+
+.createRow > :last-child {
+  flex: 1 1 auto;
+}

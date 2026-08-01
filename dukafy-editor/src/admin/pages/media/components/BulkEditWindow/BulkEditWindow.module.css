@@ -1,0 +1,91 @@
+.help {
+  margin: 0 0 var(--space-s) 0;
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+  line-height: 1.4;
+}
+
+.notice {
+  margin: 0 0 var(--space-s) 0;
+  padding: var(--space-xs) var(--space-s);
+  background: var(--bg-surface-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding-bottom: var(--space-s);
+}
+
+.sectionTitle {
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-subtle);
+  margin: 0;
+}
+
+.applyRow {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-xs);
+  padding-block: var(--space-s);
+  border-top: 1px solid var(--border);
+}
+
+.actionsRow {
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.folderPicker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+}
+
+.folderPickerLabel {
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+}
+
+.folderChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3xs);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.folderChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  padding: var(--space-4xs) var(--space-3xs) var(--space-4xs) var(--space-xs);
+  background: var(--bg-surface-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3xs);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.suggestion {
+  font-size: var(--text-xs);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+}

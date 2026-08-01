@@ -1,0 +1,1 @@
+export { canComponentizeNode } from './componentizeEligibility'

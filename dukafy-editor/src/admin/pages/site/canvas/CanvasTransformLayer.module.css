@@ -1,0 +1,47 @@
+/**
+ * CanvasTransformLayer — GPU-composited transform container.
+ * Uses design tokens from globals.css (no hardcoded colours).
+ *
+ * The `transform` property is set to a no-op initial value here;
+ * useCanvas overwrites it imperatively via a ref on mount + pan/zoom.
+ *
+ * `will-change: transform` is NOT applied permanently. A permanent promotion
+ * wraps the whole (large, complex) subtree into one oversized GPU layer whose
+ * backing overflows the tile/memory budget, leaving content blank and unpainted
+ * until invalidated (react-virtualized#453; Chrome "re-rastering composited
+ * layers on scale change"). `useCanvas` instead promotes the layer imperatively
+ * only for the duration of an active gesture (see WILL_CHANGE_RELEASE_MS), so at
+ * rest the browser rasterizes it normally (viewport-tiled).
+ */
+
+.transformLayer {
+  /* Initial transform — overridden imperatively by useCanvas on mount */
+  transform: translate(0px, 0px) scale(1);
+  transform-origin: 0 0;
+  will-change: auto;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  /* 40px == FRAME_GAP constant (CanvasTransformLayer.tsx) */
+  gap: var(--space-8xl);
+  position: absolute;
+  top: 80px;
+  left: 80px;
+}
+
+/*
+ * Smooth animation for discrete zoom actions (toolbar buttons, +/− keys,
+ * Cmd/Ctrl+0 reset, Shift+1 fit-to-screen). useCanvas toggles the
+ * data-animating attribute around these store-driven updates so the canvas
+ * eases into the new zoom level instead of snapping.
+ *
+ * Continuous gestures (wheel, trackpad pinch, middle-mouse / space drag)
+ * write the transform every animation frame and DO NOT set this attribute,
+ * so they remain instant — a transition there would visibly lag behind the
+ * cursor.
+ *
+ * The prefers-reduced-motion override in CanvasRoot.tsx disables this.
+ */
+.transformLayer[data-animating='true'] {
+  transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}

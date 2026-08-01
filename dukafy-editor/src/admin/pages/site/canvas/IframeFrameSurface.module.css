@@ -1,0 +1,52 @@
+/* IframeFrameSurface — the per-breakpoint iframe element.
+ *
+ * Sizing mirrors the previous `.viewport` div: width is driven by the
+ * `--bp-width` CSS var via inline style on the iframe (so each breakpoint
+ * sets its own logical viewport width), and the iframe is at least a full
+ * editor viewport tall so empty pages still have a recognisable frame.
+ * Width and shadow come straight across from BreakpointFrame.module.css's
+ * `.viewport` rule so the visual chrome of an iframe-rendered frame and the
+ * legacy div-rendered frame are indistinguishable to the author.
+ */
+
+.iframe {
+  /* `height` is set imperatively by `IframeFrameSurface` to match the
+   * iframe's content height — see the "Iframe height tracking" effect.
+   * `min-height: 100vh` keeps the frame at least a full editor viewport
+   * tall, matching the wrapping `.viewport` (`min-height: 100vh`). Without
+   * it, a page shorter than the viewport (empty or sparse) leaves the
+   * iframe ending partway down the wrapper, so its own bottom box-shadow
+   * draws *inside* the frame instead of at the clipped wrapper edge. With
+   * it, the iframe edge aligns with the wrapper edge and the shadow is
+   * clipped by the wrapper's `overflow: hidden`. `vh` is the editor window
+   * (a fixed reference), so there's no iframe↔content sizing feedback loop.
+   * Once content exceeds the viewport, the measurement loop sets a larger
+   * inline `height` and the frame grows to fit. */
+  min-height: 100vh;
+  background: var(--overlay);
+  box-shadow: 0 2px 12px var(--scrim-30);
+  /* `overflow: hidden` would clip pop-out chrome inside the iframe (e.g.
+   * a sticky nav that overlaps the page bottom). We rely on the iframe's
+   * height matching its content height so there's nothing to clip. */
+  overflow: visible;
+  position: relative;
+  border: 0;
+  display: block;
+}
+
+:global(html[data-instatic-canvas-parent-space-pan='1']) .iframe:not(.iframeLive),
+:global(html[data-instatic-canvas-iframe-space-pan='1']) .iframe:not(.iframeLive) {
+  pointer-events: none;
+}
+
+/* Live frame: a single real-size viewport that scrolls internally instead of
+ * growing to content. The live surface controls the wrapper's width; the
+ * iframe fills it and owns its own scrollbar (published height behaviour).
+ * Chrome — shadow / radius / min-height — is dropped so it reads as the page
+ * itself, not a framed artboard. */
+.iframeLive {
+  min-height: 0;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: auto;
+}

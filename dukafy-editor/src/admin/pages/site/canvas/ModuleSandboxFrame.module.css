@@ -1,0 +1,28 @@
+.frame {
+  position: relative;
+  --module-sandbox-min-height: 360px;
+  width: 100%;
+  min-height: var(--module-sandbox-min-height);
+  overflow: hidden;
+  background: transparent;
+}
+
+.iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  border: 0;
+  background: transparent;
+}
+
+.fallback {
+  display: grid;
+  --module-sandbox-min-height: 360px;
+  min-height: var(--module-sandbox-min-height);
+  place-items: center;
+  padding: var(--space-2xl);
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  background: var(--bg-surface);
+}

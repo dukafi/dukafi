@@ -1,0 +1,87 @@
+/* DomPanel — the Layers tab body of the consolidated ExplorerPanel
+ * (Guideline #357/#318/#321). The Explorer shell owns chrome + positioning;
+ * this body simply fills the sidebar slot it is mounted in. */
+
+/* ── Panel shell ─────────────────────────────────────────────────────────── */
+.panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    outline: none;
+}
+
+/* ── Search bar — match the 8px content inset used by every other docked
+ *    panel (see `@admin/shared/Panel/Panel.module.css → .contentPadded`).
+ *    DomPanel can't use the shared shell directly because it owns a custom
+ *    scroll surface (the tree), but the spacing between header → search bar
+ *    must stay aligned with Site / Selectors / Colors / Media etc. */
+/* Search + insert affordance share one row so the add button sits flush to
+ * the right of the search field — mirrors the Colors panel's `FilterBar`
+ * `searchTrailing` slot (same `--space-xs` gap, same centred alignment). The
+ * row owns the outer spacing; the SearchBar fills, the button keeps its
+ * intrinsic size. */
+.searchRow {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin: var(--space-s) var(--space-s) 0;
+}
+
+.searchRow::after {
+    content: "";
+    position: absolute;
+    inset-inline: calc(-1 * var(--space-s));
+    top: 100%;
+    height: var(--space-2xl);
+    pointer-events: none;
+    background: linear-gradient(180deg, var(--panel-fade-bg) 0%, transparent);
+}
+
+.searchFill {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+}
+
+/* ── Tree / scrollable content area ─────────────────────────────────────── */
+.treeArea {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* 10px gap below the search bar mirrors the `gap: 10px` on the shared
+     * Panel content area so the visual rhythm matches sibling panels. */
+    padding-top: var(--space-m);
+    padding-bottom: var(--space-xs);
+    padding-right: var(--space-s);
+}
+
+.dragOverlayRow {
+    width: min(240px, 70vw);
+    background: var(--bg-surface);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px var(--scrim-30);
+    pointer-events: none;
+}
+
+.noMatchMsg {
+    padding: var(--space-2xl);
+    color: var(--text-disabled);
+    font-size: var(--text-s);
+}
+
+/* Search-result pill layout only; shared visuals live in TagPill. */
+.searchTagPill {
+    flex-shrink: 0;
+}
+
+.searchClassChip {
+    flex: 0 1 auto;
+    min-width: 0;
+}

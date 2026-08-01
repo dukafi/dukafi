@@ -1,0 +1,1 @@
+.dukafy-stock-badge{display:inline-flex;align-items:center;gap:.375rem;font-size:.875rem}.dukafy-stock-badge::before{content:"";width:.5rem;height:.5rem;border-radius:999px;background:currentColor}.dukafy-stock-badge--in-stock{color:#15803d}.dukafy-stock-badge--low{color:#a16207}.dukafy-stock-badge--sold-out{color:#b91c1c}.dukafy-stock-badge--loading{opacity:.6}

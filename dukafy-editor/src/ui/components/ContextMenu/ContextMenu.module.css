@@ -1,0 +1,151 @@
+.menu {
+    position: fixed;
+    left: var(--context-menu-x);
+    top: var(--context-menu-y);
+    z-index: var(--context-menu-z-index);
+    width: min(var(--context-menu-width), var(--context-menu-max-width), calc(100vw - 16px));
+    min-width: var(--context-menu-min-width);
+    overflow: hidden;
+    padding: var(--space-3xs);
+    border: 0;
+    border-radius: 16px;
+    background: var(--bg-surface-3);
+    box-shadow: 0 12px 28px var(--scrim-50);
+    /* Anchor the subtle scale to the menu's top edge — the menu drops down
+       from the click point / trigger, so growing from the top reads natural. */
+    transform-origin: top center;
+}
+
+/* Entrance — a soft fade + tiny rise + scale-up. Applied via `data-open`
+   (set once the menu has been measured and is visible) so the animation
+   never plays against the off-screen measuring frame. */
+.menu[data-open] {
+    animation: contextMenuEnter 130ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Exit — the reverse, played while the caller keeps the menu mounted for
+   one `EXIT_DURATION_MS` window (see ContextMenu.tsx). `forwards` holds the
+   faded-out end state so there's no flash before unmount. */
+.menu[data-closing] {
+    animation: contextMenuExit 100ms cubic-bezier(0.4, 0, 1, 1) forwards;
+    pointer-events: none;
+}
+
+@keyframes contextMenuEnter {
+    from {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes contextMenuExit {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-3px) scale(0.98);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .menu[data-open],
+    .menu[data-closing] {
+        animation: none;
+    }
+}
+
+/* Scrollable variant — used when the caller passes a `maxHeight`. The menu
+   is capped to `min(maxHeight, 100vh - 16px)` so it never overflows the
+   viewport, and the inner content scrolls vertically. The 4px padding keeps
+   the rounded corners visible above and below the scrollbar track. */
+.menu[data-scrollable] {
+    max-height: min(var(--context-menu-max-height), calc(100vh - 16px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* Fixed-header layout: the menu is a non-scrolling flex column capped at the
+   same viewport-clamped max height; the header stays put and only the content
+   region below scrolls. Used by searchable dropdowns so the filter box doesn't
+   scroll away with the list. */
+.menu[data-has-header] {
+    display: flex;
+    flex-direction: column;
+    max-height: min(var(--context-menu-max-height), calc(100vh - 16px));
+    overflow: hidden;
+}
+
+.menuHeader {
+    flex: 0 0 auto;
+}
+
+.menuScroll[data-scrollable] {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* Search header for searchable dropdowns (Select, ModelPicker). Lives in the
+   menu's fixed header slot, so it does not scroll — just a small gap below it
+   separates the field from the list. */
+.searchHeader {
+    padding-bottom: var(--space-3xs);
+}
+
+.item {
+    min-height: 28px;
+    padding: 0 var(--space-m);
+    gap: var(--space-m);
+    border-radius: 12px;
+    font-size: var(--text-s);
+    font-weight: 560;
+    color: var(--text);
+}
+
+.item > span[aria-hidden="true"] {
+    display: inline-flex;
+    width: 16px;
+    align-items: center;
+    justify-content: center;
+    color: currentColor;
+}
+
+.separator {
+    width: auto;
+    margin: var(--space-3xs) var(--space-xs);
+    background: var(--bg-surface-2);
+}
+
+/* ── ContextMenuSubmenu ──────────────────────────────────────────────────── */
+
+.submenuRoot {
+    position: relative;
+}
+
+.submenuTrigger {
+    width: 100%;
+}
+
+.submenuTriggerContent {
+    display: flex;
+    align-items: center;
+    gap: var(--space-m);
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+}
+
+.submenuChevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    opacity: 0.7;
+}

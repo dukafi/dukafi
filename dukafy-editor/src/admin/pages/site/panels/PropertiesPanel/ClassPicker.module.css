@@ -1,0 +1,134 @@
+/* ClassPicker - class stack manager inside the Properties inspector. */
+
+.container {
+    display: grid;
+    gap: var(--space-m);
+}
+
+.pillsContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3xs);
+}
+
+/* Input + optional trailing action (e.g. the Componentize button).
+   Single column by default; when a trailing action is present, the input
+   takes the flexible space (minmax(0, 1fr)) and the action takes its
+   intrinsic width (auto). The suggestions dropdown is portaled to <body>
+   and anchors to this row, so its width covers both columns. */
+.inputRow {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-s);
+    align-items: center;
+}
+
+.inputRow[data-with-action="true"] {
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.noMatch {
+    padding: var(--space-m) var(--space-m);
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+}
+
+.suggestionLabel {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.utilityBadge {
+    flex: 0 0 auto;
+    padding: var(--space-4xs) var(--space-2xs);
+    border-radius: 999px;
+    background: var(--bg-surface-5);
+    color: var(--text);
+    font-size: var(--text-3xs);
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.suggestionMeta {
+    flex: 0 0 auto;
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    font-weight: 650;
+}
+
+.invalidSelectorRow {
+    display: flex;
+    min-height: 30px;
+    align-items: center;
+    gap: var(--space-s);
+    padding: var(--space-s) var(--space-m);
+    border-radius: var(--radius);
+    background: var(--warning-10);
+    color: var(--warning-text);
+    font-size: var(--text-xs);
+    font-weight: 650;
+    line-height: 1.25;
+}
+
+.invalidSelectorIcon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--warning);
+}
+
+.invalidSelectorMessage {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.errorText {
+    margin: calc(var(--space-3xs) * -1) 0 0;
+    color: var(--danger);
+    font-size: var(--text-xs);
+    line-height: 1.35;
+}
+
+.noticeRow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin: calc(var(--space-3xs) * -1) 0 0;
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    line-height: 1.35;
+}
+
+.noticeSelector {
+    color: var(--text);
+}
+
+/* Suggestions dropdown section headers (Recent / Frequent / All classes).
+   Non-interactive — keyboard nav within ContextMenu skips them naturally.
+   The label sits above its group with breathing room and a subtle uppercase
+   treatment so it reads as a section divider, not a clickable row. */
+.sectionHeader {
+    padding: var(--space-s) var(--space-m) var(--space-3xs);
+    color: var(--text-muted);
+    font-size: var(--text-3xs);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    user-select: none;
+    pointer-events: none;
+}
+
+/* Arrow Up / Down keyboard highlight on a suggestion row. The base button
+   already has hover and focus states; this overlays a slightly stronger
+   surface so the user can tell which row Enter would commit. */
+.suggestionHighlighted {
+    background: var(--bg-surface-2);
+    color: var(--text);
+}

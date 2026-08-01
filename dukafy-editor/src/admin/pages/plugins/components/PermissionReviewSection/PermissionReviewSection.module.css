@@ -1,0 +1,194 @@
+/*
+ * Permission review banner — shown before installing or upgrading a plugin.
+ *
+ * For an UPGRADE we render permission rows with a diff badge:
+ *   • status="new"      — new in this update (warning tint, prominent badge)
+ *   • status="existing" — already approved on the prior install
+ *   • status="dropped"  — previously granted but no longer requested
+ *
+ * The visual hierarchy puts NEW rows first so a permission expansion is
+ * impossible to miss before clicking "Update".
+ */
+.review {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xl);
+    padding: var(--space-4xl) var(--space-5xl);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: var(--space-2xl);
+}
+
+.review h2 {
+    font-size: var(--text-l);
+    font-weight: 600;
+    color: var(--text-bright);
+    margin: 0 0 var(--space-xs);
+}
+
+.review p {
+    color: var(--text-muted);
+    margin: 0;
+    font-size: var(--text-m);
+    line-height: 1.5;
+}
+
+.alert {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    padding: var(--space-m) var(--space-l);
+    border-radius: var(--radius-sm);
+    background: var(--warning-10);
+    border: 1px solid var(--warning-30);
+    color: var(--warning-text);
+    font-size: var(--text-s);
+    line-height: 1.5;
+}
+
+/*
+ * Unsandboxed-code callout — the strongest warning in the dialog.
+ * `editor.code` plugins run JavaScript in the admin window with full
+ * admin-session privileges, so the alert uses the danger state tokens
+ * instead of the warning tint shared by permission-diff notices.
+ */
+.alertDanger {
+    background: var(--danger-10);
+    border-color: var(--danger-20);
+    color: var(--danger-text);
+}
+
+/* Zero-permission install — informational, not a warning. */
+.empty {
+    padding: var(--space-l) var(--space-xl);
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface-3);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: var(--text-s);
+    line-height: 1.5;
+}
+
+.list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-s);
+}
+
+.row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+    padding: var(--space-l) var(--space-xl);
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface-3);
+    border: 1px solid transparent;
+}
+
+.row[data-status="new"] {
+    background: var(--warning-10);
+    border-color: var(--warning-30);
+}
+
+.row[data-status="dropped"] {
+    background: transparent;
+    border-color: var(--border-muted);
+    opacity: 0.6;
+}
+
+.label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+}
+
+.label strong {
+    font-weight: 600;
+    color: var(--text-bright);
+    font-size: var(--text-m);
+}
+
+.row[data-status="dropped"] .label strong {
+    text-decoration: line-through;
+}
+
+.description {
+    color: var(--text-muted);
+    font-size: var(--text-s);
+    line-height: 1.5;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 var(--space-s);
+    border-radius: 999px;
+    font-size: var(--text-2xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1;
+}
+
+.badgeNew {
+    background: var(--warning);
+    color: var(--bg-body);
+}
+
+.badgeExisting {
+    background: var(--bg-surface-3);
+    color: var(--text-muted);
+    border: 1px solid var(--border-muted);
+}
+
+.badgeDropped {
+    background: transparent;
+    color: var(--text-subtle);
+    border: 1px solid var(--border-muted);
+}
+
+/*
+ * External-host allowlist section — surfaces `networkAllowedHosts` from
+ * the manifest separately from CMS permissions. The two are
+ * complementary: permissions answer "what CMS surface can the plugin
+ * touch?", hosts answer "what remote origins can it talk to?".
+ */
+.networkSection {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-s);
+    padding-top: var(--space-s);
+    border-top: 1px solid var(--border);
+}
+
+.networkHeader {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4xs);
+}
+
+.networkHeader strong {
+    color: var(--text-bright);
+    font-size: var(--text-m);
+    font-weight: 600;
+}
+
+.row code {
+    font-family: var(--font-mono);
+    font-size: var(--text-s);
+    color: var(--text-bright);
+    background: var(--bg-surface-3);
+    padding: var(--space-4xs) var(--space-xs);
+    border-radius: var(--radius-sm);
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-s);
+}

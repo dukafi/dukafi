@@ -1,0 +1,391 @@
+/*
+ * Property Controls — control-specific styles.
+ *
+ * Row layout / label classes (.controlWrapper, .labelRow, .labelOverride,
+ * .labelUnit, .labelError) live in ControlRow.module.css (the shared row
+ * primitive at @ui/components/ControlRow). Only control-specific surfaces
+ * (color swatch, media picker, image preview, toggle wrapper, group section)
+ * remain here.
+ */
+
+/* ── UrlControl (URL / Page link modes) ──────────────────────────────────── */
+.urlControl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  width: 100%;
+}
+
+/* ── DataTableControl ────────────────────────────────────────────────────── */
+.dataTableControl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  width: 100%;
+}
+
+.controlError {
+  font-size: var(--text-s);
+  color: var(--danger);
+}
+
+/* ── SvgControl (preview tile + open-in-code-editor) ─────────────────────── */
+.svgControl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+  width: 100%;
+}
+
+.svgPreview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 96px;
+  padding: var(--space-l);
+  border-radius: var(--radius);
+  /* A checkerboard neutral so SVGs of any colour stay visible — the panel
+     can't load the site's classes that normally tint the mark. */
+  background:
+    repeating-conic-gradient(var(--bg-surface) 0% 25%, var(--bg-surface-2) 0% 50%)
+      50% / 16px 16px;
+  color: var(--text);
+  overflow: hidden;
+}
+
+.svgPreview[data-empty='true'] {
+  background: var(--bg-surface-2);
+  color: var(--text-disabled);
+}
+
+/* Constrain whatever SVG is dropped in so it fits the tile, and give it a
+   visible colour: the preview has no access to the site CSS that would
+   normally set `fill`/size on `.brand-mark` & friends, so a no-fill icon
+   would render as invisible default-black. `fill: currentColor` (inherited
+   by child shapes lacking their own fill) makes it show in the panel text
+   colour. */
+.svgPreviewInner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  color: var(--text);
+}
+
+.svgPreviewInner :global(svg) {
+  width: auto;
+  height: var(--space-11xl);
+  max-width: 100%;
+  fill: currentColor;
+}
+
+.svgPreviewEmpty {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-s);
+  font-size: var(--text-s);
+}
+
+.svgActions {
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.svgError {
+  font-size: var(--text-s);
+  color: var(--danger);
+}
+
+/* ── ColorControl ────────────────────────────────────────────────────────── */
+.colorRow {
+    display: flex;
+    gap: var(--space-s);
+    align-items: center;
+    min-width: 0;
+}
+
+.colorField {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+}
+
+.colorField .colorInlineSwatch {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 5px;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    box-shadow: none;
+    transform: translateY(-50%);
+}
+
+.colorField .colorInlineSwatch:hover {
+    border-color: var(--overlay-50);
+    box-shadow: none;
+}
+
+.colorField .colorInlineSwatch:focus-within {
+    border-color: var(--overlay-50);
+    box-shadow: 0 0 0 2px
+        color-mix(in srgb, var(--overlay) 12%, transparent);
+}
+
+.colorField .colorInlineSwatch:active {
+    transform: translateY(-50%);
+}
+
+.colorField .colorInlineSwatch > span {
+    border-radius: 8px;
+    box-shadow:
+        inset 0 0 0 1px
+            color-mix(in srgb, var(--overlay) 16%, transparent),
+        inset 0 -5px 8px color-mix(in srgb, var(--bg-body) 16%, transparent);
+}
+
+.colorText {
+    width: 100%;
+    flex: 1;
+    min-width: 0;
+}
+
+.colorField .colorTextWithPreview {
+    padding-left: var(--space-6xl);
+}
+
+.colorTokenMenu {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 4px);
+    right: 0;
+    left: 0;
+    display: grid;
+    gap: var(--space-4xs);
+    max-height: 184px;
+    overflow: auto;
+    padding: var(--space-3xs);
+    border: 1px solid var(--border-muted);
+    border-radius: 8px;
+    background: var(--bg-surface-2);
+    box-shadow: 0 12px 28px
+        color-mix(in srgb, var(--bg-body) 42%, transparent);
+}
+
+.colorTokenOption {
+    display: grid;
+    width: 100%;
+    min-height: 28px;
+    grid-template-columns: 18px minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-s);
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font: inherit;
+    padding: var(--space-3xs) var(--space-xs);
+    text-align: left;
+}
+
+.colorTokenOption:hover,
+.colorTokenOption[aria-selected="true"] {
+    background: color-mix(in srgb, var(--overlay) 8%, transparent);
+    color: var(--text);
+}
+
+.colorTokenOptionSwatch {
+    display: block;
+    --color-token-option-value: var(--bg-body);
+    width: 18px;
+    height: 18px;
+    border-radius: 7px;
+    background:
+        linear-gradient(
+            45deg,
+            color-mix(in srgb, var(--overlay) 12%, transparent) 25%,
+            transparent 25% 75%,
+            color-mix(in srgb, var(--overlay) 12%, transparent) 75%
+        ),
+        linear-gradient(
+            45deg,
+            color-mix(in srgb, var(--overlay) 12%, transparent) 25%,
+            transparent 25% 75%,
+            color-mix(in srgb, var(--overlay) 12%, transparent) 75%
+        ),
+        var(--color-token-option-value);
+    background-position:
+        0 0,
+        5px 5px,
+        0 0;
+    background-size:
+        10px 10px,
+        10px 10px,
+        auto;
+    box-shadow:
+        inset 0 0 0 1px
+            color-mix(in srgb, var(--overlay) 18%, transparent),
+        inset 0 -5px 8px color-mix(in srgb, var(--bg-body) 18%, transparent);
+}
+
+.colorTokenOptionText {
+    display: flex;
+    min-width: 0;
+    align-items: baseline;
+    gap: var(--space-xs);
+}
+
+.colorTokenOptionName {
+    min-width: 0;
+    overflow: hidden;
+    font-size: var(--text-xs);
+    font-weight: 720;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.colorTokenOptionMeta {
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    font-weight: 650;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+/* ── ImageControl ────────────────────────────────────────────────────────── */
+.imagePreview {
+    width: 100%;
+    height: 80px;
+    border-radius: var(--input-radius);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--bg-surface-2);
+}
+
+.imagePreviewImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ── MediaLibraryControl ─────────────────────────────────────────────────── */
+/*
+ * Picked-media affordance (tile + Change/Edit/Clear actions) lives in
+ * `MediaPickerField.module.css` and is shared with the Content page's
+ * featured-media field. Only the URL-mode preview wrappers and the library
+ * status banner remain here.
+ */
+.mediaPicker {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    min-width: 0;
+}
+
+.mediaUrlBody {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    min-width: 0;
+}
+
+.mediaStatus {
+    min-height: 42px;
+    padding: var(--space-m);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-surface);
+    color: var(--text-disabled);
+    font-size: var(--text-xs);
+}
+
+.videoPreview span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── DynamicBindingControl ───────────────────────────────────────────────── */
+/* Affordance, bound-state, and picker styles live in DynamicBindingControl.module.css */
+
+.videoPreview {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    min-width: 0;
+    min-height: 34px;
+    padding: 0 var(--space-m);
+    border-radius: var(--input-radius);
+    background: var(--bg-surface);
+    color: var(--text-disabled);
+    font-size: var(--text-xs);
+}
+
+/* ── ToggleControl ───────────────────────────────────────────────────────── */
+.toggleWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 28px;
+}
+
+.toggleLabel {
+    font-size: var(--text-xs);
+    font-weight: 500;
+    user-select: none;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.toggleLabelDisabled {
+    cursor: not-allowed;
+}
+
+.toggleLabelOverride {
+    color: var(--overlay-80);
+}
+
+/* ── GroupSection ────────────────────────────────────────────────────────── */
+.groupWrapper {
+    margin-bottom: var(--space-m);
+}
+
+.groupHeader {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    width: 100%;
+    min-height: 32px;
+    padding: 0 var(--space-m);
+    background: var(--overlay-5);
+    border: 1px solid var(--overlay-10);
+    border-radius: var(--radius);
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: var(--text-2xs);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: left;
+}
+
+.groupChevron {
+    display: inline-flex;
+    align-items: center;
+    transition: transform 100ms ease;
+}
+
+.groupChevronExpanded {
+    transform: rotate(90deg);
+}
+
+.groupChildren {
+    padding: var(--space-m) 0 0 var(--space-m);
+}

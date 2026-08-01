@@ -1,362 +1,303 @@
-# Dukafy — Project Setup Instructions (for coding agent)
+# Dukafy setup and operations guide
 
-Execute these steps in order. Do not skip verification steps. Stop and report if any
-verification fails.
+This guide describes the repository as it exists now. It covers a development
+installation, database/bootstrap behavior, common commands, local data, and
+known limitations. For product intent, read [VISION.md](VISION.md); for exact
+progress, read [MILESTONES.md](MILESTONES.md).
 
-Dukafy is a self-hosted, ecommerce-only visual CMS: Ruby + SQLite + HTMX backend,
-with a visual editor vendored from Instatic (MIT). Read `VISION.md` for the product
-goal and `MILESTONES.md` for the task plan before writing feature code.
+## 1. Prerequisites
 
----
+- Ruby 3.4 or newer
+- Bundler matching the lockfile
+- Bun 1.x or newer
+- libvips, required for uploaded-image dimensions and responsive WebP variants
+- Linux x86-64 for automatic installation of the pinned Tailwind standalone
+  binary; other platforms can provide their own binary
 
-## 0. Prerequisites
-
-Install the toolchain via mise (manages Ruby and Bun side by side):
-
-```bash
-curl https://mise.run | sh
-mise use -g ruby@3.4 bun@latest
-ruby --version   # expect 3.4.x
-bun --version    # expect 1.x
-```
-
-If mise is unavailable, any method giving Ruby 3.4+ and Bun 1.x is acceptable.
-Bun is a BUILD-TIME dependency only (editor bundling). The runtime product is
-pure Ruby + SQLite.
-
-Install libvips for responsive media processing:
+Ubuntu/Debian:
 
 ```bash
-sudo apt-get install libvips        # Debian/Ubuntu
-# or: brew install vips             # macOS
+sudo apt-get update
+sudo apt-get install libvips
 ```
 
----
-
-## 1. Create the repo
+macOS:
 
 ```bash
-mkdir dukafy-project && cd dukafy-project
-git init
-printf "db/*.sqlite3\npublished/\nuploads/\npublic/admin/\nnode_modules/\n.env\n" > .gitignore
+brew install vips
 ```
 
----
-
-## 2. Vendor the Instatic editor into `instatic/`
+Ruby and Bun may be installed with rbenv, mise, asdf, or another tool. Verify:
 
 ```bash
-git clone --depth 1 https://github.com/corebunch/instatic.git /tmp/instatic-src
-
-mkdir instatic
-cp -r /tmp/instatic-src/src            instatic/src
-cp    /tmp/instatic-src/index.html     instatic/
-cp    /tmp/instatic-src/vite.config.ts instatic/
-cp    /tmp/instatic-src/tsconfig.json  instatic/
-cp    /tmp/instatic-src/tsconfig.app.json  instatic/ 2>/dev/null || true
-cp    /tmp/instatic-src/tsconfig.node.json instatic/ 2>/dev/null || true
-cp    /tmp/instatic-src/package.json   instatic/
-cp    /tmp/instatic-src/bun.lock       instatic/ 2>/dev/null || true
-cp    /tmp/instatic-src/LICENSE        instatic/LICENSE          # REQUIRED — MIT attribution
-cp -r /tmp/instatic-src/docs           instatic/docs             # keep as reference
-cp -r /tmp/instatic-src/vendor         instatic/vendor 2>/dev/null || true  # pixel icons
+ruby --version
+bundle --version
+bun --version
+vips --version
 ```
 
-Also copy `/tmp/instatic-src/server` to `reference/instatic-server/` (read-only
-reference — we re-implement its API in Ruby; NEVER run it, NEVER import from it):
+## 2. Repository layout: the editor is tracked here
 
-```bash
-mkdir -p reference
-cp -r /tmp/instatic-src/server reference/instatic-server
-echo "Reference only. Do not run or import. See dukafy/routes/admin_api.rb for the Ruby reimplementation." > reference/README.md
-```
+`dukafy-editor/` is a fork of Instatic's React/Vite admin client, tracked as
+part of this monorepo. It carries local Dukafy integrations including:
 
-### 2.1 Prune what Dukafy does not use (v1)
+- Vite base path `/admin/`
+- proxying `/admin/api` to `http://localhost:9292`
+- the Commerce workspace
+- Dukafy canvas commerce modules
+- API clients matching [docs/api-contract.md](docs/api-contract.md)
 
-```bash
-rm -rf instatic/src/admin/ai
-rm -rf instatic/src/admin/plugin-host-hooks
-rm -rf instatic/src/admin/plugin-host-ui
-rm -f  instatic/src/admin/pluginRuntimeBootstrap.ts
-```
+A full, unmodified clone of the upstream project is kept separately at
+`reference/instatic/` — it has its own `.git` (so it can be `git fetch`-ed to
+diff against `dukafy-editor/`), is gitignored, and is never run or imported
+into Dukafy.
 
-### 2.2 Repair the build
+## 3. Install dependencies
 
-```bash
-cd instatic && bun install && bun run build || true
-```
-
-The build WILL fail after pruning — the router, some panels, and bootstrap code
-import the deleted AI/plugin-host modules. Fix forward:
-
-- Remove imports/usages of the deleted modules (router entries, panel tabs,
-  bootstrap calls). Prefer deleting the referencing UI (AI panel button, plugin
-  admin pages) over stubbing.
-- Do NOT modify `src/core/` type definitions in this step — they are the
-  document-format contract.
-- Iterate `bun run build` until it exits 0. Commit as
-  `vendor: instatic editor, pruned (ai, plugin host)`.
-
-### 2.3 Point the build at Dukafy
-
-Edit `instatic/vite.config.ts` (adjust, don't blindly replace — keep their plugins):
-
-```ts
-export default defineConfig({
-  base: "/admin/",
-  build: { outDir: "../dukafy/public/admin", emptyOutDir: true },
-  server: {
-    port: 5173,
-    proxy: { "/admin/api": "http://localhost:9292" },
-  },
-  // ...retain existing plugins/resolve config
-})
-```
-
-**Verify:** `bun run build` exits 0 and `dukafy/public/admin/index.html` exists
-(create `dukafy/public` first if needed, or run after step 3).
-
----
-
-## 3. Scaffold the Ruby app in `dukafy/`
-
-Create this exact tree (empty `.keep` files where noted):
-
-```bash
-cd .. && mkdir -p dukafy && cd dukafy
-mkdir -p config db/migrations models routes publisher/modules publisher/schemas \
-         services views/layouts views/checkout views/account \
-         public/js published uploads \
-         spec/golden spec/publisher spec/routes scripts
-touch published/.keep uploads/.keep public/admin/.keep spec/golden/.keep
-```
-
-### 3.1 Gemfile
-
-```ruby
-source "https://rubygems.org"
-
-gem "roda"
-gem "sequel"
-gem "sqlite3"
-gem "phlex"
-gem "puma"
-gem "json_schemer"
-gem "bcrypt"
-gem "rack-session"
-gem "stripe"
-
-group :development do
-  gem "rerun"
-  gem "foreman"
-end
-
-group :test do
-  gem "minitest"
-  gem "rack-test"
-end
-```
-
-Run `bundle install`.
-
-### 3.2 config/database.rb
-
-```ruby
-require "sequel"
-
-DB = Sequel.sqlite(ENV.fetch("DUKAFY_DB", File.expand_path("../db/dukafy.sqlite3", __dir__)))
-DB.run "PRAGMA journal_mode = WAL"
-DB.run "PRAGMA synchronous = NORMAL"
-DB.run "PRAGMA busy_timeout = 5000"
-DB.run "PRAGMA foreign_keys = ON"
-DB.run "PRAGMA cache_size = -64000"
-Sequel::Model.db = DB
-Sequel::Model.plugin :timestamps, update_on_create: true
-Sequel.extension :migration
-```
-
-### 3.3 config/environment.rb
-
-```ruby
-require_relative "database"
-Dir[File.expand_path("../models/*.rb", __dir__)].sort.each { |f| require f }
-Dir[File.expand_path("../publisher/**/*.rb", __dir__)].sort.each { |f| require f }
-Dir[File.expand_path("../services/*.rb", __dir__)].sort.each { |f| require f }
-```
-
-### 3.4 app.rb (skeleton)
-
-```ruby
-require_relative "config/environment"
-require "roda"
-
-class Dukafy < Roda
-  plugin :sessions, secret: ENV.fetch("SESSION_SECRET") { "dev-secret-change-me-" + "x" * 64 }
-  plugin :json
-  plugin :json_parser
-  plugin :public            # serves public/ (built editor at /admin)
-  plugin :halt
-
-  route do |r|
-    r.public
-
-    r.on("admin") do
-      r.on("api") { r.run AdminApi }        # routes/admin_api.rb
-      # non-API /admin/* → serve the built editor SPA shell
-      r.get { File.read(File.expand_path("public/admin/index.html", __dir__)) rescue r.halt(404) }
-    end
-
-    r.on("fragments") { r.run Fragments }   # routes/fragments.rb  (HTMX)
-    r.on("checkout")  { r.run Checkout }    # routes/checkout.rb
-
-    # storefront: Layer A disk fast-path, then live render fallback
-    r.run Storefront                        # routes/storefront.rb
-  end
-end
-```
-
-Create `config.ru`:
-
-```ruby
-require_relative "app"
-run Dukafy.freeze.app
-```
-
-Create minimal placeholder route classes in `routes/` (`AdminApi`, `Fragments`,
-`Checkout`, `Storefront`) — each a Roda subclass returning 501 for now — so the
-app boots.
-
-### 3.5 config/puma.rb
-
-```ruby
-workers 0          # single process — coherent in-memory cache, one SQLite writer
-threads 5, 5
-port ENV.fetch("PORT", 9292)
-```
-
-### 3.6 First migrations (`db/migrations/`)
-
-Create, in this order (Sequel migration format, `Sequel.migration { change { ... } }`):
-
-1. `001_admins.rb` — id, email (unique), password_digest, created_at, updated_at
-2. `002_media_assets.rb` — id, path, mime, width, height, variants_json (text), created_at
-3. `003_pages.rb` — id, slug (unique), title, kind (text: 'page'|'template'),
-   document (text/JSON — the editor's SiteDocument/NodeTree, stored verbatim),
-   status (text: 'draft'|'published'), published_document (text, nullable),
-   created_at, updated_at
-4. `004_products.rb` — id, title, slug (unique), description_document (text/JSON,
-   nullable), status, vendor, created_at, updated_at
-5. `005_variants.rb` — id, product_id (fk), sku, title, price_cents (integer),
-   currency (text, default 'USD'), stock (integer, default 0), position
-6. `006_collections.rb` — id, title, slug (unique), description, sort_order
-7. `007_collection_products.rb` — collection_id (fk), product_id (fk), position,
-   composite unique index
-8. `008_page_dependencies.rb` — page_path (text), product_id (fk), unique composite
-   index (for partial re-bakes)
-
-Add `scripts/migrate.rb`:
-
-```ruby
-require_relative "../config/database"
-Sequel::Migrator.run(DB, File.expand_path("../db/migrations", __dir__))
-puts "migrated to #{DB[:schema_migrations].count rescue 'n/a'}"
-```
-
-**NOTE:** money is integer cents, always. Never float.
-
-### 3.7 Models
-
-One Sequel model per table in `models/` (Product has many Variants, ordered by
-position; Collection many-to-many Products through collection_products; Page
-validates presence of slug, parses `document` JSON lazily).
-
-### 3.8 Publisher skeleton (`publisher/`)
-
-Rules for everything in this directory (mirrors Instatic's Constraint #179):
-
-- **PURE**: no DB access, no file IO, no network, no globals. Inputs in, strings out.
-- `registry.rb` — `Dukafy::Publisher::REGISTRY = { "base.container" => Modules::Container, ... }`
-- Each module in `publisher/modules/` implements
-  `def self.render(props, rendered_children) -> { html:, css: }` where props are
-  already-escaped plain hashes and rendered_children is an array of HTML strings.
-- `render_page.rb` — `RenderPage.call(document:, registry:, prefetched: {})`:
-  bottom-up recursive walk of the node tree (port of Instatic's `renderNode`):
-  render children → resolve breakpoint props → escape strings → module render →
-  collect CSS deduped by moduleId (`css_collector.rb`).
-- `dynamic_map.rb` — a frozen Hash of moduleId → :baked | :fragment. Ecommerce
-  classification is HARDCODED (stock badge, cart badge = :fragment; everything
-  else :baked). No author toggles.
-- HTML escaping: escape at the walker boundary before module render, exactly once.
-  URL props go through a `safe_url` helper (reject javascript:, data:text, etc.).
-
-### 3.9 HTMX
-
-```bash
-curl -sL https://unpkg.com/htmx.org@2/dist/htmx.min.js -o public/js/htmx.min.js
-```
-
-### 3.10 Procfile.dev (in `dukafy/`)
-
-```
-web:    bundle exec rerun --dir . --dir ../instatic/src -- rackup -p 9292
-editor: sh -c "cd ../instatic && bun run dev"
-```
-
----
-
-## 4. Export the document-schema contract
-
-Create `instatic/scripts/export-schemas.ts`: import the TypeBox schemas that
-define the site/page document (locate them under `instatic/src/core/` — search
-for `Type.Object` definitions of the SiteDocument / page node tree), serialize
-each with `JSON.stringify(schema)` (TypeBox schemas ARE JSON Schema), and write
-to `../dukafy/publisher/schemas/<name>.schema.json`.
-
-Run `bun run scripts/export-schemas.ts`. Then in Ruby, `Page#document=` validates
-against the schema via `json_schemer` and raises on mismatch.
-
-**This is the single contract between the React editor and the Ruby publisher.
-If a document fails validation, the bug is on whichever side changed shape.**
-
----
-
-## 5. Final verification checklist
-
-Run all; every item must pass before feature work starts:
+From the repository root:
 
 ```bash
 cd dukafy
-bundle exec ruby scripts/migrate.rb            # migrations apply cleanly
-bundle exec rackup -p 9292 &                   # app boots
-curl -s -o /dev/null -w "%{http_code}" localhost:9292/admin/api/health   # 501 or 200, not 500
-cd ../instatic
-bun run build                                  # exits 0
-test -f ../dukafy/public/admin/index.html && echo EDITOR_BUILD_OK
+bundle install
+
+cd ../dukafy-editor
+bun install
+
+cd ..
 ```
 
-Then commit: `scaffold: dukafy app + editor wiring`.
+## 4. Start both applications
 
-Final tree (top level):
-
-```
-dukafy-project/
-├── .gitignore
-├── SETUP.md  VISION.md  MILESTONES.md
-├── instatic/            # vendored editor (React/TS) — builds into dukafy/public/admin
-├── reference/           # instatic's original Bun server, read-only reference
-└── dukafy/              # THE PRODUCT — Ruby + SQLite + HTMX
+```bash
+./bin/dev
 ```
 
-## Standing rules for the agent
+The launcher performs three actions:
 
-1. `instatic/LICENSE` is never deleted. Attribution to Instatic (David Babinec,
-   MIT) stays in the repo and in any About screen.
-2. `dukafy/publisher/**` stays pure — enforce with a spec that greps for
-   `DB`, `Sequel`, `File.`, `Net::` in that directory.
-3. Money is integer cents. Stock changes never trigger re-bakes (stock renders
-   via HTMX fragments only).
-4. Every publisher module gets a golden test: `spec/golden/<module>/props.json`
-   + `expected.html`; spec renders and byte-compares.
-5. Never modify `instatic/src/core/` types without regenerating schemas (step 4)
-   and updating the Ruby side in the same commit.
-6. `reference/` is read-only. Port behavior from it; never require or execute it.
+1. Runs `dukafy/scripts/install_tailwind.rb`, downloading and checksum-verifying
+   the pinned standalone compiler when absent.
+2. Runs every unapplied Sequel migration against the configured database.
+3. Starts Puma/Roda and Vite together through Foreman.
+
+Expected addresses:
+
+| Surface | URL |
+| --- | --- |
+| Visual CMS | <http://localhost:5173/admin/> |
+| Commerce workspace | <http://localhost:5173/admin/commerce> |
+| Public storefront | <http://localhost:9292/> |
+| CMS API base | <http://localhost:9292/admin/api/cms> |
+
+The Vite address is the normal development editor entry point. Its API proxy
+keeps browser requests on port 5173 while forwarding them to Ruby on port 9292.
+Stop both processes with `Ctrl-C`.
+
+The Bundler deprecation printed by `rerun` is emitted by that development gem
+and does not prevent Puma from starting.
+
+## 5. First-time setup and development data
+
+If the database has no administrator, the editor shows the setup flow. Supply a
+store name, owner email, and password of at least 12 characters.
+
+Alternatively, create/update the owner from the terminal:
+
+```bash
+cd dukafy
+ADMIN_EMAIL=owner@example.com \
+ADMIN_PASSWORD='replace-with-a-long-password' \
+bundle exec ruby scripts/seed_admin.rb
+```
+
+Seed the idempotent demo catalog (12 products, variants, and three collections):
+
+```bash
+bundle exec ruby scripts/seed_demo_store.rb
+```
+
+## 6. Database and migrations
+
+The default database is `dukafy/db/dukafy.sqlite3`. Override it with an absolute
+or process-resolvable path:
+
+```bash
+DUKAFY_DB=/path/to/store.sqlite3 ./bin/dev
+```
+
+SQLite runs in WAL mode with foreign keys, a busy timeout, and a single Puma
+worker. Apply migrations manually with:
+
+```bash
+cd dukafy
+bundle exec ruby scripts/migrate.rb
+```
+
+Current migrations cover admins, media, pages, products, variants, collections,
+page dependencies, site state/preferences, publish state, redirects, carts, and
+cart items. Migration `015_fix_template_slugs.rb` changes legacy
+`_product-template` and `_collection-template` records to editor-valid slugs and
+updates the slug embedded inside each JSON document.
+
+Page slugs are also validated by Ruby using the same basic rule as the editor:
+lowercase letters/numbers, single hyphens inside segments, and optional single
+slashes between segments.
+
+## 7. Tailwind CSS
+
+Dukafy pins the Tailwind CSS 4 standalone compiler. The default binary lives at
+`dukafy/vendor/tailwindcss` and is ignored by Git.
+
+On unsupported platforms, install a compatible standalone executable and set:
+
+```bash
+TAILWINDCSS_BIN=/absolute/path/to/tailwindcss ./bin/dev
+```
+
+Tailwind is compiled at publish time from class attributes in rendered pages.
+It does not ship every utility. Utilities such as `p-8`, `px-8`, responsive
+variants, state variants, and arbitrary values work when they are present in a
+published document. See [docs/tailwind.md](docs/tailwind.md).
+
+## 8. Media
+
+Original uploads and generated variants live under `dukafy/uploads/`, which is
+ignored by Git. Raster uploads generate WebP variants at widths below the
+original from this set: 320, 640, 960, 1280, and 1920 pixels. Metadata and
+variant paths are stored in SQLite; image modules emit `srcset` and `sizes`.
+
+If libvips is missing, raster upload processing returns a clear service error.
+Install libvips and restart `./bin/dev`. Deleting a media record also deletes
+its managed variants.
+
+## 9. Build, tests, and verification
+
+Run all Ruby tests:
+
+```bash
+cd dukafy
+bundle exec rake test
+```
+
+Build the editor:
+
+```bash
+cd dukafy-editor
+bun run build
+```
+
+The build writes production editor assets to `dukafy/public/admin/`, which is
+ignored. Useful smoke checks while `./bin/dev` is running:
+
+```bash
+curl -i http://localhost:9292/admin/api/health
+curl -i http://localhost:9292/
+```
+
+After publishing, a storefront response should include
+`X-Dukafy-Render: disk`. Collection pagination or another noncanonical query
+may return `X-Dukafy-Render: live`.
+
+## 10. Publishing and generated files
+
+Saving and publishing are separate:
+
+- **Save** writes draft site/page state to SQLite.
+- **Publish** renders ordinary pages and all active products/collections,
+  compiles the used Tailwind classes, writes the inactive output slot, then
+  atomically switches `dukafy/published/current`.
+
+Generated output is ignored by Git. The two physical slots are `slot_0` and
+`slot_1`; only a completed slot becomes current. A failed publish removes the
+incomplete slot and preserves/restores the previous current release.
+
+`DUKAFY_PUBLISHED_ROOT` can move this output:
+
+```bash
+DUKAFY_PUBLISHED_ROOT=/absolute/path/to/published ./bin/dev
+```
+
+## 11. Catalog and template workflow
+
+Use `/admin/commerce` for product, variant, collection, membership, and CSV
+operations. Use the Site workspace for visual layout.
+
+- **Product template** renders every active product at
+  `/products/<product-slug>`.
+- **Collection template** renders every collection at
+  `/collections/<collection-slug>`.
+- Store modules with an empty slug property use the current template entry.
+- A catalog item must be active and the site must be published before its baked
+  storefront URL exists.
+
+See [docs/editor-commerce-workflow.md](docs/editor-commerce-workflow.md) for the
+complete authoring flow and module behavior.
+
+## 12. Local state, backup, and reset caution
+
+The important mutable paths are:
+
+- `dukafy/db/dukafy.sqlite3` plus temporary `-wal`/`-shm` files
+- `dukafy/uploads/`
+- `dukafy/published/` (rebuildable, but useful for immediate static serving)
+
+Production-grade Litestream automation and a restore drill are not implemented
+yet. For a consistent manual development backup, stop the server first, then
+copy the database and uploads directory. Do not copy only the main SQLite file
+while writers are active and ignore the WAL.
+
+Deleting the development database is destructive and removes CMS/catalog/cart
+state. The next `./bin/dev` recreates the schema, but not the lost content.
+
+## 13. Troubleshooting
+
+### “Could not load CMS site … Page slug must use …”
+
+Run current migrations and restart:
+
+```bash
+cd dukafy
+bundle exec ruby scripts/migrate.rb
+```
+
+Migration 015 repairs the old built-in template slugs. New invalid slugs are
+rejected by the Ruby model before they can poison CMS bootstrap.
+
+### API requests return 502 from port 5173
+
+Vite is running but Ruby is unavailable. Check the `web.1` process in the
+`./bin/dev` output and confirm port 9292 is listening.
+
+### API endpoint returns 404
+
+Make sure both sides are from compatible working copies. The editor is local
+and ignored by Git, while the Ruby contract is committed. Compare the request
+with [docs/api-contract.md](docs/api-contract.md).
+
+### WebSocket on port 5100 fails
+
+Realtime collaboration is not implemented in the Ruby v1 server. The core
+save/publish workflow uses HTTP and does not require that collaboration socket.
+
+### Publish button is disabled
+
+Finish initial setup/login, make a saved change, and ensure the CMS loaded
+without validation errors. Publish status distinguishes a saved draft from the
+currently live version.
+
+### Product URL is missing
+
+Confirm the product status is `active`, the Product template exists, and a
+publish completed. Then use port 9292 and the exact slug:
+`http://localhost:9292/products/<slug>`.
+
+## 14. Development invariants
+
+- Never use floats for money.
+- Do not add DB, filesystem, or network access to `dukafy/publisher/`.
+- Keep editor and Ruby module implementations behaviorally aligned.
+- Regenerate schemas whenever editor core document types change.
+- Treat `reference/` as read-only.
+- Preserve Instatic MIT attribution.
+- `dukafy-editor/` is tracked and committed like any other part of this repo.
+  Do not commit `reference/instatic/`, databases, uploads, generated published
+  output, built editor assets, or the local Tailwind executable.

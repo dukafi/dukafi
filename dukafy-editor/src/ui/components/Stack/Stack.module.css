@@ -1,0 +1,6 @@
+/* Stack — shared flex layout primitive. */
+
+.stack {
+    display: flex;
+    min-width: 0;
+}

@@ -1,0 +1,131 @@
+/**
+ * ComponentParamsOverview — param list overview for the active Visual Component.
+ *
+ * Achromatic palette (Guideline #376). CSS Modules only (Constraint #402/#403).
+ * Token-only colours — no hardcoded hex/rgb/hsl.
+ */
+
+/* ── Header strip ─────────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-s) var(--space-l);
+  border-bottom: 1px solid var(--border);
+}
+
+.kicker {
+  flex: 1;
+  font-size: var(--text-2xs);
+  font-weight: 750;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+  letter-spacing: 0.04em;
+}
+
+.countChip {
+  font-size: var(--text-2xs);
+  padding: var(--space-px) var(--space-xs);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-3);
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* ── Param list ───────────────────────────────────────────────────────────── */
+
+.paramList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.paramItem {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.paramItem:last-child {
+  border-bottom: none;
+}
+
+/* Row button — flex: 1 so it fills the space alongside the remove button. */
+
+.rowBtn {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Row inner content stack */
+
+.rowContent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4xs);
+  min-width: 0;
+  width: 100%;
+  padding: var(--space-3xs) 0;
+}
+
+.rowTop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.paramName {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.typeChip {
+  font-size: var(--text-2xs);
+  padding: var(--space-px) var(--space-2xs);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-3);
+  color: var(--text-subtle);
+  white-space: nowrap;
+  line-height: 1.6;
+  flex-shrink: 0;
+}
+
+.rowMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+  min-width: 0;
+  width: 100%;
+}
+
+.sourceLabel {
+  font-size: var(--text-2xs);
+  color: var(--text-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.defaultSummary {
+  font-size: var(--text-2xs);
+  color: var(--text-disabled);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Remove button — no extra margin; flex container handles alignment. */
+
+.removeBtn {
+  flex-shrink: 0;
+  margin-right: var(--space-3xs);
+}

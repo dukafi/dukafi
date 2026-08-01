@@ -1,0 +1,134 @@
+.backdrop {
+    position: fixed;
+    inset: 0;
+    /* Above the spotlight-style modal layer (Settings backdrop at
+     --spotlight-z-index: 9000, its dialog wrapper at +1) because the picker
+     can be invoked from inside those modals (e.g. Settings → General →
+     Favicon → Browse library…) and must sit above them. Stays below the body
+     slash menu (z 10000) and the tooltip layer (--tooltip-z-index: 10001). */
+    z-index: calc(var(--spotlight-z-index) + 50);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-5xl);
+    background: var(--scrim-60);
+    backdrop-filter: blur(20px);
+}
+
+.dialog {
+    display: flex;
+    flex-direction: column;
+    width: min(1280px, 100%);
+    height: min(820px, 100%);
+    background: var(--bg-surface);
+    border: 1px solid var(--overlay-10);
+    border-radius: var(--panel-radius);
+    box-shadow: var(--shadow-panel);
+    overflow: hidden;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-l);
+    padding: var(--space-l) var(--space-2xl);
+}
+
+.title {
+    margin: 0;
+    font-size: var(--text-l);
+    font-weight: 600;
+    color: var(--text);
+}
+
+.body {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    /* Inside the modal the sidebar lives next to the canvas; MediaSidebar's
+     internal layout already produces the rail + slot, we just give the
+     pair a row container. */
+}
+
+.canvasArea {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+}
+
+.footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2xl);
+    padding: var(--space-m) var(--space-2xl);
+    border-top: 1px solid var(--border);
+    background: var(--bg-body);
+}
+
+.footerActions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+}
+
+.pickedEmpty {
+    margin: 0;
+    font-size: var(--text-s);
+    color: var(--text-subtle);
+}
+
+.picked {
+    display: flex;
+    align-items: center;
+    gap: var(--space-m);
+    min-width: 0;
+}
+
+.pickedPreview {
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    background: var(--bg-surface-2);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-subtle);
+    flex: 0 0 40px;
+}
+
+.pickedPreview img,
+.pickedPreview video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.pickedMeta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4xs);
+    min-width: 0;
+}
+
+.pickedName {
+    font-size: var(--text-s);
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 360px;
+}
+
+.pickedCount {
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+}
+
+.pickedWrongKind {
+    font-size: var(--text-xs);
+    color: var(--danger);
+}

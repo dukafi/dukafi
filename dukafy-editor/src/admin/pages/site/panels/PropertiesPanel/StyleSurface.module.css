@@ -1,0 +1,176 @@
+/* StyleSurface — unified properties editor (scroll-anchor layout). */
+
+/* ── Outer shell: THE scroll container, two-column grid ────────────────────── */
+/*    Left column  = content (search bar + sections)                           */
+/*    Right column = sticky rail (32px)                                        */
+.surface {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 32px;
+    padding-top: var(--space-2xl);
+    padding-bottom: var(--space-7xl);
+    gap: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+    align-items: start;
+}
+
+/* ── Left content column ─────────────────────────────────────────────────── */
+/* Grid with the same 1px gap as `.styleSections` so the Module section and the
+   CSS sections share one consistent vertical rhythm. (The sticky search bar is
+   absolutely positioned, so it's out of flow and adds no gap.) */
+.surfaceContent {
+    display: grid;
+    align-content: start;
+    gap: var(--space-px);
+    min-width: 0;
+    padding-bottom: var(--space-7xl);
+}
+
+/* ── Sticky search bar ───────────────────────────────────────────────────── */
+.searchBarRow {
+    position: absolute;
+    bottom: -1px;
+    right: 0;
+    left: 0;
+    z-index: 99;
+    padding: var(--space-4xl);
+    padding-top: var(--space-8xl);
+    padding-bottom: var(--space-l);
+    background: linear-gradient(0, var(--panel-fade-bg) 50%, transparent);
+}
+
+/* ── Right column: sticky rail ───────────────────────────────────────────── */
+.railSticky {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    padding-top: var(--space-3xs);
+}
+
+/* ── Generated utility lock wrapper ─────────────────────────────────────── */
+.lockedContent {
+    padding: 0;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   LockedStylePreview
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.lockedPreview {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Teaser wrapper: max-height + overflow hidden so rows fade out */
+.lockedPreviewTeaserWrapper {
+    position: relative;
+    max-height: 200px;
+    overflow: hidden;
+}
+
+/* Phantom controls — read-only, slightly dimmed */
+.lockedPreviewTeaser {
+    display: grid;
+    gap: var(--space-s);
+    padding: var(--space-l) var(--space-xl);
+    pointer-events: none;
+    opacity: 0.55;
+    user-select: none;
+}
+
+/* Bottom gradient covers only the last ~80px of the teaser */
+.lockedPreviewGradient {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 80px;
+    background: linear-gradient(to bottom, transparent, var(--panel-fade-bg));
+    pointer-events: none;
+}
+
+/* CTA sits below the teaser wrapper — always visible */
+.lockedPreviewCta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-m);
+    padding: var(--space-4xl) var(--space-5xl) var(--space-5xl);
+    text-align: center;
+}
+
+.lockedPreviewCtaText {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    line-height: 1.5;
+}
+
+.lockedPreviewCtaActions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   GeneratedUtilityLockedState
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.generatedUtilityState {
+    display: grid;
+    gap: var(--space-s);
+    margin: var(--space-s) var(--space-l) var(--space-xl);
+    padding: var(--space-l);
+    border-radius: 12px;
+    background: var(--bg-surface);
+}
+
+.generatedUtilityHeader {
+    display: grid;
+    gap: var(--space-3xs);
+}
+
+.generatedUtilityKicker {
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    font-weight: 750;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.generatedUtilityName {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-size: var(--text-m);
+    font-weight: 750;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.generatedUtilityCopy {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    line-height: 1.45;
+}
+
+.generatedUtilityMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2xs);
+}
+
+.generatedUtilityMeta span {
+    border-radius: 999px;
+    background: var(--overlay-5);
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    line-height: 1;
+    padding: var(--space-3xs) var(--space-s);
+}

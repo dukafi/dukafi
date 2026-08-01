@@ -1,0 +1,130 @@
+/* ── EmptyState — shared placeholder for empty panels and empty sections ──── */
+
+.root {
+    display: flex;
+    flex-direction: column;
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+    line-height: 1.5;
+}
+
+/* ── variant=card ─────────────────────────────────────────────────────────────
+ * Surfaced placeholder with rounded background — used inline inside a panel
+ * body when the panel itself has data (filters, headers) but the list is empty.
+ * Default for in-panel "no items yet" + Create CTA empty states.
+ */
+.variant-card {
+    gap: var(--space-m);
+    padding: var(--space-xl);
+    border-radius: 12px;
+    background: var(--bg-surface);
+}
+
+/* ── variant=centered ─────────────────────────────────────────────────────────
+ * Stretches to fill its parent and centers the content along both axes — used
+ * when the empty state replaces the entire panel body (e.g. "Select an element
+ * to view its properties", agent intro screen, empty canvas).
+ */
+.variant-centered {
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-s);
+    padding: var(--space-5xl) var(--space-2xl);
+    text-align: center;
+    color: var(--text-muted);
+}
+
+/* ── compact modifier ─────────────────────────────────────────────────────────
+ * Smaller padding for in-section / inline empties (e.g. "None yet" inside a
+ * section row, inline manual-list empties). Pairs with variant=card.
+ */
+.compact {
+    padding: var(--space-s);
+    gap: var(--space-xs);
+    line-height: 1.4;
+}
+
+/* ── plain modifier ───────────────────────────────────────────────────────────
+ * Drops the surface background — used for inline empties that already sit
+ * inside a card / list (e.g. class generator empty inside a Section).
+ */
+.plain {
+    background: transparent;
+    padding: var(--space-3xs) 0;
+    border-radius: 0;
+}
+
+/* ── alignment ──────────────────────────────────────────────────────────────── */
+
+.align-start {
+    align-items: flex-start;
+    text-align: left;
+}
+
+.align-center {
+    align-items: center;
+    text-align: center;
+}
+
+/* ── content slots ──────────────────────────────────────────────────────────── */
+
+.icon {
+    color: var(--text-disabled);
+}
+
+.title {
+    margin: 0;
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+}
+
+/* In centered mode the title reads as the primary label and the description
+ * is the supporting hint underneath. */
+.variant-centered .title {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.size-large.variant-centered {
+    gap: var(--space-l);
+    padding: var(--space-7xl) var(--space-3xl);
+}
+
+.size-large .icon {
+    color: var(--text-muted);
+}
+
+.size-large .title {
+    max-width: 280px;
+    color: var(--text);
+    font-size: var(--text-xl);
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.size-large .description {
+    max-width: 280px;
+    color: var(--text-muted);
+    font-size: var(--text-s);
+}
+
+.size-large .action {
+    margin-top: var(--space-xs);
+}
+
+.description {
+    margin: 0;
+    font-size: var(--text-2xs);
+    line-height: 1.5;
+    color: var(--text-subtle);
+}
+
+.action {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-top: var(--space-4xs);
+}

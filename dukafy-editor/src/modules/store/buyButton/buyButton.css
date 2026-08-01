@@ -1,0 +1,1 @@
+.dukafy-buy-form{display:grid;gap:.5rem}.dukafy-buy-button{display:inline-flex;align-items:center;justify-content:center;min-height:2.75rem;padding:.625rem 1rem;border:1px solid currentColor;border-radius:.375rem;background:#18181b;color:#fff;font:inherit;font-weight:600;cursor:pointer}.dukafy-buy-button:disabled{cursor:not-allowed;opacity:.5}

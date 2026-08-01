@@ -1,0 +1,563 @@
+/**
+ * BlockLibrary — bottom-docked widget tray.
+ *
+ * Anchored to the bottom edge of the viewport, full-width. The panel sits
+ * above the page chrome on z-index 50 (same layer the old BlockPicker
+ * used) and reserves its own height via the `--lib-height` custom
+ * property so the resize handle at the top edge can drive it from JS
+ * without touching layout in any other component.
+ *
+ * Each "category" is a horizontal strip; vertical scrolling crosses
+ * categories, horizontal scrolling crosses widgets within a single
+ * category. The preview tiles inside the strip render the real widget
+ * components at their natural `defaultSize × default rows` footprint —
+ * `--lib-col` and `--lib-row-h` (set inline by BlockLibrary.tsx) keep
+ * the preview sizing aligned with the dashboard grid metrics.
+ */
+
+.panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* `--lib-height` is set inline by BlockLibrary.tsx from the persisted
+       per-user height (clamped to the LIBRARY_MIN_HEIGHT / MAX bounds).
+       No CSS fallback — the inline style always defines the variable
+       before this rule runs. */
+    height: var(--lib-height);
+    background: var(--bg-surface);
+    border-top: 1px solid var(--overlay-10);
+    box-shadow: 0 -16px 48px var(--scrim-50);
+    display: flex;
+    flex-direction: column;
+    z-index: 50;
+    /* The panel has its own scrolling region (`.body`) so the header,
+       search bar, and resize handle stay pinned. */
+    overflow: hidden;
+    /* Slide in from below on mount. The panel unmounts on close, so
+       React rebuilds it on the next open and the animation re-fires.
+       Honors prefers-reduced-motion via the matching media query
+       below. */
+    animation: slideIn 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+        outline-color 160ms ease,
+        box-shadow 160ms ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Reverse of slideIn. `forwards` holds the closed state so the panel
+   visually settles into the off-screen position before the unmount
+   timeout fires — without that the panel would visibly snap back to
+   visible on the last frame of the animation. */
+.panelExiting {
+    animation: slideOut 220ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    pointer-events: none;
+}
+
+/* Hidden via the same slide-down animation as the normal panel close
+   while a drag is in flight. Keeping the element in the DOM (rather
+   than `display: none`) preserves the bounding rect of every child —
+   in particular the library tile that dnd-kit just captured as the
+   drag source. `display: none` collapses that rect to 0×0, and
+   dnd-kit's DragOverlay then renders at 0×0 in the corner of the
+   viewport (the "card becomes super small and off the cursor"
+   regression).
+   `forwards` parks the panel off-screen for the duration of the drag.
+   When the class is removed (drop fires), the base `.panel` rule's
+   `animation: slideIn` takes over and plays the panel sliding back
+   in — consistent with the "drop → slide back in" behaviour the
+   user expects. */
+.panelHiddenDuringDrag {
+    animation: slideOut 220ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    pointer-events: none;
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .panel,
+    .panelExiting {
+        animation: none;
+    }
+}
+
+/* ── Minimized pill — drop target shown during an active drag ─────
+ *
+ * The library collapses to this slim, centred pill at the bottom of
+ * the viewport whenever a drag is in progress. Functionally it remains
+ * the same `useDroppable` (same `LIBRARY_DROP_ID`); visually it reads
+ * as "the library is here; release the widget on this pill to put it
+ * back". For grid-sourced drags it commits the removal; for
+ * library-sourced drags dropping on it is a no-op (cancel). The same
+ * slideIn animation from the expanded panel doesn't apply — the pill
+ * fades + scales in instead so it doesn't compete with the dragged
+ * tile for attention.
+ */
+.pill {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-m);
+    padding: 0 var(--space-3xl);
+    height: 44px;
+    border-radius: 999px;
+    background: var(--bg-surface);
+    border: 1px solid var(--overlay-10);
+    box-shadow: 0 16px 40px var(--scrim-50);
+    color: var(--text);
+    font-size: var(--text-s);
+    z-index: 50;
+    animation: pillIn 180ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+        background 140ms ease,
+        border-color 140ms ease,
+        transform 140ms ease;
+}
+
+@keyframes pillIn {
+    from {
+        transform: translate(-50%, 16px);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pill {
+        animation: none;
+    }
+}
+
+/* Variant: drag is sourced from the dashboard grid — the pill IS the
+   commit point for removal. Slightly larger / more attention-grabbing
+   so the user notices the affordance. */
+.pillRemove {
+    border-color: var(--accent-3);
+}
+
+/* Hover state — pointer is currently over the pill, drop is committed
+   on release. Ramp to success-green so the gesture reads as "OK,
+   landing here". */
+.pillActive {
+    background: var(--success-10);
+    border-color: var(--success);
+    color: var(--success);
+    transform: translate(-50%, -2px);
+}
+
+.pillIcon {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--bg-surface-3);
+    display: grid;
+    place-items: center;
+    color: var(--text);
+}
+
+.pillActive .pillIcon {
+    background: var(--success);
+    color: var(--bg-body);
+}
+
+.pillLabel {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+/* ── Top-edge resize handle ───────────────────────────────────────── */
+.resize {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 10px;
+    cursor: ns-resize;
+    display: grid;
+    place-items: center;
+    z-index: 2;
+    /* Negative margin lifts the hit-target a few pixels above the
+       panel's top border so users can grab "the edge" intuitively
+       without precision pointer placement. */
+    margin-top: calc(var(--space-3xs) * -1);
+    padding-top: var(--space-3xs);
+    touch-action: none;
+    user-select: none;
+}
+
+.resizeBar {
+    width: 56px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--border-strong);
+    transition:
+        background 120ms ease,
+        transform 120ms ease;
+}
+
+.resize:hover .resizeBar {
+    background: var(--text-subtle);
+    transform: scaleX(1.2);
+}
+
+.resizeActive .resizeBar {
+    background: var(--text);
+    transform: scaleX(1.2);
+}
+
+/* ── Header (title + search + close) ──────────────────────────────── */
+.head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-2xl);
+    padding: var(--space-xl) var(--space-4xl) var(--space-l);
+    border-bottom: 1px solid var(--overlay-10);
+}
+
+.title h3 {
+    margin: 0;
+    font-size: var(--text-m);
+    font-weight: 600;
+    color: var(--text-bright);
+}
+
+.title p {
+    margin: var(--space-4xs) 0 0;
+    font-size: var(--text-xs);
+    color: var(--text-subtle);
+}
+
+.headEnd {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+}
+
+.search {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    width: 240px;
+    height: 30px;
+    padding: 0 var(--space-m);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+}
+
+.search input {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    outline: none;
+    color: var(--text);
+    font: inherit;
+    font-size: var(--text-s);
+}
+
+/* ── Scrollable body — each category is a stacked section ─────────── */
+.body {
+    flex: 1;
+    overflow-y: auto;
+    /* Match the dashboard's body horizontal padding (28px) so the
+       centered `.container` inside lines up with the dashboard's
+       centered 1220px content column. The dashboard's `AdminPageLayout`
+       uses `padding: 56px 28px 48px` on its body and a `width:
+       min(1220px, 100%); margin: 0 auto` container inside — the
+       library mirrors that contract. */
+    padding: var(--space-2xl) var(--space-6xl) var(--space-4xl);
+}
+
+/* Inner content column — mirrors the dashboard's
+   `width: min(1220px, 100%); margin: 0 auto` so the 12-column library
+   strip sits directly above the 12-column dashboard grid and a tile of
+   `size: N` here is the same pixel width as a cell of `size: N` there. */
+.container {
+    width: min(1220px, 100%);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5xl);
+}
+
+.empty {
+    font-size: var(--text-s);
+    color: var(--text-subtle);
+    text-align: center;
+    padding: var(--space-8xl) var(--space-s);
+    margin: 0;
+}
+
+/* "Every block is on your dashboard" — shown when `availableWidgets` is
+   empty. Centred call-to-action that doubles as a hint about the
+   drag-to-library reverse interaction. */
+.everythingPlaced {
+    display: grid;
+    place-items: center;
+    gap: var(--space-m);
+    padding: var(--space-7xl) var(--space-5xl);
+    border-radius: 12px;
+    background: var(--bg-surface);
+    border: 1px dashed var(--border-strong);
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+    text-align: center;
+    line-height: 1.5;
+}
+
+.everythingPlaced strong {
+    color: var(--text-bright);
+    font-weight: 600;
+    font-size: var(--text-m);
+}
+
+.everythingPlacedIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    background: var(--bg-surface-3);
+    color: var(--text);
+    display: grid;
+    place-items: center;
+}
+
+.group {
+    display: grid;
+    gap: var(--space-m);
+}
+
+.groupHead {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-m);
+    /* Padding-bottom so the bottom divider line breathes a bit before
+       the strip starts. */
+    padding-bottom: var(--space-4xs);
+}
+
+.groupLabel {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-bright);
+}
+
+.groupDescription {
+    font-size: var(--text-xs);
+    color: var(--text-subtle);
+    flex: 1;
+    min-width: 0;
+    /* Truncate noisy descriptions to keep the row compact. */
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.groupCount {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--text-disabled);
+}
+
+/* The strip is a 12-column grid that mirrors the dashboard's
+   `repeat(12, 1fr)` layout. Items declare `--span` and span that many
+   columns — so a `size: 6` widget here renders at exactly the same
+   pixel width as a `size: 6` cell on the dashboard. CSS grid
+   auto-flows items onto a new row when the current row's 12 columns
+   are full, so wrapping is built in without any flex hacks. */
+.strip {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: var(--lib-gap);
+    grid-auto-flow: row dense;
+    /* Leave a few px of negative inset so card shadows don't get
+       clipped by the strip's overflow box. */
+    padding: var(--space-3xs);
+    margin: calc(var(--space-3xs) * -1) calc(var(--space-3xs) * -1) 0;
+}
+
+/* ── Single library item — preview tile + footer ──────────────────── */
+.item {
+    /* `--span` is set inline by BlockLibrary.tsx from the widget's
+       `defaultSize`. The item takes that many of the strip's 12
+       columns; the strip's auto-flow wraps it to a new row when full.
+       Height comes from `.itemSurface` (preview area) + `.itemFoot`. */
+    grid-column: span var(--span);
+    display: grid;
+    grid-template-rows: auto auto;
+    border-radius: 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    transition:
+        border-color 120ms ease,
+        box-shadow 150ms ease,
+        transform 120ms ease;
+    /* The dnd-kit transform is applied inline; keep the element a
+       compositing layer so the GPU handles the drag-translate. */
+    will-change: transform;
+}
+
+.item:hover {
+    border-color: var(--border-strong);
+    box-shadow: 0 6px 18px var(--scrim-40);
+}
+
+.itemDragging {
+    /* Fully hide the source during a drag — the DragOverlay portal
+       owns the visual at the pointer. Showing the source at reduced
+       opacity here would read as "two cards moving together" (the
+       dimmed in-place tile plus the floating overlay), which the
+       user explicitly called out as confusing. The grid slot stays
+       reserved by the still-mounted element, just invisibly. */
+    opacity: 0;
+    pointer-events: none;
+}
+
+.itemSurface {
+    appearance: none;
+    border: 0;
+    background: var(--bg-surface-2);
+    padding: 0;
+    width: 100%;
+    /* Height is set inline from BlockLibrary.tsx to exactly the
+       same pixel height the widget would occupy on the dashboard
+       (default_rows * row-h + (default_rows - 1) * gap). The
+       draggable ref attaches HERE — dnd-kit's DragOverlay sizes
+       itself to this preview surface, so the dragged visual matches
+       the destination cell exactly. */
+    cursor: grab;
+    /* The preview canvas is the entire surface — children render
+       inside `.itemPreview`. */
+    overflow: hidden;
+    display: block;
+    position: relative;
+    text-align: left;
+    color: var(--text);
+}
+
+.itemSurface:disabled {
+    cursor: not-allowed;
+}
+
+.itemSurface:active {
+    cursor: grabbing;
+}
+
+.itemPreview {
+    width: 100%;
+    height: 100%;
+    /* The widget renders here. `pointer-events: none` ensures any
+       interactive bits inside the widget (range tabs, chevrons) don't
+       absorb the drag-start pointerdown — the surface button owns the
+       gesture. */
+    pointer-events: none;
+    /* Let widgets paint to the edges. */
+    display: flex;
+    flex-direction: column;
+}
+
+.itemPreview > * {
+    flex: 1;
+    height: 100%;
+}
+
+/* ── Item footer (name + description + Add hint) ──────────────────── */
+.itemFoot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-m);
+    padding: var(--space-s) var(--space-l);
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border);
+}
+
+.itemMeta {
+    min-width: 0;
+}
+
+.itemName {
+    display: block;
+    font-size: var(--text-s);
+    font-weight: 500;
+    color: var(--text-bright);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.itemDescription {
+    display: block;
+    font-size: var(--text-2xs);
+    color: var(--text-subtle);
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: var(--space-4xs);
+}
+
+.addHint {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3xs);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-subtle);
+    background: var(--bg-surface-3);
+    padding: var(--space-3xs) var(--space-s);
+    border-radius: 999px;
+}
+
+/* ── Narrow viewports ─────────────────────────────────────────────── */
+@media (max-width: 760px) {
+    .head {
+        grid-template-columns: 1fr;
+        gap: var(--space-m);
+    }
+
+    .search {
+        width: 100%;
+    }
+
+    .body {
+        /* Match the dashboard's narrow-viewport horizontal padding
+           (`AdminPageLayout.module.css` uses 18px under 760px). */
+        padding: var(--space-2xl) var(--space-3xl) var(--space-4xl);
+    }
+}

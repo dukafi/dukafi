@@ -21,8 +21,8 @@ Goal: repo exists, editor builds, Ruby app boots, schema contract exported.
 - [x] Purity spec: nothing in `publisher/` references DB/File/Net
 - [x] CI (GitHub Actions): `bundle exec rake test` + `bun run build` on push
 
-**DEMO:** `foreman start` → editor UI loads at :5173/admin (API calls 501),
-storefront answers on :9292.
+**DEMO:** `./bin/dev` → editor UI loads at :5173/admin, Ruby health/API answers
+on :9292, and both processes stop together with Ctrl-C.
 
 ---
 
@@ -30,14 +30,16 @@ storefront answers on :9292.
 
 Goal: the vendored editor persists documents to SQLite through the Ruby API.
 
-- [x] Catalogue the editor's API surface: grep `instatic/src/admin` for fetch
+- [x] Catalogue the editor's API surface: grep `dukafy-editor/src/admin` for fetch
       calls; write `docs/api-contract.md` listing every endpoint + payload shape
-      the editor actually uses (cross-check against `reference/instatic-server`)
+      the editor actually uses (cross-check against `reference/instatic`)
 - [x] Auth: `POST /admin/api/auth/login`, session cookie, `GET /admin/api/auth/me`;
       bcrypt against `admins`; seed script for first admin
 - [x] Site/document endpoints: load site shell + page document, save draft
       document (validate → write `pages.document`)
 - [x] Page CRUD: list, create (with starter document), rename, delete, slug edit
+- [x] Enforce editor-compatible page slugs on the Ruby model; migrate legacy
+      underscore-prefixed Product/Collection template slugs (migration 015)
 - [x] Media endpoints: upload to `uploads/`, list, delete; store row in
       `media_assets` (variants deferred to M4)
 - [x] Trim editor features that call endpoints we won't ship in v1 (site transfer,
@@ -133,11 +135,11 @@ second; storefront shows the change; unrelated pages untouched (mtime check).
 Goal: money moves.
 
 - [x] Session cart model (cart + cart_items tables; anonymous by session id)
-- [ ] Fragment endpoints (`routes/fragments.rb`): cart badge, cart drawer,
-      add/remove/update-qty — all HTMX swaps, no full page loads
+- [~] Fragment endpoints (`routes/fragments.rb`): cart badge and add-to-cart are
+      implemented; cart drawer and remove/update-qty remain
 - [x] `hx-trigger="revealed"` skeleton pattern for baked-page fragments
-- [ ] Stock check at add-to-cart and again at checkout (race-safe: single
-      SQLite writer + transaction)
+- [~] Stock check is implemented at add-to-cart; transactional checkout-time
+      recheck remains
 - [ ] Discount codes: percentage + fixed, validity window, usage limit
 - [ ] Checkout flow (`routes/checkout.rb`, server-rendered): address → shipping
       choice (flat/manual rates v1) → Stripe Checkout redirect
@@ -146,7 +148,8 @@ Goal: money moves.
 - [ ] Order confirmation page + email (plain SMTP via `mail` gem)
 - [ ] Orders admin screen: list, detail, status (paid → fulfilled → shipped),
       refund via Stripe API
-- [ ] Migrations: carts, cart_items, orders, order_items, addresses, discounts
+- [~] Migrations: carts/cart_items are implemented in migration 014; orders,
+      order_items, addresses, and discounts remain
 
 **DEMO:** full purchase on the demo store with a Stripe test card; order appears
 in admin; stock decremented; cart badge updated everywhere without a re-bake.

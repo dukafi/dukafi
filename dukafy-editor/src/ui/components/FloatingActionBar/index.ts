@@ -1,0 +1,2 @@
+export { FloatingActionBar } from './FloatingActionBar'
+

@@ -1,0 +1,36 @@
+/* Shared "auth screen" panel styles used by both the unauthenticated
+   pre-auth form (login / setup / MFA) and the authenticated "access
+   unavailable" notice. Pre-auth-only styles (brand row, form, field,
+   spinner) live in preauth/AdminPreAuthForm.module.css. */
+
+.page {
+    display: grid;
+    min-height: 100vh;
+    place-items: center;
+    padding: var(--space-7xl) var(--space-2xl);
+    background: var(--bg-body);
+    color: var(--text);
+    font-family: system-ui, sans-serif;
+}
+
+.panel {
+    width: min(100%, 360px);
+    padding: var(--space-5xl);
+    border-radius: 16px;
+    background: var(--bg-surface);
+}
+
+.title {
+    margin: 0 0 var(--space-3xl);
+    color: var(--text-bright);
+    font-size: var(--text-3xl);
+    font-weight: 650;
+    letter-spacing: 0;
+}
+
+.error {
+    margin: 0;
+    color: var(--danger-lighter);
+    font-size: var(--text-s);
+    line-height: 1.45;
+}

@@ -1,0 +1,262 @@
+/**
+ * OnboardingPanel — two-column layout (progress + headline | steps).
+ *
+ *   ┌──────────────────────┬───────────────────────────────────┐
+ *   │                      │  step 1 — full-width row          │
+ *   │   ┌─────┐            ├───────────────────────────────────┤
+ *   │   │  3  │            │  step 2                           │
+ *   │   │ /5  │            ├───────────────────────────────────┤
+ *   │   └─────┘            │  …                                │
+ *   │                      │                                   │
+ *   │   Finish setting     │                                   │
+ *   │   up your site       │                                   │
+ *   │                      │                                   │
+ *   │   short description  │                                   │
+ *   │                      │                                   │
+ *   │   [Dismiss]          │                                   │
+ *   └──────────────────────┴───────────────────────────────────┘
+ *
+ * Both columns paint their own `--bg-surface-2` tone; the 1px grid
+ * gap reveals the darker page surface as a hairline divider — same
+ * pattern as the dashboard widget grid.
+ *
+ * The header card spans the full height of the steps stack (CSS Grid
+ * `align-items: stretch` default). Inside, the ring + headline +
+ * description live in a `space-between` flex column with the Dismiss
+ * button anchored at the bottom.
+ *
+ * Completed steps drop to 0.55 opacity so the remaining work jumps
+ * out at a glance.
+ */
+
+.onboarding {
+    display: grid;
+    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+    gap: var(--space-px);
+    background: transparent;
+}
+
+/* ── Header column ──────────────────────────────────────────────── */
+.head {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: var(--space-6xl);
+    padding: var(--space-7xl) var(--space-6xl) var(--space-5xl);
+    background: var(--bg-surface-2);
+    border: 0;
+    border-radius: 16px;
+    /* Subtle mint wash — gives the progress card a faint "achievement"
+       tone without making it feel like a banner. */
+    background-image: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--accent-1) 6%, transparent),
+        transparent 65%
+    );
+}
+
+.headBlock {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-5xl);
+}
+
+.headTitle {
+    font-size: var(--text-5xl);
+    line-height: 1.15;
+    font-weight: 600;
+    color: var(--text-bright);
+    letter-spacing: -0.015em;
+    margin: 0;
+    max-width: 12ch;
+}
+
+.headDesc {
+    font-size: var(--text-s);
+    color: var(--text-subtle);
+    margin: 0;
+    line-height: 1.55;
+    max-width: 32ch;
+}
+
+.headActions {
+    display: flex;
+    gap: var(--space-xs);
+}
+
+/* ── Steps stack ─────────────────────────────────────────────────── */
+.steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-px);
+}
+
+.step {
+    display: grid;
+    grid-template-columns: 28px 32px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-2xl);
+    padding: var(--space-2xl) var(--space-5xl);
+    background: var(--bg-surface-2);
+    border-radius: 16px;
+    transition:
+        background 120ms ease,
+        opacity 120ms ease;
+}
+
+.step:hover {
+    background: var(--bg-surface-3);
+}
+
+/* Completed steps dim so the next-up work reads as the focus area.
+   Opacity wraps the whole row — the user can still click into a
+   completed step to revisit it; it's just visually de-emphasised. */
+.step[data-state="done"] {
+    opacity: 0.55;
+}
+
+.step[data-state="done"]:hover {
+    opacity: 0.85;
+}
+
+.stepCheck {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px dashed var(--border-muted);
+    display: grid;
+    place-items: center;
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    font-family: var(--font-mono);
+    flex-shrink: 0;
+}
+
+.step[data-state="done"] .stepCheck {
+    background: var(--success);
+    border: 0;
+    color: var(--bg-body);
+}
+
+.step[data-state="active"] .stepCheck {
+    border: 1px solid var(--text);
+    border-style: solid;
+    color: var(--text-bright);
+}
+
+.stepIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--bg-surface);
+    display: grid;
+    place-items: center;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.step[data-state="done"] .stepIcon {
+    color: var(--success);
+}
+
+.step[data-state="active"] .stepIcon {
+    color: var(--text-bright);
+}
+
+.stepBody {
+    min-width: 0;
+}
+
+.stepTitle {
+    font-size: var(--text-l);
+    font-weight: 600;
+    color: var(--text-bright);
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-m);
+    flex-wrap: wrap;
+}
+
+.stepIndex {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--text-disabled);
+    letter-spacing: 0.04em;
+    font-weight: 500;
+}
+
+.stepDesc {
+    font-size: var(--text-s);
+    color: var(--text-subtle);
+    line-height: 1.5;
+    margin-top: var(--space-3xs);
+}
+
+.stepCta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl);
+}
+
+.stepHint {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--text-disabled);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.stepHint[data-state="done"] {
+    color: var(--success);
+}
+
+/* ── Narrow screens: stack header above steps ───────────────────── */
+@media (max-width: 900px) {
+    .onboarding {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .head {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-5xl);
+        padding: var(--space-5xl) var(--space-5xl);
+    }
+
+    .headBlock {
+        flex-direction: row;
+        align-items: center;
+        gap: var(--space-4xl);
+    }
+
+    .headTitle {
+        font-size: var(--text-2xl);
+        max-width: none;
+    }
+
+    .headDesc {
+        display: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .step {
+        grid-template-columns: 28px minmax(0, 1fr);
+        row-gap: var(--space-l);
+    }
+
+    .stepIcon {
+        display: none;
+    }
+
+    .stepCta {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+    }
+}

@@ -1,0 +1,50 @@
+/* Panel — shared docked-panel shell.
+ *
+ * Owns the canonical shell for every docked editor panel:
+ *   - <aside> outer with transparent background (the host sidebar slot
+ *     supplies the actual surface paint),
+ *   - 36px PanelHeader from @admin/shared/PanelHeader,
+ *   - scrollable content area with consistent 8px padding + 10px gap.
+ *
+ * Floating-overlay panels (DomPanel / AgentPanel / PropertiesPanel) keep
+ * their own positioning shells because they manage drag, width, and
+ * z-index — but their docked variant is expected to land inside the
+ * standard sidebar slot, so they don't conflict.
+ */
+
+.panel {
+    position: relative;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+    background: transparent;
+    outline: none;
+}
+
+/* Default body — padded, scrollable, vertical stack with consistent gap.
+ * This is what every panel needs unless it has a bespoke layout (e.g. the
+ * agent's message-thread + composer split, or the DOM tree's sticky
+ * search bar above an unscrolled tree). */
+.contentPadded {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-m);
+    overflow: auto;
+    padding: var(--space-s);
+}
+
+/* Bare body — no padding, no gap, no scroll container. Use when the
+ * children own their own scroll surface or layout (e.g. a plugin's
+ * arbitrary panel component, or content explorer's split sections). */
+.contentBare {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+}

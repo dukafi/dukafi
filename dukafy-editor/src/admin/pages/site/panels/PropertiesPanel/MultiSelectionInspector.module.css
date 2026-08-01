@@ -1,0 +1,70 @@
+/*
+ * MultiSelectionInspector — body shown in the Properties panel when 2+ nodes
+ * are selected. Replaces the single-node ClassPicker + StyleSurface stack
+ * with:
+ *   - a primary action bar (Duplicate / Delete / Wrap / Copy / Cut / Paste)
+ *   - a list of the selected layers, each with a quick "remove from selection"
+ *
+ * Layer summary pills use the shared TagPill primitive. This module keeps only
+ * the row/list sizing needed by the multi-selection surface.
+ */
+
+.root {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Primary action bar — center-aligned grid of buttons inside a soft surface. */
+.actionBar {
+  padding: var(--space-xl);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+}
+
+.actionRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-xs);
+}
+
+/* Selected-layers list — scrollable, compact rows */
+.layerList {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-3xs) var(--space-xs) var(--space-l);
+  display: flex;
+  flex-direction: column;
+}
+
+.layerRow {
+  /* TreeRow already provides the row chrome (height, padding, hover). The
+     extra rule here only handles the trailing "remove" button: TreeRow's
+     primary content slot collapses to its intrinsic width and pushes the
+     button to the end via flex layout inherited from TreeRow. */
+  gap: var(--space-xs);
+}
+
+.layerListHeader {
+  padding: var(--space-3xs) var(--space-xl) var(--space-s);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-disabled);
+  font-weight: 600;
+}
+
+/* Layer summary pill layout only; shared visuals live in TagPill. */
+.tagPill {
+  flex-shrink: 0;
+}
+
+.classChip {
+  flex: 0 1 auto;
+  min-width: 0;
+}

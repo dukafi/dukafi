@@ -1,0 +1,212 @@
+.shell {
+    position: relative;
+    display: grid;
+    gap: 0;
+}
+
+/* The editable ProseMirror surface. The class is applied directly to the
+ * `contenteditable` root by Tiptap (via `editorProps.attributes.class`). */
+.proseSurface {
+    min-height: 220px;
+    color: var(--text);
+    font-size: var(--text-xl);
+    line-height: 1.65;
+    outline: none;
+}
+
+.proseSurface:focus,
+.proseSurface:focus-visible {
+    outline: none;
+    box-shadow: none;
+}
+
+/* Headings */
+
+.proseSurface :global(h2),
+.proseSurface :global(h3),
+.proseSurface :global(h4) {
+    margin: 1em 0 0.35em;
+    color: var(--text);
+    font-weight: 720;
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+}
+
+.proseSurface :global(h2) {
+    font-size: var(--text-5xl);
+}
+
+.proseSurface :global(h3) {
+    font-size: var(--text-4xl);
+}
+
+.proseSurface :global(h4) {
+    font-size: var(--text-2xl);
+}
+
+/* Paragraphs */
+
+.proseSurface :global(p) {
+    margin: 0 0 0.7em;
+}
+
+.proseSurface :global(p:last-child) {
+    margin-bottom: 0;
+}
+
+/* Inline marks */
+
+.proseSurface :global(strong) {
+    font-weight: 720;
+}
+
+.proseSurface :global(em) {
+    font-style: italic;
+}
+
+.proseSurface :global(s) {
+    text-decoration: line-through;
+}
+
+.proseSurface :global(a) {
+    color: var(--overlay);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.proseSurface :global(code) {
+    padding: var(--space-px) var(--space-2xs);
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface-3);
+    color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.92em;
+}
+
+/* Lists */
+
+.proseSurface :global(ul),
+.proseSurface :global(ol) {
+    margin: 0 0 0.7em;
+    padding-left: 1.4em;
+}
+
+.proseSurface :global(li) {
+    margin: 0.15em 0;
+}
+
+.proseSurface :global(li p) {
+    margin: 0;
+}
+
+/* Blockquote */
+
+.proseSurface :global(blockquote) {
+    margin: 0.5em 0 0.9em;
+    padding: 0.2em 0 0.2em var(--space-xl);
+    border-left: 3px solid var(--border);
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Code block */
+
+.proseSurface :global(pre) {
+    margin: 0.7em 0 0.9em;
+    padding: var(--space-xl) var(--space-2xl);
+    border-radius: var(--panel-radius);
+    background: var(--bg-surface-3);
+    color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: var(--text-m);
+    line-height: 1.55;
+    overflow-x: auto;
+    white-space: pre;
+}
+
+.proseSurface :global(pre code) {
+    padding: 0;
+    background: transparent;
+    font-size: inherit;
+}
+
+/* Horizontal rule */
+
+.proseSurface :global(hr) {
+    margin: 1.4em 0;
+    border: 0;
+    border-top: 1px solid var(--border);
+}
+
+/* Tables */
+
+.proseSurface :global(table) {
+    width: 100%;
+    margin: 0.9em 0;
+    border-collapse: collapse;
+    table-layout: fixed;
+    overflow: hidden;
+}
+
+.proseSurface :global(th),
+.proseSurface :global(td) {
+    padding: var(--space-s) var(--space-m);
+    border: 1px solid var(--border);
+    vertical-align: top;
+    text-align: left;
+}
+
+.proseSurface :global(th) {
+    background: var(--bg-surface-3);
+    font-weight: 700;
+}
+
+.proseSurface :global(table p) {
+    margin: 0;
+}
+
+/* Media node */
+
+.proseSurface :global(figure[data-instatic-media]) {
+    margin: 0.9em 0;
+    padding: 0;
+}
+
+.proseSurface :global(figure[data-instatic-media] img),
+.proseSurface :global(figure[data-instatic-media] video) {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--panel-radius);
+    background: var(--bg-surface-3);
+}
+
+.proseSurface :global(figure[data-instatic-media].ProseMirror-selectednode) {
+    outline: 2px solid var(--canvas-selection-ring);
+    outline-offset: 4px;
+    border-radius: var(--panel-radius);
+}
+
+/* Placeholder — applied by `@tiptap/extensions/Placeholder` to the empty
+ * node via a Decoration that sets `data-placeholder` and the
+ * `is-empty` class. */
+
+.proseSurface :global(.is-empty)::before {
+    content: attr(data-placeholder);
+    pointer-events: none;
+    float: left;
+    height: 0;
+    color: var(--text-subtle);
+}
+
+/* ProseMirror gapcursor + dropcursor — keep them visible. */
+
+.proseSurface :global(.ProseMirror-gapcursor) {
+    display: none;
+    pointer-events: none;
+    position: absolute;
+}
+
+.proseSurface :global(.ProseMirror-focused .ProseMirror-gapcursor) {
+    display: block;
+}

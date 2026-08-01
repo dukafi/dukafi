@@ -1,0 +1,192 @@
+/* Panel shell + scrollable content area now owned by `@admin/shared/Panel`. */
+
+.rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-px);
+}
+
+/* Row wrapper: leading checkbox/icon control + main select button. */
+.row {
+    display: grid;
+    width: 100%;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-4xs);
+}
+
+/* Main select button — fills the row, holds the two-line label + trailing aside. */
+.rowMain {
+    display: grid;
+    width: 100%;
+    min-height: 34px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-s);
+    padding: var(--space-4xs) var(--space-s);
+}
+
+/* Active selector — the rule the Properties panel is currently editing (chosen
+ * here, or the selected layer's active class). The ghost button carries no
+ * active affordance of its own, so mirror its hover surface to mark the row. */
+.rowMain[data-active="true"] {
+    background: var(--bg-surface-4);
+    color: var(--text);
+}
+
+/* Leading control: paint-bucket icon at rest, Checkbox primitive on hover /
+ * while selecting. Both occupy the same 22px slot so swapping them never
+ * shifts the row. */
+.rowCheck {
+    display: inline-flex;
+    width: 22px;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.rowCheckIcon {
+    display: inline-flex;
+}
+
+.rowCheckControl {
+    display: none;
+}
+
+/* Reveal the checkbox on hover, whenever a multi-selection is active, or when
+ * this row is itself selected. */
+.row:hover .rowCheckIcon,
+.row[data-selecting] .rowCheckIcon {
+    display: none;
+}
+
+.row:hover .rowCheckControl,
+.row[data-selecting] .rowCheckControl,
+.row[data-selected] .rowCheckControl {
+    display: inline-flex;
+}
+
+.rowText {
+    display: grid;
+    min-width: 0;
+    gap: var(--space-4xs);
+    text-align: left;
+}
+
+/* Skeleton row — mirrors `.row`'s grid so the loading state lines up exactly
+ * with the real rows it stands in for (icon · two-line text · trailing aside). */
+.skeletonRow {
+    display: grid;
+    width: 100%;
+    min-height: 34px;
+    grid-template-columns: 16px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-s);
+    padding: var(--space-4xs) var(--space-s);
+}
+
+.skeletonRowText {
+    display: grid;
+    min-width: 0;
+    gap: var(--space-3xs);
+    text-align: left;
+}
+
+/* Invisible probe at the tail of the rendered batch. When it scrolls into the
+ * panel body, the next 100 rows are revealed. */
+.sentinel {
+    width: 100%;
+    height: 1px;
+}
+
+.rowLabel {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-size: var(--text-s);
+    font-weight: 650;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rowMeta,
+.rowUsage {
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.rowUsage {
+    justify-self: end;
+}
+
+.rowAside {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: end;
+    gap: var(--space-2xs);
+}
+
+.utilityBadge {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    border: 1px solid var(--overlay-10);
+    border-radius: 999px;
+    background: var(--overlay-5);
+    color: var(--text-subtle);
+    font-size: var(--text-3xs);
+    font-weight: 750;
+    letter-spacing: 0;
+    line-height: 1;
+    padding: var(--space-4xs) var(--space-2xs);
+    text-transform: uppercase;
+}
+
+/* Sticky multi-select toolbar — pinned to the bottom of the panel with a
+ * gradient fade over the list, mirroring StyleSurface's `.searchBarRow`. The
+ * panel shell (`.panel`) is the positioned ancestor, so `position: absolute`
+ * keeps the bar fixed at the panel bottom instead of scrolling with the rows. */
+.selectionBar {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-s);
+    padding: var(--space-6xl) var(--space-l) var(--space-l);
+    background: linear-gradient(0, var(--bg-body) 55%, transparent);
+    pointer-events: none;
+}
+
+/* Re-enable interaction on the controls (the bar itself is click-through so
+ * the gradient never blocks the rows it fades over). */
+.selectionCount,
+.selectionActions {
+    pointer-events: auto;
+}
+
+.selectionCount {
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    font-weight: 650;
+    white-space: nowrap;
+}
+
+.selectionActions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3xs);
+}
+
+/* Leave room so the last rows can scroll clear of the sticky bar. */
+.rowsSelecting {
+    padding-bottom: var(--space-10xl);
+}

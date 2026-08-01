@@ -1,0 +1,1 @@
+export { ModuleIcon } from './ModuleIcon'

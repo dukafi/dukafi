@@ -1,0 +1,74 @@
+/* TemplateModeControl — floating template editing + preview-source control.
+ * Clean, minimal, text-first: no boxes around the switcher or the preview
+ * select — muted labels next to strong (bold/white) values. */
+
+.control {
+    --tpl-control-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    max-width: min(640px, calc(100vw - 48px));
+    padding: var(--space-xs) var(--space-xl);
+    pointer-events: auto;
+    border: 0;
+    border-radius: var(--tpl-control-radius);
+    background: var(--bg-body);
+    color: var(--text);
+    box-shadow: var(--canvas-chrome-shadow);
+    font-size: var(--text-s);
+}
+
+/* Muted labels ("Editing template", "Previewing") — no border, no padding. */
+.modeLabel,
+.previewLabel {
+    flex-shrink: 0;
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+    font-weight: 500;
+    user-select: none;
+}
+
+.divider {
+    width: 1px;
+    align-self: stretch;
+    margin: var(--space-4xs) 0;
+    background: var(--border);
+}
+
+.previewGroup {
+    /* Trigger width (value text + chevron), measured per selected label; a
+     * default is set here so `var()` never needs a fallback. */
+    --tpl-preview-w: 80px;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-s);
+    min-width: 0;
+}
+
+/* Preview select — borderless, sized to the selected label, with the same
+ * strong typography as the switcher so the two read consistently. */
+.previewGroup .previewSelect.previewSelect {
+    width: var(--tpl-preview-w);
+    min-width: 0;
+    min-height: 0;
+    gap: var(--space-3xs);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text);
+    font-size: var(--text-s);
+    cursor: pointer;
+}
+
+.previewGroup .previewSelect.previewSelect:hover,
+.previewGroup .previewSelect.previewSelect:focus-within,
+.previewGroup .previewSelect.previewSelect[data-open="true"] {
+    background: transparent;
+    box-shadow: none;
+}
+
+/* Hover affordance for the clickable value text: a subtle opacity shift. */
+.previewGroup .previewSelect.previewSelect:hover input {
+    opacity: 0.7;
+}

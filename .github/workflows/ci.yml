@@ -16,9 +16,9 @@ jobs:
           working-directory: dukafy
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-        working-directory: instatic
+        working-directory: dukafy-editor
       - run: bun run scripts/export-schemas.ts
-        working-directory: instatic
+        working-directory: dukafy-editor
       - uses: actions/cache@v4
         with:
           path: dukafy/vendor/tailwindcss
@@ -28,4 +28,4 @@ jobs:
       - run: bundle exec rake test
         working-directory: dukafy
       - run: bun run build
-        working-directory: instatic
+        working-directory: dukafy-editor

@@ -1,0 +1,455 @@
+/* Commerce workspace shell — identity + section-nav sidebar, matching the
+   AI workspace's layout (`AiPage.module.css`). */
+
+.workspace {
+    display: grid;
+    grid-template-columns: 184px minmax(0, 1fr);
+    gap: var(--space-7xl);
+    min-height: calc(100vh - 116px);
+}
+
+.workspaceSidebar {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.workspaceIdentity {
+    display: grid;
+    gap: var(--space-s);
+    padding: 0 0 var(--space-4xl);
+}
+
+.workspaceIdentity h1 {
+    margin: 0;
+    color: var(--text-bright);
+    font-size: var(--text-4xl);
+    line-height: 1;
+}
+
+.workspaceIdentity p {
+    color: var(--text-subtle);
+    font-size: var(--text-m);
+    line-height: 1.5;
+}
+
+.workspaceNavigation {
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.workspaceNavigationButton {
+    min-width: 0;
+}
+
+.workspaceContent {
+    min-width: 0;
+}
+
+/* Nested master-detail layout — shared shape for Products and Collections. */
+
+.settingsWorkspace {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: var(--space-7xl);
+    min-height: 100%;
+}
+
+.settingsBrowser {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-l);
+    min-width: 0;
+}
+
+.settingsBrowserHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-l);
+}
+
+.settingsBrowserHeader h2 {
+    margin: 0;
+    color: var(--text-bright);
+    font-size: var(--text-2xl);
+    line-height: 1.2;
+}
+
+.settingsBrowserError {
+    margin: 0;
+    padding: var(--space-s) var(--space-l);
+    border-radius: var(--radius);
+    background: var(--danger-10);
+    color: var(--danger-text);
+    font-size: var(--text-s);
+}
+
+.settingsList {
+    display: grid;
+    gap: var(--space-px);
+    overflow-y: auto;
+}
+
+.settingsListItem {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    height: auto;
+    min-height: 48px;
+    padding: var(--space-s);
+    gap: var(--space-m);
+    border: none;
+    border-radius: var(--card-radius);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.settingsListItem:hover {
+    background: var(--overlay-5);
+}
+
+.settingsListItem[data-active="true"] {
+    background: var(--overlay-10);
+}
+
+.settingsItemIcon {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--panel-radius);
+    background: var(--bg-surface-2);
+    color: var(--text-muted);
+}
+
+.settingsHeroIcon {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--card-radius);
+    background: var(--bg-surface-2);
+    color: var(--text-muted);
+}
+
+.settingsListIdentity {
+    display: grid;
+    gap: var(--space-4xs);
+    min-width: 0;
+}
+
+.settingsListLabel {
+    overflow: hidden;
+    color: var(--text-bright);
+    font-size: var(--text-m);
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.settingsListMeta {
+    overflow: hidden;
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.settingsDetailCanvas {
+    min-width: 0;
+}
+
+.settingsDetail {
+    display: grid;
+    gap: var(--space-5xl);
+    max-width: 860px;
+}
+
+.settingsDetailHeader {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xl);
+    padding-bottom: var(--space-4xl);
+    border-bottom: 1px solid var(--overlay-10);
+}
+
+.settingsDetailIdentity {
+    display: grid;
+    gap: var(--space-s);
+    min-width: 0;
+}
+
+.settingsDetailIdentity h2 {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--text-bright);
+    font-size: var(--text-4xl);
+    line-height: 1.1;
+}
+
+.settingsDetailIdentity p {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--text-subtle);
+    font-size: var(--text-m);
+    line-height: 1.5;
+}
+
+.detailSection {
+    display: grid;
+    gap: var(--space-3xl);
+    padding-bottom: var(--space-4xl);
+    border-bottom: 1px solid var(--overlay-10);
+}
+
+.detailSection:last-child {
+    border-bottom: 0;
+}
+
+.detailSectionHeader h3 {
+    margin: 0;
+    color: var(--text-bright);
+    font-size: var(--text-xl);
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.settingsFormRow {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-2xl);
+}
+
+.settingsFormRow > label {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    color: var(--text-muted);
+    font-size: var(--text-m);
+    font-weight: 600;
+}
+
+.settingsFormRow > div {
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.settingsDetailActions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.descriptionInput {
+    width: 100%;
+    min-height: 6rem;
+    padding: var(--space-s) var(--space-m);
+    border: 1px solid var(--overlay-10);
+    border-radius: var(--radius);
+    background: var(--bg-body);
+    color: var(--text);
+    font: inherit;
+    resize: vertical;
+}
+
+.credentialDangerZone {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-xs);
+}
+
+.credentialDangerZone p {
+    margin: 0;
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+}
+
+.detailEmpty {
+    margin: 0;
+    padding: var(--space-2xl) 0;
+    color: var(--text-subtle);
+    font-size: var(--text-m);
+}
+
+/* Variants table (Products) */
+
+.variantsTable {
+    display: grid;
+    gap: var(--space-s);
+}
+
+.actionsHeader,
+.actionsCell {
+    text-align: right;
+}
+
+.actionsCell {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-xs);
+}
+
+/* Ordered product membership (Collections) */
+
+.memberList {
+    display: grid;
+    gap: var(--space-2xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.memberRow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    padding: var(--space-xs) var(--space-s);
+    border-radius: var(--card-radius);
+    background: var(--bg-surface-2);
+}
+
+.memberRow .settingsListLabel {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Import section */
+
+.section {
+    display: grid;
+    gap: var(--space-4xl);
+}
+
+.sectionHeader h2 {
+    margin: 0;
+    color: var(--text-bright);
+    font-size: var(--text-4xl);
+    line-height: 1.1;
+}
+
+.sectionHeader p {
+    margin: var(--space-xs) 0 0;
+    color: var(--text-subtle);
+    font-size: var(--text-m);
+    line-height: 1.45;
+}
+
+.importCard {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-2xl);
+    max-width: 640px;
+}
+
+.importCard h3 {
+    margin: 0;
+    color: var(--text-bright);
+    font-size: var(--text-xl);
+    font-weight: 600;
+}
+
+.importCard p {
+    margin: var(--space-xs) 0 0;
+    color: var(--text-subtle);
+    font-size: var(--text-m);
+    line-height: 1.5;
+}
+
+.connectionResultSuccess,
+.connectionResultError {
+    margin: 0;
+    padding: var(--space-s) var(--space-l);
+    border-radius: var(--radius);
+    background: var(--success-10);
+    color: var(--success-text);
+    font-size: var(--text-s);
+}
+
+.connectionResultError {
+    background: var(--danger-10);
+    color: var(--danger-text);
+}
+
+@media (max-width: 1180px) {
+    .workspace {
+        grid-template-columns: 168px minmax(0, 1fr);
+        gap: var(--space-5xl);
+    }
+
+    .settingsWorkspace {
+        grid-template-columns: 260px minmax(0, 1fr);
+        gap: var(--space-5xl);
+    }
+}
+
+@media (max-width: 900px) {
+    .workspace {
+        grid-template-columns: 48px minmax(0, 1fr);
+        gap: var(--space-3xl);
+    }
+
+    .workspaceIdentity {
+        padding: 0 0 var(--space-3xl);
+        text-align: center;
+    }
+
+    .workspaceIdentity p,
+    .workspaceNavigationButton span {
+        display: none;
+    }
+
+    .workspaceNavigationButton {
+        justify-content: center;
+        width: 32px;
+        padding: 0;
+    }
+}
+
+@media (max-width: 760px) {
+    .workspace {
+        grid-template-columns: 1fr;
+        min-height: 0;
+    }
+
+    .workspaceSidebar {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        gap: var(--space-2xl);
+        padding-bottom: var(--space-3xl);
+    }
+
+    .workspaceNavigation {
+        display: flex;
+        justify-content: flex-end;
+        overflow-x: auto;
+    }
+
+    .workspaceNavigationButton {
+        width: 32px;
+    }
+
+    .settingsWorkspace {
+        grid-template-columns: 1fr;
+    }
+
+    .settingsBrowser {
+        padding-bottom: var(--space-5xl);
+    }
+
+    .settingsFormRow {
+        grid-template-columns: 1fr;
+    }
+
+    .settingsDetailHeader {
+        align-items: flex-start;
+    }
+}

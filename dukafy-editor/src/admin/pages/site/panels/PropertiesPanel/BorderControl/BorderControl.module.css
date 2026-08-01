@@ -1,0 +1,238 @@
+/*
+ * BorderControl — visual per-side border editor + radius corner editor.
+ *
+ * Two stacked groups (Sides, Radius) each pairing a clickable visual picker
+ * with the value inputs, plus a trailing Outline pair. The pickers echo the
+ * SpacingBoxControl visual language (achromatic box, accent highlight on the
+ * active edge) but are simpler — borders only need edge/corner selection, not
+ * the full box-model diagram.
+ */
+
+.root {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    width: 100%;
+}
+
+/* ── Group (Sides / Radius) ──────────────────────────────────────────────── */
+
+.group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-s);
+}
+
+.groupHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 18px;
+}
+
+.groupTitle {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 620;
+}
+
+.groupActions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4xs);
+}
+
+.borderBody,
+.radiusBody {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-xl);
+}
+
+.fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    flex: 1;
+    min-width: 0;
+}
+
+/* ── Field row (label + control) ─────────────────────────────────────────── */
+
+.fieldRow {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    align-items: center;
+    gap: var(--space-xs);
+    min-height: 28px;
+}
+
+.fieldLabel {
+    color: var(--text-disabled);
+    font-size: var(--text-xs);
+    font-weight: 600;
+}
+
+.fieldControl {
+    min-width: 0;
+}
+
+/* ── Side picker (4 clickable edges) ─────────────────────────────────────── */
+
+.sidePicker {
+    flex: 0 0 auto;
+}
+
+.sideBox {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    border-radius: var(--radius);
+    background: var(--bg-surface);
+}
+
+.sideBoxCore {
+    position: absolute;
+    inset: 18px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface-2);
+    pointer-events: none;
+}
+
+.sideEdge {
+    position: absolute;
+    border: none;
+    padding: 0;
+    margin: 0;
+    background: var(--overlay-20);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+}
+
+.sideEdge:hover {
+    background: var(--overlay-30);
+}
+
+.sideEdgeSet {
+    background: var(--text-subtle);
+}
+
+.sideEdgeActive {
+    background: var(--overlay);
+}
+
+.sideEdgeActive:hover {
+    background: var(--text-muted);
+}
+
+/* Edge geometry — each edge is a thin bar inset from the box corners. */
+.sideTop {
+    top: 6px;
+    left: 14px;
+    right: 14px;
+    height: 6px;
+}
+
+.sideBottom {
+    bottom: 6px;
+    left: 14px;
+    right: 14px;
+    height: 6px;
+}
+
+.sideLeft {
+    left: 6px;
+    top: 14px;
+    bottom: 14px;
+    width: 6px;
+}
+
+.sideRight {
+    right: 6px;
+    top: 14px;
+    bottom: 14px;
+    width: 6px;
+}
+
+/* ── Corner picker (4 clickable dots) ────────────────────────────────────── */
+
+.cornerPicker {
+    flex: 0 0 auto;
+}
+
+.cornerBox {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    border-radius: var(--radius);
+    background: var(--bg-surface);
+}
+
+.cornerDot {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--overlay-20);
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    transition: border-color 120ms ease;
+}
+
+.cornerDot:hover {
+    border-color: var(--overlay-30);
+}
+
+.cornerDotActive {
+    border-color: var(--overlay);
+}
+
+.cornerDotActive:hover {
+    border-color: var(--text-muted);
+}
+
+/* Each dot sits at its corner and rounds the OUTER corner so the curve
+ * direction reads which corner it controls. */
+.cornerTopLeft {
+    top: 10px;
+    left: 10px;
+    border-right: none;
+    border-bottom: none;
+    border-top-left-radius: 8px;
+}
+
+.cornerTopRight {
+    top: 10px;
+    right: 10px;
+    border-left: none;
+    border-bottom: none;
+    border-top-right-radius: 8px;
+}
+
+.cornerBottomRight {
+    bottom: 10px;
+    right: 10px;
+    border-left: none;
+    border-top: none;
+    border-bottom-right-radius: 8px;
+}
+
+.cornerBottomLeft {
+    bottom: 10px;
+    left: 10px;
+    border-right: none;
+    border-top: none;
+    border-bottom-left-radius: 8px;
+}
+
+/* ── Outline pair ────────────────────────────────────────────────────────── */
+
+.outlineRows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    padding-top: var(--space-s);
+    border-top: 1px solid var(--overlay-20);
+}

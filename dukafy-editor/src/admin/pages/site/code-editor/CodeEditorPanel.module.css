@@ -1,0 +1,202 @@
+/**
+ * CodeEditorPanel — floating code editor panel (Task #432).
+ *
+ * Neutral editor chrome; syntax colors live in CodeMirrorEditor.
+ * No Tailwind, no force-overrides (Constraints 402, 403).
+ * CSS vars for all colour values.
+ */
+
+/* ── Floating panel outer shell ───────────────────────────────────────────── */
+.panel {
+  position: fixed;
+  /* Position driven by --panel-x / --panel-y CSS vars (useDraggablePanel) */
+  --code-editor-panel-width: min(800px, calc(100vw - 16px));
+  --code-editor-panel-height: min(500px, calc(100vh - 96px));
+  --panel-x: calc(50vw - 400px);
+  --panel-y: 80px;
+  left: max(8px, min(var(--panel-x), calc(100vw - var(--code-editor-panel-width) - 8px)));
+  top: max(48px, min(var(--panel-y), calc(100vh - var(--code-editor-panel-height) - 8px)));
+  /* Above the docked sidebars (z-index 85) — the code editor is a focused,
+     draggable surface that must float over the Explorer panel / rail, not
+     behind them. */
+  z-index: 95;
+  width: var(--code-editor-panel-width);
+  height: var(--code-editor-panel-height);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  backdrop-filter: blur(var(--panel-blur));
+  border: 1px solid var(--overlay-10);
+  border-radius: 12px;
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+  outline: none;
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Always-mounted pattern: display:none hides without unmounting
+   (useDraggablePanel position is preserved across open/close) */
+.panelHidden {
+  display: none;
+}
+
+/* ── Inner panel shell (fills the float container) ───────────────────────── */
+.inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ── Editor body (flex:1, holds CodeMirror or preview) ───────────────────── */
+.editorBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.editorWorkspace {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.editorSurface {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 760px) {
+  .editorWorkspace {
+    flex-direction: column;
+  }
+}
+
+/* ── Loading skeleton (CodeMirror lazy chunk) ────────────────────────────── */
+/* Mimics the editor's gutter + code-line layout so the panel doesn't pop
+   from "blank" → "code" when the lazy chunk resolves. Achromatic shimmer. */
+.loadingSkeleton {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  background: var(--bg-surface);
+  overflow: hidden;
+  /* Slight delay before the skeleton becomes visible — avoids a flash of
+     skeleton on cache hits where the chunk is already loaded and resolves
+     within a frame or two. */
+  animation: instaticCodeEditorSkeletonReveal 120ms ease-out 80ms both;
+}
+
+.loadingGutter {
+  width: 36px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-muted);
+  padding: var(--space-l) var(--space-xs);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  align-items: flex-end;
+}
+
+.loadingGutterLine {
+  width: 14px;
+  height: 8px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface-2) 0%,
+    var(--bg-surface-3) 50%,
+    var(--bg-surface-2) 100%
+  );
+  background-size: 240% 100%;
+  animation: instaticCodeEditorSkeletonShimmer 1400ms ease-in-out infinite;
+}
+
+.loadingLines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-l) var(--space-xl);
+  min-width: 0;
+}
+
+.loadingLine {
+  --skeleton-line-width: 100%;
+  width: var(--skeleton-line-width);
+  height: 8px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface-2) 0%,
+    var(--bg-surface-3) 50%,
+    var(--bg-surface-2) 100%
+  );
+  background-size: 240% 100%;
+  animation: instaticCodeEditorSkeletonShimmer 1400ms ease-in-out infinite;
+}
+
+@keyframes instaticCodeEditorSkeletonShimmer {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+
+@keyframes instaticCodeEditorSkeletonReveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loadingSkeleton,
+  .loadingGutterLine,
+  .loadingLine {
+    animation: none;
+  }
+}
+
+.loadingSrOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: calc(var(--space-px) * -1);
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── CodeMirror container fill ───────────────────────────────────────────── */
+/* Applied via data-codemirror-container attribute on the container div.
+   Fills the editorBody flex container so CM6 takes up all available space. */
+.editorBody [data-codemirror-container] {
+  height: 100%;
+}
+
+/* CodeMirror overrides — ensure the editor fills its container.
+   `:global(.cm-editor)` reaches into the runtime CodeMirror tree (CM6 stamps
+   that class on the editor root); fallow's CSS-modules parser doesn't know
+   about `:global()` and would otherwise flag `cm-editor` as an unused class
+   export. The matching ignoreExports rule in `.fallowrc.jsonc` keeps that
+   silent. */
+.editorBody :global(.cm-editor) {
+  height: 100%;
+  overflow: auto;
+}

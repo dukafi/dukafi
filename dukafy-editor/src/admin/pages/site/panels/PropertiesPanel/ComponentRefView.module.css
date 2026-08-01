@@ -1,0 +1,61 @@
+/**
+ * ComponentRefView — PropertiesPanel view for base.visual-component-ref instances.
+ *
+ * Architecture source: Contribution #619 §8.5
+ * Achromatic palette (Guideline #376). CSS Modules only (Constraint #402/#403).
+ *
+ * Row-level styles (.paramRow, .paramRowOverridden, .paramName, .paramField,
+ * .overridePill, .paramSwitch) have moved into ParamRow.module.css.
+ */
+
+/* ── Header strip ────────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-s) var(--space-l);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface-3);
+}
+
+.headerIcon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.headerName {
+  flex: 1;
+  font-size: var(--text-s);
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── No params placeholder ───────────────────────────────────────────────── */
+
+.noParams {
+  padding: var(--space-4xl) var(--space-l);
+  font-size: var(--text-xs);
+  color: var(--text-disabled);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ── Unknown VC placeholder ──────────────────────────────────────────────── */
+
+.unknownVC {
+  padding: var(--space-2xl) var(--space-l);
+  font-size: var(--text-xs);
+  color: var(--danger-light);
+  text-align: center;
+}
+
+/* ── Param rows list ─────────────────────────────────────────────────────── */
+
+.paramsList {
+  overflow-y: auto;
+  flex: 1;
+}

@@ -1,0 +1,243 @@
+.pluginCard {
+    display: grid;
+    gap: var(--space-l);
+    padding: var(--space-xl);
+    border-radius: 16px;
+    background: var(--bg-surface-2);
+    transition: background 0.3s;
+}
+
+.pluginCard:hover {
+    background: var(--bg-surface-3);
+}
+
+/* Card header — base info on the left, action buttons on the right.
+   The body below sits at the card's full width. */
+.pluginHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2xl);
+    flex-wrap: wrap;
+}
+
+.pluginHeaderInfo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-m);
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.pluginHeaderTitle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.pluginBody {
+    display: grid;
+    gap: var(--space-s);
+    min-width: 0;
+}
+
+.pluginBody p,
+.pluginBody small {
+    margin: 0;
+    font-size: var(--text-s);
+    line-height: 1.5;
+}
+
+.pluginIcon {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: var(--bg-surface);
+    border: 1px solid var(--overlay-10);
+}
+
+.pluginHeaderTitle h2 {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: var(--text-xl);
+    line-height: 1.25;
+    letter-spacing: 0;
+}
+
+/* Single row that combines license + homepage/source + admin page links
+   on the left with the author byline on the right. The links cluster
+   stays compact so the card reads as a tidy list of related items;
+   author goes right because it's metadata about the plugin's origin,
+   not something the user clicks to act on. */
+.pluginLinksRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-m);
+    font-size: var(--text-s);
+    color: var(--text-subtle);
+}
+
+.pluginLinksLeft {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-m);
+    min-width: 0;
+}
+
+.pluginAttributionItem {
+    color: var(--text-subtle);
+    text-decoration: none;
+}
+
+.pluginAttributionItem a,
+a.pluginAttributionItem {
+    color: var(--text);
+    text-decoration: none;
+}
+
+.pluginAttributionItem a:hover,
+a.pluginAttributionItem:hover {
+    color: var(--overlay);
+}
+
+.pluginPageLink {
+    color: var(--overlay);
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.pluginPageLink:hover {
+    color: var(--text);
+}
+
+.pluginAuthor {
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+}
+
+.pluginAuthor a {
+    color: var(--text);
+    text-decoration: none;
+}
+
+.pluginAuthor a:hover {
+    color: var(--overlay);
+}
+
+.pluginLicenseBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-4xs) var(--space-s);
+    border: 1px solid var(--overlay-10);
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: var(--text-xs);
+    color: var(--text);
+    background: var(--bg-surface);
+}
+
+/* Pill chrome shared by every pill element next to the plugin name
+ * (status, version, future pills). Was previously a bare
+ * `.pluginHeaderTitle span` selector — that caught loading skeleton
+ * placeholders too and gave them the pill border + padding, which read
+ * as weird "double-pill" outlines during loading. Anchoring on the
+ * explicit pill classes leaves the loading-state skeletons untouched. */
+.pluginHeaderTitle :is(.pluginStatusPill, .pluginVersionPill) {
+    padding: var(--space-4xs) var(--space-s);
+    border: 1px solid var(--overlay-10);
+    border-radius: 999px;
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    font-weight: 750;
+}
+
+.pluginHeaderTitle .pluginStatusPill[data-status="active"] {
+    color: var(--success);
+}
+
+.pluginHeaderTitle .pluginStatusPill[data-status="error"] {
+    color: var(--danger);
+}
+
+.pluginHeaderTitle .pluginStatusPill[data-status="installed"] {
+    color: var(--overlay);
+}
+
+/* Version pill — sits between the heading and the status badge so the
+   reader's eye gets "Plugin Name · v1.2.3 · Active" in one line. Inherits
+   the generic header-pill chrome (border, radius, muted text). Mono font
+   so version numbers align neatly when comparing two cards at a glance. */
+.pluginHeaderTitle .pluginVersionPill {
+    font-family: var(--font-mono);
+    font-weight: 600;
+}
+
+.pluginBody p {
+    color: var(--text-subtle);
+}
+
+.pluginBody .pluginError {
+    color: var(--danger);
+    font-weight: 700;
+}
+
+.pluginCrashLog {
+    margin-top: var(--space-3xs);
+    font-size: var(--text-xs);
+    color: var(--text-subtle);
+}
+
+.pluginCrashLog summary {
+    cursor: pointer;
+    color: var(--danger);
+    font-weight: 700;
+}
+
+.pluginCrashLog ul {
+    list-style: none;
+    margin: var(--space-xs) 0 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+}
+
+.pluginCrashLog li {
+    line-height: 1.4;
+}
+
+.pluginCrashLog time {
+    font-family: var(--font-mono);
+    color: var(--text);
+}
+
+.pluginActions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: var(--space-s);
+    flex-shrink: 0;
+}
+
+@media (max-width: 720px) {
+    .pluginHeader {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .pluginActions {
+        justify-content: flex-start;
+    }
+}
+
+/* The skeleton body is rendered via the shared `<SkeletonBlock>`
+ * primitive — see `src/ui/components/Skeleton/`. No per-card skeleton
+ * CSS lives here. */

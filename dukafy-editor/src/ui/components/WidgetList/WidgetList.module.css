@@ -1,0 +1,54 @@
+/**
+ * WidgetList — shared list-row chrome for dashboard widget bodies. Used
+ * by first-party widgets (Top pages, Publish queue, Activity feed) AND
+ * plugin-registered widgets composed via `@instatic/host-ui`.
+ *
+ * The list anchors to the bottom of the widget body (margin-top: auto)
+ * so a single-line header sits at the top and rows fill the remaining
+ * height — same pattern the host's Sparkline-based widgets use.
+ */
+
+.list {
+    list-style: none;
+    display: grid;
+    gap: 0;
+    margin: 0;
+    margin-top: auto;
+    padding: 0;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-m);
+    padding: var(--space-m) 0;
+    border-top: 1px solid var(--border);
+    font-size: var(--text-m);
+    color: var(--text);
+}
+
+.row:first-child {
+    border-top: 0;
+}
+
+.primary {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-disabled);
+}
+
+.meta {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-subtle);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-s);
+}

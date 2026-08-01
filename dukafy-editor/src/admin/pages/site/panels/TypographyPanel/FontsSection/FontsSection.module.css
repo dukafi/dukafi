@@ -1,0 +1,572 @@
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-s);
+}
+
+.list {
+    display: grid;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    gap: var(--space-px);
+    border-radius: var(--card-radius);
+    overflow: hidden;
+}
+
+.assetList {
+    display: grid;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    gap: var(--space-px);
+    border-radius: var(--card-radius);
+    overflow: hidden;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-l);
+    border-radius: var(--card-radius);
+    background: var(--bg-surface-2);
+    color: var(--text);
+    min-width: 0;
+    transition: background-color 120ms ease;
+}
+
+.row:hover,
+.row:focus-within {
+    background: var(--bg-surface-3);
+}
+
+.rowMain {
+    display: grid;
+    grid-template-rows: auto auto;
+    gap: var(--space-4xs);
+    min-width: 0;
+}
+
+.rowFamily {
+    color: var(--text);
+    font-size: var(--text-xl);
+    font-weight: 600;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rowMeta {
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rowActions {
+    display: flex;
+    align-items: center;
+}
+
+.tokenToolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-m);
+    min-width: 0;
+}
+
+.tokenToolbarTitle {
+    min-width: 0;
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.errorAlert {
+    margin: 0;
+    color: var(--danger);
+    font-size: var(--text-xs);
+    line-height: 1.4;
+}
+
+/* ─── Add-Font dialog ────────────────────────────────────────────────── */
+
+.dialogBody {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-l);
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.tokenDialogBody {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-l);
+    overflow-y: auto;
+}
+
+.tokenField {
+    display: grid;
+    gap: var(--space-xs);
+    min-width: 0;
+}
+
+.tokenFieldLabel {
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+    font-weight: 700;
+}
+
+.tokenNotice {
+    margin: 0;
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    line-height: 1.4;
+}
+
+/* Live download-size hint anchored to the left of the dialog actions row.
+ * The `margin-inline-end: auto` shoves the Back / Install buttons flush right
+ * while the hint sits next to the dialog's left padding. */
+.estimateHint,
+.estimateHintError {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-inline-end: auto;
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    line-height: 1.2;
+    min-width: 0;
+}
+
+.estimateHintError {
+    color: var(--danger);
+}
+
+.estimateValue {
+    color: var(--text);
+    font-size: var(--text-s);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.estimateMeta {
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+}
+
+/* ─── Family picker ──────────────────────────────────────────────────── */
+
+.pickerSearch {
+    flex-shrink: 0;
+}
+
+/* 2-column responsive grid of font tiles. Each tile renders the family name
+ * large in its own font; meta (category + variants count) sits below in
+ * muted text. The whole grid scrolls inside the dialog body — never the
+ * dialog itself, so the search bar and dialog actions stay anchored. */
+.pickerList {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    list-style: none;
+    margin: 0;
+    gap: var(--space-px);
+    border-radius: var(--card-radius);
+    background: var(--bg-surface);
+    overflow-y: auto;
+}
+
+@media (max-width: 520px) {
+    .pickerList {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.pickerItem {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: var(--space-m);
+    min-height: 96px;
+    padding: var(--space-xl) var(--space-2xl);
+    border-radius: var(--card-radius);
+    border: 0;
+    background: var(--bg-surface-2);
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    overflow: hidden;
+    min-width: 0;
+    transition:
+        background-color 120ms ease,
+        transform 120ms ease;
+}
+
+.pickerItem:hover,
+.pickerItem:focus-visible {
+    background: var(--bg-surface-3);
+    outline: none;
+}
+
+.pickerItem:active {
+    background: var(--bg-surface-4);
+}
+
+.pickerItem:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.pickerName {
+    font-size: var(--text-5xl);
+    font-weight: 500;
+    line-height: 1.1;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pickerMeta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-s);
+    min-width: 0;
+}
+
+.pickerCategory {
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.pickerInstalled {
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.pickerEmpty {
+    grid-column: 1 / -1;
+    padding: var(--space-7xl) var(--space-3xl);
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+    text-align: center;
+}
+
+.pickerInfo {
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+}
+
+/* ─── Variants + subsets picker (step 2) ─────────────────────────────── */
+
+/* Hero preview — large family render that takes the top of the dialog body.
+ * Doubles as a typing playground via contenteditable; the user can rewrite
+ * the sample text and the live render updates instantly. */
+.preview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-s);
+    padding: var(--space-3xl) var(--space-4xl) var(--space-4xl);
+    border-radius: var(--card-radius);
+    background: var(--bg-surface-2);
+    min-width: 0;
+}
+
+.previewMeta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-l);
+}
+
+.previewFamilyName {
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.previewCategory {
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.previewSample {
+    color: var(--text);
+    font-size: var(--text-6xl);
+    line-height: 1.15;
+    margin: 0;
+    word-break: break-word;
+    /* contenteditable surface — must accept clicks/typing without an outline
+     * border to keep the preview chrome calm. Browser still gives keyboard
+     * focus indication via the parent's :focus-within if needed. */
+    outline: none;
+    cursor: text;
+    min-height: 1.15em;
+}
+
+.previewSample:focus-visible {
+    outline: none;
+}
+
+.dialogSection {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-m);
+}
+
+.dialogSectionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-l);
+}
+
+.dialogSectionTitle {
+    color: var(--text-subtle);
+    font-size: var(--text-l);
+    font-weight: 700;
+    margin: 0;
+}
+
+.dialogSectionSelectAll {
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+}
+
+.dialogSectionSelectAll:hover,
+.dialogSectionSelectAll:focus-visible {
+    color: var(--text);
+    outline: none;
+    text-decoration: underline;
+}
+
+/* Variant rows — one row per weight/italic combo, each labelled with the
+ * weight name (Regular 400, Bold 700, etc.) AND a sample word rendered in
+ * the actual weight/style so the user can compare at a glance. */
+.variantList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--space-px);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.variantRow {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-m);
+    padding: var(--space-s) var(--space-l);
+    border-radius: var(--card-radius);
+    background: var(--bg-surface-2);
+    border: 0;
+    color: var(--text);
+    cursor: pointer;
+    line-height: 1.2;
+    min-width: 0;
+}
+
+.variantRow:hover {
+    background: var(--bg-surface-3);
+}
+
+.variantRow[data-checked="true"] {
+    background: var(--bg-surface-4);
+}
+
+.variantSample {
+    font-size: var(--text-2xl);
+    line-height: 1.1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.variantWeightLabel {
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    font-variant-numeric: tabular-nums;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+}
+
+/* Subset chips — compact pill toggles. Subset list is short (1-15 entries)
+ * so a wrap row reads better than a checkbox column. */
+.subsetChips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.subsetChip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-3xs) var(--space-m);
+    border-radius: var(--radius);
+    border: 0;
+    background: var(--bg-surface-2);
+    color: var(--text);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    line-height: 1.4;
+    transition:
+        background-color 120ms ease,
+        color 120ms ease;
+}
+
+.subsetChip:hover {
+    background: var(--bg-surface-3);
+}
+
+.subsetChip[aria-pressed="true"] {
+    background: var(--bg-surface-4);
+    color: var(--text);
+}
+
+.subsetChip:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-input-focus);
+}
+
+/* ─── Custom-font file picker ─────────────────────────────────────────── */
+
+.customFontList {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: var(--space-px);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-radius: var(--card-radius);
+    background: var(--bg-surface);
+    overflow-y: auto;
+}
+
+.customFontItem {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-l);
+    padding: var(--space-xl) var(--space-2xl);
+    border-radius: var(--card-radius);
+    border: 0;
+    background: var(--bg-surface-2);
+    color: var(--text);
+    min-width: 0;
+    transition: background-color 120ms ease;
+}
+
+.customFontItem:hover,
+.customFontItem:focus-within {
+    background: var(--bg-surface-3);
+}
+
+.customFontItem[data-checked="true"] {
+    background: var(--bg-surface-4);
+}
+
+.customPickLabel {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-l);
+    min-width: 0;
+    cursor: pointer;
+}
+
+.customFontFileText {
+    display: grid;
+    gap: var(--space-xs);
+    min-width: 0;
+}
+
+.customFontPreviewName {
+    color: var(--text);
+    font-size: var(--text-4xl);
+    font-weight: 500;
+    line-height: 1.1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.customFontMeta {
+    color: var(--text-subtle);
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.customFileControls {
+    display: grid;
+    grid-template-columns: minmax(150px, 220px) auto;
+    align-items: center;
+    gap: var(--space-m);
+    padding-inline-start: var(--space-6xl);
+    min-width: 0;
+}
+
+.customItalicToggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}

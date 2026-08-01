@@ -1,0 +1,110 @@
+/* AccountMenuButton — toolbar avatar trigger + account dropdown
+ *
+ * Achromatic to match the rest of the editor chrome (Guideline #356,
+ * achromatic-color-policy.test.ts). Tones lean on `--bg-surface-*` and
+ * `--text*` tokens — no hardcoded hex.
+ */
+
+.trigger {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg-surface-2);
+    color: var(--text);
+    font-size: var(--text-xs);
+    font-weight: 750;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    overflow: hidden;
+    transition:
+        background-color 120ms ease,
+        border-color 120ms ease;
+}
+
+/* The avatar nested inside the trigger already paints its own circle. Hide
+ * the inner ring so we don't end up with a double border, and let the
+ * button's own background show through behind the identicon. */
+.triggerAvatar {
+    border: none;
+    background: transparent;
+}
+
+.trigger:hover {
+    background: var(--bg-surface-3);
+}
+
+.trigger[data-active="true"] {
+    background: var(--bg-surface-3);
+    border-color: var(--border);
+}
+
+.trigger:focus-visible {
+    box-shadow: var(--focus-ring);
+}
+
+/* ── Dropdown header (display name + email + role badge) ─────────────────── */
+.header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4xs);
+    padding: var(--space-s) var(--space-m) var(--space-xs);
+    pointer-events: none;
+}
+
+.headerName {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.headerEmail {
+    font-size: var(--text-xs);
+    font-weight: 500;
+    color: var(--text-subtle);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.headerRoleRow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-top: var(--space-3xs);
+}
+
+.roleBadge {
+    display: inline-flex;
+    align-items: center;
+    height: 16px;
+    padding: 0 var(--space-xs);
+    border-radius: 999px;
+    background: var(--bg-surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+/* ── Status (busy / error) ────────────────────────────────────────────────── */
+.status {
+    padding: var(--space-3xs) var(--space-m) var(--space-s);
+    font-size: var(--text-2xs);
+    line-height: 1.4;
+    color: var(--text-subtle);
+}
+
+.statusError {
+    color: var(--danger-light);
+}

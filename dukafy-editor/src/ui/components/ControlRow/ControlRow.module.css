@@ -1,0 +1,68 @@
+/* ControlRow — shared row layout for property/inspector controls. */
+
+/* ── Control row wrapper ─────────────────────────────────────────────────── */
+.controlWrapper {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: var(--space-3xs);
+    width: 100%;
+    min-height: 28px;
+}
+
+/*
+ * Stacked layout — label sits on its own line above a full-width control.
+ * Used for media/image/textarea/richtext by default and for any property
+ * declared with `layout: 'stacked'` in its module schema.
+ */
+.controlWrapperStacked {
+    grid-template-columns: 1fr;
+    gap: var(--space-xs);
+}
+
+/*
+ * No-label variant — when the caller passes `label=""` to suppress the label
+ * row entirely (e.g. a child control mounted under an already-labelled
+ * parent). The control fills the wrapper's full width.
+ */
+.controlWrapperNoLabel {
+    grid-template-columns: 1fr;
+    gap: 0;
+}
+
+.controlWrapperDisabled {
+    opacity: 0.5;
+}
+
+/* ── Label row ───────────────────────────────────────────────────────────── */
+.labelRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-s);
+    min-height: 16px;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 620;
+}
+
+.labelOverride {
+    color: var(--overlay-80);
+}
+
+.labelUnit {
+    color: var(--text-disabled);
+    font-size: var(--text-2xs);
+}
+
+.labelError {
+    color: var(--danger-light);
+    font-size: var(--text-2xs);
+}
+
+/* ── Description (sub-label caption) ─────────────────────────────────────── */
+.description {
+    grid-column: 1 / -1;
+    font-size: var(--text-xs);
+    color: var(--text-disabled);
+    line-height: 1.3;
+}

@@ -1,7 +1,7 @@
 # Dukafy editor API contract
 
 The vendored editor uses `/admin/api/cms` as its API root. Shapes were checked
-against `instatic/src/core/persistence/` and `reference/instatic-server/handlers/cms/`.
+against `dukafy-editor/src/core/persistence/` and `reference/instatic/server/handlers/cms/`.
 
 ## Authentication and bootstrap
 
@@ -13,6 +13,9 @@ against `instatic/src/core/persistence/` and `reference/instatic-server/handlers
 | POST | `/login` | `{email, password}` | `{ok:true, mfaRequired:false}` plus session cookie |
 | POST | `/logout` | — | `{ok:true}` |
 | GET | `/me` | — | `{user, role, capabilities}` |
+| GET | `/me/preferences/:key` | — | `{value}` |
+| PUT | `/me/preferences/:key` | `{value}` | `{value}` |
+| DELETE | `/me/preferences/:key` | — | `{value:null}` |
 
 Compatibility aliases also exist at `/admin/api/auth/login` and
 `/admin/api/auth/me`. MFA, device/session management, and account-security
@@ -30,10 +33,18 @@ mutations are not exposed in the M1 UI.
 | POST | `/pages` | Page document | `201 {row}` |
 | PATCH | `/pages/:id` | `{title?, slug?}` | `{row}` |
 | DELETE | `/pages/:id` | — | `204` |
+| GET | `/publish/status` | — | draft/live state and timestamps |
+| POST | `/publish` | — | `{publishedPages}` |
+| POST | `/tailwind/compile` | `{classes: string[]}` | `{css}` |
 
-The editor loads the four GET endpoints in parallel. Pages are translated
+The editor loads the four document GET endpoints in parallel. Pages are translated
 between Dukafy's `pages.document` JSON and Instatic's page `DataRow` wire
 shape. `PUT /site-document` is atomic and is the primary canvas save path.
+
+Page slugs must match lowercase alphanumeric/hyphenated segments with optional
+single slashes. The server validates this contract as well as the page JSON
+schema. Built-in Product and Collection templates are created lazily by the
+pages/publish flows and use valid slugs without leading underscores.
 
 ## Media
 
@@ -46,6 +57,9 @@ shape. `PUT /site-document` is atomic and is the primary canvas save path.
 
 Folder mutation, soft-delete/restore, binary replacement, and storage-adapter
 screens are deferred and their entry points are not part of the M1 navigation.
+Raster upload responses include width, height, and generated WebP variant
+metadata. Processing failures return 503 when libvips is unavailable or 422 for
+an invalid image. Deletion removes both the original and managed variants.
 
 ## Commerce workspace
 
@@ -63,6 +77,25 @@ screens are deferred and their entry points are not part of the M1 navigation.
 These endpoints require the authenticated CMS session. Storefront routes never
 serve commerce administration HTML.
 
+Product create/update and variant mutations may include or trigger a dependency-
+aware partial rebake. Product reads accept either a numeric id or an active
+product slug; writes use numeric ids.
+
+## Public storefront fragments
+
+These routes are outside the CMS API and use the anonymous cart session:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/fragments/stock` | Live aggregate or selected-variant stock badge |
+| GET | `/fragments/cart/badge` | Live cart count link |
+| POST | `/fragments/cart/items` | Add a positive quantity of an active product variant |
+
+The add endpoint returns HTML, checks requested quantity against current stock,
+and emits `HX-Trigger: dukafy:cart-updated` on success. Cart drawer, remove, and
+quantity-update endpoints are not implemented yet. `/checkout` currently
+returns 501.
+
 ## Errors
 
 Every Ruby API failure uses:
@@ -72,4 +105,5 @@ Every Ruby API failure uses:
 ```
 
 Authentication failures return 401, missing resources 404, conflicts 409, and
-invalid payloads 422.
+invalid payloads 422. API clients should use the envelope rather than parsing
+Ruby exception text.

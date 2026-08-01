@@ -1,0 +1,116 @@
+/* AdminPageLayout — styles for the lightweight admin-page shell.
+ *
+ * Used by Plugins, Users, Account, and plugin admin pages. Companion to the
+ * canvas layouts — see the layouts/ index for the picking guide. This file
+ * just lays out toolbar + a scrollable, centered page body with a unified
+ * header; the canvas chrome lives outside this module.
+ */
+
+.shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--bg-body);
+    color: var(--text);
+}
+
+.body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: var(--space-10xl) var(--space-6xl) var(--space-9xl);
+    user-select: text;
+    background: var(--bg-surface);
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+}
+
+.body[data-page-mode="workspace"] {
+    padding: var(--space-5xl) var(--space-6xl) var(--space-7xl);
+}
+
+.container {
+    display: grid;
+    gap: var(--space-6xl);
+    width: min(1220px, 100%);
+    margin: 0 auto;
+}
+
+.container[data-page-mode="workspace"] {
+    display: block;
+    width: 100%;
+    min-height: 100%;
+}
+
+.header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: var(--space-3xl);
+    padding-bottom: var(--space-5xl);
+    border-bottom: 1px solid var(--overlay-10);
+}
+
+.titleGroup {
+    display: grid;
+    gap: var(--space-xs);
+    min-width: 0;
+}
+
+.titleGroup h1 {
+    margin: 0;
+    color: var(--text-bright);
+    font-size: var(--text-7xl);
+    line-height: 1.05;
+    letter-spacing: 0;
+}
+
+.titleGroup p {
+    margin: 0;
+    color: var(--text-subtle);
+    font-size: var(--text-xl);
+    line-height: 1.45;
+}
+
+.headerEnd {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-l);
+}
+
+.tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-s);
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-s);
+}
+
+@media (max-width: 760px) {
+    .body {
+        padding: var(--space-10xl) var(--space-3xl) var(--space-7xl);
+    }
+
+    .body[data-page-mode="workspace"] {
+        padding: var(--space-2xl);
+    }
+
+    .header {
+        grid-template-columns: 1fr;
+        align-items: start;
+    }
+
+    .headerEnd {
+        justify-content: flex-start;
+    }
+}
+
+/* The page body's skeleton is rendered via the shared
+ * `<SkeletonBlock>` primitive — see `src/ui/components/Skeleton/`. */

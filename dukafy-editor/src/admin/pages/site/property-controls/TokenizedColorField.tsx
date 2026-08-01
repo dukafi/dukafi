@@ -1,0 +1,230 @@
+import { useState, type CSSProperties, type ChangeEvent, type FocusEvent, type KeyboardEvent } from 'react'
+import { generateFrameworkColorVariableSets } from '@core/framework'
+import { useEditorStore } from '@site/store/store'
+import { ColorInput } from '@ui/components/ColorInput'
+import { Input } from '@ui/components/Input'
+import { cn } from '@ui/cn'
+import styles from './controls.module.css'
+
+type ColorVariable = ReturnType<typeof generateFrameworkColorVariableSets>['light'][number]
+type TokenSwatchStyle = CSSProperties & { '--color-token-option-value'?: string }
+
+interface TokenizedColorFieldProps {
+  id?: string
+  value: string
+  disabled?: boolean
+  inputLabel: string
+  swatchLabel: string
+  placeholder?: string
+  excludeTokenId?: string
+  monospace?: boolean
+  fieldSize?: 'xs' | 'sm' | 'md'
+  onTextChange: (value: string) => void
+  onTextBlur: () => void
+  onSwatchChange: (value: string) => void
+  onTokenSelect: (value: string) => void
+  /**
+   * Optional hover-preview hooks. When provided, hovering a colour-token
+   * option fires `onTokenPreview` with its `var(--…)` reference; leaving the
+   * row / closing the menu fires `onTokenPreviewClear`. The caller
+   * (ColorControl) only passes these when the `hoverPreview` preference is on,
+   * so this field stays preview-agnostic.
+   */
+  onTokenPreview?: (value: string) => void
+  onTokenPreviewClear?: () => void
+}
+
+export function TokenizedColorField({
+  id,
+  value,
+  disabled = false,
+  inputLabel,
+  swatchLabel,
+  placeholder,
+  excludeTokenId,
+  monospace = false,
+  fieldSize = 'sm',
+  onTextChange,
+  onTextBlur,
+  onSwatchChange,
+  onTokenSelect,
+  onTokenPreview,
+  onTokenPreviewClear,
+}: TokenizedColorFieldProps) {
+  const colorSettings = useEditorStore((state) => state.site?.settings.framework?.colors)
+  const [open, setOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const variables = generateFrameworkColorVariableSets(colorSettings).light
+    .filter((variable) => variable.tokenId !== excludeTokenId)
+  const filteredVariables = computeFilteredVariables(value, variables)
+  const swatchValue = resolveTokenReferenceValue(value, variables) ?? value
+  const menuId = id ? `${id}-token-menu` : undefined
+  const showMenu = open && !disabled && filteredVariables.length > 0
+
+  // Reset the keyboard-highlight to the first option whenever `value` (and
+  // therefore `filteredVariables`) changes. Done as a render-time
+  // "previous-value" comparison rather than a useEffect+setState, so we
+  // don't incur an extra render pass per keystroke.
+  const [lastValue, setLastValue] = useState(value)
+  if (lastValue !== value) {
+    setLastValue(value)
+    setActiveIndex(0)
+  }
+
+  function handleTextFocus() {
+    if (!disabled) setOpen(true)
+  }
+
+  function handleTextBlur(event: FocusEvent<HTMLInputElement>) {
+    onTextBlur()
+    if (event.relatedTarget instanceof HTMLElement && event.currentTarget.parentElement?.contains(event.relatedTarget)) {
+      return
+    }
+    onTokenPreviewClear?.()
+    window.setTimeout(() => setOpen(false), 0)
+  }
+
+  function handleTextChange(event: ChangeEvent<HTMLInputElement>) {
+    onTextChange(event.target.value)
+    setOpen(true)
+  }
+
+  function handleSwatchChange(event: ChangeEvent<HTMLInputElement>) {
+    onSwatchChange(event.target.value)
+    setOpen(false)
+  }
+
+  function commitToken(variable: ColorVariable) {
+    onTokenPreviewClear?.()
+    onTokenSelect(`var(${variable.name})`)
+    setOpen(false)
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (!showMenu) {
+      if (event.key === 'ArrowDown' && filteredVariables.length > 0) {
+        event.preventDefault()
+        setOpen(true)
+      }
+      return
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      onTokenPreviewClear?.()
+      setOpen(false)
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setActiveIndex((index) => Math.min(index + 1, filteredVariables.length - 1))
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setActiveIndex((index) => Math.max(index - 1, 0))
+    } else if (event.key === 'Enter') {
+      event.preventDefault()
+      commitToken(filteredVariables[activeIndex])
+    }
+  }
+
+  return (
+    <div className={styles.colorRow}>
+      <div className={styles.colorField} data-color-field="true">
+        <ColorInput
+          id={id ? `${id}-swatch` : undefined}
+          value={swatchValue}
+          swatchValue={swatchValue}
+          disabled={disabled}
+          onChange={handleSwatchChange}
+          aria-label={swatchLabel}
+          fieldSize="xs"
+          className={styles.colorInlineSwatch}
+        />
+        <Input
+          id={id}
+          type="text"
+          value={value}
+          disabled={disabled}
+          fieldSize={fieldSize}
+          monospace={monospace}
+          onFocus={handleTextFocus}
+          onMouseDown={() => {
+            if (!disabled) setOpen(true)
+          }}
+          onChange={handleTextChange}
+          onBlur={handleTextBlur}
+          onKeyDown={handleKeyDown}
+          aria-label={inputLabel}
+          aria-controls={showMenu ? menuId : undefined}
+          aria-expanded={showMenu ? true : undefined}
+          placeholder={placeholder}
+          spellCheck={false}
+          className={cn(styles.colorText, styles.colorTextWithPreview)}
+        />
+        {showMenu && (
+          <div
+            id={menuId}
+            role="listbox"
+            aria-label={`${inputLabel} color tokens`}
+            className={styles.colorTokenMenu}
+            onMouseLeave={() => onTokenPreviewClear?.()}
+          >
+            {filteredVariables.map((variable, index) => (
+              <button
+                key={`${variable.tokenId}-${variable.variantId}`}
+                type="button"
+                role="option"
+                aria-selected={index === activeIndex}
+                className={styles.colorTokenOption}
+                onMouseEnter={() => {
+                  setActiveIndex(index)
+                  onTokenPreview?.(`var(${variable.name})`)
+                }}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => commitToken(variable)}
+              >
+                <span
+                  className={styles.colorTokenOptionSwatch}
+                  style={{ '--color-token-option-value': variable.value } as TokenSwatchStyle}
+                  aria-hidden="true"
+                />
+                <span className={styles.colorTokenOptionText}>
+                  <span className={styles.colorTokenOptionName}>{variable.name}</span>
+                  {variable.variantName && (
+                    <span className={styles.colorTokenOptionMeta}>{variable.variantName}</span>
+                  )}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function computeFilteredVariables(value: string, variables: ColorVariable[]): ColorVariable[] {
+  const query = colorTokenSearchQuery(value)
+  if (!query) return variables.slice(0, 32)
+  return variables.filter((variable) => tokenVariableMatches(variable, query)).slice(0, 32)
+}
+
+function colorTokenSearchQuery(value: string): string {
+  const trimmed = value.trim().toLowerCase()
+  const variableMatch = /^var\(\s*(--[a-z0-9_-]+)\s*\)$/i.exec(trimmed)
+  const tokenishValue = variableMatch?.[1] ?? trimmed
+  if (tokenishValue.startsWith('--')) return tokenishValue.slice(2)
+  if (/^[a-z0-9_-]+$/.test(tokenishValue)) return tokenishValue
+  return ''
+}
+
+function tokenVariableMatches(variable: ColorVariable, query: string): boolean {
+  const name = variable.name.slice(2).toLowerCase()
+  return name.includes(query) ||
+    variable.slug.toLowerCase().includes(query) ||
+    (variable.variantName?.toLowerCase().includes(query) ?? false)
+}
+
+function resolveTokenReferenceValue(value: string, variables: ColorVariable[]): string | null {
+  const variableName = /^var\(\s*(--[a-z0-9_-]+)\s*\)$/i.exec(value.trim())?.[1]
+  if (!variableName) return null
+  return variables.find((variable) => variable.name === variableName)?.value ?? null
+}

@@ -1,0 +1,32 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+}
+
+.label {
+  color: var(--text-subtle);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  max-height: 168px;
+  overflow-y: auto;
+  padding: var(--space-3xs);
+  border: 1px solid var(--overlay-10);
+  border-radius: var(--radius);
+  background: var(--bg-surface-2);
+}
+
+.empty {
+  padding: var(--space-4xs) var(--space-3xs);
+  color: var(--text-subtle);
+  font-size: var(--text-2xs);
+  line-height: 1.3;
+}

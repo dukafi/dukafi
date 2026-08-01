@@ -1,0 +1,90 @@
+/* SegmentedControl — connected (fused) button group.
+ *
+ * Achromatic tokens only. No Tailwind, no inline styles, no !important.
+ * Composes the shared Button primitive: each segment is a Button with
+ * `variant="secondary"` and `pressed` to surface the active state.
+ *
+ * The visual "track" is a 2px-padded overlay around the segments. Active
+ * segments use overlay states instead of surface steps so light theme controls
+ * still have visible contrast on pale panels.
+ */
+
+.group {
+    display: inline-flex;
+    align-items: stretch;
+    gap: var(--space-4xs);
+    border-radius: 12px;
+    padding: var(--space-4xs);
+    border: 1px solid var(--overlay-20);
+    background: var(--overlay-5);
+}
+
+.fullWidth {
+    display: flex;
+    width: 100%;
+}
+
+/* Each segment fills available width and uses a smaller radius so it nests
+ * cleanly inside the 10px track. The doubled `.group .segment.segment`
+ * selector lifts specificity above Button.module.css's `.btn.variant-X`
+ * pairings so the segment's transparent / pressed look wins regardless of
+ * stylesheet load order. */
+.group .segment.segment {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    border-radius: 8px;
+    background: transparent;
+}
+
+.group .segment.segment:hover {
+    background: var(--overlay-10);
+}
+
+.group .segment.segment[aria-pressed="true"] {
+    background: var(--overlay-20);
+    color: var(--text);
+}
+
+.group[data-active-surface="recessed"] .segment.segment[aria-pressed="true"] {
+    background: var(--bg-surface);
+}
+
+/* Trailing modifier — used by the render-prop's `trailingClassName`. Switches
+ * the segment from "stretch to fill" to "fixed-square icon button" so a
+ * chevron-down dropdown trigger never absorbs flex slack and reads as a
+ * 1:1 icon-only button alongside the wider primary segments. The width
+ * matches the segment's intrinsic 26px height (size-sm Button) so the
+ * trailing tile renders perfectly square. */
+.group .segment.trailing.trailing {
+    flex: 0 0 26px;
+    width: 26px;
+}
+
+/* ── Clearable overlay ─────────────────────────────────────────────────────
+ * Rendered only inside active segments when the parent group is marked
+ * `data-clearable="true"`. The overlay sits over the icon+label with
+ * opacity 0 until the user hovers / focuses the active segment, at which
+ * point it fades in to communicate "click here to clear". The actual
+ * clear behavior is wired to the segment's onClick — this is purely the
+ * visual affordance. */
+.group .segment .clearOverlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: var(--overlay-20);
+    color: var(--text);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 100ms ease;
+}
+
+.group[data-clearable="true"] .segment[aria-pressed="true"]:hover .clearOverlay,
+.group[data-clearable="true"]
+    .segment[aria-pressed="true"]:focus-visible
+    .clearOverlay {
+    opacity: 1;
+}

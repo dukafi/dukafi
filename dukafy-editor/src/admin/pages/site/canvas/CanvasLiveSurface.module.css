@@ -1,0 +1,92 @@
+/**
+ * CanvasLiveSurface — single real-size editable frame (canvasView 'live').
+ *
+ * The frame stays centred horizontally; side handles sit flush against its
+ * edges so dragging them feels like grabbing the edge of the page itself.
+ * All colors come from globals.css design tokens — see CLAUDE.md.
+ */
+
+.surface {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    overflow: hidden;
+    background: var(--bg-surface-2);
+}
+
+.frame {
+    position: relative;
+    --live-width: 100%;
+    display: flex;
+    align-items: stretch;
+    width: var(--live-width);
+    height: 100%;
+}
+
+/* The iframe's visible viewport. The frame surrounds it with handles on both
+   sides; the viewport fills whatever's left. The live iframe scrolls
+   internally, so this box is a fixed-height window onto the page. */
+.iframeViewport {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    background: var(--overlay);
+    overflow: hidden;
+}
+
+/* Side resize handle — slim vertical strip flush with the frame edge. */
+.resizeHandle {
+    flex: 0 0 8px;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: ew-resize;
+    background: transparent;
+    transition: background-color 120ms ease;
+    touch-action: none;
+}
+
+.resizeHandle:hover,
+.resizeHandle:focus-visible {
+    background: var(--overlay-5);
+    outline: none;
+}
+
+.resizeHandle:active {
+    background: var(--overlay-10);
+}
+
+.resizeGrip {
+    width: 2px;
+    height: 36px;
+    border-radius: 999px;
+    background: var(--border-muted);
+    transition: background-color 120ms ease;
+}
+
+.resizeHandle:hover .resizeGrip,
+.resizeHandle:active .resizeGrip {
+    background: var(--text-muted);
+}
+
+/* Width readout — small unobtrusive badge at the bottom-centre of the frame. */
+.widthBadge {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: var(--space-4xs) var(--space-s);
+    border-radius: 999px;
+    background: var(--canvas-live-scrim);
+    color: var(--text-muted);
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    line-height: 1.4;
+    pointer-events: none;
+    user-select: none;
+}

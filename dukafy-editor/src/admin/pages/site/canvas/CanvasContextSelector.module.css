@@ -1,0 +1,280 @@
+/**
+ * CanvasContextSelector — top-right editing-context control (viewports +
+ * custom conditions) and its add-condition dialog. The notch belongs to the
+ * black editor chrome; the select carries the mint accent.
+ */
+
+.shell {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-s);
+    pointer-events: none;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-3xs) var(--space-3xs) var(--space-3xs) var(--space-m);
+    margin-right: var(--space-xs);
+    pointer-events: auto;
+    color: var(--success-text);
+    background: var(--accent-1-10);
+    border-radius: var(--panel-radius);
+    box-shadow: 0 8px 18px var(--scrim-20);
+    font-size: var(--text-xs);
+    font-weight: 620;
+}
+
+.badgeLabel {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.badgeExit.badgeExit {
+    color: var(--success-text-muted);
+}
+
+.notch {
+    --breakpoint-notch-bg: var(--bg-body);
+    --breakpoint-notch-radius: 16px;
+    --breakpoint-notch-corner: 16px;
+    --breakpoint-notch-corner-cut: calc(var(--breakpoint-notch-corner) - 0.5px);
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-xs);
+    pointer-events: auto;
+    background: var(--breakpoint-notch-bg);
+    border: 0;
+    border-radius: 0 0 0 var(--breakpoint-notch-radius);
+    box-shadow: 0 8px 18px var(--scrim-20);
+}
+
+.notch > * {
+    position: relative;
+    z-index: 1;
+}
+
+.notch::before,
+.notch::after {
+    position: absolute;
+    z-index: 0;
+    width: var(--breakpoint-notch-corner);
+    height: var(--breakpoint-notch-corner);
+    pointer-events: none;
+    content: "";
+}
+
+.notch::before {
+    top: 0;
+    left: calc(1px - var(--breakpoint-notch-corner));
+    background: radial-gradient(
+        circle at 0 100%,
+        transparent var(--breakpoint-notch-corner-cut),
+        var(--breakpoint-notch-bg) var(--breakpoint-notch-corner)
+    );
+}
+
+.notch::after {
+    right: 0;
+    bottom: calc(1px - var(--breakpoint-notch-corner));
+    background: radial-gradient(
+        circle at 0 100%,
+        transparent var(--breakpoint-notch-corner-cut),
+        var(--breakpoint-notch-bg) var(--breakpoint-notch-corner)
+    );
+}
+
+@media (max-width: 900px) {
+    .shell {
+        top: 40px;
+    }
+
+    .notch {
+        border-radius: var(--breakpoint-notch-radius) 0 0 var(--breakpoint-notch-radius);
+    }
+
+    .notch::before,
+    .notch::after {
+        display: none;
+    }
+}
+
+.triggerPill.triggerPill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-4xs);
+    height: 22px;
+    padding: 0 var(--space-xs);
+    border-radius: 9px;
+    border: 0;
+    background: var(--accent-1-10);
+    color: var(--success-text);
+}
+
+.triggerLabel {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--text-xs);
+    font-weight: 620;
+    line-height: 1;
+}
+
+.triggerPill.triggerPill:hover {
+    background:
+        linear-gradient(
+            180deg,
+            var(--overlay-10),
+            transparent
+        ),
+        color-mix(in srgb, var(--accent-1) 20%, transparent);
+}
+
+/* Dropdown panel — the anchored ContextMenu renders inline (not portaled), so
+ * it inherits the shell's `pointer-events: none`. Re-enable it here or the
+ * menu's clicks/hover fall through to the canvas (and dismiss the menu). */
+.menuPanel {
+    pointer-events: auto;
+}
+
+/* Dropdown rows */
+
+.menuRow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4xs);
+}
+
+.menuRowMain.menuRowMain {
+    flex: 1 1 auto;
+    justify-content: flex-start;
+    gap: var(--space-s);
+    min-width: 0;
+}
+
+.menuRowActive.menuRowActive {
+    color: var(--success-text);
+}
+
+.rowLabel {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+}
+
+.rowDetail {
+    flex: 0 0 auto;
+    color: var(--text-muted);
+    font-size: var(--text-2xs);
+    font-weight: 700;
+}
+
+.rowAction.rowAction {
+    flex: 0 0 auto;
+    color: var(--text-muted);
+}
+
+.rowAction.rowAction:hover {
+    color: var(--success-text);
+}
+
+.rowRemove.rowRemove {
+    flex: 0 0 auto;
+    color: var(--text-muted);
+}
+
+.rowRemove.rowRemove:hover {
+    color: var(--danger-light);
+}
+
+/* Add-condition dialog */
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-m);
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+}
+
+.toggleRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-m);
+}
+
+.label {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 620;
+}
+
+.error {
+    margin: 0;
+    color: var(--danger-light);
+    font-size: var(--text-xs);
+}
+
+/* Guided builder */
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+}
+
+.rangeRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: var(--space-xs);
+    align-items: center;
+}
+
+.pairRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xs);
+    align-items: center;
+}
+
+.hint {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+}
+
+.supportBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3xs);
+    font-size: var(--text-xs);
+    font-weight: 620;
+}
+
+.supportYes {
+    color: var(--success-text);
+}
+
+.supportNo {
+    color: var(--danger-light);
+}

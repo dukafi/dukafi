@@ -11,11 +11,15 @@ dukafy/uploads/*
 !dukafy/uploads/.keep
 dukafy/public/admin/*
 !dukafy/public/admin/.keep
-instatic/dist/
 node_modules/
 .env
 dukafy/vendor/tailwindcss
 
-# The Instatic editor is maintained outside this repository. Keep the local
-# working copy available for development, but never include it in Dukafy pushes.
-/instatic/
+# dukafy-editor/ is our fork of Instatic and is tracked as part of this
+# monorepo. Only its build output and dependencies are ignored.
+dukafy-editor/dist/
+dukafy-editor/.tmp-lint/
+
+# Full upstream Instatic clone, kept only as a diffing/reference baseline.
+# Has its own .git — never tracked as part of this repo.
+/reference/instatic/

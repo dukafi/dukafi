@@ -1,0 +1,131 @@
+/**
+ * SpotlightSkeleton.module.css — loading shimmer rows for async providers.
+ *
+ * Shown 240ms after a provider enters loadingProviders so fast responses
+ * never flash a skeleton. Animation respects prefers-reduced-motion.
+ *
+ * Tokens from src/styles/globals.css:
+ *   --overlay-5    base fill colour
+ *   --overlay-10 highlight colour for the sweep
+ */
+
+/* ─── Group header (reuses the exact same style as Spotlight.module.css) ───── */
+
+.groupHeader {
+    display: flex;
+    align-items: center;
+    gap: var(--space-m);
+    min-height: 32px;
+    padding: var(--space-3xs) var(--space-s) var(--space-xs);
+    user-select: none;
+}
+
+.groupBar {
+    width: 4px;
+    height: 18px;
+    border-radius: var(--radius-sm);
+    background: var(--spotlightAccent);
+    flex-shrink: 0;
+}
+
+.groupTitle {
+    color: var(--text-bright);
+    font-size: var(--text-xl);
+    font-weight: 700;
+}
+
+/* ─── Skeleton row ────────────────────────────────────────────────────────── */
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-m);
+    height: 44px;
+    padding: 0 var(--space-2xl);
+}
+
+/* ─── Shimmer placeholders ────────────────────────────────────────────────── */
+
+.iconPlaceholder {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(
+        90deg,
+        var(--overlay-5) 25%,
+        var(--overlay-10) 50%,
+        var(--overlay-5) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s linear infinite;
+}
+
+.content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    justify-content: center;
+}
+
+.titlePlaceholder {
+    height: 11px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(
+        90deg,
+        var(--overlay-5) 25%,
+        var(--overlay-10) 50%,
+        var(--overlay-5) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s linear infinite;
+}
+
+.subtitlePlaceholder {
+    height: 9px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(
+        90deg,
+        var(--overlay-5) 25%,
+        var(--overlay-10) 50%,
+        var(--overlay-5) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s linear infinite;
+    animation-delay: 75ms;
+}
+
+/* Vary placeholder widths so the rows don't look identical */
+.row:nth-child(2) .titlePlaceholder    { width: 56%; }
+.row:nth-child(2) .subtitlePlaceholder { width: 35%; }
+.row:nth-child(3) .titlePlaceholder    { width: 72%; }
+.row:nth-child(3) .subtitlePlaceholder { width: 44%; }
+.row:nth-child(4) .titlePlaceholder    { width: 48%; }
+.row:nth-child(4) .subtitlePlaceholder { width: 30%; }
+.row:nth-child(5) .titlePlaceholder    { width: 64%; }
+.row:nth-child(5) .subtitlePlaceholder { width: 40%; }
+.row:nth-child(6) .titlePlaceholder    { width: 80%; }
+.row:nth-child(6) .subtitlePlaceholder { width: 52%; }
+.row:nth-child(7) .titlePlaceholder    { width: 58%; }
+.row:nth-child(7) .subtitlePlaceholder { width: 36%; }
+
+/* ─── Shimmer keyframe ────────────────────────────────────────────────────── */
+
+@keyframes shimmer {
+    0%   { background-position: 200% center; }
+    100% { background-position: -200% center; }
+}
+
+/* ─── Reduced motion ──────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+    .iconPlaceholder,
+    .titlePlaceholder,
+    .subtitlePlaceholder {
+        animation: none;
+        background: var(--overlay-5);
+        opacity: 0.7;
+    }
+}

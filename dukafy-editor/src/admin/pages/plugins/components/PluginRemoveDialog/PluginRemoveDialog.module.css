@@ -1,0 +1,44 @@
+/**
+ * Body-only styling for PluginRemoveDialog. The backdrop, dialog chrome,
+ * header, and footer are owned by the shared <Dialog/> primitive in
+ * @ui/components/Dialog — do not duplicate that CSS here.
+ */
+
+.lead {
+    margin: 0 0 var(--space-s) 0;
+    font-size: var(--text-m);
+}
+
+.checklist {
+    margin: 0 0 var(--space-l) 0;
+    padding-left: var(--space-3xl);
+    display: grid;
+    gap: var(--space-3xs);
+    font-size: var(--text-m);
+    color: var(--text-subtle);
+}
+
+.checklist code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: var(--text-xs);
+    padding: var(--space-px) var(--space-2xs);
+    background: var(--bg-surface);
+    border: 1px solid var(--overlay-10);
+    border-radius: 4px;
+    color: var(--text);
+}
+
+.note {
+    margin: 0;
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+}
+
+/* Force-remove caveat — state color (warning), not decoration: the plugin's
+   own cleanup code is skipped and external resources may remain. */
+.warning {
+    margin: 0;
+    color: var(--warning-text);
+    font-size: var(--text-s);
+    line-height: 1.5;
+}

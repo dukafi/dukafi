@@ -1,0 +1,11 @@
+/* Plugin editor panel — only retains the surfaces specific to the plugin
+ * mount (unavailable fallback, error banner). Panel shell + scrollable
+ * content area come from the shared `@admin/shared/Panel`. */
+
+.unavailable {
+    padding: var(--space-2xl);
+    color: var(--text-subtle);
+    font-size: var(--text-m);
+    text-align: center;
+}
+

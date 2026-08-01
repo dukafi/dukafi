@@ -1,0 +1,85 @@
+/* Shared native color input wrapper. */
+
+.colorInput {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+    border: 1px solid var(--overlay-20);
+    background:
+        linear-gradient(
+            180deg,
+            var(--overlay-10),
+            var(--overlay-5)
+        ),
+        transparent;
+    box-shadow:
+        inset 0 1px 0 var(--overlay-10),
+        0 1px 0 var(--scrim-30);
+    overflow: hidden;
+    cursor: pointer;
+    transition:
+        background-color 140ms ease,
+        border-color 140ms ease,
+        box-shadow 140ms ease,
+        transform 140ms ease;
+}
+
+.colorInput:hover {
+    border-color: var(--overlay-50);
+    box-shadow:
+        inset 0 1px 0 var(--overlay-10),
+        0 3px 10px var(--scrim-30);
+}
+
+.colorInput:focus-within {
+    border-color: var(--overlay-50);
+    box-shadow:
+        var(--shadow-input-focus),
+        0 0 0 3px var(--overlay-10);
+}
+
+.colorInput:active {
+    transform: translateY(1px);
+}
+
+.disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.size-xs {
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+}
+
+.size-sm {
+    width: 28px;
+    height: 28px;
+    border-radius: 10px;
+}
+
+.size-md {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--input-radius);
+}
+
+.preview {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background:
+        linear-gradient(135deg, var(--overlay-20), transparent 34%),
+        var(--color-input-value);
+}
+
+.nativeInput {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    opacity: 0;
+    cursor: inherit;
+}

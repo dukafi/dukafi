@@ -1,0 +1,56 @@
+/* StyleRuleComposer — CSS property section content. */
+
+.styleSections {
+    display: grid;
+    align-content: start;
+    min-width: 0;
+    gap: var(--space-px);
+    padding-bottom: var(--space-2xl);
+}
+
+.noStyleMatches {
+    padding: var(--space-l) var(--space-xl);
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    line-height: 1.4;
+}
+
+/* ── Advanced disclosure (border shorthand rows) ─────────────────────────── */
+
+.advanced {
+    margin-top: var(--space-s);
+    padding-top: var(--space-s);
+    border-top: 1px solid var(--overlay-20);
+}
+
+.advancedSummary {
+    cursor: pointer;
+    list-style: none;
+    color: var(--text-disabled);
+    font-size: var(--text-xs);
+    font-weight: 620;
+    padding: var(--space-4xs) 0;
+    user-select: none;
+}
+
+.advancedSummary::-webkit-details-marker {
+    display: none;
+}
+
+.advancedSummary::before {
+    content: "▸";
+    display: inline-block;
+    margin-right: var(--space-xs);
+    font-size: var(--text-3xs);
+    transition: transform 120ms ease;
+}
+
+.advanced[open] > .advancedSummary::before {
+    transform: rotate(90deg);
+}
+
+.advancedBody {
+    display: grid;
+    gap: var(--space-3xs);
+    padding-top: var(--space-xs);
+}

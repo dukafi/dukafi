@@ -1,0 +1,7 @@
+/* Unified stream chart slot, rendered above the step list when an adapter
+ * supplies its own all-in-one visualisation (e.g. Spacing's bar chart). */
+.streamChartHost {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-s);
+}

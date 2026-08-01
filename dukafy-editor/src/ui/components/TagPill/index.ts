@@ -1,0 +1,2 @@
+export { TagPill } from './TagPill'
+

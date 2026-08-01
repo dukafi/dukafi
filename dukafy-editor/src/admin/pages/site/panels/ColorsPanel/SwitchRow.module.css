@@ -1,0 +1,10 @@
+.checkboxRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-s);
+    min-height: 26px;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 650;
+}

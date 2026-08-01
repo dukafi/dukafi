@@ -2,199 +2,218 @@
 
 **Own your store. One click to live.**
 
-Dukafy is a self-hosted, ecommerce-only visual CMS. A merchant manages their
-catalog and designs storefront pages in a visual editor; Dukafy publishes the
-result as clean, static HTML and compact CSS. Dynamic features such as stock,
-cart, and checkout are delivered only where they are actually needed.
+Dukafy is a self-hosted, ecommerce-focused visual CMS. Merchants manage a
+catalog and design the customer-facing store in one editor. Publishing turns
+the design into static HTML and a content-hashed CSS bundle, while genuinely
+live concerns such as inventory and carts remain small server-rendered
+fragments.
 
-The project is aimed at small, design-conscious stores that want ownership and
-speed without assembling a headless stack or depending permanently on a hosted
-commerce platform.
+This repository is an active pre-production implementation. Page publishing,
+catalog management, commerce canvas modules, responsive images, and the first
+cart fragments work today. Checkout, orders, discounts, deployment hardening,
+and backups remain on the roadmap.
 
-## How it works
+## System at a glance
 
 ```text
-Visual editor ──save──▶ SQLite ──publish──▶ static HTML + used CSS
-                            │                    │
-Commerce admin ─────────────┘                    ├── served from disk
-                                                 └── HTMX fragments for live data
+Browser editor (:5173/admin)
+      │ saves page JSON and catalog changes
+      ▼
+Ruby API (:9292/admin/api/cms) ──────▶ SQLite + local uploads
+      │ Publish
+      ▼
+Pure Ruby renderer ──▶ used Tailwind utilities ──▶ published/slot_N
+                                                   │ atomic symlink flip
+                                                   ▼
+Customer storefront (:9292) ◀── static HTML/CSS + HTMX live fragments
 ```
 
-- The editor saves page documents through the Ruby admin API.
-- The Ruby publisher walks those documents and renders semantic HTML.
-- Tailwind CSS is compiled at publish time from the utilities actually used.
-- A complete publish is written to a new slot and activated with an atomic
-  symlink swap.
-- Storefront requests use the baked disk copy first and fall back to live Ruby
-  rendering when a request is genuinely dynamic.
-- Catalog, orders, content, and configuration live in SQLite. Uploaded media is
-  stored in one local directory.
+The editor and storefront have deliberately different responsibilities:
+
+- `/admin/` is the authenticated CMS. Site design, products, variants,
+  collections, media, and imports happen here.
+- `/` is only the public storefront. No merchant administration is exposed on
+  customer-facing pages.
+- Product data is not copied into a separate canvas page per product. A shared
+  Product template binds to the current catalog entry and produces every
+  `/products/<slug>` page.
+- A shared Collection template similarly produces `/collections/<slug>` pages.
+
+## Implemented capabilities
+
+### CMS and catalog
+
+- First-owner setup, bcrypt login, cookie sessions, and persisted preferences
+- Canvas page load/save, page CRUD, drafts, and publishing
+- Products with status, vendor, sanitized rich HTML description, and variants
+- Integer-cent prices, currency codes, inventory, SKU, and variant ordering
+- Collections with ordered product membership
+- Transactional CSV import, updating by product slug and variant SKU
+- Media upload/list/delete and responsive WebP variants through libvips
+- Permanent storefront redirects after product or collection slug changes
+
+### Visual commerce building
+
+The editor and Ruby publisher implement matching modules for:
+
+- Product cards
+- Price
+- Image gallery with responsive `srcset`
+- Variant picker
+- Buy button
+- Collection loop with pagination
+- Live stock badge
+- Live cart badge
+
+Blank product or collection slug properties bind to the current entry when a
+module is used in the matching Product or Collection template. This is what
+makes one template dynamic across the whole catalog.
+
+### Publishing and storefront
+
+- Pure, synchronous document-to-HTML Ruby publisher
+- Published regular pages plus generated product and collection routes
+- Tailwind CSS 4 compiled only from class tokens found in rendered output
+- Responsive utilities (`p-8`, `px-8`, `md:grid-cols-2`), state variants, and
+  arbitrary values supported by the compiler
+- Content-hashed CSS assets and atomic two-slot publish activation
+- Disk-first storefront serving with live fallback
+- Tracking-only query parameters retain the static fast path
+- Collection pagination queries render live
+- Dependency tracking and targeted rebakes after catalog changes
+- Anonymous session cart, add-to-cart, stock fragment, and cart-badge fragment
 
 ## Technology stack
 
-| Area | Technology | Purpose |
+| Layer | Technology | Role |
 | --- | --- | --- |
-| Application | Ruby 3.4, Roda, Puma | Single-process HTTP application |
-| Persistence | SQLite, Sequel | Catalog, content, sessions, and commerce data |
-| Admin interactions | Instatic React workspace | Products, variants, collections, media, and visual editing in one CMS shell |
-| Storefront interactions | Server-rendered HTML, HTMX 2 | Small dynamic fragments for cart, stock, and checkout |
-| Visual editor | Instatic, React 19, Vite, Bun | Build-time visual page editing |
-| Publisher | Plain Ruby renderers, libvips | Pure document-to-HTML rendering and responsive media variants |
-| Styling | Tailwind CSS 4 standalone | Used-utility-only CSS generated during publish |
-| Payments | Stripe Checkout | Hosted payment collection planned for M5 |
-| Deployment | Docker, Caddy, Litestream | Planned one-image deployment, TLS, and SQLite backup |
+| Server | Ruby 3.4, Roda, Puma, Rack | API, storefront routing, fragments |
+| Data | SQLite in WAL mode, Sequel | CMS, catalog, sessions, dependencies |
+| Editor | `dukafy-editor/` — a Dukafy fork of Instatic, React 19 + Vite, Bun | Authenticated visual CMS |
+| Storefront | Static semantic HTML, HTMX 2 fragments | Fast public experience |
+| Publisher | Plain Ruby modules | Deterministic page rendering |
+| CSS | Tailwind CSS 4 standalone + framework/module CSS | Used-class-only bundle |
+| Images | image_processing, ruby-vips/libvips | Responsive WebP variants |
+| Payments | Stripe gem | Dependency present; checkout is not complete |
 
-Bun is a development and build dependency only. The intended production image
-contains Ruby and the compiled admin assets, not Node or Bun. Fully static
-storefront pages contain no publisher JavaScript.
+Bun is used only to develop/build the editor. The storefront does not ship a
+React runtime, and a fully static page needs no publisher JavaScript.
 
-## Current capabilities
+## Quick start
 
-- Visual page load, edit, save, and publish loop
-- Atomic static-site baking with hashed CSS bundles
-- Tailwind utilities, responsive variants, and arbitrary values
-- Product and variant administration
-- Ordered collections with drag-and-drop membership
-- Sanitized rich-text product descriptions
-- Permanent redirects for renamed product and collection slugs
-- Product and variant CSV import
-- Media upload and management
-- Responsive WebP media variants with `srcset` output
-- Session authentication and first-admin setup
-
-See [MILESTONES.md](MILESTONES.md) for detailed progress and
-[VISION.md](VISION.md) for the product principles and scope.
-
-## Repository layout
-
-```text
-dukafy/                  Ruby application
-  db/migrations/         SQLite schema migrations
-  models/                Sequel models
-  routes/                Admin API and storefront routes
-  publisher/             Pure Ruby page renderer and module registry
-  services/              Baking, publishing, imports, and support services
-  spec/                  Minitest suite and golden publisher tests
-  published/             Generated storefront output (ignored)
-  uploads/               Merchant media (ignored)
-instatic/                Local visual-editor working copy (ignored by Git)
-docs/                    Architecture and workflow documentation
-bin/dev                  One-command development launcher
-```
-
-`instatic/` is intentionally excluded from this Git repository. Provide the
-local editor checkout before running development or editor builds. The
-provenance and initial vendoring process are documented in [SETUP.md](SETUP.md).
-
-## Requirements
-
-- Ruby 3.4+
-- Bundler
-- Bun 1.3+
-- Linux x86-64 for the automatic Tailwind standalone binary installer
-
-## Local setup
-
-Install Ruby dependencies:
+Requirements: Ruby 3.4+, Bundler, Bun 1.x+, and libvips.
 
 ```bash
+sudo apt-get install libvips
 cd dukafy
 bundle install
-cd ..
-```
-
-Install editor dependencies after placing the editor in `instatic/`:
-
-```bash
-cd instatic
+cd ../dukafy-editor
 bun install
 cd ..
+./bin/dev
 ```
 
-Create an initial administrator if you do not want to use the browser setup
-flow:
+`./bin/dev` installs/verifies the pinned Tailwind executable, applies database
+migrations, and starts both development processes.
 
-```bash
-cd dukafy
-ADMIN_EMAIL=owner@example.com \
-ADMIN_PASSWORD='replace-with-a-long-password' \
-bundle exec ruby scripts/seed_admin.rb
-cd ..
-```
+Open:
 
-Populate a development database with 12 products, 20 variants, and three
-ordered collections:
+- Editor: <http://localhost:5173/admin/>
+- Commerce workspace: <http://localhost:5173/admin/commerce>
+- Storefront: <http://localhost:9292/>
+- Ruby API/storefront directly: <http://localhost:9292/>
+
+On first use, complete the owner setup form. To seed demo commerce data:
 
 ```bash
 cd dukafy
 bundle exec ruby scripts/seed_demo_store.rb
-cd ..
 ```
 
-The demo seed is idempotent, so it is safe to run again.
+See [SETUP.md](SETUP.md) for complete installation, environment, troubleshooting,
+testing, and recovery instructions.
 
-## Run development
+## Everyday workflow
 
-Start Ruby and the visual editor together:
+1. Start the system with `./bin/dev`.
+2. Manage products and collections under **Commerce**.
+3. Open **Site** and edit ordinary pages, **Product template**, or
+   **Collection template**.
+4. Add commerce modules from the module inserter. In templates, leave the
+   catalog slug blank to use the current product/collection.
+5. Save the draft, then click **Publish**.
+6. Visit `/products/<product-slug>` or `/collections/<collection-slug>` on port
+   9292. Products must have status `active` to be generated.
 
-```bash
-./bin/dev
+Publishing is distinct from saving: Save persists editor state; Publish creates
+and activates the customer-facing files.
+
+## Repository layout
+
+```text
+bin/dev                         one-command development launcher
+dukafy/                         Ruby product
+  config/                       database and runtime configuration
+  db/migrations/                ordered schema migrations
+  models/                       Sequel models
+  publisher/                    pure renderers, schemas, module registry
+  routes/                       CMS API, storefront, fragments, checkout
+  services/                     publish, bake, templates, imports, media
+  spec/                         Minitest and golden-output tests
+  published/                    generated two-slot output (ignored)
+  uploads/                      merchant originals/variants (ignored)
+dukafy-editor/                  Dukafy's fork of Instatic's editor client (tracked)
+reference/instatic/             full upstream Instatic clone; diff-only, gitignored, never executed
+docs/                           focused architecture and workflow guides
 ```
 
-The command installs the pinned Tailwind compiler when needed, runs database
-migrations, and starts both processes:
+`dukafy-editor/` is a fork of [Instatic](https://github.com/corebunch/instatic)
+and is tracked as part of this monorepo like everything else — Ruby API changes
+and editor changes land in the same commit. `reference/instatic/` is a separate,
+full clone of upstream kept only so the fork can be diffed against it; it's
+gitignored and never built or run.
 
-- Visual editor: <http://localhost:5173/admin/>
-- Ruby storefront and API: <http://localhost:9292/>
-- Commerce workspace: <http://localhost:5173/admin/commerce>
-
-Stop both processes with `Ctrl-C`.
-
-## Product CSV import
-
-Open **Commerce → Import CSV** in the editor. The import supports multiple variants
-per product and updates existing records by product slug and SKU. Imports are
-transactional: one invalid row rolls back the entire file.
-
-The complete format and example are in [docs/csv-import.md](docs/csv-import.md).
-
-## Tests and builds
-
-Run the Ruby suite:
+## Tests
 
 ```bash
 cd dukafy
 bundle exec rake test
-```
 
-Build the visual editor:
-
-```bash
-cd instatic
+cd ../dukafy-editor
 bun run build
 ```
 
-## Publishing model
+Publisher modules use golden HTML tests, and a purity test prevents database,
+filesystem, or network access from leaking into `dukafy/publisher/`.
 
-Publishing renders every published page into a staging slot, compiles only the
-Tailwind classes found in the rendered markup, emits content-hashed CSS, and
-then atomically points `published/current` at the completed slot. Visitors
-therefore never observe a half-written release.
+## Important invariants
 
-The output under `dukafy/published/current/` is portable static HTML and CSS.
-Cart, checkout, and other personalized functionality will use small HTMX
-fragments rather than turning the storefront into a client-rendered app.
+- Money is always integer cents, never floating point.
+- Public page slugs use lowercase alphanumeric segments, single hyphens, and
+  optional single slashes. Built-in templates use `product-template` and
+  `collection-template`; migration 015 repairs older underscore-prefixed data.
+- Stock is checked dynamically and should not require a full site publish.
+- Publisher code is pure: data in, strings out.
+- `reference/` is read-only reference material.
+- Uploaded media, the SQLite database, generated output, editor checkout, and
+  local Tailwind binary are intentionally ignored by Git.
 
-## Project status
+## Documentation map
 
-Dukafy is under active development and is not yet ready to process production
-orders. The publisher foundation and core catalog admin are functional. Cart,
-checkout, hardened production deployment, backup automation, and the final
-commerce canvas modules remain on the milestone plan.
+- [SETUP.md](SETUP.md) — install, run, configure, verify, and troubleshoot
+- [docs/editor-commerce-workflow.md](docs/editor-commerce-workflow.md) — products,
+  templates, dynamic bindings, publishing, and storefront URLs
+- [docs/architecture/publishing.md](docs/architecture/publishing.md) — renderer,
+  Tailwind, atomic slots, dependencies, and request paths
+- [docs/api-contract.md](docs/api-contract.md) — editor/Ruby HTTP contract
+- [docs/csv-import.md](docs/csv-import.md) — catalog import schema
+- [docs/tailwind.md](docs/tailwind.md) — used-class-only CSS behavior
+- [VISION.md](VISION.md) — product direction and boundaries
+- [MILESTONES.md](MILESTONES.md) — implementation status and next work
 
 ## Attribution
 
 The visual editing experience is derived from
-[Instatic](https://github.com/corebunch/instatic), © David Babinec, licensed
-under the MIT License. Dukafy keeps the editor as a separate local working copy
-and reimplements the required server contract in Ruby.
+[Instatic](https://github.com/corebunch/instatic), © David Babinec, under the
+MIT License. Dukafy reimplements the server contract in Ruby and keeps the
+upstream server copy as read-only reference material.
