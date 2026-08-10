@@ -1,4 +1,7 @@
 class Product < Sequel::Model
+  extend Sluggable
+  def self.slug_fallback = "product"
+
   one_to_many :variants, order: :position
   many_to_many :collections, join_table: :collection_products, order: Sequel[:collection_products][:position]
   one_to_many :product_images, order: :position

@@ -54,6 +54,7 @@ function resetStore() {
     hoveredNodeId: null,
     activeBreakpointId: 'desktop',
     activeClassId: null,
+    inlineStyleEditing: false,
     previewClassAssignment: null,
     propertiesPanel: { collapsed: false, x: 0, y: 0, width: 280 },
     focusedPanel: 'canvas',
@@ -149,32 +150,33 @@ describe('PP-2 — ClassPicker visible immediately on element selection', () => 
 // PP-3: Pill click opens minimal StyleRuleComposer; clicking again closes it
 // ---------------------------------------------------------------------------
 
-describe('PP-3 — Pill click toggles CSS editor; locked preview shown with no active class', () => {
-  it('before class selection the locked preview CTA is shown; clicking a pill opens the CSS editor; clicking again returns to locked preview', () => {
-    const { nodeId } = loadSiteWithClasses(1)
-    selectNode(nodeId)
+describe('PP-3 — Styling is never gated behind adding a class', () => {
+  function stylePlaceholder(): string {
+    const box = screen.getByRole('searchbox', { name: /search class style properties to add/i })
+    return (box as HTMLInputElement).placeholder
+  }
+
+  it('a class-less node edits its inline styles immediately — no "Add class" gate', () => {
+    const { nodeId } = loadSiteWithHeading()
+    useEditorStore.getState().selectNode(nodeId)
     render(<PropertiesPanel />)
 
-    // No active class — LockedStylePreview is shown with its "Add class" CTA.
-    // The style search bar is bound to the active class, so it's hidden in
-    // the no-class state (nothing to search).
-    expect(screen.getByRole('button', { name: /^add class$/i })).toBeDefined()
-    expect(screen.queryByRole('searchbox', { name: /search class style properties to add/i })).toBeNull()
-
-    // Click the pill to activate the class CSS editor.
-    const pill = screen.getByRole('button', { name: /edit class \.class-1/i })
-    fireEvent.click(pill)
-
-    // CSS editor active — locked preview CTA gone, CSS property rows accessible,
-    // and the style search bar is now visible (scoped to the active class).
     expect(screen.queryByRole('button', { name: /^add class$/i })).toBeNull()
-    expect(screen.getByRole('searchbox', { name: /search class style properties to add/i })).toBeDefined()
+    expect(stylePlaceholder()).toMatch(/inline styles/i)
+  })
 
-    // Click again to deselect — locked preview returns and the search bar
-    // disappears with it.
-    fireEvent.click(pill)
-    expect(screen.getByRole('button', { name: /^add class$/i })).toBeDefined()
-    expect(screen.queryByRole('searchbox', { name: /search class style properties to add/i })).toBeNull()
+  it('a node with a class opens on that class; deactivating the pill falls back to inline editing', () => {
+    const { nodeId } = loadSiteWithClasses(1)
+    useEditorStore.getState().selectNode(nodeId)
+    render(<PropertiesPanel />)
+
+    // An assigned class is the initial edit target.
+    expect(stylePlaceholder()).toMatch(/\.class-1/)
+
+    // Deactivating it drops to inline editing rather than the old locked teaser.
+    fireEvent.click(screen.getByRole('button', { name: /deselect class \.class-1/i }))
+    expect(screen.queryByRole('button', { name: /^add class$/i })).toBeNull()
+    expect(stylePlaceholder()).toMatch(/inline styles/i)
   })
 })
 

@@ -169,7 +169,8 @@ class Bake
     description = @state.site.dig("settings", "metaDescription")
     Dukafy::Publisher::HtmlDocument.call(
       title:, body: rendered.html, body_classes: rendered.body_classes,
-      language:, description:, css_href: "/assets/#{bundle_name(css_filename)}"
+      language:, description:, css_href: "/assets/#{bundle_name(css_filename)}",
+      runtimes: rendered.runtimes
     )
   end
 

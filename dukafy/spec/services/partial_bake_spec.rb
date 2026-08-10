@@ -88,6 +88,32 @@ class PartialBakeSpec < Minitest::Test
     assert File.file?(File.join(@output_root, "current", "collections", "featured-picks.html"))
   end
 
+  # `publish_version % 2` and the live `current` symlink can disagree — any
+  # bake that wrote somewhere else still advances the version. Once they drift
+  # into agreement, PartialBake targeted the slot it was serving FROM, and
+  # since it opens with `rm_rf(target)` that deleted the live site outright
+  # before dying on `cp_r` with "same file".
+  def test_a_drifted_publish_version_does_not_make_a_bake_destroy_the_live_slot
+    product = Product.create(
+      title: "Water", slug: "water", status: "active",
+      description_document: "", created_at: Time.now, updated_at: Time.now
+    )
+    Variant.create(product_id: product.id, sku: "W-1", title: "Default",
+                   price_cents: 800, currency: "USD", stock: 5, position: 0)
+    Bake.call(state: @state, output_root: @output_root)
+    served = File.readlink(File.join(@output_root, "current"))
+
+    # Drift the version until its parity matches the slot being served.
+    @state.update(publish_version: @state.publish_version + 1) while "slot_#{@state.publish_version % 2}" != served
+    assert_equal served, "slot_#{@state.publish_version % 2}", "failed to set up the drift"
+
+    result = PartialBake.call(product: product, state: @state, output_root: @output_root)
+
+    refute_equal served, result.slot, "baked into the very slot it was serving from"
+    assert File.file?(File.join(@output_root, "current", "index.html")), "the live site was destroyed"
+    assert File.file?(File.join(@output_root, "current", "products", "water.html"))
+  end
+
   private
 
   def page_document

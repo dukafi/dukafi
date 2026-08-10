@@ -14,9 +14,13 @@ import { BoxStackSolidIcon } from 'pixel-art-icons/icons/box-stack-solid'
 import { CloudUploadSolidIcon } from 'pixel-art-icons/icons/cloud-upload-solid'
 import { PackageSolidIcon } from 'pixel-art-icons/icons/package-solid'
 import { Settings2SolidIcon } from 'pixel-art-icons/icons/settings-2-solid'
+import { ListBoxSolidIcon } from 'pixel-art-icons/icons/list-box-solid'
+import { PlugSolidIcon } from 'pixel-art-icons/icons/plug-solid'
 import { useCommerceData } from './hooks/useCommerceData'
 import { CollectionsSection } from './sections/CollectionsSection'
 import { ImportSection } from './sections/ImportSection'
+import { OrdersSection } from './sections/OrdersSection'
+import { PluginsSection } from './sections/PluginsSection'
 import { ProductsSection } from './sections/ProductsSection'
 import { SettingsSection } from './sections/SettingsSection'
 import type { CommerceSection } from './types'
@@ -25,6 +29,8 @@ import styles from './CommercePage.module.css'
 const SECTION_LABELS: Record<CommerceSection, string> = {
   products: 'Products',
   collections: 'Collections',
+  orders: 'Orders',
+  plugins: 'Plugins',
   import: 'Import',
   settings: 'Settings',
 }
@@ -32,11 +38,13 @@ const SECTION_LABELS: Record<CommerceSection, string> = {
 const SECTION_ICONS = {
   products: PackageSolidIcon,
   collections: BoxStackSolidIcon,
+  orders: ListBoxSolidIcon,
+  plugins: PlugSolidIcon,
   import: CloudUploadSolidIcon,
   settings: Settings2SolidIcon,
 } satisfies Record<CommerceSection, typeof PackageSolidIcon>
 
-const SECTIONS: CommerceSection[] = ['products', 'collections', 'import', 'settings']
+const SECTIONS: CommerceSection[] = ['products', 'collections', 'orders', 'plugins', 'import', 'settings']
 
 export function CommercePage() {
   const [section, setSection] = useState<CommerceSection>('products')
@@ -78,6 +86,8 @@ export function CommercePage() {
 
         <div className={styles.workspaceContent} aria-labelledby="commerce-title">
           {section === 'products' && <ProductsSection data={data} />}
+          {section === 'orders' && <OrdersSection data={data} />}
+          {section === 'plugins' && <PluginsSection data={data} />}
           {section === 'collections' && <CollectionsSection data={data} />}
           {section === 'import' && <ImportSection data={data} />}
           {section === 'settings' && <SettingsSection />}

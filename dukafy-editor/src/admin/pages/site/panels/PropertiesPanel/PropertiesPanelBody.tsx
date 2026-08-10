@@ -29,6 +29,7 @@ import { Button } from '@ui/components/Button'
 import { ClassPicker, type ClassPickerHandle } from './ClassPicker'
 import { StyleSurface } from './StyleSurface'
 import { HtmlAttributesPanel } from './HtmlAttributesPanel'
+import { NodeActionsPanel } from './NodeActionsPanel'
 import { ComponentRefView } from './ComponentRefView'
 import { ComponentParamsOverview } from './ComponentParamsOverview'
 import { ConvertToComponentButton } from './ConvertToComponentButton'
@@ -58,7 +59,7 @@ interface PropertiesPanelBodyProps {
   onFocusClassPicker: () => void
 }
 
-type NodeInspectorView = 'styles' | 'attributes'
+type NodeInspectorView = 'styles' | 'interactions' | 'attributes'
 
 export function PropertiesPanelBody(props: PropertiesPanelBodyProps): React.ReactNode {
   const {
@@ -154,6 +155,16 @@ export function PropertiesPanelBody(props: PropertiesPanelBodyProps): React.Reac
           variant="ghost"
           size="xs"
           className={styles.nodeViewButton}
+          active={activeNodeView === 'interactions'}
+          onClick={() => setActiveNodeView('interactions')}
+          data-testid="node-view-interactions"
+        >
+          Interactions
+        </Button>
+        <Button
+          variant="ghost"
+          size="xs"
+          className={styles.nodeViewButton}
           active={activeNodeView === 'attributes'}
           onClick={() => setActiveNodeView('attributes')}
         >
@@ -192,6 +203,15 @@ export function PropertiesPanelBody(props: PropertiesPanelBodyProps): React.Reac
           inlineStyles={selectedNode.inlineStyles}
           moduleContent={moduleTabContent}
           onFocusClassPicker={onFocusClassPicker}
+        />
+      ) : activeNodeView === 'interactions' ? (
+        // Behaviour lives on its own, not beside raw HTML attributes:
+        // attributes are static, an interaction is something the element DOES.
+        <NodeActionsPanel
+          nodeId={selectedNode.id}
+          actions={selectedNode.actions}
+          visibleWhen={selectedNode.visibleWhen}
+          readOnly={!permissions.canEditStructure}
         />
       ) : (
         <HtmlAttributesPanel

@@ -6,6 +6,14 @@
  *
  * `clearDataMetaCache` is exported for test isolation; import it from this
  * module directly — do not re-export it from the `.tsx` component file.
+ *
+ * Dukafy has NO generic `data_tables`/`data_rows` system — products,
+ * variants and collections are first-class entities instead (see
+ * `commerceEntry.ts`). `GET /admin/api/cms/data/_meta` therefore does not
+ * exist on the Ruby side and never will, so a failed fetch is treated as
+ * "there are no tables", not as an error. Surfacing it turned "Insert data
+ * token" into a dead end reading "Could not load tables" — for a backend the
+ * product deliberately does not have.
  */
 
 import type { DataMeta } from '@core/data/schemas'
@@ -29,10 +37,14 @@ export function loadDataMeta(): Promise<DataMeta> {
       _metaPromise = null
       return m
     })
-    .catch((err) => {
-      // Clear so a retry is possible after an error.
+    .catch(() => {
+      // No tables endpoint (Dukafy) or a transient failure — either way the
+      // picker's other scopes (commerce entities, page/site/route/cart) are
+      // unaffected and must still render.
+      const empty: DataMeta = { tables: [] }
+      _cachedMeta = empty
       _metaPromise = null
-      throw err
+      return empty
     })
   return _metaPromise
 }

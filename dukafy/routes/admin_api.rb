@@ -6,7 +6,7 @@ require "securerandom"
 
 class AdminApi < Roda
   plugin :all_verbs
-  plugin :sessions, secret: ENV.fetch("SESSION_SECRET") { "dev-secret-change-me-" + "x" * 64 }
+  plugin :sessions, secret: SessionSecret.fetch
   plugin :json
   plugin :json_parser
 
@@ -104,7 +104,7 @@ class AdminApi < Roda
 
   def commerce_product_payload(product)
     {
-      id: product.id, title: product.title, slug: product.slug, vendor: product.vendor,
+      id: product.id, title: product.title, slug: product.slug,
       status: product.status, descriptionHtml: product.description_document.to_s,
       variants: product.variants.map do |variant|
         {
@@ -119,6 +119,34 @@ class AdminApi < Roda
     }
   end
 
+  def commerce_order_payload(order)
+    submissions = FormSubmission.where(order_id: order.id).order(:id).all
+    {
+      id: order.id, status: order.status, currency: order.currency,
+      email: order.email, phone: order.phone,
+      customerId: order.customer_id,
+      customerName: order.customer&.name,
+      subtotalCents: order.subtotal_cents, discountCents: order.discount_cents,
+      shippingCents: order.shipping_cents, totalCents: order.total_cents,
+      createdAt: order.created_at.utc.iso8601, updatedAt: order.updated_at.utc.iso8601,
+      items: OrderItem.where(order_id: order.id).order(:id).map do |item|
+        {
+          id: item.id, sku: item.sku, productTitle: item.product_title,
+          variantTitle: item.variant_title, quantity: item.quantity,
+          unitPriceCents: item.unit_price_cents,
+          lineTotalCents: item.unit_price_cents * item.quantity,
+        }
+      end,
+      # Merchant-defined forms filed against this order (delivery address,
+      # M-Pesa confirmation, whatever they invented). Payloads are returned as
+      # stored — Dukafy never chose their shape, so it can't flatten them.
+      submissions: submissions.map do |row|
+        { id: row.id, formId: row.form_id, payload: row.payload_data,
+          createdAt: row.created_at.utc.iso8601 }
+      end,
+    }
+  end
+
   def commerce_collection_payload(collection)
     memberships = CollectionProduct.where(collection_id: collection.id).order(:position).all
     {
@@ -128,11 +156,28 @@ class AdminApi < Roda
     }
   end
 
-  def commerce_product_attributes(params)
+  # `existing_id` excludes the product being edited from the collision check,
+  # so saving a product without touching its slug doesn't rename it.
+  # `current_slug` is the slug the product already has (nil when creating).
+  # It matters because a slug is a URL: on CREATE a blank one is derived from
+  # the title, but on EDIT a blank one KEEPS the existing slug rather than
+  # regenerating it. Otherwise renaming a product would silently move its live
+  # page, and every inbound link would depend on the redirect table catching it.
+  def commerce_product_attributes(params, existing_id: nil, current_slug: nil)
+    title = params.fetch("title", "").strip
+    submitted = params.fetch("slug", "").strip.downcase
+    slug = if !submitted.empty?
+      # A slug the merchant typed is normalised but otherwise respected.
+      normalized = Product.slugify(submitted)
+      normalized.empty? ? (current_slug || Product.unique_slug(title, exclude_id: existing_id)) : normalized
+    elsif current_slug
+      current_slug
+    else
+      Product.unique_slug(title, exclude_id: existing_id)
+    end
     {
-      title: params.fetch("title", "").strip,
-      slug: params.fetch("slug", "").strip.downcase,
-      vendor: params.fetch("vendor", "").strip,
+      title: title,
+      slug: slug,
       status: params.fetch("status", "draft"),
       description_document: RichTextSanitizer.call(params.fetch("descriptionHtml", "")),
     }
@@ -150,9 +195,22 @@ class AdminApi < Roda
     }
   end
 
-  def commerce_collection_attributes(params)
+  # Same slug rules as products, and for the same reason: a collection slug
+  # is a public URL. Blank on CREATE derives from the title; blank on EDIT
+  # keeps the existing slug rather than silently moving a live page.
+  def commerce_collection_attributes(params, existing_id: nil, current_slug: nil)
+    title = params.fetch("title", "").strip
+    submitted = params.fetch("slug", "").strip.downcase
+    slug = if !submitted.empty?
+      normalized = Collection.slugify(submitted)
+      normalized.empty? ? (current_slug || Collection.unique_slug(title, exclude_id: existing_id)) : normalized
+    elsif current_slug
+      current_slug
+    else
+      Collection.unique_slug(title, exclude_id: existing_id)
+    end
     {
-      title: params.fetch("title", "").strip, slug: params.fetch("slug", "").strip.downcase,
+      title: title, slug: slug,
       description: params.fetch("description", "").strip,
       sort_order: Integer(params.fetch("sortOrder", 0)),
     }
@@ -190,16 +248,92 @@ class AdminApi < Roda
     Product.where(id: product_ids).each { |product| rebake_product(product) }
   end
 
+  # Find the row a client-side page id refers to.
+  #
+  # Pages loaded FROM the database carry their numeric id. Pages created in the
+  # editor (New page, or an import) carry a nanoid, and `"V1StGXR8".to_i` is
+  # `0` — so a naive `Page[id.to_i]` found nothing, meaning every save after
+  # the first tried to CREATE the page again and died on the unique slug, and
+  # every delete silently removed nothing.
+  #
+  # The stored document keeps whatever id the editor gave it, so that is what
+  # a non-numeric id is matched against. Slug is a last resort for rows written
+  # before this existed.
+  def find_page_for(editor_id, slug = nil)
+    id = editor_id.to_s
+    return Page[id.to_i] if id.match?(/\A\d+\z/)
+    return nil if id.empty?
+
+    by_document = Page.where(
+      Sequel.lit("json_extract(document, '$.id') = ?", id)
+    ).first
+    by_document || (slug && Page.first(slug: slug))
+  end
+
   def save_page!(raw)
-    id = raw.fetch("id").to_s
-    page = Page[id.to_i]
-    document = raw
-    attrs = { slug: raw.fetch("slug"), title: raw.fetch("title"), document: document }
+    page = find_page_for(raw.fetch("id"), raw.fetch("slug"))
+    attrs = { slug: raw.fetch("slug"), title: raw.fetch("title"), document: raw }
     if page
       page.update(attrs)
     else
       Page.create(attrs.merge(kind: "page", status: "draft"))
     end
+  end
+
+  # Render one page of an UNSAVED editor draft to a standalone HTML document.
+  #
+  # The editor posts its whole in-memory SiteDocument, so this never reads the
+  # Page rows — that's the point: preview must show edits the user hasn't
+  # persisted yet. Rendering goes through the same RenderPage + CssCollector
+  # pipeline Bake uses, so preview and publish can't drift.
+  #
+  # CSS is INLINED rather than linked: the client renders the result in an
+  # `<iframe sandbox="" srcdoc>`, which has an opaque origin, so a relative
+  # `/assets/...` stylesheet href would never resolve.
+  def build_runtime_preview(site, page, template_context)
+    prefetched = CommercePrefetcher.call
+    # entryStack is ordered outermost→innermost; the top frame is `currentEntry`.
+    entry_stack = template_context.is_a?(Hash) ? template_context["entryStack"] : nil
+    current_entry = entry_stack.is_a?(Array) ? entry_stack.last : nil
+
+    rendered = Dukafy::Publisher::RenderPage.call(
+      document: page, registry: Dukafy::Publisher::REGISTRY, site: site,
+      prefetched: prefetched, current_entry: current_entry
+    )
+
+    collector = Dukafy::Publisher::CssCollector.new
+    collector.add("page-modules", rendered.css)
+    bundle = collector.bundle(
+      framework_css: Dukafy::Publisher::FrameworkCss.call(site),
+      tailwind_css: TailwindCompiler.call(
+        html: %(<body class="#{rendered.body_classes.join(' ')}">#{rendered.html}</body>)
+      )
+    )
+
+    html = Dukafy::Publisher::HtmlDocument.call(
+      # Same title/language/description precedence Bake uses, so what the user
+      # previews is what publishing will emit.
+      title: site.dig("settings", "metaTitle") || page["title"].to_s,
+      body: rendered.html, body_classes: rendered.body_classes,
+      language: site.dig("settings", "language") || "en",
+      description: site.dig("settings", "metaDescription"),
+      css: bundle.content, runtimes: rendered.runtimes
+    )
+
+    {
+      html: html,
+      assets: [{
+        path: "assets/#{bundle.filename}", publicPath: "/assets/#{bundle.filename}",
+        content: bundle.content, contentType: "text/css",
+      }],
+      # Deliberately empty: this field describes USER-AUTHORED site scripts
+      # (fileId/placement/timing/priority), which Dukafy doesn't have yet.
+      # Built-in runtimes like htmx are a different concept and are already
+      # emitted as <script> tags inside `html` above — squeezing them in here
+      # would fail the client's schema and break preview outright.
+      runtimeAssets: { scripts: [] },
+      diagnostics: [],
+    }
   end
 
   route do |r|
@@ -294,6 +428,29 @@ class AdminApi < Roda
         { css: TailwindCompiler.call(classes: classes) }
       end
 
+      r.post("runtime", "preview") do
+        require_admin!
+        site = r.params["site"]
+        page_id = r.params["pageId"]
+        halt_json(422, "invalid_site", "A site document is required") unless site.is_a?(Hash)
+        pages = site["pages"]
+        halt_json(422, "invalid_site", "Site document has no pages") unless pages.is_a?(Array)
+
+        page = pages.find { |candidate| candidate.is_a?(Hash) && candidate["id"].to_s == page_id.to_s }
+        halt_json(404, "page_not_found", "Page #{page_id.inspect} is not in the posted site document") unless page
+        unless page["nodes"].is_a?(Hash) && page["rootNodeId"]
+          halt_json(422, "invalid_page", "Page #{page_id.inspect} has no node tree to render")
+        end
+
+        begin
+          build_runtime_preview(site, page, r.params["templateContext"])
+        rescue StandardError => e
+          # A half-built draft (dangling node ref, bad prop) is normal mid-edit
+          # and must read as "preview couldn't build", not a 500 crash.
+          halt_json(422, "preview_failed", "Could not build preview: #{e.message}")
+        end
+      end
+
       r.get("site") do
         require_admin!
         state = SiteState.first || halt_json(404, "site_not_found", "Site has not been created")
@@ -305,6 +462,76 @@ class AdminApi < Roda
         ProductTemplate.ensure!
         CollectionTemplate.ensure!
         { rows: Page.order(:kind, :id).map { |page| data_row(page) } }
+      end
+
+      # Submissions are schemaless by design, so this returns the payload as
+      # stored rather than flattening it into columns Dukafy chose.
+      r.get("form-submissions") do
+        require_admin!
+        rows = FormSubmission.order(Sequel.desc(:created_at)).limit(500).all
+        {
+          rows: rows.map do |row|
+            {
+              id: row.id, formId: row.form_id, payload: row.payload_data,
+              orderId: row.order_id, customerId: row.customer_id,
+              createdAt: row.created_at.utc.iso8601,
+            }
+          end,
+        }
+      end
+
+      # Plugin configuration — API tokens, channel ids, endpoints.
+      #
+      # Secret values are WRITE-ONLY: the admin can set one and see THAT it is
+      # set, but the value never travels back to a browser. Sending a token to
+      # the client so a form can prefill it is how tokens end up in screen
+      # recordings and browser caches.
+      r.on("plugins") do
+        require_admin!
+        r.is do
+          r.get do
+            {
+              plugins: Dukafy::Plugins.all.map do |plugin|
+                values = plugin.settings
+                {
+                  id: plugin.id, name: plugin.name, version: plugin.version,
+                  configured: values.configured?,
+                  paymentProviders: plugin.payment_providers.keys,
+                  settings: plugin.settings_schema.map do |setting|
+                    stored = values[setting.key].to_s
+                    {
+                      key: setting.key, label: setting.label, type: setting.type.to_s,
+                      secret: setting.secret,
+                      isSet: !stored.empty?,
+                      value: setting.secret ? nil : stored,
+                    }
+                  end,
+                }
+              end,
+            }
+          end
+        end
+
+        r.on(String) do |plugin_id|
+          plugin = Dukafy::Plugins.find(plugin_id) || halt_json(404, "plugin_not_found", "Plugin not found")
+          r.put("settings") do
+            submitted = r.params["settings"]
+            halt_json(422, "invalid_settings", "Settings must be an object") unless submitted.is_a?(Hash)
+
+            values = plugin.settings
+            plugin.settings_schema.each do |setting|
+              next unless submitted.key?(setting.key)
+
+              incoming = submitted[setting.key].to_s
+              # An empty submission for a secret means "leave it alone" — the
+              # form could not have shown the current value to resubmit.
+              next if setting.secret && incoming.empty?
+
+              values[setting.key] = incoming
+            end
+            { ok: true, configured: values.configured? }
+          end
+        end
       end
 
       r.get("components") { require_admin!; { rows: [] } }
@@ -367,7 +594,9 @@ class AdminApi < Roda
             r.patch do
               old_slug = product.slug
               DB.transaction do
-                product.update(commerce_product_attributes(r.params))
+                product.update(commerce_product_attributes(
+                  r.params, existing_id: product.id, current_slug: product.slug
+                ))
                 SlugRedirect.record(resource_type: "product", old_slug:, destination_slug: product.slug)
               end
               { product: commerce_product_payload(product), rebakedPages: rebake_product(product, old_slug:) }
@@ -426,7 +655,9 @@ class AdminApi < Roda
             r.patch do
               old_slug = collection.slug
               DB.transaction do
-                collection.update(commerce_collection_attributes(r.params))
+                collection.update(commerce_collection_attributes(
+                  r.params, existing_id: collection.id, current_slug: collection.slug
+                ))
                 SlugRedirect.record(resource_type: "collection", old_slug:, destination_slug: collection.slug)
               end
               { collection: commerce_collection_payload(collection), rebakedPages: rebake_collection(collection, old_slug:) }
@@ -450,6 +681,26 @@ class AdminApi < Roda
             end
           end
         end
+        r.on("orders") do
+          r.is do
+            r.get do
+              { orders: Order.order(Sequel.desc(:id)).limit(500).map { |order| commerce_order_payload(order) } }
+            end
+          end
+          r.on(String) do |id|
+            order = Order[id.to_i] || halt_json(404, "order_not_found", "Order not found")
+            r.get { commerce_order_payload(order) }
+            r.patch do
+              status = r.params["status"].to_s
+              unless Order::STATUSES.include?(status)
+                halt_json(422, "invalid_status", "Status must be one of #{Order::STATUSES.join(', ')}")
+              end
+              order.update(status: status, updated_at: Time.now)
+              commerce_order_payload(order)
+            end
+          end
+        end
+
         r.on("settings") do
           r.get { { settings: commerce_settings_payload } }
           r.patch do
@@ -473,7 +724,9 @@ class AdminApi < Roda
           state.seq += 1
           state.save
           changed_pages.each { |page| save_page!(page) }
-          r.params.fetch("deletedPageIds", []).each { |id| Page[id.to_i]&.destroy }
+          # Deleting by slug fallback would be wrong here — a stale id must not
+          # take out whatever page happens to hold that slug now.
+          r.params.fetch("deletedPageIds", []).each { |id| find_page_for(id)&.destroy }
         end
         { ok: true, seq: state.seq }
       end

@@ -11,6 +11,7 @@ class Dukafy
         register_button(registry)
         register_link(registry)
         register_list(registry)
+        BaseFormModules.register(registry)
         registry
       end
 

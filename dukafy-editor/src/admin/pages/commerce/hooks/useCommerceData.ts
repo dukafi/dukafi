@@ -7,11 +7,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getErrorMessage } from '@core/utils/errorMessage'
 import { commerceApi } from '../api'
-import type { Collection, Product } from '../types'
+import type { Collection, Order, Plugin, Product } from '../types'
 
 export interface CommerceData {
   products: Product[]
   collections: Collection[]
+  orders: Order[]
+  plugins: Plugin[]
   loading: boolean
   error: string | null
   setError: (error: string | null) => void
@@ -21,17 +23,23 @@ export interface CommerceData {
 export function useCommerceData(): CommerceData {
   const [products, setProducts] = useState<Product[]>([])
   const [collections, setCollections] = useState<Collection[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
+  const [plugins, setPlugins] = useState<Plugin[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     try {
-      const [productsResult, collectionsResult] = await Promise.all([
+      const [productsResult, collectionsResult, ordersResult, pluginsResult] = await Promise.all([
         commerceApi.listProducts(),
         commerceApi.listCollections(),
+        commerceApi.listOrders(),
+        commerceApi.listPlugins(),
       ])
       setProducts(productsResult.products)
       setCollections(collectionsResult.collections)
+      setOrders(ordersResult.orders)
+      setPlugins(pluginsResult.plugins)
       setError(null)
     } catch (err) {
       setError(getErrorMessage(err, 'Could not load the catalog'))
@@ -44,5 +52,5 @@ export function useCommerceData(): CommerceData {
     void refresh()
   }, [refresh])
 
-  return { products, collections, loading, error, setError, refresh }
+  return { products, collections, orders, plugins, loading, error, setError, refresh }
 }

@@ -30,11 +30,14 @@ class ProductCsvImporter
   end
 
   def self.import_product(row)
-    slug = row["product_slug"].to_s.strip.downcase
-    product = Product.first(slug:) || Product.new(slug:)
+    title = row["product_title"].to_s.strip
+    slug = Product.slugify(row["product_slug"])
+    # A CSV without a usable slug column still imports — the slug comes from
+    # the title, the same as creating a product in the admin.
+    product = (Product.first(slug: slug) if !slug.empty?)
+    product ||= Product.new(slug: slug.empty? ? Product.unique_slug(title) : slug)
     product.set(
-      title: row["product_title"].to_s.strip,
-      vendor: row["vendor"].to_s.strip,
+      title: title,
       status: row["status"].to_s.strip.downcase,
       description_document: RichTextSanitizer.call(row["description_html"]),
     )

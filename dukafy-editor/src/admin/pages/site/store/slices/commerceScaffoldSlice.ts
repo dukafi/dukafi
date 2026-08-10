@@ -9,6 +9,7 @@
  * outlet/VC-cycle guards apply here.
  */
 import {
+  buildCartScaffoldSnapshot,
   buildProductScaffoldSnapshot,
   buildRelationshipLoopSnapshot,
   type RelationshipKind,
@@ -32,6 +33,13 @@ interface CommerceScaffoldSlice {
    * is `insertRelationshipLoop('products')`.
    */
   insertRelationshipLoop: (relationship: RelationshipKind, explicitTarget?: InsertLocation) => string | null
+
+  /**
+   * Insert a whole cart: a `cartItems` loop with a line row, plus a subtotal
+   * bound to the `cart` frame. A starting point the merchant then edits —
+   * Dukafy ships no cart component.
+   */
+  insertCartScaffold: (explicitTarget?: InsertLocation) => string | null
 }
 
 declare module '@site/store/types' {
@@ -73,5 +81,6 @@ export const createCommerceScaffoldSlice: EditorStoreSliceCreator<CommerceScaffo
     insertProductScaffold: (explicitTarget) => insertSnapshot(buildProductScaffoldSnapshot(), explicitTarget),
     insertRelationshipLoop: (relationship, explicitTarget) =>
       insertSnapshot(buildRelationshipLoopSnapshot(relationship), explicitTarget),
+    insertCartScaffold: (explicitTarget) => insertSnapshot(buildCartScaffoldSnapshot(), explicitTarget),
   }
 }

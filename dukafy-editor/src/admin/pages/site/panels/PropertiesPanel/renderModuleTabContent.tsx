@@ -33,6 +33,7 @@ import type {
 } from '@core/page-tree'
 import type { LoopSourceField } from '@core/loops/types'
 import type { CommerceEntityKind } from '../../property-controls/DynamicBindingControl/commerceEntry'
+import { COMMERCE_ENTITIES, listFields, type EntityId } from '@core/commerce/entitySchema'
 import type { ActiveDocument } from '../../store/slices/uiSlice'
 import { LoopPropertiesView } from './LoopPropertiesView'
 import { ParamPromotableRow } from './ParamPromotableRow'
@@ -110,7 +111,8 @@ export function renderModuleTabContent(args: ModuleTabContentArgs): React.ReactN
         />
       )}
 
-      {Object.entries(definition.schema).map(([key, control]: [string, PropertyControl]) => {
+      {Object.entries(loopSourceAwareSchema(definition, commerceEntityKind))
+        .map(([key, control]: [string, PropertyControl]) => {
         // Hidden controls carry a type for the engine (escaping dispatch) but
         // render no editor surface — e.g. base.outlet.html, a publisher-filled
         // binding target the author never edits.
@@ -137,6 +139,7 @@ export function renderModuleTabContent(args: ModuleTabContentArgs): React.ReactN
 
         return (
           <PropertyControlRenderer
+            moduleDefault={definition.defaults?.[key]}
             key={key}
             propKey={key}
             control={control}
@@ -161,4 +164,43 @@ export function renderModuleTabContent(args: ModuleTabContentArgs): React.ReactN
 
 function isPromotedFormProperty(selectedNode: PageNode, key: string): boolean {
   return selectedNode.moduleId === 'base.form' && PROMOTED_FORM_PROPERTY_KEYS.has(key)
+}
+
+/**
+ * The relationship loop's `source` becomes a SELECT built from the entity
+ * schema, so an author picks "Images" rather than typing `currentEntry.images`
+ * and hoping.
+ *
+ * Options are the root catalogue sources plus — when a loop encloses this one —
+ * the list fields of whatever entity is in scope there. That is the composable
+ * part made visible: nest a loop and the choices grow with the data.
+ */
+function loopSourceAwareSchema(
+  definition: AnyModuleDefinition,
+  entityInScope: CommerceEntityKind | null,
+): AnyModuleDefinition['schema'] {
+  if (definition.id !== 'store.relationship-loop') return definition.schema
+
+  const options = [
+    { label: 'All products', value: 'products' },
+    { label: 'Cart items', value: 'cart.items' },
+  ]
+  if (entityInScope) {
+    for (const field of listFields(entityInScope as EntityId)) {
+      options.push({
+        label: `${COMMERCE_ENTITIES[entityInScope as EntityId].label} → ${field.label}`,
+        value: `currentEntry.${field.id}`,
+      })
+    }
+  }
+  return {
+    ...definition.schema,
+    source: {
+      type: 'select',
+      label: 'Source',
+      // Free-form paths (`collections/<slug>.products`) stay valid; the select
+      // covers the common cases without hiding the rest.
+      options,
+    },
+  }
 }

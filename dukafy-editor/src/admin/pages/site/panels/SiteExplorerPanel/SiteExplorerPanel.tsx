@@ -1,16 +1,19 @@
-import { useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { useEditorStore } from '@site/store/store'
 import type { SiteFile } from '@core/files/schemas'
 import type { ExplorerPathChangePlan, Page, SiteExplorerSectionId, StructuralSiteExplorerSectionId } from '@core/page-tree'
-import { createUniquePageSlug, pagePublicPath, isHomePage } from '@core/page-tree'
+import { buildPageExport, createUniquePageSlug, pagePublicPath, parsePageExport, isHomePage } from '@core/page-tree'
 import { templateTargetLabel } from '@core/templates'
 import { flattenVCToVirtualPage } from '@core/visualComponents'
 import { SkeletonBlock } from '@ui/components/Skeleton'
+import { pushToast } from '@ui/components/Toast'
+import { downloadJsonFile, safeFilenameFragment } from '@admin/shared/downloadJsonFile'
 import { FileTextSolidIcon } from 'pixel-art-icons/icons/file-text-solid'
 import { FolderGlyphIcon } from 'pixel-art-icons/icons/folder-glyph'
 import { BracesIcon } from 'pixel-art-icons/icons/braces'
 import { PaintBucketSolidIcon } from 'pixel-art-icons/icons/paint-bucket-solid'
 import { CodeIcon } from 'pixel-art-icons/icons/code'
+import { ArrowDownIcon } from 'pixel-art-icons/icons/arrow-down'
 import { ExternalLinkSolidIcon } from 'pixel-art-icons/icons/external-link-solid'
 import { GlobeSolidIcon } from 'pixel-art-icons/icons/globe-solid'
 import { Settings2SolidIcon } from 'pixel-art-icons/icons/settings-2-solid'
@@ -118,6 +121,7 @@ export function SiteExplorerPanel({
   const previewDeleteExplorerFolder = useEditorStore((s) => s.previewDeleteExplorerFolder)
   const commitExplorerPathChange = useEditorStore((s) => s.commitExplorerPathChange)
   const setPageAsHomepage = useEditorStore((s) => s.setPageAsHomepage)
+  const importPage = useEditorStore((s) => s.importPage)
   const confirmVCDeletion = useVCDeletionConfirm()
   const confirmDelete = useConfirmDelete()
   const [createKind, setCreateKind] = useState<SiteCreateKind | null>(null)
@@ -128,6 +132,31 @@ export function SiteExplorerPanel({
 
   const files = site?.files ?? EMPTY_FILES
   const fileBuckets = groupSiteFiles(files)
+  const pageImportInputRef = useRef<HTMLInputElement>(null)
+
+  async function handlePageImportFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0]
+    event.currentTarget.value = ''
+    if (!file) return
+    try {
+      const raw = JSON.parse(await file.text())
+      const parsed = parsePageExport(raw)
+      if (!parsed) {
+        pushToast({ kind: 'error', title: 'Not a Dukafy page export', body: `${file.name} doesn't match the expected file shape.` })
+        return
+      }
+      const page = importPage(parsed)
+      openPageInCanvas(page.id)
+      pushToast({ kind: 'success', title: `Imported "${page.title}"` })
+    } catch {
+      pushToast({ kind: 'error', title: 'Could not read file', body: `${file.name} is not valid JSON.` })
+    }
+  }
+
+  function handleExportPage(page: Page) {
+    if (!site) return
+    downloadJsonFile(`${safeFilenameFragment(page.slug)}.dukafy-page.json`, buildPageExport(page, site.styleRules))
+  }
 
   function handleCreate({ name, slug }: SiteCreatePayload) {
     if (!createKind) return
@@ -416,6 +445,14 @@ export function SiteExplorerPanel({
           setContextMenu(null)
         },
       },
+      {
+        label: 'Export page',
+        icon: <ArrowDownIcon size={13} />,
+        action: () => {
+          handleExportPage(page)
+          setContextMenu(null)
+        },
+      },
       // Templates get title+slug through "Template settings" already — avoid
       // a second, redundant slug editor for the same page.
       ...(!page.template ? [{
@@ -611,6 +648,13 @@ export function SiteExplorerPanel({
   function renderPanel(explorerDnd: SiteExplorerDndState) {
     return (
       <div className={styles.panelBody} data-testid="site-explorer-panel">
+        <input
+          ref={pageImportInputRef}
+          type="file"
+          accept=".json,application/json"
+          hidden
+          onChange={(event) => void handlePageImportFileChange(event)}
+        />
         {!site ? (
           <SkeletonBlock minHeight={160} ariaLabel="Loading site" />
         ) : (
@@ -630,6 +674,7 @@ export function SiteExplorerPanel({
             inlineRenameTargetForSection={inlineRenameSectionTarget}
             selectedItemIdsForSection={(sectionId) => explorerSelection.selectedItemIdsForSection(sectionId)}
             onCreatePage={() => setCreateKind('page')}
+            onImportPage={() => pageImportInputRef.current?.click()}
             onCreateTemplate={handleCreateTemplate}
             onCreateComponent={() => setCreateKind('component')}
             onCreateStyle={() => setCreateKind('style')}

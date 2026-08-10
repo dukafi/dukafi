@@ -56,6 +56,43 @@ class FragmentsSpec < Minitest::Test
     assert_equal 0, CartItem.count
   end
 
+  # A product with ONE variant needs no picker, so nothing on the merchant's
+  # page supplies `variant_sku` — and requiring it 404'd every "Add to cart"
+  # on a simple product.
+  def test_add_item_without_a_sku_uses_the_only_variant
+    post "/fragments/cart/items", product_slug: "canvas-bag", quantity: "2"
+
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, "Added Canvas Bag — Large."
+    assert_equal @variant.id, CartItem.first.variant_id
+  end
+
+  # With a real choice to make, guessing would silently add the wrong size.
+  def test_add_item_without_a_sku_refuses_when_the_product_has_several_variants
+    Variant.create(
+      product_id: @product.id, sku: "BAG-S", title: "Small", price_cents: 13_950,
+      currency: "USD", stock: 3, position: 1
+    )
+
+    post "/fragments/cart/items", product_slug: "canvas-bag", quantity: "1"
+
+    assert_equal 404, last_response.status
+    assert_includes last_response.body, "Choose an option first."
+    assert_equal 0, CartItem.count
+  end
+
+  # A rejected add used to call `active_cart`, which CREATES a cart — so every
+  # failed click left an empty row behind.
+  def test_a_rejected_add_creates_no_cart
+    post "/fragments/cart/items", product_slug: "ghost", quantity: "1"
+    assert_equal 404, last_response.status
+
+    post "/fragments/cart/items", product_slug: "canvas-bag", variant_sku: "BAG-L", quantity: "99"
+    assert_equal 409, last_response.status
+
+    assert_equal 0, Cart.count
+  end
+
   def test_stock_fragment_reports_variant_and_product_inventory
     get "/fragments/stock", product_slug: "canvas-bag", variant_sku: "BAG-L", low_stock_threshold: "3"
 

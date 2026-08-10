@@ -1,0 +1,32 @@
+/* NodeActionsPanel — node-level editor for the `actions` behaviour overlay. */
+
+.panel {
+    display: grid;
+    gap: var(--space-m);
+    padding: var(--space-l) var(--space-xl);
+}
+
+.hint {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+    line-height: 1.4;
+}
+
+/* A titled group, so "what this node does" and "whether it renders at all"
+   read as two separate ideas rather than one long list of selects. */
+.group {
+    display: grid;
+    gap: var(--space-m);
+    padding-top: var(--space-m);
+    border-top: 1px solid var(--border-subtle, rgba(128, 128, 128, 0.2));
+}
+
+.groupTitle {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}

@@ -493,4 +493,5 @@ class StoreModulesSpec < Minitest::Test
     assert_includes output.fetch(:css), ".dukafy-cart-badge{"
     refute_match(/>\d+<\/span>/, output.fetch(:html))
   end
+
 end

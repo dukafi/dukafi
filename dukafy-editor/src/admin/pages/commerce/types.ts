@@ -6,7 +6,7 @@
  */
 import type { ReactNode } from 'react'
 
-export type CommerceSection = 'products' | 'collections' | 'import' | 'settings'
+export type CommerceSection = 'products' | 'collections' | 'orders' | 'plugins' | 'import' | 'settings'
 
 export interface CommerceSettings {
   currency: string
@@ -41,7 +41,6 @@ export interface Product {
   id: number
   title: string
   slug: string
-  vendor: string
   status: 'draft' | 'active'
   descriptionHtml: string
   variants: Variant[]
@@ -81,4 +80,71 @@ export function variantFormFrom(variant: Variant): VariantFormState {
     stock: String(variant.stock),
     position: String(variant.position),
   }
+}
+
+export interface OrderItem {
+  id: number
+  sku: string
+  productTitle: string
+  variantTitle: string
+  quantity: number
+  unitPriceCents: number
+  lineTotalCents: number
+}
+
+/**
+ * A merchant-defined form filed against this order (delivery details, an
+ * M-Pesa confirmation, whatever they invented). `payload` is deliberately
+ * open — Dukafy never chose its shape, so it can't type it.
+ */
+export interface OrderSubmission {
+  id: number
+  formId: string
+  payload: Record<string, string>
+  createdAt: string
+}
+
+export interface Order {
+  id: number
+  status: string
+  currency: string
+  email: string | null
+  phone: string | null
+  customerId: number | null
+  customerName: string | null
+  subtotalCents: number
+  discountCents: number
+  shippingCents: number
+  totalCents: number
+  createdAt: string
+  updatedAt: string
+  items: OrderItem[]
+  submissions: OrderSubmission[]
+}
+
+export const ORDER_STATUSES = ['pending', 'paid', 'fulfilled', 'shipped', 'refunded'] as const
+
+/**
+ * One configurable field a plugin declared. The admin form is generated from
+ * these, so a new plugin gets its settings UI with no UI code of its own.
+ *
+ * `value` is null for secrets — they are write-only over the API, so the form
+ * can report that one is set but never prefill it.
+ */
+export interface PluginSettingField {
+  key: string
+  label: string
+  type: string
+  secret: boolean
+  isSet: boolean
+  value: string | null
+}
+
+export interface Plugin {
+  id: string
+  name: string
+  version: string
+  configured: boolean
+  paymentProviders: string[]
+  settings: PluginSettingField[]
 }

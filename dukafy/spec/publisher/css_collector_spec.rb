@@ -26,4 +26,41 @@ class CssCollectorSpec < Minitest::Test
     refute_match(%r{</style}i, changed.content)
     assert_includes changed.content, '<\\/style>'
   end
+
+  # A module's CSS is a DEFAULT. It used to come last at equal specificity and
+  # therefore win: `.dukafy-collection-loop{grid-template-columns:repeat(auto-fit,...)}`
+  # silently overrode an authored `lg:grid-cols-4`, so the published grid
+  # disagreed with the editor canvas — one product filled the whole row.
+  def test_module_css_is_layered_so_an_authored_utility_beats_it
+    collector = Dukafy::Publisher::CssCollector.new
+    collector.add("store.relationship-loop", ".dukafy-collection-loop{display:grid}")
+    content = collector.bundle(tailwind_css: ".lg\\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}").content
+
+    assert_match(/\A@layer dukafy-reset, dukafy-modules;/, content)
+    assert_includes content, "@layer dukafy-modules {"
+    # The utility stays UNLAYERED, and unlayered beats layered regardless of
+    # specificity or source order.
+    refute_includes content, "@layer dukafy-modules {\n.lg"
+    utility_at = content.index(".lg")
+    modules_at = content.index("@layer dukafy-modules {")
+    assert_operator utility_at, :<, modules_at,
+                    "the utility should sit outside (before) the modules layer"
+  end
+
+  def test_the_reset_is_layered_below_modules
+    collector = Dukafy::Publisher::CssCollector.new
+    collector.add("m", ".dukafy-buy-button{padding:.625rem 1rem}")
+    content = collector.bundle.content
+
+    # Order of first appearance in the @layer statement is the cascade order,
+    # so a module's padding still beats the reset's `padding: 0`.
+    assert_includes content, "@layer dukafy-reset {"
+    assert_operator content.index("dukafy-reset"), :<, content.index("dukafy-modules")
+  end
+
+  def test_an_empty_module_set_emits_no_empty_layer_block
+    content = Dukafy::Publisher::CssCollector.new.bundle.content
+
+    refute_includes content, "@layer dukafy-modules {"
+  end
 end

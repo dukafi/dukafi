@@ -5,6 +5,8 @@
  * product"/row "Edit" open `ProductDialog` (create and edit share one
  * dialog, mirroring `users/components/UserDialog.tsx`); variants live in
  * their own `VariantsDialog` opened from the row action menu, not inline.
+ * Inside it, variants are a read-only list and create/edit is a real form —
+ * a row of always-live inputs saved half-typed values on a stray click.
  */
 import { useState, type FormEvent } from 'react'
 import { Button } from '@ui/components/Button'
@@ -104,7 +106,6 @@ export function ProductsSection({ data }: { data: CommerceData }) {
     const input = {
       title: String(form.get('title') || ''),
       slug: String(form.get('slug') || ''),
-      vendor: String(form.get('vendor') || ''),
       status: String(form.get('status') || 'draft'),
       descriptionHtml: String(form.get('descriptionHtml') || ''),
     }
@@ -164,7 +165,6 @@ export function ProductsSection({ data }: { data: CommerceData }) {
           <DataTableHead>
             <DataTableRow>
               <DataTableHeader scope="col">Name</DataTableHeader>
-              <DataTableHeader scope="col">Vendor</DataTableHeader>
               <DataTableHeader scope="col">Status</DataTableHeader>
               <DataTableHeader scope="col">Variants</DataTableHeader>
               <DataTableHeader scope="col">Price</DataTableHeader>
@@ -181,7 +181,6 @@ export function ProductsSection({ data }: { data: CommerceData }) {
                     <span>{product.slug}</span>
                   </div>
                 </DataTableCell>
-                <DataTableCell>{product.vendor || '—'}</DataTableCell>
                 <DataTableCell><TagPill label={product.status} muted={product.status === 'draft'} size="xs" /></DataTableCell>
                 <DataTableCell>{product.variants.length}</DataTableCell>
                 <DataTableCell>{priceSummary(product)}</DataTableCell>
@@ -317,11 +316,21 @@ function ProductDialog({
         <FormField label="Title" htmlFor="product-title">
           <Input id="product-title" name="title" required defaultValue={product?.title} />
         </FormField>
-        <FormField label="Slug" htmlFor="product-slug">
-          <Input id="product-slug" name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" defaultValue={product?.slug} monospace />
-        </FormField>
-        <FormField label="Vendor" htmlFor="product-vendor">
-          <Input id="product-vendor" name="vendor" defaultValue={product?.vendor} />
+        <FormField
+          label="Slug"
+          htmlFor="product-slug"
+          description={product
+            ? 'The product\u2019s URL. Changing it leaves a redirect behind.'
+            : 'Leave blank to generate one from the title.'}
+        >
+          <Input
+            id="product-slug"
+            name="slug"
+            pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+            placeholder={product ? undefined : 'auto'}
+            defaultValue={product?.slug}
+            monospace
+          />
         </FormField>
         <FormField label="Status" htmlFor="product-status">
           <Select id="product-status" name="status" defaultValue={product?.status ?? 'draft'} options={STATUS_OPTIONS} />
@@ -358,48 +367,230 @@ function ProductDialog({
 
 function VariantsDialog({ product, refresh, onClose }: { product: Product; refresh: () => Promise<void>; onClose: () => void }) {
   const [error, setError] = useState<string | null>(null)
-  const [creatingRow, setCreatingRow] = useState(false)
+  // `null` = listing, `'new'` = creating, a Variant = editing that one.
+  // Create and edit share one form, the way ProductDialog does.
+  const [editing, setEditing] = useState<Variant | 'new' | null>(null)
+  const [removing, setRemoving] = useState<Variant | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function handleDelete(variant: Variant) {
+    setBusy(true)
+    setError(null)
+    try {
+      await commerceApi.deleteVariant(product.id, variant.id)
+      await refresh()
+      setRemoving(null)
+    } catch (err) {
+      setError(getErrorMessage(err, 'Could not delete variant'))
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
-    <Dialog open onClose={onClose} title={`Variants — ${product.title}`} size="xl" footer={<Button type="button" variant="secondary" size="sm" onClick={onClose}><span>Close</span></Button>}>
+    <Dialog
+      open
+      onClose={onClose}
+      title={`Variants — ${product.title}`}
+      size="xl"
+      footer={<Button type="button" variant="secondary" size="sm" onClick={onClose}><span>Close</span></Button>}
+    >
       {error && <p className={styles.error} role="alert">{error}</p>}
-      <DataTable density="compact" aria-label={`Variants for ${product.title}`}>
-        <DataTableHead>
-          <DataTableRow>
-            <DataTableHeader scope="col">SKU</DataTableHeader>
-            <DataTableHeader scope="col">Title</DataTableHeader>
-            <DataTableHeader scope="col">Price</DataTableHeader>
-            <DataTableHeader scope="col">Stock</DataTableHeader>
-            <DataTableHeader scope="col">Position</DataTableHeader>
-            <DataTableHeader scope="col" className={styles.actionsHeader}>Actions</DataTableHeader>
-          </DataTableRow>
-        </DataTableHead>
-        <DataTableBody>
-          {product.variants.map((variant) => (
-            <VariantRow key={variant.id} productId={product.id} variant={variant} onError={setError} refresh={refresh} />
-          ))}
-          {creatingRow ? (
-            <VariantRow
-              productId={product.id}
-              variant={null}
-              nextPosition={product.variants.length}
-              onError={setError}
-              onDone={() => setCreatingRow(false)}
-              refresh={refresh}
-            />
-          ) : (
-            <DataTableRow>
-              <DataTableCell colSpan={6}>
-                <Button type="button" variant="ghost" size="xs" onClick={() => setCreatingRow(true)}>
-                  <PlusIcon size={12} aria-hidden="true" />
-                  <span>Add variant</span>
-                </Button>
-              </DataTableCell>
-            </DataTableRow>
-          )}
-        </DataTableBody>
-      </DataTable>
+
+      {editing ? (
+        <VariantForm
+          productId={product.id}
+          variant={editing === 'new' ? null : editing}
+          nextPosition={product.variants.length}
+          onError={setError}
+          onDone={() => setEditing(null)}
+          refresh={refresh}
+        />
+      ) : (
+        <>
+          <DataTable density="compact" aria-label={`Variants for ${product.title}`}>
+            <DataTableHead>
+              <DataTableRow>
+                <DataTableHeader scope="col">SKU</DataTableHeader>
+                <DataTableHeader scope="col">Title</DataTableHeader>
+                <DataTableHeader scope="col">Price</DataTableHeader>
+                <DataTableHeader scope="col">Stock</DataTableHeader>
+                <DataTableHeader scope="col">Position</DataTableHeader>
+                <DataTableHeader scope="col" className={styles.actionsHeader}>Actions</DataTableHeader>
+              </DataTableRow>
+            </DataTableHead>
+            <DataTableBody>
+              {product.variants.length === 0 ? (
+                <DataTableRow>
+                  <DataTableCell colSpan={6}>No variants yet.</DataTableCell>
+                </DataTableRow>
+              ) : (
+                product.variants.map((variant) => (
+                  <DataTableRow key={variant.id}>
+                    <DataTableCell>{variant.sku}</DataTableCell>
+                    <DataTableCell>{variant.title}</DataTableCell>
+                    <DataTableCell>{formatCents(variant.priceCents, variant.currency)}</DataTableCell>
+                    <DataTableCell>{variant.stock}</DataTableCell>
+                    <DataTableCell>{variant.position}</DataTableCell>
+                    <DataTableCell className={styles.actionsCell}>
+                      <Button
+                        type="button" variant="ghost" size="xs"
+                        onClick={() => setEditing(variant)}
+                        data-testid={`variant-edit-${variant.id}`}
+                      >
+                        <EditSolidIcon size={12} aria-hidden="true" />
+                        <span>Edit</span>
+                      </Button>
+                      <Button
+                        type="button" variant="ghost" tone="danger" size="xs" iconOnly
+                        aria-label={`Delete variant ${variant.sku}`}
+                        onClick={() => setRemoving(variant)}
+                      >
+                        <TrashSolidIcon size={12} aria-hidden="true" />
+                      </Button>
+                    </DataTableCell>
+                  </DataTableRow>
+                ))
+              )}
+            </DataTableBody>
+          </DataTable>
+
+          <Button type="button" variant="secondary" size="xs" onClick={() => setEditing('new')} data-testid="variant-add">
+            <PlusIcon size={12} aria-hidden="true" />
+            <span>Add variant</span>
+          </Button>
+        </>
+      )}
+
+      <Dialog
+        open={removing !== null}
+        onClose={() => setRemoving(null)}
+        title="Delete variant?"
+        tone="danger"
+        footer={
+          <>
+            <Button type="button" variant="secondary" size="sm" onClick={() => setRemoving(null)} disabled={busy}>
+              <span>Cancel</span>
+            </Button>
+            <Button
+              type="button" variant="destructive" size="sm" disabled={busy}
+              onClick={() => removing && void handleDelete(removing)}
+            >
+              <span>Delete</span>
+            </Button>
+          </>
+        }
+      >
+        <p>This permanently deletes “{removing?.sku}”.</p>
+      </Dialog>
     </Dialog>
+  )
+}
+
+/**
+ * Create/edit a variant — one form for both.
+ *
+ * Replaces the old inline row editing: a real <form> means Enter submits,
+ * the browser enforces required fields, and a half-typed SKU is never saved
+ * by a stray click the way a row of live inputs invited.
+ */
+function VariantForm({
+  productId,
+  variant,
+  nextPosition,
+  onError,
+  onDone,
+  refresh,
+}: {
+  productId: number
+  variant: Variant | null
+  nextPosition: number
+  onError: (message: string | null) => void
+  onDone: () => void
+  refresh: () => Promise<void>
+}) {
+  const [form, setForm] = useState<VariantFormState>(
+    variant ? variantFormFrom(variant) : { ...emptyVariantForm, position: String(nextPosition) },
+  )
+  const [busy, setBusy] = useState(false)
+
+  function update<K extends keyof VariantFormState>(key: K, value: VariantFormState[K]) {
+    setForm((current) => ({ ...current, [key]: value }))
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setBusy(true)
+    onError(null)
+    try {
+      const input = {
+        sku: form.sku.trim(),
+        title: form.title.trim(),
+        priceCents: Number(form.priceCents),
+        stock: Number(form.stock),
+        position: Number(form.position),
+      }
+      if (variant) {
+        await commerceApi.updateVariant(productId, variant.id, input)
+      } else {
+        await commerceApi.createVariant(productId, input)
+      }
+      await refresh()
+      onDone()
+    } catch (err) {
+      onError(getErrorMessage(err, 'Could not save variant'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form className={styles.dialogForm} onSubmit={(event) => void handleSubmit(event)}>
+      <FormField label="SKU" htmlFor="variant-sku" description="Unique within this product.">
+        <Input
+          id="variant-sku" value={form.sku} required monospace autoFocus
+          onChange={(event) => update('sku', event.currentTarget.value)}
+        />
+      </FormField>
+      <FormField label="Title" htmlFor="variant-title">
+        <Input
+          id="variant-title" value={form.title} required
+          onChange={(event) => update('title', event.currentTarget.value)}
+        />
+      </FormField>
+      <FormField
+        label="Price"
+        htmlFor="variant-price"
+        description="In cents — 13950 is 139.50. The store currency is applied automatically."
+      >
+        <Input
+          id="variant-price" type="number" min={0} value={form.priceCents} required unit="¢"
+          onChange={(event) => update('priceCents', event.currentTarget.value)}
+        />
+      </FormField>
+      <FormField label="Stock" htmlFor="variant-stock">
+        <Input
+          id="variant-stock" type="number" min={0} value={form.stock} required
+          onChange={(event) => update('stock', event.currentTarget.value)}
+        />
+      </FormField>
+      <FormField label="Position" htmlFor="variant-position" description="Lowest shows first.">
+        <Input
+          id="variant-position" type="number" min={0} value={form.position} required
+          onChange={(event) => update('position', event.currentTarget.value)}
+        />
+      </FormField>
+
+      <div className={styles.dialogFormActions}>
+        <Button type="button" variant="secondary" size="sm" onClick={onDone} disabled={busy}>
+          <span>Cancel</span>
+        </Button>
+        <Button type="submit" variant="primary" size="sm" disabled={busy}>
+          <SaveSolidIcon size={12} aria-hidden="true" />
+          <span>{busy ? 'Saving…' : variant ? 'Save variant' : 'Add variant'}</span>
+        </Button>
+      </div>
+    </form>
   )
 }
 
@@ -471,90 +662,5 @@ function ImagesDialog({ product, refresh, onClose }: { product: Product; refresh
         onPickMultiple={(assets) => void persist([...product.images.map((image) => String(image.id)), ...assets.map((asset) => asset.id)]).then(() => setPickerOpen(false))}
       />
     </Dialog>
-  )
-}
-
-function VariantRow({
-  productId,
-  variant,
-  nextPosition,
-  onError,
-  onDone,
-  refresh,
-}: {
-  productId: number
-  variant: Variant | null
-  nextPosition?: number
-  onError: (message: string | null) => void
-  onDone?: () => void
-  refresh: () => Promise<void>
-}) {
-  const [form, setForm] = useState<VariantFormState>(
-    variant ? variantFormFrom(variant) : { ...emptyVariantForm, position: String(nextPosition ?? 0) },
-  )
-  const [busy, setBusy] = useState(false)
-
-  function update<K extends keyof VariantFormState>(key: K, value: VariantFormState[K]) {
-    setForm((current) => ({ ...current, [key]: value }))
-  }
-
-  async function save() {
-    setBusy(true)
-    onError(null)
-    try {
-      const input = {
-        sku: form.sku,
-        title: form.title,
-        priceCents: Number(form.priceCents),
-        stock: Number(form.stock),
-        position: Number(form.position),
-      }
-      if (variant) {
-        await commerceApi.updateVariant(productId, variant.id, input)
-      } else {
-        await commerceApi.createVariant(productId, input)
-        setForm({ ...emptyVariantForm, position: String((nextPosition ?? 0) + 1) })
-        onDone?.()
-      }
-      await refresh()
-    } catch (err) {
-      onError(getErrorMessage(err, 'Could not save variant'))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function remove() {
-    if (!variant) return
-    setBusy(true)
-    onError(null)
-    try {
-      await commerceApi.deleteVariant(productId, variant.id)
-      await refresh()
-    } catch (err) {
-      onError(getErrorMessage(err, 'Could not delete variant'))
-      setBusy(false)
-    }
-  }
-
-  return (
-    <DataTableRow>
-      <DataTableCell><Input aria-label="SKU" value={form.sku} required monospace fieldSize="sm" onChange={(e) => update('sku', e.currentTarget.value)} /></DataTableCell>
-      <DataTableCell><Input aria-label="Title" value={form.title} required fieldSize="sm" onChange={(e) => update('title', e.currentTarget.value)} /></DataTableCell>
-      <DataTableCell><Input aria-label="Price cents" type="number" min={0} value={form.priceCents} required fieldSize="sm" unit="¢" onChange={(e) => update('priceCents', e.currentTarget.value)} /></DataTableCell>
-      <DataTableCell><Input aria-label="Stock" type="number" min={0} value={form.stock} required fieldSize="sm" onChange={(e) => update('stock', e.currentTarget.value)} /></DataTableCell>
-      <DataTableCell><Input aria-label="Position" type="number" min={0} value={form.position} required fieldSize="sm" onChange={(e) => update('position', e.currentTarget.value)} /></DataTableCell>
-      <DataTableCell className={styles.actionsCell}>
-        <Button type="button" variant="secondary" size="xs" disabled={busy} onClick={() => void save()}>
-          <SaveSolidIcon size={12} aria-hidden="true" />
-          <span>Save</span>
-        </Button>
-        {variant && (
-          <Button type="button" variant="ghost" tone="danger" size="xs" iconOnly aria-label="Delete variant" disabled={busy} onClick={() => void remove()}>
-            <TrashSolidIcon size={12} aria-hidden="true" />
-          </Button>
-        )}
-      </DataTableCell>
-    </DataTableRow>
   )
 }

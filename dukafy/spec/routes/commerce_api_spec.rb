@@ -37,7 +37,7 @@ class CommerceApiSpec < Minitest::Test
   end
 
   def test_product_and_variant_crud
-    post_json "/admin/api/cms/commerce/products", title: "Canvas Bag", slug: "canvas-bag", vendor: "Dukafy", status: "active", descriptionHtml: "<p>Strong</p>"
+    post_json "/admin/api/cms/commerce/products", title: "Canvas Bag", slug: "canvas-bag", status: "active", descriptionHtml: "<p>Strong</p>"
     product_id = json.dig("product", "id")
     assert_equal 201, last_response.status
 
@@ -49,7 +49,7 @@ class CommerceApiSpec < Minitest::Test
     assert_equal 200, last_response.status, last_response.body
     assert_equal 13_900, json.dig("variant", "priceCents")
 
-    patch_json "/admin/api/cms/commerce/products/#{product_id}", title: "Canvas Tote", slug: "canvas-tote", vendor: "Dukafy", status: "active", descriptionHtml: "<p>Updated</p>"
+    patch_json "/admin/api/cms/commerce/products/#{product_id}", title: "Canvas Tote", slug: "canvas-tote", status: "active", descriptionHtml: "<p>Updated</p>"
     assert_equal "canvas-tote", json.dig("product", "slug")
     assert_equal "canvas-tote", SlugRedirect.first(old_slug: "canvas-bag").destination_slug
 
@@ -163,5 +163,65 @@ class CommerceApiSpec < Minitest::Test
     assert_equal({ "products" => 1, "variants" => 1 }, json)
   ensure
     file&.close!
+  end
+
+  def test_a_product_created_without_a_slug_gets_one_from_its_title
+    post_json "/admin/api/cms/commerce/products",
+              title: "Canvas & Bag", status: "active", descriptionHtml: ""
+    assert_equal 201, last_response.status, last_response.body
+    assert_equal "canvas-bag", json.dig("product", "slug")
+
+    # A second product with the same title must not 422 on the unique index.
+    post_json "/admin/api/cms/commerce/products",
+              title: "Canvas & Bag", status: "active", descriptionHtml: ""
+    assert_equal 201, last_response.status, last_response.body
+    assert_match(/\Acanvas-bag-[0-9a-f]{4}\z/, json.dig("product", "slug"))
+  end
+
+  def test_editing_a_product_without_touching_its_slug_keeps_the_url
+    post_json "/admin/api/cms/commerce/products",
+              title: "Canvas Bag", status: "active", descriptionHtml: ""
+    id = json.dig("product", "id")
+
+    patch_json "/admin/api/cms/commerce/products/#{id}",
+               title: "Canvas Tote", status: "active", descriptionHtml: "", slug: ""
+
+    # Renaming a product must NOT silently move its live page.
+    assert_equal 200, last_response.status, last_response.body
+    assert_equal "canvas-bag", json.dig("product", "slug")
+  end
+
+  def test_a_slug_the_merchant_typed_is_respected_after_normalising
+    post_json "/admin/api/cms/commerce/products",
+              title: "Canvas Bag", slug: "My Custom Slug", status: "active", descriptionHtml: ""
+
+    assert_equal 201, last_response.status, last_response.body
+    assert_equal "my-custom-slug", json.dig("product", "slug")
+  end
+
+  def test_a_collection_created_without_a_slug_gets_one_from_its_title
+    post_json "/admin/api/cms/commerce/collections",
+              title: "Caf\u00e9 Picks", description: "", sortOrder: 0
+    assert_equal 201, last_response.status, last_response.body
+    # Accents fold rather than vanish.
+    assert_equal "cafe-picks", json.dig("collection", "slug")
+
+    # A second collection with the same title must not 422 on the unique index.
+    post_json "/admin/api/cms/commerce/collections",
+              title: "Caf\u00e9 Picks", description: "", sortOrder: 0
+    assert_equal 201, last_response.status, last_response.body
+    assert_match(/\Acafe-picks-[0-9a-f]{4}\z/, json.dig("collection", "slug"))
+  end
+
+  def test_editing_a_collection_without_touching_its_slug_keeps_the_url
+    post_json "/admin/api/cms/commerce/collections",
+              title: "Featured", description: "", sortOrder: 0
+    id = json.dig("collection", "id")
+
+    patch_json "/admin/api/cms/commerce/collections/#{id}",
+               title: "Staff Picks", description: "", sortOrder: 0, slug: ""
+
+    assert_equal 200, last_response.status, last_response.body
+    assert_equal "featured", json.dig("collection", "slug")
   end
 end

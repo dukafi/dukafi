@@ -129,6 +129,14 @@
                         {
                           "const": "route",
                           "type": "string"
+                        },
+                        {
+                          "const": "cart",
+                          "type": "string"
+                        },
+                        {
+                          "const": "payment",
+                          "type": "string"
                         }
                       ]
                     },
@@ -169,6 +177,158 @@
                       ]
                     }
                   }
+                }
+              }
+            },
+            "actions": {
+              "type": "object",
+              "properties": {
+                "click": {
+                  "type": "object",
+                  "required": [
+                    "type"
+                  ],
+                  "properties": {
+                    "type": {
+                      "anyOf": [
+                        {
+                          "const": "cart.addItem",
+                          "type": "string"
+                        },
+                        {
+                          "const": "cart.removeItem",
+                          "type": "string"
+                        },
+                        {
+                          "const": "cart.setQuantity",
+                          "type": "string"
+                        },
+                        {
+                          "const": "cart.createOrder",
+                          "type": "string"
+                        },
+                        {
+                          "const": "payment.initiate",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "quantity": {
+                      "type": "number"
+                    },
+                    "delta": {
+                      "type": "number"
+                    },
+                    "redirect": {
+                      "type": "string"
+                    },
+                    "provider": {
+                      "type": "string"
+                    },
+                    "productSlug": {
+                      "type": "string"
+                    },
+                    "variantSku": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "region": {
+                  "anyOf": [
+                    {
+                      "const": "payment",
+                      "type": "string"
+                    },
+                    {
+                      "const": "cart",
+                      "type": "string"
+                    }
+                  ]
+                }
+              }
+            },
+            "visibleWhen": {
+              "type": "object",
+              "required": [
+                "source",
+                "field",
+                "operator"
+              ],
+              "properties": {
+                "source": {
+                  "anyOf": [
+                    {
+                      "const": "currentEntry",
+                      "type": "string"
+                    },
+                    {
+                      "const": "parentEntry",
+                      "type": "string"
+                    },
+                    {
+                      "const": "page",
+                      "type": "string"
+                    },
+                    {
+                      "const": "site",
+                      "type": "string"
+                    },
+                    {
+                      "const": "route",
+                      "type": "string"
+                    },
+                    {
+                      "const": "cart",
+                      "type": "string"
+                    },
+                    {
+                      "const": "payment",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "field": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "operator": {
+                  "anyOf": [
+                    {
+                      "const": "isTrue",
+                      "type": "string"
+                    },
+                    {
+                      "const": "isFalse",
+                      "type": "string"
+                    },
+                    {
+                      "const": "equals",
+                      "type": "string"
+                    },
+                    {
+                      "const": "notEquals",
+                      "type": "string"
+                    },
+                    {
+                      "const": "greaterThan",
+                      "type": "string"
+                    },
+                    {
+                      "const": "lessThan",
+                      "type": "string"
+                    },
+                    {
+                      "const": "isEmpty",
+                      "type": "string"
+                    },
+                    {
+                      "const": "isNotEmpty",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "value": {
+                  "type": "string"
                 }
               }
             }

@@ -27,8 +27,10 @@ export function createUiStateActions({ set, get }: SiteSliceHelpers): UiStateAct
   return {
     setActiveClass(id) {
       const { activeClassId, inlineStyleEditing } = get()
-      // Selecting a real class always switches away from inline editing.
-      const nextInline = id !== null ? false : inlineStyleEditing
+      // Selecting a real class switches away from inline editing; clearing the
+      // active class (e.g. removing/deactivating the last one) falls straight
+      // into inline editing rather than the "add a class" gate.
+      const nextInline = id === null
       // Guideline #242 no-op guard — bail only when nothing actually changes.
       if (Object.is(activeClassId, id) && nextInline === inlineStyleEditing) return
       set((s) => {

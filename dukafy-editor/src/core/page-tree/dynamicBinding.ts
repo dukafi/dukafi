@@ -12,6 +12,14 @@
  *   Always present on every render — no loop or template needed.
  * - `site` — site-level fields (name, baseUrl, settings.*). Always present.
  * - `route` — URL frame (path, slug, segments). Always present.
+ * - `payment` — the in-flight payment attempt (status, message, receipt).
+ *   Resolves inside a node marked as the payment region; elsewhere it falls
+ *   back like any unresolved binding.
+ * - `cart` — the visitor's cart summary (count, subtotalDisplay, isEmpty).
+ *   Cart-level fields are not per-line, so they need their own frame rather
+ *   than riding on `currentEntry`, which inside a cart loop is one LINE.
+ *   Resolves only where a cart is in scope (the cart-lines fragment render);
+ *   elsewhere it falls back like any unresolved binding.
  *
  * Format tag controls how the resolved value is rendered (plain text, raw
  * HTML, URL, media path). Fallback strategy controls behaviour when the
@@ -30,14 +38,25 @@ import { asPlainObject } from './parseHelpers'
 // Schemas
 // ---------------------------------------------------------------------------
 
-const DynamicBindingSourceSchema = Type.Union([
+export const DynamicBindingSourceSchema = Type.Union([
   Type.Literal('currentEntry'),
   Type.Literal('parentEntry'),
   Type.Literal('page'),
   Type.Literal('site'),
   Type.Literal('route'),
+  Type.Literal('cart'),
+  Type.Literal('payment'),
 ])
-type DynamicBindingSource = Static<typeof DynamicBindingSourceSchema>
+export type DynamicBindingSource = Static<typeof DynamicBindingSourceSchema>
+
+/**
+ * The same sources, as a runtime list. Conditions (`visibleWhen`) read the
+ * same frames as bindings, so they share this rather than keeping a second
+ * copy that can drift.
+ */
+export const VALID_BINDING_SOURCES: DynamicBindingSource[] = [
+  'currentEntry', 'parentEntry', 'page', 'site', 'route', 'cart', 'payment',
+]
 
 const DynamicBindingFormatSchema = Type.Union([
   Type.Literal('plain'),
@@ -66,14 +85,7 @@ export type DynamicPropBinding = Static<typeof DynamicPropBindingSchema>
 function parseDynamicPropBinding(raw: unknown): DynamicPropBinding | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
   const r = raw as Record<string, unknown>
-  const VALID_SOURCES: DynamicBindingSource[] = [
-    'currentEntry',
-    'parentEntry',
-    'page',
-    'site',
-    'route',
-  ]
-  if (!VALID_SOURCES.includes(r.source as DynamicBindingSource)) return null
+  if (!VALID_BINDING_SOURCES.includes(r.source as DynamicBindingSource)) return null
   if (typeof r.field !== 'string' || r.field.length === 0) return null
 
   const VALID_FORMATS: DynamicBindingFormat[] = ['plain', 'html', 'url', 'media']

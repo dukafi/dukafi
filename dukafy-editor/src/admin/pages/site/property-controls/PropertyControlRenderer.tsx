@@ -76,6 +76,11 @@ interface RenderControlOptions {
   isOverride?: boolean
   disabled?: boolean
   dynamicBinding?: DynamicBindingRenderContext
+  /**
+   * The module's default for this prop. Used only to tell an untouched
+   * placeholder from text the author wrote, when inserting a data token.
+   */
+  moduleDefault?: unknown
 }
 
 /**
@@ -113,6 +118,7 @@ export function PropertyControlRenderer({
   isOverride = false,
   disabled = false,
   dynamicBinding,
+  moduleDefault,
 }: RenderControlOptions) {
   const layout = resolveControlLayout(control)
 
@@ -268,11 +274,15 @@ export function PropertyControlRenderer({
       onClear={dynamicBinding.onClear}
       insertMode={bindingMode === 'token'}
       onInsertToken={(token) => {
-        // Append to the current string value with a leading space when
-        // the value isn't empty. Stage A — caret-position-aware
-        // insertion lands in Stage B with the chip UI.
+        // Appending is deliberate — it is how you write "Only {x} left!".
+        //
+        // But a node that still holds its module DEFAULT has not been written
+        // by anyone, and appending to it produced "Add your text here. suit"
+        // on every freshly inserted text node. An untouched default is
+        // replaced; anything the author actually typed is appended to.
         const current = typeof value === 'string' ? value : ''
-        const next = current.length === 0 ? token : `${current} ${token}`
+        const untouched = current.length === 0 || current === moduleDefault
+        const next = untouched ? token : `${current} ${token}`
         onChange(propKey, next)
       }}
       availableFields={dynamicBinding.availableFields}

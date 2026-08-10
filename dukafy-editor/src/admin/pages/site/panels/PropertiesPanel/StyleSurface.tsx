@@ -157,22 +157,26 @@ export function StyleSurface({
   const hasModuleContent = definition != null && moduleContent != null
   const moduleVisible = hasModuleContent && (!styleQuery || moduleMatchesQuery(styleQuery, definition!))
 
-  // The search bar is bound to the active class — both its placeholder and
-  // the rows it filters belong to that class. It only renders when the class
-  // exists and is editable.
-  //   - no active class selected → LockedStylePreview teaser is shown instead
-  //   - active class is a locked generated utility → GeneratedUtilityLockedState
-  //     is shown instead (no editable CSS rows to search)
+  // The search bar filters whichever CSS rows are on screen — the active
+  // class's, or the node's inline styles. It's hidden only when there are no
+  // editable rows at all: a locked generated utility, or the opted-out
+  // no-target state.
   const searchableClass = activeClass != null && !isGeneratedClassLocked(activeClass)
     ? activeClass
     : null
+  const searchPlaceholder = searchableClass
+    ? `Search styles in ${styleRuleSelector(searchableClass)}...`
+    : 'Search inline styles...'
+  const showSearchBar = searchableClass != null || showInline
 
   // CSS area content. Branches in priority order:
   //  - caller lacks `site.style.edit`           → role-locked notice
   //  - inline-style editing target              → InlineStyleComposer
   //  - active class is set and editable         → StyleRuleComposer
   //  - active class is a locked generated utility → utility notice
-  //  - no active class                          → teaser + "Add class"/"Style inline"
+  //  - no target at all                         → teaser + "Add class"/"Style inline".
+  //    Only reachable by toggling the Inline pill off with no class assigned;
+  //    selection seeds inline editing so styling is never gated behind a class.
   let cssContent: ReactNode
   if (!canEditStyleHere) {
     cssContent = (
@@ -228,9 +232,8 @@ export function StyleSurface({
       <div className={styles.surfaceContent}>
 
         {/* Search bar — sticky at the top, searches both module and CSS.
-            Hidden when no class is selected or the active class is a locked
-            generated utility (no CSS rows to search in either state). */}
-        {searchableClass && (
+            Hidden when there are no editable CSS rows to search. */}
+        {showSearchBar && (
           <div className={styles.searchBarRow}>
             <SearchBar
               value={styleQuery}
@@ -242,7 +245,7 @@ export function StyleSurface({
                   clearStyleQuery()
                 }
               }}
-              placeholder={`Search styles in ${styleRuleSelector(searchableClass)}...`}
+              placeholder={searchPlaceholder}
               aria-label="Search class style properties to add"
             />
           </div>
@@ -325,7 +328,7 @@ function LockedStylePreview({ onFocusClassPicker, onStyleInline }: LockedStylePr
       {/* CTA — always visible below the teaser */}
       <div className={styles.lockedPreviewCta}>
         <p className={styles.lockedPreviewCtaText}>
-          Add a class to start styling this element
+          Pick where these styles should live
         </p>
         <div className={styles.lockedPreviewCtaActions}>
           <Button

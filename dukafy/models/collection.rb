@@ -1,4 +1,7 @@
 class Collection < Sequel::Model
+  extend Sluggable
+  def self.slug_fallback = "collection"
+
   many_to_many :products, join_table: :collection_products, order: Sequel[:collection_products][:position]
 
   def validate

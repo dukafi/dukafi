@@ -116,7 +116,7 @@ class Dukafy
           label = disabled ? "Sold out" : props["label"].to_s
           quantity = [Integer(props["quantity"] || 1), 1].max
           html = %(<form class="dukafy-buy-form" method="post" action="/fragments/cart/items" hx-post="/fragments/cart/items" hx-target="find .dukafy-buy-result" hx-swap="outerHTML"><input type="hidden" name="product_slug" value="#{CGI.escapeHTML(product_slug)}"><input type="hidden" name="variant_sku" value="#{CGI.escapeHTML(sku)}"><input type="hidden" name="quantity" value="#{quantity}"><button class="dukafy-buy-button" type="submit"#{disabled ? ' disabled' : ''}>#{CGI.escapeHTML(label)}</button><output class="dukafy-buy-result" aria-live="polite"></output></form>)
-          { html:, css: BUY_BUTTON_CSS }
+          { html:, css: BUY_BUTTON_CSS, runtimes: [:htmx] }
         end
         registry.register(
           "store.relationship-loop",
@@ -139,7 +139,7 @@ class Dukafy
           threshold = [[Integer(props["lowStockThreshold"] || 5), 0].max, 100_000].min
           query = "product_slug=#{CGI.escape(product_slug)}&variant_sku=#{CGI.escape(props['variantSku'].to_s)}&low_stock_threshold=#{threshold}"
           html = %(<span class="dukafy-stock-badge dukafy-stock-badge--loading" hx-get="/fragments/stock?#{CGI.escapeHTML(query)}" hx-trigger="revealed" hx-swap="outerHTML" aria-live="polite">Checking availability…</span>)
-          { html:, css: STOCK_BADGE_CSS }
+          { html:, css: STOCK_BADGE_CSS, runtimes: [:htmx] }
         end
         registry.register(
           "store.cart-badge",
@@ -148,7 +148,7 @@ class Dukafy
         ) do |props, _children, _context|
           query = "label=#{CGI.escape(props['label'].to_s)}&href=#{CGI.escape(props['href'].to_s)}"
           html = %(<a class="dukafy-cart-badge dukafy-cart-badge--loading" href="#{BaseHelpers.safe_url(props['href'])}" hx-get="/fragments/cart/badge?#{CGI.escapeHTML(query)}" hx-trigger="revealed, dukafy:cart-updated from:body" hx-swap="outerHTML" aria-label="#{CGI.escapeHTML(props['label'].to_s)}: loading">#{CGI.escapeHTML(props['label'].to_s)} <span class="dukafy-cart-badge__count">…</span></a>)
-          { html:, css: CART_BADGE_CSS }
+          { html:, css: CART_BADGE_CSS, runtimes: [:htmx] }
         end
       end
 

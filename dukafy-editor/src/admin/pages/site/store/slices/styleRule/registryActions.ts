@@ -204,8 +204,11 @@ export function createRegistryActions({
         }
         if (!mutated) return false
         // Clear active / selected references that pointed at a deleted class.
+        // Falls into inline editing (not the "add a class" gate) — same rule
+        // as everywhere else the active class becomes null.
         if (state.activeClassId && targets.has(state.activeClassId)) {
           state.activeClassId = null
+          state.inlineStyleEditing = true
         }
         if (state.selectedSelectorClassId && targets.has(state.selectedSelectorClassId)) {
           state.selectedSelectorClassId = null

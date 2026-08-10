@@ -9,6 +9,7 @@ import { firstOutletId } from '@core/templates'
 import {
   buildProductScaffoldSnapshot,
   buildRelationshipLoopSnapshot,
+  buildCartScaffoldSnapshot,
 } from '@site/store/commerceScaffold'
 import {
   moduleWireForId,
@@ -76,7 +77,7 @@ interface ModuleInserterComponentItem extends BaseInserterItem {
   uses: number
 }
 
-export type CommerceScaffoldId = 'product' | 'products-loop' | 'variants-loop'
+export type CommerceScaffoldId = 'product' | 'products-loop' | 'variants-loop' | 'cart'
 
 interface ModuleInserterCommerceScaffoldItem extends BaseInserterItem {
   kind: 'commerceScaffold'
@@ -98,6 +99,14 @@ const HIDDEN_MODULE_IDS = new Set([
   // (Ruby + editor) so already-published documents keep rendering, but
   // never offered for new inserts.
   'store.product-card',
+  // Superseded by the `cart.addItem` action, which attaches add-to-cart to
+  // ANY node. This module emitted its own fixed <form>/<button>/<output>,
+  // which was the last hardcoded commerce control.
+  'store.buy-button',
+  // Replaceable by a `base.select` containing a wrapper-less loop over
+  // `currentEntry.variants` emitting bound `base.option`s — the merchant's own
+  // markup, styled however they like.
+  'store.variant-picker',
   'store.image-gallery',
   'store.collection-loop',
   // Instatic-era generic loop: its `data.rows` source targets a generic
@@ -374,6 +383,12 @@ function getCommerceScaffoldItems(): ModuleInserterCommerceScaffoldItem[] {
       name: 'Insert variant list',
       description: 'Repeats a title/price row for a product’s variants.',
       wire: wireFromTree(toWireTree(buildRelationshipLoopSnapshot('variants'))),
+    },
+    {
+      scaffoldId: 'cart',
+      name: 'Insert cart',
+      description: 'Cart lines plus a subtotal — every part editable and rebindable.',
+      wire: wireFromTree(toWireTree(buildCartScaffoldSnapshot())),
     },
   ]
   return definitions.map(({ scaffoldId, name, description, wire }) => ({

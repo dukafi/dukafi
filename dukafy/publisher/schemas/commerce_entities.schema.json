@@ -1,0 +1,354 @@
+{
+  "product": {
+    "id": "product",
+    "label": "Product",
+    "fields": [
+      {
+        "id": "title",
+        "label": "Title",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "slug",
+        "label": "Slug",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "href",
+        "label": "Link",
+        "kind": "scalar",
+        "format": "url"
+      },
+      {
+        "id": "descriptionHtml",
+        "label": "Description",
+        "kind": "scalar",
+        "format": "html"
+      },
+      {
+        "id": "imageUrl",
+        "label": "Main image",
+        "kind": "scalar",
+        "format": "media"
+      },
+      {
+        "id": "priceDisplay",
+        "label": "Price",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "priceCents",
+        "label": "Price (cents)",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "currency",
+        "label": "Currency",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "createdAt",
+        "label": "Created at",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "id",
+        "label": "ID",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "inCart",
+        "label": "In cart?",
+        "kind": "scalar",
+        "format": "plain",
+        "derived": true
+      },
+      {
+        "id": "cartQuantity",
+        "label": "Quantity in cart",
+        "kind": "scalar",
+        "format": "plain",
+        "derived": true
+      },
+      {
+        "id": "images",
+        "label": "Images",
+        "kind": "list",
+        "of": "image"
+      },
+      {
+        "id": "variants",
+        "label": "Variants",
+        "kind": "list",
+        "of": "variant"
+      }
+    ]
+  },
+  "variant": {
+    "id": "variant",
+    "label": "Variant",
+    "fields": [
+      {
+        "id": "title",
+        "label": "Variant title",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "sku",
+        "label": "SKU",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "priceDisplay",
+        "label": "Price",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "priceCents",
+        "label": "Price (cents)",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "currency",
+        "label": "Currency",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "stock",
+        "label": "Stock",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "position",
+        "label": "Position",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "id",
+        "label": "ID",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "inCart",
+        "label": "In cart?",
+        "kind": "scalar",
+        "format": "plain",
+        "derived": true
+      },
+      {
+        "id": "cartQuantity",
+        "label": "Quantity in cart",
+        "kind": "scalar",
+        "format": "plain",
+        "derived": true
+      }
+    ]
+  },
+  "image": {
+    "id": "image",
+    "label": "Image",
+    "fields": [
+      {
+        "id": "url",
+        "label": "URL",
+        "kind": "scalar",
+        "format": "media"
+      },
+      {
+        "id": "alt",
+        "label": "Alt text",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "width",
+        "label": "Width",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "height",
+        "label": "Height",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "variants",
+        "label": "Renditions",
+        "kind": "list",
+        "of": "imageVariant"
+      }
+    ]
+  },
+  "imageVariant": {
+    "id": "imageVariant",
+    "label": "Rendition",
+    "fields": [
+      {
+        "id": "path",
+        "label": "Path",
+        "kind": "scalar",
+        "format": "media"
+      },
+      {
+        "id": "width",
+        "label": "Width",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "height",
+        "label": "Height",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "format",
+        "label": "Format",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "sizeBytes",
+        "label": "Size (bytes)",
+        "kind": "scalar",
+        "format": "plain"
+      }
+    ]
+  },
+  "collection": {
+    "id": "collection",
+    "label": "Collection",
+    "fields": [
+      {
+        "id": "title",
+        "label": "Title",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "slug",
+        "label": "Slug",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "description",
+        "label": "Description",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "id",
+        "label": "ID",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "products",
+        "label": "Products",
+        "kind": "list",
+        "of": "product"
+      }
+    ]
+  },
+  "cartItem": {
+    "id": "cartItem",
+    "label": "Cart item",
+    "fields": [
+      {
+        "id": "title",
+        "label": "Product title",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "variantTitle",
+        "label": "Variant",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "sku",
+        "label": "SKU",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "productSlug",
+        "label": "Product slug",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "href",
+        "label": "Link",
+        "kind": "scalar",
+        "format": "url"
+      },
+      {
+        "id": "imageUrl",
+        "label": "Image",
+        "kind": "scalar",
+        "format": "media"
+      },
+      {
+        "id": "quantity",
+        "label": "Quantity",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "unitPriceDisplay",
+        "label": "Unit price",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "unitPriceCents",
+        "label": "Unit price (cents)",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "linePriceDisplay",
+        "label": "Line total",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "linePriceCents",
+        "label": "Line total (cents)",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "currency",
+        "label": "Currency",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "stock",
+        "label": "Stock",
+        "kind": "scalar",
+        "format": "plain"
+      }
+    ]
+  }
+}

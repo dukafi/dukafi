@@ -6,7 +6,7 @@
  * `docs/architecture/publishing.md`) — callers don't need to know that, they
  * just get the updated row back.
  */
-import type { Collection, CommerceSettings, Product, Variant } from './types'
+import type { Collection, CommerceSettings, Order, Plugin, Product, Variant } from './types'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/admin/api/cms/commerce${path}`, {
@@ -21,10 +21,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.status === 204 ? (undefined as T) : (response.json() as Promise<T>)
 }
 
+async function requestAbsolute<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, {
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
+    ...init,
+  })
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { error?: { message?: string } } | null
+    throw new Error(body?.error?.message || `Request failed (${response.status})`)
+  }
+  return response.status === 204 ? (undefined as T) : (response.json() as Promise<T>)
+}
+
 export interface ProductInput {
   title: string
   slug: string
-  vendor: string
   status: string
   descriptionHtml: string
 }
@@ -50,6 +62,20 @@ export interface CollectionInput {
 }
 
 export const commerceApi = {
+  // Plugins are not commerce-specific, but the Commerce workspace is where
+  // the first ones (payment providers) are configured. Path differs from the
+  // rest of this client, hence the explicit leading `../`-style absolute call.
+  listPlugins: () => requestAbsolute<{ plugins: Plugin[] }>('/admin/api/cms/plugins'),
+  savePluginSettings: (id: string, settings: Record<string, string>) =>
+    requestAbsolute<{ ok: boolean; configured: boolean }>(`/admin/api/cms/plugins/${id}/settings`, {
+      method: 'PUT',
+      body: JSON.stringify({ settings }),
+    }),
+
+  listOrders: () => request<{ orders: Order[] }>('/orders'),
+  updateOrderStatus: (id: number, status: string) =>
+    request<Order>(`/orders/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+
   listProducts: () => request<{ products: Product[] }>('/products'),
   createProduct: (input: ProductInput) =>
     request<{ product: Product }>('/products', { method: 'POST', body: JSON.stringify(input) }),

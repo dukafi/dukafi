@@ -25,6 +25,7 @@ export function useInsertInserterItem() {
 
   const insertLayoutAction = useEditorStore((s) => s.insertLayout)
   const insertProductScaffold = useEditorStore((s) => s.insertProductScaffold)
+  const insertCartScaffold = useEditorStore((s) => s.insertCartScaffold)
   const insertRelationshipLoop = useEditorStore((s) => s.insertRelationshipLoop)
 
   const insertVC = (vcId: string, explicitTarget?: InsertLocation): boolean => {
@@ -56,7 +57,9 @@ export function useInsertInserterItem() {
               ? Boolean(
                   item.scaffoldId === 'product'
                     ? insertProductScaffold(target)
-                    : insertRelationshipLoop(item.scaffoldId === 'products-loop' ? 'products' : 'variants', target),
+                    : item.scaffoldId === 'cart'
+                      ? insertCartScaffold(target)
+                      : insertRelationshipLoop(item.scaffoldId === 'products-loop' ? 'products' : 'variants', target),
                 )
               : false
 

@@ -13,6 +13,8 @@
 import { Type, type Static } from '@core/utils/typeboxHelpers'
 import { BaseNodeSchema, parseBaseNodeFields } from './baseNode'
 import { DynamicPropBindingSchema, parseDynamicBindings } from './dynamicBinding'
+import { NodeActionsSchema, parseNodeActions } from './nodeAction'
+import { NodeVisibilitySchema, parseNodeVisibility } from './visibility'
 import { asPlainObject } from './parseHelpers'
 
 // ---------------------------------------------------------------------------
@@ -28,6 +30,16 @@ export const PageNodeSchema = Type.Object({
    * Silently dropped if invalid — handled in parsePageNode.
    */
   dynamicBindings: Type.Optional(Type.Record(Type.String(), DynamicPropBindingSchema)),
+  /**
+   * Behaviour overlay — what this node DOES when interacted with (e.g. remove
+   * a cart line). Lets commerce controls be plain nodes. Dropped if invalid.
+   */
+  actions: Type.Optional(NodeActionsSchema),
+  /**
+   * Render condition. When present and false, the node and its whole subtree
+   * render nothing at all. Dropped if invalid, which leaves the node visible.
+   */
+  visibleWhen: Type.Optional(NodeVisibilitySchema),
 })
 
 export type PageNode = Static<typeof PageNodeSchema>
@@ -58,9 +70,13 @@ export function parsePageNode(raw: unknown, nodePath: string): PageNode {
 
   // Page-only overlay: template data-binding map. Silently dropped if invalid.
   const dynamicBindings = parseDynamicBindings(r.dynamicBindings)
+  const actions = parseNodeActions(r.actions)
+  const visibleWhen = parseNodeVisibility(r.visibleWhen)
 
   return {
     ...base,
     ...(dynamicBindings !== undefined ? { dynamicBindings } : {}),
+    ...(actions !== undefined ? { actions } : {}),
+    ...(visibleWhen !== undefined ? { visibleWhen } : {}),
   }
 }

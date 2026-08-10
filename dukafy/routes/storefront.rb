@@ -57,7 +57,7 @@ class Storefront < Roda
       language: state.site.dig("settings", "language") || "en",
       body: rendered.html,
       body_classes: rendered.body_classes,
-      css: css,
+      css: css, runtimes: rendered.runtimes,
     )
   end
 
@@ -87,7 +87,7 @@ class Storefront < Roda
     Dukafy::Publisher::HtmlDocument.call(
       title: collection.fetch("title"), language: state.site.dig("settings", "language") || "en",
       description: collection["description"], body: rendered.html,
-      body_classes: rendered.body_classes, css:
+      body_classes: rendered.body_classes, css:, runtimes: rendered.runtimes
     )
   end
 

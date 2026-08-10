@@ -41,6 +41,14 @@ export {   parsePageTemplate } from './pageTemplate'
 // Types — derived from schemas. Schemas are the source of truth.
 export type { Breakpoint } from './breakpoint'
 export type { DynamicPropBinding } from './dynamicBinding'
+export type { NodeAction, NodeActionType, NodeActions, NodeRegion } from './nodeAction'
+export { parseNodeActions } from './nodeAction'
+export type { NodeVisibility, ConditionOperator } from './visibility'
+export {
+  parseNodeVisibility,
+  VALID_CONDITION_OPERATORS,
+  CONDITION_OPERATORS_WITH_VALUE,
+} from './visibility'
 export type { PageTemplateConfig, TemplateTarget } from './pageTemplate'
 export type { PageNode } from './pageNode'
 export type { TreeOperation, TreeMutateResult } from './operationSchema'
@@ -156,6 +164,16 @@ export { reindexNodeParents } from './parentIndex'
 export { removeNodeSubtrees, deleteSubtree } from './subtreeRemoval'
 
 export { cloneNodeWithRemap } from './cloneNode'
+
+export {
+  buildPageExport,
+  parsePageExport,
+  importPageIntoSite,
+  buildSiteExport,
+  parseSiteExport,
+  type DukafyPageExportFile,
+  type DukafySiteExportFile,
+} from './pageTransfer'
 
 export { cloneScopedClassesForNodeMap } from './scopedClassClone'
 

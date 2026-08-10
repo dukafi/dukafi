@@ -125,10 +125,18 @@ export function DynamicBindingControl({
   }, [])
 
   // ── Bound state (structured whole-prop binding) ─────────────────────────
-  // In insert mode the binding lives inline in the prop value as a token,
-  // so we never enter this branch — the children render normally and
-  // tokens appear in the text input as ordinary characters.
-  if (binding && !insertMode) {
+  //
+  // Shown whenever a STRUCTURED binding exists — including on token-mode
+  // controls (text/textarea/url). Those two things are independent: inline
+  // `{currentEntry.title}` tokens live in the prop string and leave `binding`
+  // undefined, while a structured binding overrides the whole prop no matter
+  // what the control type is.
+  //
+  // This used to be `binding && !insertMode`, which hid structured bindings on
+  // every text prop: the panel showed an empty input while the renderer
+  // displayed the bound value, with nothing on screen explaining where the
+  // text came from — or any way to clear it.
+  if (binding) {
     const bindingLabel = resolveBindingLabel(binding, availableFields, sourceLabel, resolvedMeta)
     return (
       <div

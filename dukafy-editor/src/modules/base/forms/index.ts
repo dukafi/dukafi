@@ -43,6 +43,12 @@ const FormPropsSchema = Type.Object({
   successBehavior: Type.Union([Type.Literal('message'), Type.Literal('redirect')], { default: 'message' }),
   successMessage: Type.String({ default: 'Thanks. Your submission was received.' }),
   redirectUrl: Type.String({ default: '' }),
+  /**
+   * Whether a submission is filed against an order. Explicit rather than
+   * automatic: a contact form must not attach itself to an order just because
+   * the visitor happened to buy something earlier in the session.
+   */
+  attachTo: Type.Union([Type.Literal('none'), Type.Literal('order')], { default: 'none' }),
   honeypotName: Type.String({ default: 'company' }),
   minSubmitSeconds: Type.Number({ default: 2 }),
   htmlAttributes: Type.Record(Type.String(), Type.String(), HtmlAttributesPropSchemaOptions),
@@ -190,6 +196,10 @@ export const FormModule: ModuleDefinition<FormProps> = {
     ] },
     successMessage: { type: 'text', label: 'Success message', condition: { field: 'successBehavior', eq: 'message' } },
     redirectUrl: { type: 'url', label: 'Redirect URL', condition: { field: 'successBehavior', eq: 'redirect' } },
+    attachTo: { type: 'select', label: 'Attach submission to', condition: { field: 'mode', eq: 'cms' }, options: [
+      { label: 'Nothing (standalone)', value: 'none' },
+      { label: 'The customer\u2019s order', value: 'order' },
+    ] },
     honeypotName: { type: 'text', label: 'Honeypot field', condition: { field: 'mode', eq: 'cms' } },
     minSubmitSeconds: { type: 'number', label: 'Minimum fill seconds', condition: { field: 'mode', eq: 'cms' } },
     htmlAttributes: htmlAttributesControl(),

@@ -107,6 +107,9 @@ describe('module inserter model', () => {
   it('hides the retired card/loop modules in every context, even though they stay registered', () => {
     const modules = [
       mod('store.product-card', 'Commerce', 'Product card'),
+      mod('store.buy-button', 'Commerce', 'Buy button'),
+      mod('store.variant-picker', 'Commerce', 'Variant picker'),
+      mod('store.stock-badge', 'Commerce', 'Stock badge'),
       mod('store.image-gallery', 'Commerce', 'Image gallery'),
       mod('store.collection-loop', 'Commerce', 'Collection loop'),
       mod('store.relationship-loop', 'Commerce', 'Relationship loop'),
@@ -116,6 +119,15 @@ describe('module inserter model', () => {
     for (const ctx of [PAGE_CTX, TEMPLATE_CTX, VC_CTX]) {
       const ids = getVisibleModuleItems(modules, ctx).map((item) => item.id)
       expect(ids).not.toContain('store.product-card')
+      // Superseded by the `cart.addItem` action, which attaches add-to-cart to
+      // any node. This module emitted its own fixed form/button markup.
+      expect(ids).not.toContain('store.buy-button')
+      // Replaceable by a base.select + wrapper-less loop of bound options.
+      expect(ids).not.toContain('store.variant-picker')
+      // NOT retired: it fetches LIVE stock at request time. A baked page
+      // cannot show a number that changes after publish, so there is no
+      // composable equivalent to replace it with yet.
+      expect(ids).toContain('store.stock-badge')
       expect(ids).not.toContain('store.image-gallery')
       expect(ids).not.toContain('store.collection-loop')
       expect(ids).toContain('store.relationship-loop')
@@ -123,7 +135,7 @@ describe('module inserter model', () => {
     }
   })
 
-  it('includes the three commerce scaffold items in buildModuleInserterItems, wired for insertion', () => {
+  it('includes the commerce scaffold items in buildModuleInserterItems, wired for insertion', () => {
     const built = buildModuleInserterItems({
       modules: [],
       context: PAGE_CTX,
@@ -132,6 +144,7 @@ describe('module inserter model', () => {
     })
 
     expect(built.commerceScaffoldItems.map((item) => item.scaffoldId).sort()).toEqual([
+      'cart',
       'product',
       'products-loop',
       'variants-loop',

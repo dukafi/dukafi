@@ -68,6 +68,12 @@ type NodeActions = Pick<
   | 'wrapNode'
   | 'wrapNodes'
   | 'setNodeDynamicBinding'
+  | 'setNodeAction'
+  | 'clearNodeAction'
+  | 'setNodeRegion'
+  | 'clearNodeRegion'
+  | 'setNodeVisibility'
+  | 'clearNodeVisibility'
   | 'clearNodeDynamicBinding'
 >
 
@@ -580,6 +586,85 @@ export function createNodeActions(helpers: SiteSliceHelpers): NodeActions {
           ...(node.dynamicBindings ?? {}),
           [propKey]: binding,
         }
+        return true
+      })
+    },
+
+    setNodeAction: (nodeId, action) => {
+      mutateActiveTree((tree) => {
+        const node = tree.nodes[nodeId]
+        if (!node) return false
+        const current = node.actions?.click
+        if (
+          current &&
+          current.type === action.type &&
+          current.quantity === action.quantity &&
+          current.delta === action.delta
+        ) {
+          return false
+        }
+        // Spread, don't replace: `region` is an independent marker on the same
+        // node, and a merchant setting a click verb must not silently unmark
+        // the cart region they set a moment earlier.
+        node.actions = { ...(node.actions ?? {}), click: action }
+        return true
+      })
+    },
+
+    clearNodeAction: (nodeId) => {
+      mutateActiveTree((tree) => {
+        const node = tree.nodes[nodeId]
+        if (!node?.actions?.click) return false
+        delete node.actions.click
+        if (Object.keys(node.actions).length === 0) delete node.actions
+        return true
+      })
+    },
+
+    setNodeRegion: (nodeId, region) => {
+      mutateActiveTree((tree) => {
+        const node = tree.nodes[nodeId]
+        if (!node) return false
+        if (node.actions?.region === region) return false
+        node.actions = { ...(node.actions ?? {}), region }
+        return true
+      })
+    },
+
+    setNodeVisibility: (nodeId, condition) => {
+      mutateActiveTree((tree) => {
+        const node = tree.nodes[nodeId]
+        if (!node) return false
+        const current = node.visibleWhen
+        if (
+          current &&
+          current.source === condition.source &&
+          current.field === condition.field &&
+          current.operator === condition.operator &&
+          current.value === condition.value
+        ) {
+          return false
+        }
+        node.visibleWhen = condition
+        return true
+      })
+    },
+
+    clearNodeVisibility: (nodeId) => {
+      mutateActiveTree((tree) => {
+        const node = tree.nodes[nodeId]
+        if (!node?.visibleWhen) return false
+        delete node.visibleWhen
+        return true
+      })
+    },
+
+    clearNodeRegion: (nodeId) => {
+      mutateActiveTree((tree) => {
+        const node = tree.nodes[nodeId]
+        if (!node?.actions?.region) return false
+        delete node.actions.region
+        if (Object.keys(node.actions).length === 0) delete node.actions
         return true
       })
     },

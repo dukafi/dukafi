@@ -1,5 +1,6 @@
 import type { KeyboardEvent, MouseEvent } from 'react'
 import { FilePlusSolidIcon } from 'pixel-art-icons/icons/file-plus-solid'
+import { UploadIcon } from 'pixel-art-icons/icons/upload'
 import { PaintBucketSolidIcon } from 'pixel-art-icons/icons/paint-bucket-solid'
 import { CodeIcon } from 'pixel-art-icons/icons/code'
 import type { SiteExplorerSectionId } from '@core/page-tree'
@@ -31,6 +32,7 @@ interface SiteExplorerPanelSectionsProps {
   inlineRenameTargetForSection: (sectionId: SiteExplorerSectionId) => SiteExplorerInlineRenameTarget | null
   selectedItemIdsForSection: (sectionId: SiteExplorerSectionId) => readonly string[]
   onCreatePage: () => void
+  onImportPage: () => void
   onCreateTemplate: () => void
   onCreateComponent: () => void
   onCreateStyle: () => void
@@ -83,6 +85,7 @@ export function SiteExplorerPanelSections({
   inlineRenameTargetForSection,
   selectedItemIdsForSection,
   onCreatePage,
+  onImportPage,
   onCreateTemplate,
   onCreateComponent,
   onCreateStyle,
@@ -107,6 +110,9 @@ export function SiteExplorerPanelSections({
           actionLabel="New page"
           actionIcon={FilePlusSolidIcon}
           onAction={onCreatePage}
+          secondaryActionLabel="Import page"
+          secondaryActionIcon={UploadIcon}
+          onSecondaryAction={onImportPage}
           model={pageTreeModel}
           dropTarget={explorerDnd.target}
           inlineRenameTarget={inlineRenameTargetForSection('pages')}

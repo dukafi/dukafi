@@ -19,11 +19,9 @@ import { registry } from '@core/module-engine'
 import { getAncestors, resolveProps } from '@core/page-tree'
 import { loopSourceRegistry } from '@core/loops/registry'
 import { primaryTemplateTableSlug } from '@core/templates'
-import {
-  COMMERCE_ENTITY_FIELDS,
-  COMMERCE_ENTITY_LABELS,
-  type CommerceEntityKind,
-} from '../../property-controls/DynamicBindingControl/commerceEntry'
+import { COMMERCE_ENTITIES, listFields, scalarFields, type EntityId } from '@core/commerce/entitySchema'
+import { entityForLoopSource, loopSourceFor } from '@core/commerce/loopSource'
+import { type CommerceEntityKind } from '../../property-controls/DynamicBindingControl/commerceEntry'
 import { buildClassTokenUsageMap, buildSelectorUsageMap, resolveSelectorUsage } from '../selectorUsage'
 import type {
   AnyModuleDefinition,
@@ -335,11 +333,33 @@ const EMPTY_ENCLOSING_CONTEXT: EnclosingLoopContext = {
   commerceEntityKind: null,
 }
 
-function commerceBindingSource(kind: CommerceEntityKind): EnclosingLoopContext {
+/**
+ * Fields for the picker, from the declared entity schema.
+ *
+ * Scalars become bindable tokens; `list` fields are what a nested loop can
+ * iterate and are surfaced with their entity named, so the author can see
+ * that "Images" leads somewhere rather than being a dead value.
+ */
+function commerceBindingSource(entity: EntityId): EnclosingLoopContext {
+  const schema = COMMERCE_ENTITIES[entity]
+  const fields: LoopSourceField[] = [
+    ...scalarFields(entity).map((field) => ({
+      id: field.id, label: field.label, format: field.format,
+    })),
+    ...listFields(entity).map((field) => ({
+      id: field.id,
+      label: `${field.label} (list of ${COMMERCE_ENTITIES[field.of].label.toLowerCase()})`,
+      format: 'plain' as const,
+    })),
+  ]
   return {
-    enclosingLoopSource: { label: COMMERCE_ENTITY_LABELS[kind], fields: COMMERCE_ENTITY_FIELDS[kind] },
+    enclosingLoopSource: { label: schema.label, fields },
     enclosingLoopTableId: null,
-    commerceEntityKind: kind,
+    // The legacy kind only knows three entities; anything else has no
+    // preview-value support yet and is reported as null rather than lied about.
+    commerceEntityKind: (entity === 'product' || entity === 'variant' || entity === 'collection')
+      ? entity
+      : null,
   }
 }
 
@@ -361,10 +381,16 @@ function resolveEnclosingLoopContext(
     (a) => a.moduleId === 'store.relationship-loop',
   )
   if (relationshipLoopNode) {
-    const kind: CommerceEntityKind = relationshipLoopNode.props.relationship === 'variants'
-      ? 'variant'
-      : 'product'
-    return commerceBindingSource(kind)
+    // Walk enclosing loops OUTERMOST first, threading the entity through each
+    // source. That is what lets `currentEntry.images` inside a products loop
+    // resolve to `image` — the picker then offers the image's own fields, and
+    // its own list fields, at any depth.
+    let inScope: EntityId | null = null
+    for (const ancestor of ancestors) {
+      if (ancestor.moduleId !== 'store.relationship-loop') continue
+      inScope = entityForLoopSource(loopSourceFor(ancestor.props), inScope)
+    }
+    return inScope ? commerceBindingSource(inScope) : EMPTY_ENCLOSING_CONTEXT
   }
 
   // Instatic-era generic loop — kept for any pre-existing document still

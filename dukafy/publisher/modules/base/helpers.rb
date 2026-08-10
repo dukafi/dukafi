@@ -8,6 +8,11 @@ class Dukafy
       VOID_TAGS = %w[area base br col embed hr img input link meta param source track wbr].freeze
       FORBIDDEN_TAGS = %w[script iframe frame frameset object embed applet base link meta style].freeze
       TEXT_TAGS = %w[none p h1 h2 h3 h4 h5 h6 span div small strong em].freeze
+      # Text-ish input types only. `file` is excluded until uploads have a
+      # storage story; `image`/`submit`/`reset`/`button` are buttons wearing an
+      # input costume and belong to base.button; `hidden` is excluded so a form
+      # can't smuggle values the visitor never sees.
+      INPUT_TYPES = %w[text email tel number password search url date time datetime-local month week color range].freeze
 
       module_function
 
@@ -48,6 +53,25 @@ class Dukafy
       def text_tag(value)
         candidate = value.to_s.downcase
         TEXT_TAGS.include?(candidate) ? candidate : "p"
+      end
+
+      # A form control's `name` becomes a request parameter, so it must be a
+      # plain identifier — no brackets, dots or anything that could reshape the
+      # posted params into a structure the server did not expect.
+      def field_name(value)
+        candidate = value.to_s.strip
+        candidate.match?(/\A[a-zA-Z][a-zA-Z0-9_-]{0,63}\z/) ? candidate : ""
+      end
+
+      def input_type(value)
+        candidate = value.to_s.downcase
+        INPUT_TYPES.include?(candidate) ? candidate : "text"
+      end
+
+      # Emit a boolean attribute only when truthy, the way HTML expects
+      # (`required`, not `required="false"`).
+      def flag(name, value)
+        value ? " #{name}" : ""
       end
 
       def target(value)

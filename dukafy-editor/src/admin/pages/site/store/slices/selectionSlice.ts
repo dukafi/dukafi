@@ -256,8 +256,10 @@ function applySelection(
 ): void {
   const nextAnchor = nextIds.length > 0 ? nextIds[nextIds.length - 1] : null
   const nextActiveClassId = getSelectionActiveClassId(current, nextAnchor)
-  // A node with inline styles but no class opens directly in inline-edit mode.
-  const nextInlineEditing = nextActiveClassId === null && nodeHasInlineStyles(current, nextAnchor)
+  // A node with no active class opens straight into the inline-style editor —
+  // no "add a class first" gate. The user can still promote to a reusable
+  // class at any time via the ClassPicker above.
+  const nextInlineEditing = nextActiveClassId === null
   const shouldPreservePropertiesCollapse =
     options.preservePropertiesPanelCollapse &&
     current.propertiesPanel.collapsed &&
@@ -407,19 +409,6 @@ function getSelectionActiveClassId(state: EditorStore, nodeId: string | null): s
     return state.activeClassId
   }
   return visibleClassIds[0]
-}
-
-/**
- * Whether a node carries inline styles. Used to seed `inlineStyleEditing` on
- * selection so a node with inline styles but no class opens straight into the
- * inline-style editor (the flag is then the single source of truth for which
- * target the Properties panel edits).
- */
-function nodeHasInlineStyles(state: EditorStore, nodeId: string | null): boolean {
-  if (!nodeId) return false
-  const node = findSelectableNode(state, nodeId)
-  const inline = (node as { inlineStyles?: Record<string, unknown> } | null)?.inlineStyles
-  return !!inline && Object.keys(inline).length > 0
 }
 
 function findSelectableNode(state: EditorStore, nodeId: string): BaseNode | null {

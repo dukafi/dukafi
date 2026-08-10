@@ -37,6 +37,10 @@ interface SiteExplorerTreeSectionProps<TTarget> {
   count: number
   actionLabel: string
   actionIcon: IconComponent
+  /** Optional second header action (e.g. "Import page") — omitted entirely when unset. */
+  secondaryActionLabel?: string
+  secondaryActionIcon?: IconComponent
+  onSecondaryAction?: () => void
   model: SiteExplorerTreeSectionModel<TTarget> | SiteExplorerStructuralSectionModel<TTarget>
   dropTarget: SiteExplorerDropTarget | null
   inlineRenameTarget: SiteExplorerInlineRenameTarget | null
@@ -60,6 +64,9 @@ export function SiteExplorerTreeSection<TTarget>({
   count,
   actionLabel,
   actionIcon,
+  secondaryActionLabel,
+  secondaryActionIcon,
+  onSecondaryAction,
   model,
   dropTarget,
   inlineRenameTarget,
@@ -131,6 +138,21 @@ export function SiteExplorerTreeSection<TTarget>({
         >
           <ActionIcon size={13} />
         </Button>
+        {secondaryActionIcon && onSecondaryAction && (() => {
+          const SecondaryActionIcon = secondaryActionIcon
+          return (
+            <Button
+              variant="ghost"
+              size="xs"
+              iconOnly
+              aria-label={secondaryActionLabel}
+              tooltip={secondaryActionLabel}
+              onClick={onSecondaryAction}
+            >
+              <SecondaryActionIcon size={13} />
+            </Button>
+          )
+        })()}
       </div>
 
       <TreeContainer

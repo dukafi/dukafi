@@ -1,0 +1,1129 @@
+{
+  "dukafyExport": "page",
+  "version": 1,
+  "exportedAt": 1786006984473,
+  "page": {
+    "title": "Home",
+    "slug": "index",
+    "rootNodeId": "root",
+    "nodes": {
+      "hero-title": {
+        "id": "hero-title",
+        "moduleId": "base.text",
+        "props": {
+          "text": "Everything for your day, in one place.",
+          "tag": "h1",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [],
+        "classIds": [
+          "tw-m_0",
+          "tw-text_4xl",
+          "tw-sm_text_5xl",
+          "tw-lg_text_6xl",
+          "tw-font_bold",
+          "tw-tracking_tight",
+          "tw-text_balance"
+        ]
+      },
+      "hero-lead": {
+        "id": "hero-lead",
+        "moduleId": "base.text",
+        "props": {
+          "text": "Thoughtfully made goods, delivered across the country.",
+          "tag": "p",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [],
+        "classIds": [
+          "tw-m_0",
+          "tw-text_lg",
+          "tw-sm_text_xl",
+          "tw-text_zinc_600",
+          "tw-max_w_2xl",
+          "tw-justify_self_center",
+          "tw-text_pretty"
+        ]
+      },
+      "hero-cta": {
+        "id": "hero-cta",
+        "moduleId": "base.link",
+        "props": {
+          "href": "/collections/featured",
+          "text": "Shop the collection",
+          "target": "_self",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [],
+        "classIds": [
+          "tw-inline_block",
+          "tw-justify_self_center",
+          "tw-rounded_md",
+          "tw-bg_zinc_900",
+          "tw-px_6",
+          "tw-py_3",
+          "tw-font_semibold",
+          "tw-text_white",
+          "tw-no_underline",
+          "tw-hover_bg_zinc_700"
+        ]
+      },
+      "hero": {
+        "id": "hero",
+        "moduleId": "base.container",
+        "props": {
+          "tag": "header",
+          "customTag": "",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [
+          "hero-title",
+          "hero-lead",
+          "hero-cta"
+        ],
+        "classIds": [
+          "tw-grid",
+          "tw-gap_5",
+          "tw-py_20",
+          "tw-text_center"
+        ]
+      },
+      "values-title": {
+        "id": "values-title",
+        "moduleId": "base.text",
+        "props": {
+          "text": "Why shop with us",
+          "tag": "h2",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [],
+        "classIds": [
+          "tw-text_3xl",
+          "tw-font_semibold",
+          "tw-tracking_tight",
+          "tw-m_0"
+        ]
+      },
+      "value-0-title": {
+        "id": "value-0-title",
+        "moduleId": "base.text",
+        "props": {
+          "text": "Fast delivery",
+          "tag": "h3",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [],
+        "classIds": [
+          "tw-m_0",
+          "tw-text_lg",
+          "tw-font_semibold"
+        ]
+      },
+      "value-0-body": {
+        "id": "value-0-body",
+        "moduleId": "base.text",
+        "props": {
+          "text": "Orders leave the same day when placed before 3pm.",
+          "tag": "p",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [],
+        "classIds": [
+          "tw-m_0",
+          "tw-text_zinc_600"
+        ]
+      },
+      "value-0": {
+        "id": "value-0",
+        "moduleId": "base.container",
+        "props": {
+          "tag": "div",
+          "customTag": "",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [
+          "value-0-title",
+          "value-0-body"
+        ],
+        "classIds": [
+          "tw-grid",
+          "tw-gap_2",
+          "tw-rounded_lg",
+          "tw-border",
+          "tw-border_zinc_200",
+          "tw-p_5"
+        ]
+      },
+      "value-1-title": {
+        "id": "value-1-title",
+        "moduleId": "base.text",
+        "props": {
+          "text": "Fair prices",
+          "tag": "h3",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [],
+        "classIds": [
+          "tw-m_0",
+          "tw-text_lg",
+          "tw-font_semibold"
+        ]
+      },
+      "value-1-body": {
+        "id": "value-1-body",
+        "moduleId": "base.text",
+        "props": {
+          "text": "No markups, no surprises at checkout.",
+          "tag": "p",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [],
+        "classIds": [
+          "tw-m_0",
+          "tw-text_zinc_600"
+        ]
+      },
+      "value-1": {
+        "id": "value-1",
+        "moduleId": "base.container",
+        "props": {
+          "tag": "div",
+          "customTag": "",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [
+          "value-1-title",
+          "value-1-body"
+        ],
+        "classIds": [
+          "tw-grid",
+          "tw-gap_2",
+          "tw-rounded_lg",
+          "tw-border",
+          "tw-border_zinc_200",
+          "tw-p_5"
+        ]
+      },
+      "value-2-title": {
+        "id": "value-2-title",
+        "moduleId": "base.text",
+        "props": {
+          "text": "Real support",
+          "tag": "h3",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [],
+        "classIds": [
+          "tw-m_0",
+          "tw-text_lg",
+          "tw-font_semibold"
+        ]
+      },
+      "value-2-body": {
+        "id": "value-2-body",
+        "moduleId": "base.text",
+        "props": {
+          "text": "Message us and a person answers.",
+          "tag": "p",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [],
+        "classIds": [
+          "tw-m_0",
+          "tw-text_zinc_600"
+        ]
+      },
+      "value-2": {
+        "id": "value-2",
+        "moduleId": "base.container",
+        "props": {
+          "tag": "div",
+          "customTag": "",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [
+          "value-2-title",
+          "value-2-body"
+        ],
+        "classIds": [
+          "tw-grid",
+          "tw-gap_2",
+          "tw-rounded_lg",
+          "tw-border",
+          "tw-border_zinc_200",
+          "tw-p_5"
+        ]
+      },
+      "values-grid": {
+        "id": "values-grid",
+        "moduleId": "base.container",
+        "props": {
+          "tag": "div",
+          "customTag": "",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [
+          "value-0",
+          "value-1",
+          "value-2"
+        ],
+        "classIds": [
+          "tw-grid",
+          "tw-gap_6",
+          "tw-sm_grid_cols_2",
+          "tw-lg_grid_cols_3"
+        ]
+      },
+      "values": {
+        "id": "values",
+        "moduleId": "base.container",
+        "props": {
+          "tag": "section",
+          "customTag": "",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [
+          "values-title",
+          "values-grid"
+        ],
+        "classIds": [
+          "tw-grid",
+          "tw-gap_6",
+          "tw-py_12"
+        ]
+      },
+      "product-image": {
+        "id": "product-image",
+        "moduleId": "base.image",
+        "props": {
+          "src": "",
+          "loading": "lazy",
+          "fetchPriority": "auto",
+          "decoding": "async",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [],
+        "classIds": [
+          "tw-block",
+          "tw-w_full",
+          "tw-aspect_square",
+          "tw-object_cover",
+          "tw-rounded_md",
+          "tw-bg_zinc_100"
+        ],
+        "dynamicBindings": {
+          "src": {
+            "source": "currentEntry",
+            "field": "imageUrl",
+            "format": "media",
+            "fallback": "empty"
+          }
+        }
+      },
+      "product-title": {
+        "id": "product-title",
+        "moduleId": "base.text",
+        "props": {
+          "text": "Product title",
+          "tag": "h3",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [],
+        "classIds": [
+          "tw-m_0",
+          "tw-text_base",
+          "tw-font_medium"
+        ],
+        "dynamicBindings": {
+          "text": {
+            "source": "currentEntry",
+            "field": "title",
+            "format": "plain",
+            "fallback": "static"
+          }
+        }
+      },
+      "product-price": {
+        "id": "product-price",
+        "moduleId": "base.text",
+        "props": {
+          "text": "$0.00",
+          "tag": "span",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [],
+        "classIds": [
+          "tw-text_zinc_600"
+        ],
+        "dynamicBindings": {
+          "text": {
+            "source": "currentEntry",
+            "field": "priceDisplay",
+            "format": "plain",
+            "fallback": "static"
+          }
+        }
+      },
+      "product-row": {
+        "id": "product-row",
+        "moduleId": "base.link",
+        "props": {
+          "href": "#",
+          "text": "",
+          "target": "_self",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [
+          "product-image",
+          "product-title",
+          "product-price"
+        ],
+        "classIds": [
+          "tw-grid",
+          "tw-gap_2",
+          "tw-text_inherit",
+          "tw-no_underline",
+          "tw-group"
+        ],
+        "dynamicBindings": {
+          "href": {
+            "source": "currentEntry",
+            "field": "href",
+            "format": "url",
+            "fallback": "static"
+          }
+        }
+      },
+      "featured-loop": {
+        "id": "featured-loop",
+        "moduleId": "store.relationship-loop",
+        "props": {
+          "relationship": "products",
+          "sourceSlug": "featured",
+          "perPage": 8,
+          "orderBy": "manual",
+          "direction": "asc",
+          "offset": 0
+        },
+        "breakpointOverrides": {},
+        "children": [
+          "product-row"
+        ],
+        "classIds": [
+          "tw-grid",
+          "tw-gap_6",
+          "tw-sm_grid_cols_2",
+          "tw-lg_grid_cols_4"
+        ]
+      },
+      "featured-title": {
+        "id": "featured-title",
+        "moduleId": "base.text",
+        "props": {
+          "text": "Featured",
+          "tag": "h2",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [],
+        "classIds": [
+          "tw-text_3xl",
+          "tw-font_semibold",
+          "tw-tracking_tight",
+          "tw-m_0"
+        ]
+      },
+      "featured": {
+        "id": "featured",
+        "moduleId": "base.container",
+        "props": {
+          "tag": "section",
+          "customTag": "",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [
+          "featured-title",
+          "featured-loop"
+        ],
+        "classIds": [
+          "tw-grid",
+          "tw-gap_6",
+          "tw-py_12"
+        ]
+      },
+      "cta-title": {
+        "id": "cta-title",
+        "moduleId": "base.text",
+        "props": {
+          "text": "Ready when you are.",
+          "tag": "h2",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [],
+        "classIds": [
+          "tw-text_3xl",
+          "tw-font_semibold",
+          "tw-tracking_tight",
+          "tw-m_0"
+        ]
+      },
+      "cta-body": {
+        "id": "cta-body",
+        "moduleId": "base.text",
+        "props": {
+          "text": "Browse the full catalogue and find something you like.",
+          "tag": "p",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [],
+        "classIds": [
+          "tw-m_0",
+          "tw-text_zinc_600"
+        ]
+      },
+      "cta-link": {
+        "id": "cta-link",
+        "moduleId": "base.link",
+        "props": {
+          "href": "/collections/featured",
+          "text": "Browse everything",
+          "target": "_self",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [],
+        "classIds": [
+          "tw-inline_block",
+          "tw-justify_self_center",
+          "tw-rounded_md",
+          "tw-bg_zinc_900",
+          "tw-px_6",
+          "tw-py_3",
+          "tw-font_semibold",
+          "tw-text_white",
+          "tw-no_underline",
+          "tw-hover_bg_zinc_700"
+        ]
+      },
+      "cta": {
+        "id": "cta",
+        "moduleId": "base.container",
+        "props": {
+          "tag": "section",
+          "customTag": "",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [
+          "cta-title",
+          "cta-body",
+          "cta-link"
+        ],
+        "classIds": [
+          "tw-grid",
+          "tw-gap_6",
+          "tw-py_12",
+          "tw-text_center"
+        ]
+      },
+      "root": {
+        "id": "root",
+        "moduleId": "base.container",
+        "props": {
+          "tag": "base.body",
+          "customTag": "",
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "children": [
+          "hero",
+          "values",
+          "featured",
+          "cta"
+        ],
+        "classIds": [
+          "tw-mx_auto",
+          "tw-max_w_6xl",
+          "tw-px_6",
+          "tw-text_zinc_900",
+          "tw-antialiased"
+        ]
+      }
+    },
+    "classes": {
+      "tw-m_0": {
+        "id": "tw-m_0",
+        "name": "m-0",
+        "kind": "class",
+        "selector": ".m-0",
+        "order": 0,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_4xl": {
+        "id": "tw-text_4xl",
+        "name": "text-4xl",
+        "kind": "class",
+        "selector": ".text-4xl",
+        "order": 1,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-sm_text_5xl": {
+        "id": "tw-sm_text_5xl",
+        "name": "sm:text-5xl",
+        "kind": "class",
+        "selector": ".sm:text-5xl",
+        "order": 2,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-lg_text_6xl": {
+        "id": "tw-lg_text_6xl",
+        "name": "lg:text-6xl",
+        "kind": "class",
+        "selector": ".lg:text-6xl",
+        "order": 3,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-font_bold": {
+        "id": "tw-font_bold",
+        "name": "font-bold",
+        "kind": "class",
+        "selector": ".font-bold",
+        "order": 4,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-tracking_tight": {
+        "id": "tw-tracking_tight",
+        "name": "tracking-tight",
+        "kind": "class",
+        "selector": ".tracking-tight",
+        "order": 5,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_balance": {
+        "id": "tw-text_balance",
+        "name": "text-balance",
+        "kind": "class",
+        "selector": ".text-balance",
+        "order": 6,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_lg": {
+        "id": "tw-text_lg",
+        "name": "text-lg",
+        "kind": "class",
+        "selector": ".text-lg",
+        "order": 7,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-sm_text_xl": {
+        "id": "tw-sm_text_xl",
+        "name": "sm:text-xl",
+        "kind": "class",
+        "selector": ".sm:text-xl",
+        "order": 8,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_zinc_600": {
+        "id": "tw-text_zinc_600",
+        "name": "text-zinc-600",
+        "kind": "class",
+        "selector": ".text-zinc-600",
+        "order": 9,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-max_w_2xl": {
+        "id": "tw-max_w_2xl",
+        "name": "max-w-2xl",
+        "kind": "class",
+        "selector": ".max-w-2xl",
+        "order": 10,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-justify_self_center": {
+        "id": "tw-justify_self_center",
+        "name": "justify-self-center",
+        "kind": "class",
+        "selector": ".justify-self-center",
+        "order": 11,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_pretty": {
+        "id": "tw-text_pretty",
+        "name": "text-pretty",
+        "kind": "class",
+        "selector": ".text-pretty",
+        "order": 12,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-inline_block": {
+        "id": "tw-inline_block",
+        "name": "inline-block",
+        "kind": "class",
+        "selector": ".inline-block",
+        "order": 13,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-rounded_md": {
+        "id": "tw-rounded_md",
+        "name": "rounded-md",
+        "kind": "class",
+        "selector": ".rounded-md",
+        "order": 14,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-bg_zinc_900": {
+        "id": "tw-bg_zinc_900",
+        "name": "bg-zinc-900",
+        "kind": "class",
+        "selector": ".bg-zinc-900",
+        "order": 15,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-px_6": {
+        "id": "tw-px_6",
+        "name": "px-6",
+        "kind": "class",
+        "selector": ".px-6",
+        "order": 16,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-py_3": {
+        "id": "tw-py_3",
+        "name": "py-3",
+        "kind": "class",
+        "selector": ".py-3",
+        "order": 17,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-font_semibold": {
+        "id": "tw-font_semibold",
+        "name": "font-semibold",
+        "kind": "class",
+        "selector": ".font-semibold",
+        "order": 18,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_white": {
+        "id": "tw-text_white",
+        "name": "text-white",
+        "kind": "class",
+        "selector": ".text-white",
+        "order": 19,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-no_underline": {
+        "id": "tw-no_underline",
+        "name": "no-underline",
+        "kind": "class",
+        "selector": ".no-underline",
+        "order": 20,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-hover_bg_zinc_700": {
+        "id": "tw-hover_bg_zinc_700",
+        "name": "hover:bg-zinc-700",
+        "kind": "class",
+        "selector": ".hover:bg-zinc-700",
+        "order": 21,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-grid": {
+        "id": "tw-grid",
+        "name": "grid",
+        "kind": "class",
+        "selector": ".grid",
+        "order": 22,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-gap_5": {
+        "id": "tw-gap_5",
+        "name": "gap-5",
+        "kind": "class",
+        "selector": ".gap-5",
+        "order": 23,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-py_20": {
+        "id": "tw-py_20",
+        "name": "py-20",
+        "kind": "class",
+        "selector": ".py-20",
+        "order": 24,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_center": {
+        "id": "tw-text_center",
+        "name": "text-center",
+        "kind": "class",
+        "selector": ".text-center",
+        "order": 25,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_3xl": {
+        "id": "tw-text_3xl",
+        "name": "text-3xl",
+        "kind": "class",
+        "selector": ".text-3xl",
+        "order": 26,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-gap_2": {
+        "id": "tw-gap_2",
+        "name": "gap-2",
+        "kind": "class",
+        "selector": ".gap-2",
+        "order": 27,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-rounded_lg": {
+        "id": "tw-rounded_lg",
+        "name": "rounded-lg",
+        "kind": "class",
+        "selector": ".rounded-lg",
+        "order": 28,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-border": {
+        "id": "tw-border",
+        "name": "border",
+        "kind": "class",
+        "selector": ".border",
+        "order": 29,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-border_zinc_200": {
+        "id": "tw-border_zinc_200",
+        "name": "border-zinc-200",
+        "kind": "class",
+        "selector": ".border-zinc-200",
+        "order": 30,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-p_5": {
+        "id": "tw-p_5",
+        "name": "p-5",
+        "kind": "class",
+        "selector": ".p-5",
+        "order": 31,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-gap_6": {
+        "id": "tw-gap_6",
+        "name": "gap-6",
+        "kind": "class",
+        "selector": ".gap-6",
+        "order": 32,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-sm_grid_cols_2": {
+        "id": "tw-sm_grid_cols_2",
+        "name": "sm:grid-cols-2",
+        "kind": "class",
+        "selector": ".sm:grid-cols-2",
+        "order": 33,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-lg_grid_cols_3": {
+        "id": "tw-lg_grid_cols_3",
+        "name": "lg:grid-cols-3",
+        "kind": "class",
+        "selector": ".lg:grid-cols-3",
+        "order": 34,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-py_12": {
+        "id": "tw-py_12",
+        "name": "py-12",
+        "kind": "class",
+        "selector": ".py-12",
+        "order": 35,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-block": {
+        "id": "tw-block",
+        "name": "block",
+        "kind": "class",
+        "selector": ".block",
+        "order": 36,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-w_full": {
+        "id": "tw-w_full",
+        "name": "w-full",
+        "kind": "class",
+        "selector": ".w-full",
+        "order": 37,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-aspect_square": {
+        "id": "tw-aspect_square",
+        "name": "aspect-square",
+        "kind": "class",
+        "selector": ".aspect-square",
+        "order": 38,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-object_cover": {
+        "id": "tw-object_cover",
+        "name": "object-cover",
+        "kind": "class",
+        "selector": ".object-cover",
+        "order": 39,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-bg_zinc_100": {
+        "id": "tw-bg_zinc_100",
+        "name": "bg-zinc-100",
+        "kind": "class",
+        "selector": ".bg-zinc-100",
+        "order": 40,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_base": {
+        "id": "tw-text_base",
+        "name": "text-base",
+        "kind": "class",
+        "selector": ".text-base",
+        "order": 41,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-font_medium": {
+        "id": "tw-font_medium",
+        "name": "font-medium",
+        "kind": "class",
+        "selector": ".font-medium",
+        "order": 42,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_inherit": {
+        "id": "tw-text_inherit",
+        "name": "text-inherit",
+        "kind": "class",
+        "selector": ".text-inherit",
+        "order": 43,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-group": {
+        "id": "tw-group",
+        "name": "group",
+        "kind": "class",
+        "selector": ".group",
+        "order": 44,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-lg_grid_cols_4": {
+        "id": "tw-lg_grid_cols_4",
+        "name": "lg:grid-cols-4",
+        "kind": "class",
+        "selector": ".lg:grid-cols-4",
+        "order": 45,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-mx_auto": {
+        "id": "tw-mx_auto",
+        "name": "mx-auto",
+        "kind": "class",
+        "selector": ".mx-auto",
+        "order": 46,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-max_w_6xl": {
+        "id": "tw-max_w_6xl",
+        "name": "max-w-6xl",
+        "kind": "class",
+        "selector": ".max-w-6xl",
+        "order": 47,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_zinc_900": {
+        "id": "tw-text_zinc_900",
+        "name": "text-zinc-900",
+        "kind": "class",
+        "selector": ".text-zinc-900",
+        "order": 48,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-antialiased": {
+        "id": "tw-antialiased",
+        "name": "antialiased",
+        "kind": "class",
+        "selector": ".antialiased",
+        "order": 49,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      }
+    }
+  }
+}

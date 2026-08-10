@@ -22,10 +22,21 @@ class TailwindCompiler
       # would make prose such as "flex" generate a utility even when it is not
       # a class. A candidate-only source enforces Dukafy's used-class contract.
       File.write(source_path, candidates.join("\n"))
+      # Utilities are emitted UNLAYERED on purpose.
+      #
+      # Dukafy's reset (`:where(*) { margin: 0; padding: 0 }`) is unlayered,
+      # and in the CSS cascade an unlayered declaration beats a layered one
+      # NO MATTER the specificity. With utilities inside `@layer utilities`,
+      # that zero-specificity reset silently defeated every padding and margin
+      # utility — `p-5`, `px-6`, `py-20` all computed but never applied, while
+      # colours, borders, grid and gap (which the reset doesn't touch) worked
+      # fine. Unlayered, normal specificity applies and `.p-5` (0,1,0) wins.
+      #
+      # The theme layer stays: custom properties resolve regardless of layer.
       File.write(input_path, <<~CSS)
-        @layer theme, utilities;
+        @layer theme;
         @import "tailwindcss/theme.css" layer(theme);
-        @import "tailwindcss/utilities.css" layer(utilities) source(none);
+        @import "tailwindcss/utilities.css" source(none);
         @source "./published.html";
       CSS
       _stdout, stderr, status = Open3.capture3(

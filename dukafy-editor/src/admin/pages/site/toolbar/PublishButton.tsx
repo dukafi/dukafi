@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { SiteDocument } from '@core/page-tree'
+import { buildSiteExport, parseSiteExport, type SiteDocument } from '@core/page-tree'
 import { selectActivePage, useEditorStore } from '@site/store/store'
 import { getCmsPublishStatus, publishCmsDraft } from '@core/persistence'
 import { LoaderIcon } from 'pixel-art-icons/icons/loader'
@@ -7,13 +7,17 @@ import { CalendarSolidIcon } from 'pixel-art-icons/icons/calendar-solid'
 import { CheckIcon } from 'pixel-art-icons/icons/check'
 import { CircleAlertSolidIcon } from 'pixel-art-icons/icons/circle-alert-solid'
 import { CloudUploadSolidIcon } from 'pixel-art-icons/icons/cloud-upload-solid'
+import { ArrowDownIcon } from 'pixel-art-icons/icons/arrow-down'
 import { EyeSolidIcon } from 'pixel-art-icons/icons/eye-solid'
 import { StepUpCancelledMessage, useStepUp } from '@admin/shared/StepUp'
 import { SchedulePublishDialog } from '@admin/modals/SchedulePublishDialog'
+import { Dialog } from '@ui/components/Dialog'
+import { Button } from '@ui/components/Button'
 import type { PersistenceSaveStatus } from '@site/hooks/usePersistence'
 import { pushToast } from '@ui/components/Toast'
 import { PublishActionGroup, type PublishActionMenuItem } from './PublishActionGroup'
 import { getErrorMessage } from '@core/utils/errorMessage'
+import { downloadJsonFile, safeFilenameFragment } from '@admin/shared/downloadJsonFile'
 
 type PublishState = 'idle' | 'publishing' | 'published' | 'error'
 
@@ -30,6 +34,8 @@ export function PublishButton({ enabled = true, saveStatus }: PublishButtonProps
   const { runStepUp } = useStepUp()
   const [state, setState] = useState<PublishState>('idle')
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
+  const [pendingSiteImport, setPendingSiteImport] = useState<SiteDocument | null>(null)
+  const siteImportInputRef = useRef<HTMLInputElement>(null)
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   /**
    * The `site` reference captured when the button entered the "published"
@@ -166,7 +172,51 @@ export function PublishButton({ enabled = true, saveStatus }: PublishButtonProps
     state === 'error' ? CircleAlertSolidIcon :
     CloudUploadSolidIcon
 
+  function handleExportSite() {
+    if (!site) return
+    downloadJsonFile(`${safeFilenameFragment(site.name)}.dukafy-site.json`, buildSiteExport(site))
+  }
+
+  async function handleSiteImportFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0]
+    event.currentTarget.value = ''
+    if (!file) return
+    try {
+      const raw = JSON.parse(await file.text())
+      const parsed = parseSiteExport(raw)
+      if (!parsed) {
+        pushToast({ kind: 'error', title: "Not a Dukafy site export", body: `${file.name} doesn't match the expected file shape.` })
+        return
+      }
+      setPendingSiteImport(parsed.site)
+    } catch {
+      pushToast({ kind: 'error', title: 'Could not read file', body: `${file.name} is not valid JSON.` })
+    }
+  }
+
+  function confirmSiteImport() {
+    if (!pendingSiteImport) return
+    useEditorStore.getState().loadSite(pendingSiteImport)
+    setPendingSiteImport(null)
+    pushToast({ kind: 'success', title: 'Site imported into the draft', body: 'Review it, then Publish to go live.' })
+  }
+
   const menuItems: PublishActionMenuItem[] = [
+    {
+      id: 'export-site',
+      label: 'Export site',
+      icon: ArrowDownIcon,
+      disabled: !site,
+      onSelect: handleExportSite,
+      testId: 'toolbar-export-site-action',
+    },
+    // "Import site…" is deliberately NOT offered yet. In connected mode
+    // `loadSite` binds each imported page id to an empty server doc, and the
+    // projection then deletes every one of those pages — importing a site
+    // silently empties it, while the shell survives so it still looks fine.
+    // Proven in `__tests__/collab/siteImportConnected.test.ts`. Export and
+    // per-page Import are unaffected; re-list this once import seeds the
+    // imported content INTO the bound docs instead of being overwritten.
     {
       // Per-page scheduling. The Site editor's primary Publish button
       // still publishes ALL draft pages at once (existing behaviour);
@@ -231,6 +281,37 @@ export function PublishButton({ enabled = true, saveStatus }: PublishButtonProps
           }}
         />
       )}
+      <input
+        ref={siteImportInputRef}
+        type="file"
+        accept=".json,application/json"
+        hidden
+        onChange={(event) => void handleSiteImportFileChange(event)}
+      />
+      <Dialog
+        open={pendingSiteImport !== null}
+        onClose={() => setPendingSiteImport(null)}
+        title="Import site?"
+        tone="danger"
+        footer={
+          <>
+            <Button type="button" variant="secondary" size="sm" onClick={() => setPendingSiteImport(null)}>
+              <span>Cancel</span>
+            </Button>
+            <Button type="button" variant="destructive" size="sm" onClick={confirmSiteImport}>
+              <span>Replace draft with this file</span>
+            </Button>
+          </>
+        }
+      >
+        <p>
+          This replaces every page, style, and setting in your CURRENT draft with the ones in
+          the imported file — {pendingSiteImport?.pages.length ?? 0} page
+          {pendingSiteImport?.pages.length === 1 ? '' : 's'}. Nothing goes live until you hit
+          Publish. If your current site has pages the import doesn&rsquo;t include, delete them
+          yourself before publishing so they don&rsquo;t linger live.
+        </p>
+      </Dialog>
     </>
   )
 }

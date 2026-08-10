@@ -11,7 +11,10 @@ import type { Draft } from 'mutative'
 import type { FrameworkColorToken, FrameworkColorUtilityType, FrameworkPreferencesSettings, FrameworkScaleManualSize, FrameworkScaleMode, FrameworkSpacingClassGenerator, FrameworkSpacingGroup, FrameworkTypographyClassGenerator, FrameworkTypographyGroup } from '@core/framework-schema'
 import type {
   DecorativeSiteExplorerSectionId,
+  DukafyPageExportFile,
   DynamicPropBinding,
+  NodeAction,
+  NodeVisibility,
   ExplorerPathChangePlan,
   Page,
   PageNode,
@@ -117,6 +120,7 @@ export interface SiteSlice {
   deletePage: (pageId: string) => void
   renamePage: (pageId: string, title: string, slug?: string) => void
   duplicatePage: (sourcePageId: string, title: string, slug?: string) => Page
+  importPage: (exported: DukafyPageExportFile) => Page
   reorderPages: (fromIndex: number, toIndex: number) => void
   convertPageToTemplate: (pageId: string, config: PageTemplateConfig) => void
   convertTemplateToPage: (pageId: string) => void
@@ -233,6 +237,25 @@ export interface SiteSlice {
   wrapNodes: (nodeIds: string[], containerModuleId: string, defaults?: Record<string, unknown>) => string | null
   setNodeDynamicBinding: (nodeId: string, propKey: string, binding: DynamicPropBinding) => void
   clearNodeDynamicBinding: (nodeId: string, propKey: string) => void
+  /**
+   * Attach a behaviour (e.g. remove a cart line) to an ordinary node. The
+   * sibling of setNodeDynamicBinding: that sets where data comes FROM, this
+   * sets what the node DOES.
+   */
+  setNodeAction: (nodeId: string, action: NodeAction) => void
+  clearNodeAction: (nodeId: string) => void
+  /**
+   * Mark a node as a live region — the area a flow re-renders into. Separate
+   * from `setNodeAction`: a node can both perform a verb and be a region.
+   */
+  setNodeRegion: (nodeId: string, region: NodeRegion) => void
+  clearNodeRegion: (nodeId: string) => void
+  /**
+   * Condition this node's rendering. When false the node and its subtree
+   * render nothing — the mechanism behind "show this only when in cart".
+   */
+  setNodeVisibility: (nodeId: string, condition: NodeVisibility) => void
+  clearNodeVisibility: (nodeId: string) => void
 
   // Breakpoint mutations
   addBreakpoint: (bp: Omit<Breakpoint, 'id'>) => Breakpoint

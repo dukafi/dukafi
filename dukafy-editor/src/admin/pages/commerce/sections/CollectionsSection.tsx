@@ -249,8 +249,21 @@ function CollectionDialog({
         <FormField label="Title" htmlFor="collection-title">
           <Input id="collection-title" name="title" required defaultValue={collection?.title} />
         </FormField>
-        <FormField label="Slug" htmlFor="collection-slug">
-          <Input id="collection-slug" name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" defaultValue={collection?.slug} monospace />
+        <FormField
+          label="Slug"
+          htmlFor="collection-slug"
+          description={collection
+            ? 'The collection\u2019s URL. Changing it leaves a redirect behind.'
+            : 'Leave blank to generate one from the title.'}
+        >
+          <Input
+            id="collection-slug"
+            name="slug"
+            pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+            placeholder={collection ? undefined : 'auto'}
+            defaultValue={collection?.slug}
+            monospace
+          />
         </FormField>
         <FormField label="Description" htmlFor="collection-description">
           <Input id="collection-description" name="description" defaultValue={collection?.description} />

@@ -1,5 +1,5 @@
 /**
- * System binding sources — `page`, `site`, `route`.
+ * System binding sources — `page`, `site`, `route`, `cart`.
  *
  * The dynamic binding picker lists these alongside post-types and data
  * tables in its left pane. Each entry declares the fields a binding can
@@ -16,7 +16,7 @@
 
 import type { LoopSourceField } from '@core/loops/types'
 
-export type SystemSourceId = 'page' | 'site' | 'route'
+export type SystemSourceId = 'page' | 'site' | 'route' | 'cart'
 
 interface SystemSource {
   id: SystemSourceId
@@ -69,6 +69,35 @@ const ROUTE_SOURCE: SystemSource = {
 }
 
 // ---------------------------------------------------------------------------
+// cart — the visitor's cart summary
+//
+// Cart-level totals only. Per-LINE fields (title, quantity, linePriceDisplay)
+// come from `currentEntry` inside a `cartItems` relationship loop, because
+// there is one of them per line and only one cart.
+//
+// Resolves wherever a cart is in scope — the cart-lines fragment render. On a
+// baked page with no cart, these fall back like any unresolved binding.
+// ---------------------------------------------------------------------------
+
+const CART_SOURCE: SystemSource = {
+  id: 'cart',
+  label: 'Cart',
+  description: 'Totals and discount for the visitor’s cart. Per-item fields live on the cart loop.',
+  fields: [
+    { id: 'subtotalDisplay', label: 'Subtotal (formatted)' },
+    { id: 'subtotalCents', label: 'Subtotal (cents)' },
+    { id: 'discountCode', label: 'Discount code' },
+    { id: 'discountDisplay', label: 'Discount (formatted)' },
+    { id: 'discountCents', label: 'Discount (cents)' },
+    { id: 'totalDisplay', label: 'Total (formatted)' },
+    { id: 'totalCents', label: 'Total (cents)' },
+    { id: 'count', label: 'Item count' },
+    { id: 'currency', label: 'Currency' },
+    { id: 'isEmpty', label: 'Is empty' },
+  ],
+}
+
+// ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
@@ -76,4 +105,5 @@ export const SYSTEM_SOURCES: readonly SystemSource[] = [
   PAGE_SOURCE,
   SITE_SOURCE,
   ROUTE_SOURCE,
+  CART_SOURCE,
 ]

@@ -5,7 +5,7 @@ require "rack/files"
 Dir[File.expand_path("routes/*.rb", __dir__)].sort.each { |f| require f }
 
 class Dukafy < Roda
-  plugin :sessions, secret: ENV.fetch("SESSION_SECRET") { "dev-secret-change-me-" + "x" * 64 }
+  plugin :sessions, secret: SessionSecret.fetch
   plugin :json
   plugin :json_parser
   plugin :public
@@ -29,6 +29,8 @@ class Dukafy < Roda
     end
 
     r.on("fragments") { r.run Fragments }
+    r.on("forms") { r.run Forms }
+    r.on("payments") { r.run Payments::Routes }
     r.on("checkout") { r.run Checkout }
     r.run Storefront
   end

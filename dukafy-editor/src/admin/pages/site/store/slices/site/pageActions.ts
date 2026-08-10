@@ -4,12 +4,14 @@
  */
 
 import {
+  type DukafyPageExportFile,
   type Page,
   addPage,
   deletePage,
   renamePage,
   reorderPages,
   duplicatePage,
+  importPageIntoSite,
   reconcileSiteExplorerInPlace,
 } from '@core/page-tree'
 import type { SiteSlice, SiteSliceHelpers } from './types'
@@ -24,6 +26,7 @@ type PageActions = Pick<
   | 'reorderPages'
   | 'convertPageToTemplate'
   | 'convertTemplateToPage'
+  | 'importPage'
 >
 
 export function createPageActions({
@@ -74,6 +77,20 @@ export function createPageActions({
         newPage = duplicatePage(p, sourcePageId, title, slug)
         reconcileSiteExplorerInPlace(p)
         return true
+      })
+      return newPage
+    },
+
+    importPage: (exported: DukafyPageExportFile) => {
+      let newPage!: Page
+      mutateSite((p) => {
+        newPage = importPageIntoSite(p, exported)
+        reconcileSiteExplorerInPlace(p)
+        return true
+      })
+      set((state) => {
+        state.activePageId = newPage.id
+        clearCanvasSelectionDraft(state)
       })
       return newPage
     },

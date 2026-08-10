@@ -40,6 +40,12 @@ const VALID_SOURCES: ReadonlySet<DynamicPropBinding['source']> = new Set([
   'page',
   'site',
   'route',
+  // Recognised so `{cart.subtotalDisplay}` PARSES as a token. The canvas has
+  // no cart frame, so it resolves to nothing and the token's fallback shows —
+  // which beats rendering the raw `{cart.subtotalDisplay}` text, as it did
+  // before, on the canvas AND in the published page.
+  'cart',
+  'payment',
 ])
 
 function isValidSource(s: string): s is DynamicPropBinding['source'] {
@@ -210,6 +216,11 @@ export function readFrame(
       return (context.site as unknown as Record<string, unknown>) ?? null
     case 'route':
       return (context.route as unknown as Record<string, unknown>) ?? null
+    // No cart or payment frame on the canvas — those exist only where a real
+    // one is in scope (the cart-lines / payment-status fragments).
+    case 'cart':
+    case 'payment':
+      return null
     default:
       return null
   }

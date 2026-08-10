@@ -24,8 +24,17 @@ class PartialBake
     return Result.new(page_count: 0, paths: [], slot: source_slot) unless publish_available?(source_slot)
 
     version = @state.publish_version + 1
-    slot_name = "slot_#{version % 2}"
+    # Target the slot we are NOT serving from, derived from the live symlink
+    # rather than from `publish_version % 2`.
+    #
+    # Those two can disagree — a bake that wrote elsewhere still advances the
+    # version, and any drift made this target its own source. Since the first
+    # thing below is `rm_rf(slot_path)`, that deleted the LIVE SITE and then
+    # died on `cp_r` with "same file". Deriving from the symlink cannot
+    # collide however far the version has drifted.
+    slot_name = source_slot == "slot_0" ? "slot_1" : "slot_0"
     slot_path = File.join(@output_root, slot_name)
+    raise "refusing to bake into the slot being served (#{slot_name})" if slot_path == source_path_for(source_slot)
     source_path = File.join(@output_root, source_slot)
     affected, old_path, current_path = affected_paths
     rendered_paths = []
@@ -70,6 +79,10 @@ class PartialBake
   end
 
   private
+
+  def source_path_for(slot)
+    File.join(@output_root, slot.to_s)
+  end
 
   def publish_available?(slot)
     @state && @state.publish_version.positive? && slot && File.directory?(File.join(@output_root, slot))
@@ -132,7 +145,8 @@ class PartialBake
       title: site.dig("settings", "metaTitle") || entry.fetch(:title),
       body: rendered.html, body_classes: rendered.body_classes,
       language: site.dig("settings", "language") || "en",
-      description: site.dig("settings", "metaDescription"), css_href:
+      description: site.dig("settings", "metaDescription"), css_href:,
+      runtimes: rendered.runtimes
     )
     FileUtils.mkdir_p(File.dirname(destination))
     File.write(destination, html)
