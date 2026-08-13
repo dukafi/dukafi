@@ -31,7 +31,6 @@ class Dukafy < Roda
     r.on("fragments") { r.run Fragments }
     r.on("forms") { r.run Forms }
     r.on("payments") { r.run Payments::Routes }
-    r.on("checkout") { r.run Checkout }
     r.run Storefront
   end
 end

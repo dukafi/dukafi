@@ -14,11 +14,11 @@ class Dukafy
       # cart is per-visitor, so a `cartItems` loop bakes as an htmx placeholder
       # and only renders real lines when the fragment endpoint re-renders that
       # same subtree with a cart in hand.
-      def self.call(document:, registry:, prefetched: {}, breakpoint_id: nil, site: nil, query_params: {}, current_entry: nil, cart: nil, payment: nil, cart_loop_id: nil)
-        new(document, registry, prefetched, breakpoint_id, site, query_params, current_entry, cart, payment, cart_loop_id).call
+      def self.call(document:, registry:, prefetched: {}, breakpoint_id: nil, site: nil, query_params: {}, current_entry: nil, cart: nil, payment: nil, cart_loop_id: nil, page_paths: {})
+        new(document, registry, prefetched, breakpoint_id, site, query_params, current_entry, cart, payment, cart_loop_id, page_paths).call
       end
 
-      def initialize(document, registry, prefetched, breakpoint_id, site, query_params, current_entry, cart = nil, payment = nil, cart_loop_id = nil)
+      def initialize(document, registry, prefetched, breakpoint_id, site, query_params, current_entry, cart = nil, payment = nil, cart_loop_id = nil, page_paths = {})
         @document = document
         @registry = registry
         @prefetched = prefetched
@@ -41,6 +41,8 @@ class Dukafy
         # Set when re-rendering ONE cart line standalone: the row's own +/-/
         # remove buttons carry the loop id, and without it they render inert.
         @cart_loop_id = cart_loop_id
+        # page id -> public path, for resolving `cms:page:<id>` link targets.
+        @page_paths = page_paths.is_a?(Hash) ? page_paths : {}
         @css = CssCollector.new
         @visiting = {}
         @body_classes = []
@@ -703,9 +705,29 @@ class Dukafy
         props.merge(allowed)
       end
 
+      # The editor stores a link to another PAGE as `cms:page:<id>`, not as a
+      # path — so renaming a page's slug never breaks the links into it. The
+      # publisher has to turn that back into a URL; left alone, `safe_url`
+      # sees an unknown `cms:` scheme and renders `#`, which is exactly what a
+      # link to a page looked like on a published site.
+      PAGE_REF = /\Acms:page:([A-Za-z0-9_-]+)(#.*)?\z/
+
+      def resolve_page_ref(value)
+        match = PAGE_REF.match(value)
+        return value unless match
+
+        path = @page_paths[match[1]]
+        # A ref whose page was deleted has no honest destination. `#` at least
+        # stays on the page rather than 404ing.
+        return "#" unless path
+
+        "#{path}#{match[2]}"
+      end
+
       def escaped_props(props, schema)
         props.to_h do |key, value|
           control = schema.fetch(key, {})
+          value = resolve_page_ref(value) if control[:type] == :url && value.is_a?(String)
           safe_value = if value.is_a?(String) && !%i[url image media richtext svg].include?(control[:type])
             CGI.escapeHTML(value)
           else

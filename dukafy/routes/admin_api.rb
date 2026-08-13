@@ -298,7 +298,7 @@ class AdminApi < Roda
 
     rendered = Dukafy::Publisher::RenderPage.call(
       document: page, registry: Dukafy::Publisher::REGISTRY, site: site,
-      prefetched: prefetched, current_entry: current_entry
+      prefetched: prefetched, current_entry: current_entry, page_paths: PagePaths.call
     )
 
     collector = Dukafy::Publisher::CssCollector.new

@@ -42,7 +42,7 @@ class Storefront < Roda
     document = page.published_document_data || page.document_data
     rendered = Dukafy::Publisher::RenderPage.call(
       document:, registry: Dukafy::Publisher::REGISTRY, site: state.site,
-      prefetched: CommercePrefetcher.call, query_params:
+      prefetched: CommercePrefetcher.call, query_params:, page_paths: PagePaths.call
     )
     tailwind_html = %(<body class="#{rendered.body_classes.join(' ')}">#{rendered.html}</body>)
     tailwind_css = TailwindCompiler.call(
@@ -77,7 +77,7 @@ class Storefront < Roda
 
     rendered = Dukafy::Publisher::RenderPage.call(
       document:, registry: Dukafy::Publisher::REGISTRY, site: state.site,
-      prefetched:, current_entry: collection, query_params:
+      prefetched:, current_entry: collection, query_params:, page_paths: PagePaths.call
     )
     tailwind_html = %(<body class="#{rendered.body_classes.join(' ')}">#{rendered.html}</body>)
     collector = Dukafy::Publisher::CssCollector.new

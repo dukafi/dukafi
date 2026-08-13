@@ -94,7 +94,10 @@ class CheckoutFlowSpec < Minitest::Test
     # Exactly what the rendered button submits: the form's own fields.
     post "/fragments/cart/order", email: "buyer@example.com", phone: "", redirect: "/thank-you"
 
-    assert_equal 200, last_response.status, last_response.body
+    # 204: this verb has no hx-target, so any body would be swapped into the
+    # merchant's own button. The redirect header still drives the browser.
+    assert_equal 204, last_response.status, last_response.body
+    assert_empty last_response.body
     assert_equal "/thank-you", last_response.headers["hx-redirect"]
     order = Order.first
     assert_equal 27_900, order.total_cents
@@ -111,7 +114,7 @@ class CheckoutFlowSpec < Minitest::Test
 
     post "/fragments/cart/order", phone: "+254 712 345 678"
 
-    assert_equal 200, last_response.status, last_response.body
+    assert_equal 204, last_response.status, last_response.body
     assert_equal "+254712345678", Order.first.phone
     assert_nil Order.first.email
   end

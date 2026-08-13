@@ -302,3 +302,56 @@ describe('node render conditions', () => {
     expect(after.actions?.region).toBe('cart')
   })
 })
+
+/**
+ * Block insertion must survive PARTIAL props.
+ *
+ * Modules inserted normally go through `createNode`, which merges module
+ * defaults. Blocks bypass that — `insertSnapshotSubtrees` writes nodes
+ * verbatim — so a hand-written block listing only the props its author cared
+ * about produced nodes missing everything else. `base.form` without `formId`
+ * crashed the canvas renderer outright (`.replace` of undefined).
+ */
+describe('insertBlock fills module defaults', () => {
+  function blockWith(moduleId: string, props: Record<string, unknown>) {
+    return {
+      dukafyExport: 'block' as const,
+      version: 1,
+      exportedAt: 0,
+      block: {
+        name: 'Partial',
+        rootNodeIds: ['n1'],
+        nodes: {
+          n1: {
+            id: 'n1', moduleId, props,
+            breakpointOverrides: {}, children: [], classIds: [],
+          },
+        },
+        classes: {},
+      },
+    }
+  }
+
+  it('completes props the block omitted', () => {
+    seedSite()
+    // Exactly the shape that crashed: a custom-mode form with no formId.
+    const id = useEditorStore.getState().insertBlock(
+      blockWith('base.form', { mode: 'custom', method: 'post' }),
+    )!
+    const node = useEditorStore.getState().site!.pages[0].nodes[id]
+
+    expect(node.props.formId).toBeDefined()
+    expect(node.props.honeypotName).toBeDefined()
+  })
+
+  it('never lets a default overwrite an authored value', () => {
+    seedSite()
+    const id = useEditorStore.getState().insertBlock(
+      blockWith('base.form', { mode: 'custom', formId: 'checkout' }),
+    )!
+    const node = useEditorStore.getState().site!.pages[0].nodes[id]
+
+    expect(node.props.mode).toBe('custom')
+    expect(node.props.formId).toBe('checkout')
+  })
+})

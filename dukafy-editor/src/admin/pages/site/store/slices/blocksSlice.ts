@@ -18,13 +18,37 @@
  * them too.
  */
 
-import type { DukafyBlockExportFile } from '@core/page-tree'
+import type { DukafyBlockExportFile, PageNode } from '@core/page-tree'
+import { registry } from '@core/module-engine'
 import { treeHasOutlet } from '@core/templates'
 import { pushToast } from '@ui/components/Toast'
 import { resolveInsertLocation, type InsertLocation } from '@site/store/insertLocation'
 import { insertSnapshotSubtrees } from '@site/store/subtreeSnapshot'
 import type { EditorStoreSliceCreator } from '@site/store/types'
 import { buildSiteHelpers, resolveActiveTreeTarget } from './site/helpers'
+
+/**
+ * Fill in props a hand-authored block left out.
+ *
+ * Modules inserted the normal way go through `createNode`, which merges
+ * `mod.defaults`. A block bypasses that — `insertSnapshotSubtrees` writes
+ * nodes verbatim — so a block file listing only the props its author cared
+ * about produced nodes missing everything else. That is not a small gap: a
+ * `base.form` without `formId` crashes the canvas renderer outright, because
+ * its render calls `.replace` on the missing value.
+ *
+ * Block JSON is written by hand. Partial props are the normal case, not the
+ * error case, so they are completed rather than rejected. Authored values
+ * always win over defaults.
+ */
+function withModuleDefaults(nodes: Record<string, PageNode>): Record<string, PageNode> {
+  const filled: Record<string, PageNode> = {}
+  for (const [id, node] of Object.entries(nodes)) {
+    const defaults = registry.get(node.moduleId)?.defaults
+    filled[id] = defaults ? { ...node, props: { ...defaults, ...node.props } } : node
+  }
+  return filled
+}
 
 interface BlocksSlice {
   /**
@@ -78,7 +102,7 @@ export const createBlocksSlice: EditorStoreSliceCreator<BlocksSlice> = (set, get
           draftSite,
           {
             rootNodeIds: block.block.rootNodeIds,
-            nodes: block.block.nodes,
+            nodes: withModuleDefaults(block.block.nodes),
             classes: block.block.classes,
           },
           location,

@@ -129,7 +129,7 @@ class PartialBake
   def entry(document, prefetched, current_entry, title)
     rendered = Dukafy::Publisher::RenderPage.call(
       document:, registry: Dukafy::Publisher::REGISTRY, site: @state.published_site || @state.site,
-      prefetched:, current_entry:
+      prefetched:, current_entry:, page_paths: PagePaths.call
     )
     { rendered:, title:, product_ids: DependencyTracker.product_ids(document:, prefetched:, current_entry:) }
   end

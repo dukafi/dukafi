@@ -444,7 +444,8 @@ class CartLinesSpec < Minitest::Test
 
     post "/fragments/cart/order", email: "buyer@example.com", name: "Ada"
 
-    assert_equal 200, last_response.status, last_response.body
+    assert_equal 204, last_response.status, last_response.body
+    assert_empty last_response.body
     assert_equal "dukafy:order-created", last_response.headers.fetch("hx-trigger")
     order = Order.first
     assert_equal 27_900, order.total_cents
@@ -459,7 +460,7 @@ class CartLinesSpec < Minitest::Test
 
     post "/fragments/cart/order", phone: "+254 712 345 678"
 
-    assert_equal 200, last_response.status, last_response.body
+    assert_equal 204, last_response.status, last_response.body
     assert_equal "+254712345678", Order.first.phone
   end
 

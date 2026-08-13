@@ -94,7 +94,7 @@ class Fragments < Roda
     Dukafy::Publisher::RenderPage.call(
       document: subtree, registry: Dukafy::Publisher::REGISTRY,
       site: state&.site, prefetched: prefetched || CommercePrefetcher.call,
-      current_entry: current_entry,
+      current_entry: current_entry, page_paths: PagePaths.call,
       cart: CartPayload.call(current_cart, discount_code: session["discount_code"])
     ).html
   end
@@ -282,7 +282,7 @@ class Fragments < Roda
       document: document.merge("rootNodeId" => children.first),
       registry: Dukafy::Publisher::REGISTRY, site: state&.site,
       prefetched: CommercePrefetcher.call, cart: payload,
-      current_entry: item, cart_loop_id: node.fetch("id"),
+      current_entry: item, cart_loop_id: node.fetch("id"), page_paths: PagePaths.call,
     ).html
     html.sub(/<([a-zA-Z][\w-]*)/) { %(<#{Regexp.last_match(1)} data-dukafy-cart-line="#{CGI.escapeHTML(sku)}") }
   end
@@ -346,7 +346,7 @@ class Fragments < Roda
     Dukafy::Publisher::RenderPage.call(
       document: document.merge("rootNodeId" => node.fetch("id")),
       registry: Dukafy::Publisher::REGISTRY, site: state&.site,
-      prefetched: CommercePrefetcher.call, payment: frame
+      prefetched: CommercePrefetcher.call, payment: frame, page_paths: PagePaths.call
     ).html
   end
 
@@ -568,12 +568,20 @@ class Fragments < Roda
         # guessable id. The token is the capability.
         session["order_token"] = result.order.public_token
 
-        response["Content-Type"] = "text/html; charset=utf-8"
+        # 204 and no body, for the same reason as the add endpoint: this verb
+        # has no hx-target, so anything returned is swapped into the merchant's
+        # own "Place order" button, destroying its label. htmx skips the swap
+        # on 204 but still processes HX-Redirect and HX-Trigger — both are read
+        # at the top of its response handler, before it decides about swapping.
+        #
+        # The order token goes to the session, not the response, so a
+        # thank-you page can identify this order without it being guessable.
         response["Cache-Control"] = "no-store"
         response["HX-Trigger"] = "dukafy:order-created"
         destination = safe_local_path(r.params["redirect"])
         response["HX-Redirect"] = destination if destination
-        %(<div class="dukafy-order-created" data-order="#{CGI.escapeHTML(result.order.public_token)}"></div>)
+        response.status = 204
+        nil
       end
 
       r.get("lines") do

@@ -1,0 +1,698 @@
+{
+  "dukafyExport": "block",
+  "version": 1,
+  "exportedAt": 0,
+  "block": {
+    "name": "Checkout \u2014 order without payment",
+    "rootNodeIds": [
+      "checkout"
+    ],
+    "nodes": {
+      "checkout": {
+        "id": "checkout",
+        "moduleId": "base.container",
+        "children": [
+          "heading",
+          "summary",
+          "form"
+        ],
+        "props": {
+          "tag": "section"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-mx_auto",
+          "tw-flex",
+          "tw-w_full",
+          "tw-max_w_md",
+          "tw-flex_col",
+          "tw-gap_6",
+          "tw-p_6"
+        ]
+      },
+      "heading": {
+        "id": "heading",
+        "moduleId": "base.text",
+        "children": [],
+        "props": {
+          "text": "Checkout",
+          "tag": "h1"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-text_2xl",
+          "tw-font_semibold",
+          "tw-text_zinc_900"
+        ]
+      },
+      "summary": {
+        "id": "summary",
+        "moduleId": "base.container",
+        "children": [
+          "sumitems",
+          "sumtotal"
+        ],
+        "props": {
+          "tag": "div"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-flex",
+          "tw-flex_col",
+          "tw-gap_1",
+          "tw-rounded_lg",
+          "tw-border",
+          "tw-border_zinc_200",
+          "tw-bg_zinc_50",
+          "tw-p_4"
+        ],
+        "actions": {
+          "region": "cart"
+        }
+      },
+      "sumitems": {
+        "id": "sumitems",
+        "moduleId": "base.text",
+        "children": [],
+        "props": {
+          "text": "Items: {cart.count}",
+          "tag": "p"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-flex",
+          "tw-justify_between",
+          "tw-text_sm",
+          "tw-text_zinc_600"
+        ]
+      },
+      "sumtotal": {
+        "id": "sumtotal",
+        "moduleId": "base.text",
+        "children": [],
+        "props": {
+          "text": "Total: {cart.totalDisplay}",
+          "tag": "p"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-flex",
+          "tw-justify_between",
+          "tw-text_base",
+          "tw-font_semibold",
+          "tw-text_zinc_900"
+        ]
+      },
+      "form": {
+        "id": "form",
+        "moduleId": "base.form",
+        "children": [
+          "emaillabel",
+          "email",
+          "phonelabel",
+          "phone",
+          "namelabel",
+          "name",
+          "place",
+          "hint"
+        ],
+        "props": {
+          "mode": "custom",
+          "formId": "checkout",
+          "targetTableId": "",
+          "action": "",
+          "method": "post",
+          "successBehavior": "message",
+          "successMessage": "",
+          "redirectUrl": "",
+          "honeypotName": "company",
+          "minSubmitSeconds": 2,
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-flex",
+          "tw-flex_col",
+          "tw-gap_4"
+        ]
+      },
+      "emaillabel": {
+        "id": "emaillabel",
+        "moduleId": "base.label",
+        "children": [],
+        "props": {
+          "text": "Email"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-text_sm",
+          "tw-font_medium",
+          "tw-text_zinc_700"
+        ]
+      },
+      "email": {
+        "id": "email",
+        "moduleId": "base.input",
+        "children": [],
+        "props": {
+          "inputType": "email",
+          "name": "email",
+          "fieldId": "email",
+          "id": "checkout-email",
+          "placeholder": "you@example.com",
+          "autocomplete": "email"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-w_full",
+          "tw-rounded_md",
+          "tw-border",
+          "tw-border_zinc_300",
+          "tw-px_3",
+          "tw-py_2",
+          "tw-text_sm",
+          "tw-text_zinc_900",
+          "tw-placeholder_text_zinc_400"
+        ]
+      },
+      "phonelabel": {
+        "id": "phonelabel",
+        "moduleId": "base.label",
+        "children": [],
+        "props": {
+          "text": "Phone"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-text_sm",
+          "tw-font_medium",
+          "tw-text_zinc_700"
+        ]
+      },
+      "phone": {
+        "id": "phone",
+        "moduleId": "base.input",
+        "children": [],
+        "props": {
+          "inputType": "tel",
+          "name": "phone",
+          "fieldId": "phone",
+          "id": "checkout-phone",
+          "placeholder": "+254 700 000 000",
+          "autocomplete": "tel"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-w_full",
+          "tw-rounded_md",
+          "tw-border",
+          "tw-border_zinc_300",
+          "tw-px_3",
+          "tw-py_2",
+          "tw-text_sm",
+          "tw-text_zinc_900",
+          "tw-placeholder_text_zinc_400"
+        ]
+      },
+      "namelabel": {
+        "id": "namelabel",
+        "moduleId": "base.label",
+        "children": [],
+        "props": {
+          "text": "Name (optional)"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-text_sm",
+          "tw-font_medium",
+          "tw-text_zinc_700"
+        ]
+      },
+      "name": {
+        "id": "name",
+        "moduleId": "base.input",
+        "children": [],
+        "props": {
+          "inputType": "text",
+          "name": "name",
+          "fieldId": "name",
+          "id": "checkout-name",
+          "placeholder": "Ada Lovelace",
+          "autocomplete": "name"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-w_full",
+          "tw-rounded_md",
+          "tw-border",
+          "tw-border_zinc_300",
+          "tw-px_3",
+          "tw-py_2",
+          "tw-text_sm",
+          "tw-text_zinc_900",
+          "tw-placeholder_text_zinc_400"
+        ]
+      },
+      "place": {
+        "id": "place",
+        "moduleId": "base.button",
+        "children": [],
+        "props": {
+          "label": "Place order",
+          "href": ""
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-mt_2",
+          "tw-w_full",
+          "tw-rounded_md",
+          "tw-bg_zinc_900",
+          "tw-px_4",
+          "tw-py_3",
+          "tw-text_sm",
+          "tw-font_medium",
+          "tw-text_white",
+          "tw-hover_bg_zinc_700"
+        ],
+        "actions": {
+          "click": {
+            "type": "cart.createOrder",
+            "redirect": "/thank-you"
+          }
+        }
+      },
+      "hint": {
+        "id": "hint",
+        "moduleId": "base.text",
+        "children": [],
+        "props": {
+          "text": "Enter an email address or a phone number.",
+          "tag": "p"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-text_xs",
+          "tw-text_zinc_500"
+        ]
+      }
+    },
+    "classes": {
+      "tw-mx_auto": {
+        "id": "tw-mx_auto",
+        "name": "mx-auto",
+        "kind": "class",
+        "selector": ".mx-auto",
+        "order": 0,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-flex": {
+        "id": "tw-flex",
+        "name": "flex",
+        "kind": "class",
+        "selector": ".flex",
+        "order": 1,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-w_full": {
+        "id": "tw-w_full",
+        "name": "w-full",
+        "kind": "class",
+        "selector": ".w-full",
+        "order": 2,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-max_w_md": {
+        "id": "tw-max_w_md",
+        "name": "max-w-md",
+        "kind": "class",
+        "selector": ".max-w-md",
+        "order": 3,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-flex_col": {
+        "id": "tw-flex_col",
+        "name": "flex-col",
+        "kind": "class",
+        "selector": ".flex-col",
+        "order": 4,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-gap_6": {
+        "id": "tw-gap_6",
+        "name": "gap-6",
+        "kind": "class",
+        "selector": ".gap-6",
+        "order": 5,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-p_6": {
+        "id": "tw-p_6",
+        "name": "p-6",
+        "kind": "class",
+        "selector": ".p-6",
+        "order": 6,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_2xl": {
+        "id": "tw-text_2xl",
+        "name": "text-2xl",
+        "kind": "class",
+        "selector": ".text-2xl",
+        "order": 7,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-font_semibold": {
+        "id": "tw-font_semibold",
+        "name": "font-semibold",
+        "kind": "class",
+        "selector": ".font-semibold",
+        "order": 8,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_zinc_900": {
+        "id": "tw-text_zinc_900",
+        "name": "text-zinc-900",
+        "kind": "class",
+        "selector": ".text-zinc-900",
+        "order": 9,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-gap_1": {
+        "id": "tw-gap_1",
+        "name": "gap-1",
+        "kind": "class",
+        "selector": ".gap-1",
+        "order": 10,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-rounded_lg": {
+        "id": "tw-rounded_lg",
+        "name": "rounded-lg",
+        "kind": "class",
+        "selector": ".rounded-lg",
+        "order": 11,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-border": {
+        "id": "tw-border",
+        "name": "border",
+        "kind": "class",
+        "selector": ".border",
+        "order": 12,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-border_zinc_200": {
+        "id": "tw-border_zinc_200",
+        "name": "border-zinc-200",
+        "kind": "class",
+        "selector": ".border-zinc-200",
+        "order": 13,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-bg_zinc_50": {
+        "id": "tw-bg_zinc_50",
+        "name": "bg-zinc-50",
+        "kind": "class",
+        "selector": ".bg-zinc-50",
+        "order": 14,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-p_4": {
+        "id": "tw-p_4",
+        "name": "p-4",
+        "kind": "class",
+        "selector": ".p-4",
+        "order": 15,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-justify_between": {
+        "id": "tw-justify_between",
+        "name": "justify-between",
+        "kind": "class",
+        "selector": ".justify-between",
+        "order": 16,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_sm": {
+        "id": "tw-text_sm",
+        "name": "text-sm",
+        "kind": "class",
+        "selector": ".text-sm",
+        "order": 17,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_zinc_600": {
+        "id": "tw-text_zinc_600",
+        "name": "text-zinc-600",
+        "kind": "class",
+        "selector": ".text-zinc-600",
+        "order": 18,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_base": {
+        "id": "tw-text_base",
+        "name": "text-base",
+        "kind": "class",
+        "selector": ".text-base",
+        "order": 19,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-gap_4": {
+        "id": "tw-gap_4",
+        "name": "gap-4",
+        "kind": "class",
+        "selector": ".gap-4",
+        "order": 20,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-font_medium": {
+        "id": "tw-font_medium",
+        "name": "font-medium",
+        "kind": "class",
+        "selector": ".font-medium",
+        "order": 21,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_zinc_700": {
+        "id": "tw-text_zinc_700",
+        "name": "text-zinc-700",
+        "kind": "class",
+        "selector": ".text-zinc-700",
+        "order": 22,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-rounded_md": {
+        "id": "tw-rounded_md",
+        "name": "rounded-md",
+        "kind": "class",
+        "selector": ".rounded-md",
+        "order": 23,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-border_zinc_300": {
+        "id": "tw-border_zinc_300",
+        "name": "border-zinc-300",
+        "kind": "class",
+        "selector": ".border-zinc-300",
+        "order": 24,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-px_3": {
+        "id": "tw-px_3",
+        "name": "px-3",
+        "kind": "class",
+        "selector": ".px-3",
+        "order": 25,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-py_2": {
+        "id": "tw-py_2",
+        "name": "py-2",
+        "kind": "class",
+        "selector": ".py-2",
+        "order": 26,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-placeholder_text_zinc_400": {
+        "id": "tw-placeholder_text_zinc_400",
+        "name": "placeholder:text-zinc-400",
+        "kind": "class",
+        "selector": ".placeholder:text-zinc-400",
+        "order": 27,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-mt_2": {
+        "id": "tw-mt_2",
+        "name": "mt-2",
+        "kind": "class",
+        "selector": ".mt-2",
+        "order": 28,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-bg_zinc_900": {
+        "id": "tw-bg_zinc_900",
+        "name": "bg-zinc-900",
+        "kind": "class",
+        "selector": ".bg-zinc-900",
+        "order": 29,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-px_4": {
+        "id": "tw-px_4",
+        "name": "px-4",
+        "kind": "class",
+        "selector": ".px-4",
+        "order": 30,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-py_3": {
+        "id": "tw-py_3",
+        "name": "py-3",
+        "kind": "class",
+        "selector": ".py-3",
+        "order": 31,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_white": {
+        "id": "tw-text_white",
+        "name": "text-white",
+        "kind": "class",
+        "selector": ".text-white",
+        "order": 32,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-hover_bg_zinc_700": {
+        "id": "tw-hover_bg_zinc_700",
+        "name": "hover:bg-zinc-700",
+        "kind": "class",
+        "selector": ".hover:bg-zinc-700",
+        "order": 33,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_xs": {
+        "id": "tw-text_xs",
+        "name": "text-xs",
+        "kind": "class",
+        "selector": ".text-xs",
+        "order": 34,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_zinc_500": {
+        "id": "tw-text_zinc_500",
+        "name": "text-zinc-500",
+        "kind": "class",
+        "selector": ".text-zinc-500",
+        "order": 35,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      }
+    }
+  }
+}

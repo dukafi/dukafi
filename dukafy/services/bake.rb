@@ -152,8 +152,16 @@ class Bake
 
   def render_document_data(document, prefetched:, current_entry: nil)
     Dukafy::Publisher::RenderPage.call(
-      document:, registry: @registry, site: @state.site, prefetched:, current_entry:
+      document:, registry: @registry, site: @state.site, prefetched:, current_entry:,
+      page_paths: page_paths
     )
+  end
+
+  # Built once per bake: every page being published, so `cms:page:<id>` link
+  # targets resolve. Uses the same page set the bake is writing, so a link to
+  # a page published in this very run resolves too.
+  def page_paths
+    @page_paths ||= PagePaths.call(@pages)
   end
 
   def bake_entry(entry, tailwind_css, slot_path)
