@@ -23,6 +23,19 @@ class AdminApi < Roda
     { error: { code: code, message: message } }
   end
 
+  # 204 means "no content", and Rack forbids a content-type header on one.
+  # Roda's `json` plugin stamps `application/json` onto every response, so
+  # every delete endpoint here was emitting an invalid 204 — which
+  # `Rack::Lint` turns into a 500 in development. The delete itself had
+  # already committed by then, which is why the row vanished on refresh while
+  # the request looked like it failed.
+  #
+  # Halting with an explicit triplet is the only way to be sure: it bypasses
+  # the response object the plugin has already decorated.
+  def no_content!
+    request.halt([204, {}, []])
+  end
+
   def halt_json(status, code, message)
     request.halt([status, { "content-type" => "application/json" }, [JSON.generate(error_payload(code, message))]])
   end
@@ -589,7 +602,7 @@ class AdminApi < Roda
               rescue Sequel::ValidationFailed, ArgumentError => error
                 halt_json(422, "invalid_variant", error.message)
               end
-              r.delete { variant.destroy; rebake_product(product); response.status = 204; "" }
+              r.delete { variant.destroy; rebake_product(product); no_content! }
             end
             r.patch do
               old_slug = product.slug
@@ -636,7 +649,7 @@ class AdminApi < Roda
             rescue ArgumentError
               halt_json(422, "invalid_collections", "Collection IDs must be integers")
             end
-            r.delete { product.destroy; response.status = 204; "" }
+            r.delete { product.destroy; no_content! }
           end
         end
         r.on("collections") do
@@ -664,7 +677,7 @@ class AdminApi < Roda
             rescue Sequel::ValidationFailed, Sequel::UniqueConstraintViolation, ArgumentError => error
               halt_json(422, "invalid_collection", error.message)
             end
-            r.delete { collection.destroy; response.status = 204; "" }
+            r.delete { collection.destroy; no_content! }
             r.put("products") do
               ids = r.params.fetch("productIds", []).map { |value| Integer(value) }
               valid_ids = Product.where(id: ids).select_map(:id)
@@ -752,8 +765,7 @@ class AdminApi < Roda
           end
           r.delete do
             page.destroy
-            response.status = 204
-            ""
+            no_content!
           end
         end
       end
@@ -797,8 +809,7 @@ class AdminApi < Roda
               File.delete(variant_path) if File.file?(variant_path)
             end
             asset.destroy
-            response.status = 204
-            ""
+            no_content!
           end
         end
       end

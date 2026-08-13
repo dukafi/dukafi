@@ -412,7 +412,7 @@ function getCommerceScaffoldItems(): ModuleInserterCommerceScaffoldItem[] {
     description,
     accent: moduleAccentForCategory('Commerce'),
     wire,
-    searchText: searchText([name, scaffoldId, 'commerce', description]),
+    searchText: searchText([name, scaffoldId, 'dashboard', description]),
   }))
 }
 

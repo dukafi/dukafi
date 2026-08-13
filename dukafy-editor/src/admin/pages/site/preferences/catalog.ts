@@ -153,12 +153,12 @@ export const PREFERENCE_CATALOG = [
     type: 'select',
     category: 'editor',
     label: 'Theme',
-    description: 'Choose whether the admin interface uses the default dark chrome or a light theme.',
+    description: 'Light is the default; dark chrome is opt-in.',
     options: [
-      { value: 'dark',  label: 'Dark' },
       { value: 'light', label: 'Light' },
+      { value: 'dark',  label: 'Dark' },
     ],
-    default: 'dark',
+    default: 'light',
   },
   {
     id: 'density',

@@ -22,7 +22,7 @@ import { commerceApi } from '../api'
 import { Pagination } from '../components/Pagination'
 import type { CommerceData } from '../hooks/useCommerceData'
 import { ORDER_STATUSES, type Order } from '../types'
-import styles from '../CommercePage.module.css'
+import styles from '../DashboardPage.module.css'
 
 function money(cents: number, currency: string): string {
   const amount = (cents / 100).toFixed(2)

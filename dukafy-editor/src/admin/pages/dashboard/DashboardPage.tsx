@@ -1,13 +1,14 @@
 /**
- * CommercePage — `/admin/commerce`.
+ * DashboardPage — `/admin/dashboard`.
  *
- * The authenticated Commerce workspace: products, variants, collections, CSV
+ * The authenticated Dashboard workspace: products, variants, collections, CSV
  * import, and store-wide settings (see `docs/architecture/admin-store.md`).
  * Left sidebar section nav (`AdminPageLayout`'s `workspace` mode, same shell
  * shape as the AI workspace) — each section is a plain, paginated data
  * table; create/edit happens in a `Dialog`, never inline.
  */
-import { useState } from 'react'
+import { useParams } from '@admin/lib/routing'
+import { useAdminNavigate } from '@admin/lib/useAdminNavigate'
 import { Button } from '@ui/components/Button'
 import { AdminPageLayout } from '@admin/layouts/AdminPageLayout'
 import { BoxStackSolidIcon } from 'pixel-art-icons/icons/box-stack-solid'
@@ -24,7 +25,7 @@ import { PluginsSection } from './sections/PluginsSection'
 import { ProductsSection } from './sections/ProductsSection'
 import { SettingsSection } from './sections/SettingsSection'
 import type { CommerceSection } from './types'
-import styles from './CommercePage.module.css'
+import styles from './DashboardPage.module.css'
 
 const SECTION_LABELS: Record<CommerceSection, string> = {
   products: 'Products',
@@ -46,20 +47,30 @@ const SECTION_ICONS = {
 
 const SECTIONS: CommerceSection[] = ['products', 'collections', 'orders', 'plugins', 'import', 'settings']
 
-export function CommercePage() {
-  const [section, setSection] = useState<CommerceSection>('products')
+/** `products` is the landing area; anything unrecognised falls back to it. */
+export function sectionFromParam(value: string | undefined): CommerceSection {
+  return SECTIONS.includes(value as CommerceSection) ? (value as CommerceSection) : 'products'
+}
+
+export function DashboardPage() {
+  // The area lives in the URL, not in component state: each Commerce area is
+  // its own page, so it can be linked to, bookmarked, and reached with the
+  // back button. `/admin/dashboard` alone means Products.
+  const { dashboardSection } = useParams()
+  const section = sectionFromParam(dashboardSection)
+  const navigate = useAdminNavigate()
   const data = useCommerceData()
 
   return (
-    <AdminPageLayout workspace="commerce" mode="workspace">
+    <AdminPageLayout workspace="dashboard" mode="workspace">
       <div className={styles.workspace}>
-        <aside className={styles.workspaceSidebar} aria-label="Commerce workspace">
+        <aside className={styles.workspaceSidebar} aria-label="Dashboard workspace">
           <div className={styles.workspaceIdentity}>
-            <h1 id="commerce-title">Commerce</h1>
+            <h1 id="dashboard-title">Dashboard</h1>
             <p>Products, collections, and imports.</p>
           </div>
 
-          <nav className={styles.workspaceNavigation} aria-label="Commerce sections">
+          <nav className={styles.workspaceNavigation} aria-label="Dashboard sections">
             {SECTIONS.map((item) => {
               const Icon = SECTION_ICONS[item]
               return (
@@ -71,9 +82,9 @@ export function CommercePage() {
                   align="start"
                   fullWidth
                   active={section === item}
-                  onClick={() => setSection(item)}
+                  onClick={() => navigate(`/admin/dashboard/${item}`)}
                   aria-current={section === item ? 'page' : undefined}
-                  data-testid={`commerce-nav-${item}`}
+                  data-testid={`dashboard-nav-${item}`}
                   className={styles.workspaceNavigationButton}
                 >
                   <Icon size={16} aria-hidden="true" />
@@ -84,7 +95,7 @@ export function CommercePage() {
           </nav>
         </aside>
 
-        <div className={styles.workspaceContent} aria-labelledby="commerce-title">
+        <div className={styles.workspaceContent} aria-labelledby="dashboard-title">
           {section === 'products' && <ProductsSection data={data} />}
           {section === 'orders' && <OrdersSection data={data} />}
           {section === 'plugins' && <PluginsSection data={data} />}

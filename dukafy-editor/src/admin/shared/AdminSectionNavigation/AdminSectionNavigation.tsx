@@ -6,7 +6,8 @@ import type { CmsCurrentUser } from '@core/persistence'
 import { Link } from '@admin/lib/routing'
 import { useAdminNavigate } from '@admin/lib/useAdminNavigate'
 import type { AdminWorkspace } from '@admin/workspace'
-import toolbarStyles from '@site/toolbar/Toolbar.module.css'
+import { cn } from '@ui/cn'
+import styles from './AdminSectionNavigation.module.css'
 
 const NAV_ICON_SIZE = 13
 
@@ -20,13 +21,17 @@ export function AdminSectionNavigation({
   section,
   onWorkspaceNavigateStart,
 }: AdminSectionNavigationProps) {
+  // A <nav> of links, deliberately NOT role="tablist": these navigate to
+  // separate routes, and the tab roles promise tabpanels in this document that
+  // do not exist. The segmented look is styling; the semantics stay
+  // navigation, with `aria-current` marking where you are.
   return (
-    <>
+    <nav className={styles.tabs} aria-label="Workspace">
       <NavItem
-        to="/admin/commerce"
+        to="/admin/dashboard"
         icon={<PackageSolidIcon size={NAV_ICON_SIZE} aria-hidden="true" />}
-        label="Commerce"
-        active={section === 'commerce'}
+        label="Dashboard"
+        active={section === 'dashboard'}
         onNavigateStart={onWorkspaceNavigateStart}
       />
       <NavItem
@@ -43,7 +48,7 @@ export function AdminSectionNavigation({
         active={section === 'media'}
         onNavigateStart={onWorkspaceNavigateStart}
       />
-    </>
+    </nav>
   )
 }
 
@@ -58,16 +63,16 @@ function NavItem({
 }) {
   if (active) {
     return (
-      <span className={toolbarStyles.activeSection}>
+      <span className={cn(styles.tab, styles.tabActive)} aria-current="page">
         {icon}
-        <span>{label}</span>
+        <span className={styles.label}>{label}</span>
       </span>
     )
   }
   return (
     <AdminRouteLink to={to} onNavigateStart={onNavigateStart}>
       {icon}
-      <span>{label}</span>
+      <span className={styles.label}>{label}</span>
     </AdminRouteLink>
   )
 }
@@ -88,5 +93,9 @@ function AdminRouteLink({
     navigate(to)
   }
 
-  return <Link to={to} onClick={handleClick}>{children}</Link>
+  return (
+    <Link to={to} className={styles.tab} onClick={handleClick}>
+      {children}
+    </Link>
+  )
 }

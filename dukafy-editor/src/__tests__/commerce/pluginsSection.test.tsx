@@ -9,9 +9,9 @@
  */
 import { describe, it, expect, afterEach } from 'bun:test'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
-import { PluginsSection } from '@admin/pages/commerce/sections/PluginsSection'
-import type { CommerceData } from '@admin/pages/commerce/hooks/useCommerceData'
-import type { Plugin } from '@admin/pages/commerce/types'
+import { PluginsSection } from '@admin/pages/dashboard/sections/PluginsSection'
+import type { CommerceData } from '@admin/pages/dashboard/hooks/useCommerceData'
+import type { Plugin } from '@admin/pages/dashboard/types'
 
 afterEach(cleanup)
 

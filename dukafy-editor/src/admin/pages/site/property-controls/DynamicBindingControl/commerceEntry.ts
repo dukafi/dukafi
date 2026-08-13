@@ -19,7 +19,7 @@
  * `dukafy/services/commerce_prefetcher.rb`.
  */
 import type { LoopSourceField } from '@core/loops/types'
-import { commerceApi } from '@admin/pages/commerce/api'
+import { commerceApi } from '@admin/pages/dashboard/api'
 
 export type CommerceEntityKind = 'product' | 'variant' | 'collection'
 

@@ -98,13 +98,13 @@ describe('admin capability access helpers', () => {
     expect(canAccessWorkspace(operator, 'site')).toBe(true)
     expect(canAccessWorkspace(operator, 'media')).toBe(true)
     // No `content.manage`, so the catalogue stays closed.
-    expect(canAccessWorkspace(operator, 'commerce')).toBe(false)
+    expect(canAccessWorkspace(operator, 'dashboard')).toBe(false)
     expect(firstAccessibleWorkspace(operator)).toBe('site')
 
     const merchant = user('merchant', ['content.manage', 'media.read'])
-    expect(canAccessWorkspace(merchant, 'commerce')).toBe(true)
+    expect(canAccessWorkspace(merchant, 'dashboard')).toBe(true)
     expect(canAccessWorkspace(merchant, 'site')).toBe(false)
-    expect(firstAccessibleWorkspace(merchant)).toBe('commerce')
+    expect(firstAccessibleWorkspace(merchant)).toBe('dashboard')
 
     const mediaOnly = user('media-only', ['media.read'])
     expect(firstAccessibleWorkspace(mediaOnly)).toBe('media')
@@ -112,7 +112,7 @@ describe('admin capability access helpers', () => {
     expect(firstAccessibleWorkspace(null)).toBeNull()
     expect(workspacePath('site')).toBe('/admin/site')
     expect(workspacePath('media')).toBe('/admin/media')
-    expect(workspacePath('commerce')).toBe('/admin/commerce')
+    expect(workspacePath('dashboard')).toBe('/admin/dashboard')
   })
 
   it('keeps editor write modes independent in the UI policy layer', () => {

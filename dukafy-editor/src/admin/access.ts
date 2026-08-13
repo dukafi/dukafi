@@ -253,15 +253,16 @@ export function canAccessWorkspace(user: CmsCurrentUser | null, workspace: Admin
       return hasCapability(user, 'site.read')
     case 'media':
       return canReadMedia(user)
-    case 'commerce':
+    case 'dashboard':
       return hasCapability(user, 'content.manage')
   }
 }
 
 export function firstAccessibleWorkspace(user: CmsCurrentUser | null): AdminWorkspace | null {
-  // Site is the canonical admin home — it is the editor. Falls through for
-  // roles that lack `site.read`.
-  const order: AdminWorkspace[] = ['site', 'commerce', 'media']
+  // Commerce is the admin home: a merchant's day is catalogue and orders,
+  // and the canvas editor is something they open deliberately, not the room
+  // they are dropped into. Falls through for roles without `content.manage`.
+  const order: AdminWorkspace[] = ['dashboard', 'site', 'media']
   return order.find((workspace) => canAccessWorkspace(user, workspace)) ?? null
 }
 
@@ -271,8 +272,8 @@ export function workspacePath(workspace: AdminWorkspace): string {
       return '/admin/site'
     case 'media':
       return '/admin/media'
-    case 'commerce':
-      return '/admin/commerce'
+    case 'dashboard':
+      return '/admin/dashboard'
   }
 }
 

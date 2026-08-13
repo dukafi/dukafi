@@ -3,8 +3,9 @@
  *
  * In-house admin router: wildcard (`*`) matching and the AdminRoutes
  * catch-all. Unknown ADMIN URLs (e.g. /admin/login, a typo, a stale deep
- * link) must never render an empty tree — they redirect to /admin/site,
- * which shows the login form when unauthenticated and the editor when
+ * link) must never render an empty tree — they redirect to /admin/dashboard,
+ * the admin home, which shows the login form when unauthenticated and the
+ * Commerce workspace when
  * authenticated. The catch-all is scoped to /admin/* so public-site 404s —
  * which have their own treatment in the publish pipeline (NotFound template)
  * — are never claimed by the admin SPA.
@@ -32,8 +33,8 @@ describe('matchPath — wildcard patterns', () => {
   })
 
   it('still treats non-wildcard patterns literally', () => {
-    expect(matchPath('/admin/site', '/admin/site')).not.toBeNull()
-    expect(matchPath('/admin/site', '/admin/site2')).toBeNull()
+    expect(matchPath('/admin/dashboard', '/admin/dashboard')).not.toBeNull()
+    expect(matchPath('/admin/dashboard', '/admin/dashboard2')).toBeNull()
     expect(matchPath('/admin/plugins/:pluginId/:pageId', '/admin/plugins/a/b')).not.toBeNull()
   })
 })
@@ -48,20 +49,20 @@ describe('Routes — catch-all route', () => {
     render(
       <MemoryRouter initialEntries={['/admin/login']}>
         <Routes>
-          <Route path="/admin/site" element={<LocationProbe />} />
-          <Route path="*" element={<Navigate to="/admin/site" replace />} />
+          <Route path="/admin/dashboard" element={<LocationProbe />} />
+          <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Routes>
       </MemoryRouter>,
     )
     const probe = await screen.findByTestId('probe')
-    expect(probe.textContent).toBe('/admin/site')
+    expect(probe.textContent).toBe('/admin/dashboard')
   })
 
   it('prefers an earlier explicit match over the catch-all', () => {
     render(
-      <MemoryRouter initialEntries={['/admin/site']}>
+      <MemoryRouter initialEntries={['/admin/dashboard']}>
         <Routes>
-          <Route path="/admin/site" element={<div data-testid="site" />} />
+          <Route path="/admin/dashboard" element={<div data-testid="site" />} />
           <Route path="*" element={<div data-testid="fallback" />} />
         </Routes>
       </MemoryRouter>,
@@ -72,7 +73,7 @@ describe('Routes — catch-all route', () => {
 })
 
 describe('AdminRoutes — unknown admin URLs never render an empty tree', () => {
-  it('declares a final /admin/* catch-all redirecting to /admin/site', () => {
+  it('declares a final /admin/* catch-all redirecting to /admin/dashboard', () => {
     // Inspect the declared route table (no DOM mount — AdminEntry is heavy).
     const routes = AdminRoutes()
     const routeElements = React.Children.toArray(routes.props.children) as Array<
@@ -83,7 +84,7 @@ describe('AdminRoutes — unknown admin URLs never render an empty tree', () => 
     expect(last.props.element.type).toBe(Navigate)
     expect(
       (last.props.element as React.ReactElement<{ to: string; replace?: boolean }>).props.to,
-    ).toBe('/admin/site')
+    ).toBe('/admin/dashboard')
   })
 
   it('does not claim non-admin paths (public 404s keep their own treatment)', () => {

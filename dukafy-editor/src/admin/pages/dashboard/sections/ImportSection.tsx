@@ -9,7 +9,7 @@ import { getErrorMessage } from '@core/utils/errorMessage'
 import { CloudUploadSolidIcon } from 'pixel-art-icons/icons/cloud-upload-solid'
 import { commerceApi } from '../api'
 import type { CommerceData } from '../hooks/useCommerceData'
-import styles from '../CommercePage.module.css'
+import styles from '../DashboardPage.module.css'
 
 export function ImportSection({ data }: { data: CommerceData }) {
   const { refresh } = data

@@ -66,7 +66,7 @@ const LazySpotlight = lazy(() =>
 
 function workspaceFromPathname(pathname: string): AdminWorkspace {
   if (pathname.startsWith('/admin/media')) return 'media'
-  if (pathname.startsWith('/admin/commerce')) return 'commerce'
+  if (pathname.startsWith('/admin/dashboard')) return 'dashboard'
   return 'site'
 }
 

@@ -53,7 +53,15 @@ class StarterSite
 
     DB.transaction do
       SiteState.create(site: shell, seq: 0)
-      Page.create(slug: "index", title: "Home", kind: "page", document: page, status: "draft")
+      # Only seed the starter page when the site is genuinely empty. Setup can
+      # legitimately run against a database that already holds pages — after a
+      # restore, or when the admin row is recreated — and blowing up with
+      # "slug is already taken" there locks the owner out of their own data
+      # with no way forward. An existing page is content to keep, not a
+      # conflict to report.
+      unless Page.first(slug: "index")
+        Page.create(slug: "index", title: "Home", kind: "page", document: page, status: "draft")
+      end
     end
   end
 end

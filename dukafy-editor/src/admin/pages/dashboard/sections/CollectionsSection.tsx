@@ -29,7 +29,7 @@ import { Pagination } from '../components/Pagination'
 import { RowActionMenu } from '../components/RowActionMenu'
 import type { CommerceData } from '../hooks/useCommerceData'
 import type { Collection, Product } from '../types'
-import styles from '../CommercePage.module.css'
+import styles from '../DashboardPage.module.css'
 
 export function CollectionsSection({ data }: { data: CommerceData }) {
   const { collections, products, error, setError, refresh } = data

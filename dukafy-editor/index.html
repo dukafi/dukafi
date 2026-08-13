@@ -1,12 +1,45 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dukafy</title>
 
-        <style data-initial-loader>
+        <!--
+      Apply the saved admin theme BEFORE first paint.
+
+      The theme is a token swap driven by `data-editor-theme` on the root
+      element, but React only sets that after it mounts. The shell used to
+      hardcode `class="dark"`, so a merchant who chose Light got a dark flash
+      on every single page load — most visible in Commerce, which is where a
+      merchant actually spends the day.
+
+      Reads the same `instatic-editor-prefs` blob the preferences store owns,
+      and stays silent if it is absent or unparseable: dark is the default, and
+      the shell CSS below already paints dark.
+    -->
+    <script>
+      (function () {
+        try {
+          var theme = 'light';
+          var raw = localStorage.getItem('instatic-editor-prefs');
+          if (raw) {
+            var stored = JSON.parse(raw).theme;
+            if (stored === 'light' || stored === 'dark') theme = stored;
+          }
+          // ALWAYS set it. globals.css still carries the dark palette on bare
+          // `:root`, so an absent attribute paints dark — which is no longer
+          // the default. Setting it unconditionally means the shell, the first
+          // paint and React all agree.
+          document.documentElement.setAttribute('data-editor-theme', theme);
+        } catch (e) {
+          /* corrupt or unavailable storage — fall through to the dark default */
+        }
+      })();
+    </script>
+
+    <style data-initial-loader>
       html,
       body,
       #root {
@@ -17,7 +50,7 @@
 
       body {
         overflow: hidden;
-        background: #000;
+        background: #e3e7ed;
       }
 
       .loading {
@@ -25,8 +58,8 @@
         min-height: 100vh;
         place-items: center;
         overflow: hidden;
-        background: #000;
-        color: #ededed;
+        background: #e3e7ed;
+        color: #1f2937;
       }
 
       .loader {
@@ -50,7 +83,7 @@
         top: 0;
         width: 100%;
         height: 100%;
-        background: #fff;
+        background: #1f2937;
       }
 
       .box:nth-child(3n) {
@@ -429,6 +462,19 @@
 
       .box:nth-child(9) {
         animation: move-9 4s infinite;
+      }
+
+      /* The loader paints before globals.css exists, so it cannot use tokens —
+         both palettes are spelled out here. Light is the base (above); dark is
+         the opt-in override, matching the preference default. */
+      [data-editor-theme='dark'] body,
+      [data-editor-theme='dark'] .loading {
+        background: #000;
+        color: #ededed;
+      }
+
+      [data-editor-theme='dark'] .box:before {
+        background: #fff;
       }
 
       @media (prefers-reduced-motion: reduce) {

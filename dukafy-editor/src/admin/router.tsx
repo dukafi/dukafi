@@ -51,12 +51,17 @@ function withRouteBoundary(element: ReactElement): ReactElement {
 export function AdminRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/admin/site" replace />} />
-      <Route path="/admin" element={<Navigate to="/admin/site" replace />} />
+      <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
+      <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
       <Route path="/admin/site" element={withRouteBoundary(<AdminEntry section="site" />)} />
       <Route path="/admin/media" element={withRouteBoundary(<AdminEntry section="media" />)} />
-      <Route path="/admin/commerce" element={withRouteBoundary(<AdminEntry section="commerce" />)} />
-      <Route path="/admin/*" element={<Navigate to="/admin/site" replace />} />
+      <Route path="/admin/dashboard" element={withRouteBoundary(<AdminEntry section="dashboard" />)} />
+      {/* Each Commerce area is its own URL, so it is linkable, bookmarkable
+          and survives a back button — a section held in component state was
+          none of those. `AdminEntry` still mounts the one Commerce workspace;
+          only which area it shows comes from the path. */}
+      <Route path="/admin/dashboard/:dashboardSection" element={withRouteBoundary(<AdminEntry section="dashboard" />)} />
+      <Route path="/admin/*" element={<Navigate to="/admin/dashboard" replace />} />
     </Routes>
   )
 }

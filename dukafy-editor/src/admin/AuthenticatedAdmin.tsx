@@ -70,9 +70,9 @@ const MediaPage = prewarmedLazy(
   () => import('./pages/media/MediaPage').then((m) => ({ default: m.MediaPage })),
   { displayName: 'MediaPage' },
 )
-const CommercePage = prewarmedLazy(
-  () => import('./pages/commerce/CommercePage').then((m) => ({ default: m.CommercePage })),
-  { displayName: 'CommercePage' },
+const DashboardPage = prewarmedLazy(
+  () => import('./pages/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })),
+  { displayName: 'DashboardPage' },
 )
 
 // Plugin runtime (globalThis.__instatic) is now installed LAZILY by
@@ -112,8 +112,8 @@ if (typeof window !== 'undefined') {
   const activePage =
     pathname.startsWith('/admin/site') ? SitePage :
     pathname.startsWith('/admin/media') ? MediaPage :
-    pathname.startsWith('/admin/commerce') ? CommercePage :
-    SitePage
+    pathname.startsWith('/admin/dashboard') ? DashboardPage :
+    DashboardPage
   void activePage.preload().catch(() => {
     // Cold-render retry will re-fire preload via prewarmedLazy's throw.
   })
@@ -131,18 +131,19 @@ interface AuthenticatedAdminProps {
 // admin-only one-offs) — `requestIdleCallback` doesn't promise a
 // specific order, but if the browser starts firing requests round-
 // robin, this puts the most-likely-next pages first.
+// Ordered by likely next destination from the Commerce landing page.
 const ALL_WORKSPACE_PAGES = [
-  SitePage,
+  DashboardPage,
   MediaPage,
-  CommercePage,
+  SitePage,
 ]
 
 function pageForSection(section: AdminWorkspace) {
   return (
     section === 'site' ? SitePage :
     section === 'media' ? MediaPage :
-    section === 'commerce' ? CommercePage :
-    SitePage
+    section === 'dashboard' ? DashboardPage :
+    DashboardPage
   )
 }
 
@@ -250,7 +251,7 @@ export default function AuthenticatedAdmin({ section, currentUser }: Authenticat
                   legitimately lazy because the editor surfaces are large and
                   shouldn't ship until needed. */}
           <Suspense fallback={<AppLoadingScreen />}>
-            {section === 'media' ? <MediaPage /> : section === 'commerce' ? <CommercePage /> : <SitePage />}
+            {section === 'media' ? <MediaPage /> : section === 'dashboard' ? <DashboardPage /> : <SitePage />}
           </Suspense>
         </SpotlightRoot>
       </StepUpProvider>

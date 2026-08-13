@@ -21,7 +21,7 @@ import { getErrorMessage } from '@core/utils/errorMessage'
 import { commerceApi } from '../api'
 import type { CommerceData } from '../hooks/useCommerceData'
 import type { Plugin, PluginSettingField } from '../types'
-import styles from '../CommercePage.module.css'
+import styles from '../DashboardPage.module.css'
 
 function inputType(field: PluginSettingField): string {
   if (field.secret) return 'password'

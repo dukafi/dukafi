@@ -9,6 +9,14 @@
  * Self-contained (own fetch), unlike Products/Collections — this data isn't
  * shared with any other section, so it doesn't need to live in
  * `useCommerceData`.
+ *
+ * Appearance sits here too. It is not commerce data — it is the same
+ * `theme` preference the global Settings modal owns, surfaced a second time.
+ * A merchant lives in Commerce and never opens the canvas editor, and in the
+ * modal that control is filed under a group labelled "Editor", which reads
+ * like it does not apply to them. Same underlying preference, so changing it
+ * in either place updates the other and both stay in sync through the
+ * preferences store's change event.
  */
 import { useEffect, useState, type FormEvent } from 'react'
 import { Button } from '@ui/components/Button'
@@ -17,9 +25,41 @@ import { Input } from '@ui/components/Input'
 import { SkeletonBlock } from '@ui/components/Skeleton'
 import { getErrorMessage } from '@core/utils/errorMessage'
 import { SaveSolidIcon } from 'pixel-art-icons/icons/save-solid'
+import { Select } from '@ui/components/Select'
+import {
+  setEditorSelectPreference,
+  useEditorSelectPreference,
+} from '@site/preferences/editorPreferences'
 import { commerceApi } from '../api'
 import type { CommerceSettings } from '../types'
-import styles from '../CommercePage.module.css'
+import styles from '../DashboardPage.module.css'
+
+/**
+ * Admin appearance. Writes straight through to the shared preference — no
+ * local state, so the value shown is always the live one even when it was
+ * changed from the global Settings modal in the same session.
+ */
+function AppearanceFields() {
+  const theme = useEditorSelectPreference('theme')
+
+  return (
+    <FormField
+      label="Theme"
+      htmlFor="commerce-theme"
+      description="Applies to the whole admin, not just this page. Saved on this device."
+    >
+      <Select
+        id="commerce-theme"
+        value={theme}
+        onChange={(event) => setEditorSelectPreference('theme', event.currentTarget.value)}
+        style={{ width: '12ch' }}
+      >
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+      </Select>
+    </FormField>
+  )
+}
 
 export function SettingsSection() {
   const [settings, setSettings] = useState<CommerceSettings | null>(null)
@@ -55,10 +95,40 @@ export function SettingsSection() {
     }
   }
 
-  if (error && !settings) return <p className={styles.error} role="alert">{error}</p>
-  if (!settings) return <SkeletonBlock minHeight={160} ariaLabel="Loading commerce settings" />
+  // Appearance is device-local and has no fetch, so it renders even when the
+  // commerce settings request is still in flight or has failed — a merchant
+  // should never be unable to switch to light because an API call is down.
+  const appearance = (
+    <div className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <h2>Appearance</h2>
+        <p>How the admin looks on this device.</p>
+      </div>
+      <div className={styles.dialogForm}>
+        <AppearanceFields />
+      </div>
+    </div>
+  )
+
+  if (error && !settings) {
+    return (
+      <>
+        <p className={styles.error} role="alert">{error}</p>
+        {appearance}
+      </>
+    )
+  }
+  if (!settings) {
+    return (
+      <>
+        <SkeletonBlock minHeight={160} ariaLabel="Loading commerce settings" />
+        {appearance}
+      </>
+    )
+  }
 
   return (
+    <>
     <div className={styles.section}>
       <div className={styles.sectionHeader}>
         <h2>Settings</h2>
@@ -108,5 +178,7 @@ export function SettingsSection() {
         </div>
       </form>
     </div>
+    {appearance}
+    </>
   )
 }

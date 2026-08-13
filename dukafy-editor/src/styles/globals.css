@@ -16,7 +16,7 @@
  * The admin chrome uses the Core Framework-style token vocabulary directly.
  */
 :root {
-    color-scheme: dark;
+    color-scheme: light;
 
     --font-sans: "Inter Variable", system-ui, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",

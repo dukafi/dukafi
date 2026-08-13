@@ -35,7 +35,7 @@ import { RowActionMenu } from '../components/RowActionMenu'
 import type { CommerceData } from '../hooks/useCommerceData'
 import type { Collection, Product, Variant, VariantFormState } from '../types'
 import { emptyVariantForm, variantFormFrom } from '../types'
-import styles from '../CommercePage.module.css'
+import styles from '../DashboardPage.module.css'
 
 const STATUS_OPTIONS = [
   { value: 'draft', label: 'Draft', textValue: 'Draft' },

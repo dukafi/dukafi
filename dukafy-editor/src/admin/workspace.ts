@@ -13,4 +13,4 @@
 export type AdminWorkspace =
   | 'site'
   | 'media'
-  | 'commerce'
+  | 'dashboard'

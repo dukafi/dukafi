@@ -1,0 +1,92 @@
+/* Workspace tabs — Commerce / Site / Media.
+ *
+ * A connected segmented group rather than three loose links: the workspaces
+ * are siblings you switch between, and separate links read as unrelated
+ * destinations. One shared border with hairline dividers between segments
+ * makes that relationship visible without adding weight to the toolbar. */
+
+/* Enclosed and pill-rounded, matching the Publish button's `--input-radius`
+   so the two read as the same family of control.
+
+   Surface and border are deliberate: the toolbar is `--bg-body`, and the
+   earlier `--bg-surface-2` fill over a `--border-muted` hairline was within a
+   few percent of it in LIGHT (#f6f7f9 on #e3e7ed, hairline #dce1e7) — the
+   group was effectively invisible. `--bg-surface` contrasts with `--bg-body`
+   in both themes (#ffffff on #e3e7ed, #1b1b1b on #000000), and `--border`
+   carries the outline. */
+.tabs {
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid var(--border);
+    border-radius: var(--input-radius);
+    background: var(--bg-surface);
+    overflow: hidden;
+}
+
+/* Dividers come from the segments themselves, so the group keeps a single
+   outer border no matter how many workspaces exist. */
+.tab + .tab {
+    border-left: 1px solid var(--border-muted);
+}
+
+.tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    height: 28px;
+    padding: 0 var(--space-m);
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.tab:hover {
+    background: var(--overlay-10);
+    color: var(--text);
+}
+
+.tab:focus-visible {
+    outline: 2px solid var(--border-strong);
+    outline-offset: -2px;
+}
+
+/* The active segment is a filled surface, not just bolder text — at this size
+   weight alone is easy to miss when scanning. */
+.tabActive {
+    background: var(--bg-surface-4);
+    color: var(--text-bright);
+    font-weight: 700;
+    cursor: default;
+}
+
+.tabActive:hover {
+    background: var(--bg-surface-4);
+}
+
+/* The pill's own corners have to be inherited by the end segments, or an
+   active first/last tab paints square corners over the rounded container. */
+.tab:first-child {
+    border-top-left-radius: inherit;
+    border-bottom-left-radius: inherit;
+}
+
+.tab:last-child {
+    border-top-right-radius: inherit;
+    border-bottom-right-radius: inherit;
+}
+
+/* Narrow toolbars drop the labels; the icons still read as one group. */
+@media (max-width: 900px) {
+    .tab {
+        padding: 0 var(--space-s);
+    }
+
+    .label {
+        display: none;
+    }
+}

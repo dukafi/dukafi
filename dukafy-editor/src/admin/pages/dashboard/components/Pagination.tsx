@@ -8,7 +8,7 @@ import { Button } from '@ui/components/Button'
 import { Select } from '@ui/components/Select'
 import { ChevronLeftIcon } from 'pixel-art-icons/icons/chevron-left'
 import { ChevronRightIcon } from 'pixel-art-icons/icons/chevron-right'
-import styles from '../CommercePage.module.css'
+import styles from '../DashboardPage.module.css'
 
 const ROWS_PER_PAGE_OPTIONS = [
   { value: '25', label: '25', textValue: '25' },
