@@ -2,8 +2,19 @@
  * sitePanelSlice — Dependency management state (Phase E+).
  *
  * Owns the in-memory `packageJson` manifest.
- * The SitePanel overlay UI was deleted in Task #434 (Guideline #410: 5-panel layout);
- * DependenciesPanel now owns all dependency UI through DepsSection.tsx.
+ *
+ * NO UI READS THIS ANY MORE. The Dependencies panel that owned it was removed
+ * along with the rest of the npm-package surface: Dukafy has no resolver
+ * endpoint behind it (`/runtime/dependencies/resolve` was never implemented)
+ * and no way to author the scripts a package would be imported by — see
+ * `runtimeAssets: { scripts: [] }` in `dukafy/routes/admin_api.rb`. Dukafy's
+ * client-side story is instead per-module `runtimes:` declarations collected
+ * by RenderPage.
+ *
+ * What survives is the DATA layer only, because `packageJson` and
+ * `site.runtime` are part of the SiteDocument shape and are still read by
+ * persistence/validation, module-engine and site import. Removing those is a
+ * schema change and belongs with the wider Instatic prune, not here.
  *
  * This slice owns dependency-adjacent editor state:
  *   - packageJson         in-memory package.json manifest
@@ -50,15 +61,14 @@ import { getErrorMessage } from '@core/utils/errorMessage'
 
 /**
  * Minimal package.json shape for the in-memory manifest.
- * Stores only the dependency maps relevant to DependenciesPanel.
+ * Stores only the dependency maps the SiteDocument schema carries.
  */
 type PackageJson = SitePackageJson
 
 /**
- * Lifecycle of the background dependency-lock resolution. Driven by the
- * auto-resolve hook (and the manual `resolveDependencyLock()` action),
- * surfaced by DepsSection so the user can see what's happening even when
- * the work was triggered without a click.
+ * Lifecycle of the dependency-lock resolution. The auto-resolve hook that
+ * drove this was removed with the panel; only `resolveDependencyLock()`
+ * remains, and nothing calls it.
  */
 type DependencyResolveStatus = 'idle' | 'resolving' | 'resolved' | 'error'
 
@@ -83,7 +93,7 @@ interface SitePanelSlice {
 
   /**
    * Number of packages locked at the end of the last successful resolution.
-   * Used by DepsSection to render `"N locked"` after a background resolve.
+   * No longer surfaced anywhere.
    */
   dependencyResolveLockedCount: number
 

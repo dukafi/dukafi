@@ -17,6 +17,83 @@ class Fragments < Roda
     key && Cart.first(session_key: key, status: "active")
   end
 
+  # The signed-in shopper, if any. A SEPARATE session key from the admin's:
+  # storefront and admin sessions must never be confusable, and a customer
+  # holding `admin_id` would be a privilege escalation.
+  def current_customer
+    id = session["customer_id"]
+    id && Customer[id]
+  end
+
+  # Wording for every form outcome, success and failure alike. Reason codes
+  # stay machine-readable in `CustomerAccount`; the sentences live here at the
+  # HTTP edge so a merchant can override them in their own voice later without
+  # touching the service.
+  FORM_MESSAGES = {
+    "invalid_email" => "Enter a valid email address.",
+    "weak_password" => "Use at least #{CustomerAccount::MIN_PASSWORD_LENGTH} characters.",
+    "already_registered" => "That email already has an account.",
+    "invalid_credentials" => "Email or password is incorrect.",
+    "registered" => "Account created.",
+    "signed_in" => "Welcome back.",
+    "signed_out" => "Signed out.",
+  }.freeze
+
+  GENERIC_FORM_ERROR = "Something went wrong. Please try again.".freeze
+
+  def form_message(reason)
+    FORM_MESSAGES.fetch(reason.to_s, GENERIC_FORM_ERROR)
+  end
+
+  # Announced as an event, like every other storefront state change, so the
+  # merchant's own markup decides what "signed in" looks like.
+  #
+  # The outcome is ALSO parked in the session, keyed by the form region the
+  # button named. htmx discards 4xx bodies, so a rejected sign-in cannot hand
+  # back the merchant's error banner directly — it fires the event, the region
+  # hears it and re-renders itself with `form.hasError` true. See `FormFlash`.
+  def account_response(status: 204, reason:, ok: true)
+    FormFlash.write(session, request.params["node"].to_s, reason: reason, ok: ok)
+    message = form_message(reason)
+    event = ok ? "dukafy:account-updated" : "dukafy:account-error"
+    headers = { "hx-trigger" => JSON.generate({ event => { "message" => message } }) }
+    # No body on success: this verb has no hx-target, so anything returned is
+    # swapped into the merchant's own button. The region carries the visible
+    # result.
+    request.halt([status, headers, []]) if ok
+    request.halt([status, headers.merge("content-type" => "text/html; charset=utf-8"),
+                  [%(<p class="dukafy-account-notice" role="alert">#{CGI.escapeHTML(message)}</p>)]])
+  end
+
+  # What a form region sees. The two halves answer different questions:
+  # `hasError`/`error` are the one-shot outcome of the last POST, `signedIn`
+  # and friends are durable session state re-read on every render.
+  #
+  # Every key is always present so a condition on a field never silently
+  # misses — `form.hasError` reads false rather than nil on a page where
+  # nothing has happened yet.
+  def form_frame(node_id)
+    customer = current_customer
+    frame = {
+      "hasError" => false, "status" => "", "reason" => "", "error" => "", "message" => "",
+      "signedIn" => !customer.nil?, "signedOut" => customer.nil?,
+      "email" => customer&.email.to_s, "name" => customer&.name.to_s,
+    }
+    flash = FormFlash.take(session, node_id)
+    return frame unless flash
+
+    message = form_message(flash["reason"])
+    ok = flash["ok"] == true
+    frame.merge(
+      "reason" => flash["reason"].to_s, "message" => message,
+      "status" => ok ? "ok" : "error",
+      "hasError" => !ok,
+      # Blank on success rather than the success text, so a banner conditioned
+      # on `form.error` cannot render a cheerful message in a red box.
+      "error" => ok ? "" : message,
+    )
+  end
+
   def stock_fragment(product, variant_sku, threshold)
     variants = product&.variants || []
     variant = variant_sku.empty? ? nil : variants.find { |item| item.sku == variant_sku }
@@ -83,6 +160,30 @@ class Fragments < Roda
   # there is no module id to check — the marker itself is the whole claim.
   def find_cart_region(node_id)
     find_published_node(node_id) { |node| node.dig("actions", "region").to_s == "cart" }
+  end
+
+  def find_form_region(node_id)
+    find_published_node(node_id) { |node| node.dig("actions", "region").to_s == "form" }
+  end
+
+  # Re-render a form region with the last outcome and the signed-in customer
+  # in scope. Unlike the cart region this also renders at BAKE time — the form
+  # itself is the same for every visitor — so this fragment is a correction,
+  # not a first paint.
+  def form_region_fragment(node_id)
+    found = find_form_region(node_id)
+    return unless found
+
+    document, node = found
+    state = SiteState.first
+    Dukafy::Publisher::RenderPage.call(
+      document: document.merge("rootNodeId" => node.fetch("id")),
+      registry: Dukafy::Publisher::REGISTRY, site: state&.site,
+      # A login box is `base.*` nodes and nothing else; making it pay for the
+      # whole catalogue on every auth attempt would be pure waste.
+      prefetched: needs_catalogue?(document, node) ? CommercePrefetcher.call : CommercePrefetcher.for_product(nil),
+      form: form_frame(node_id), page_paths: PagePaths.call,
+    ).html
   end
 
   # Re-render ONE subtree with the visitor's cart in scope. `rootNodeId` is
@@ -422,6 +523,51 @@ class Fragments < Roda
         response["HX-Trigger"] = "dukafy:payment-#{attempt.status}" if attempt.terminal?
         payment_region_html(r.params["node"].to_s, attempt)
       end
+    end
+
+    # ── Customer accounts ────────────────────────────────────────────────
+    # Dukafy ships no login form. These are the verbs; the merchant designs
+    # the page, exactly as with the cart. `hx-include="closest form"` carries
+    # whatever fields they chose to collect.
+    r.on("account") do
+      r.post("register") do
+        result = CustomerAccount.register(
+          email: r.params["email"], password: r.params["password"],
+          name: r.params["name"], order_token: r.params["order_token"] || session["order_token"],
+        )
+        account_response(status: 422, reason: result.reason, ok: false) unless result.ok?
+
+        session["customer_id"] = result.customer.id
+        account_response(reason: "registered")
+      end
+
+      r.post("login") do
+        result = CustomerAccount.authenticate(email: r.params["email"], password: r.params["password"])
+        account_response(status: 401, reason: result.reason, ok: false) unless result.ok?
+
+        session["customer_id"] = result.customer.id
+        account_response(reason: "signed_in")
+      end
+
+      r.post("logout") do
+        session.delete("customer_id")
+        account_response(reason: "signed_out")
+      end
+    end
+
+    # The live area a merchant's login/register form renders its outcome into.
+    # Same shape as the cart region: the node id is the whole address, and
+    # `find_form_region` scanning PUBLISHED documents for the marker is the
+    # security boundary.
+    r.get("form", "region") do
+      response["Content-Type"] = "text/html; charset=utf-8"
+      response["Cache-Control"] = "no-store"
+      html = form_region_fragment(r.params["node"].to_s)
+      unless html
+        request.halt([404, { "content-type" => "text/html; charset=utf-8" },
+                      [%(<div class="dukafy-form-region dukafy-form-region--missing"></div>)]])
+      end
+      html
     end
 
     r.on("cart") do

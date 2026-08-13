@@ -59,12 +59,17 @@
     flex: 1;
     min-height: 0;
     display: flex;
-    background: var(--overlay);
+    /* The page sheet, not admin chrome — see --canvas-page-bg. */
+    background: var(--canvas-page-bg);
 }
 
 .iframe {
     flex: 1;
     border: 0;
-    background: var(--overlay);
+    /* A storefront page, not admin chrome — see --canvas-page-bg. Without the
+     * explicit scheme an embedded document that sets no colours of its own
+     * inherits the OS preference and paints itself black with white text. */
+    color-scheme: light;
+    background: var(--canvas-page-bg);
     display: block;
 }

@@ -146,7 +146,6 @@ const VC_AWARE_PANEL_DIRS = [
   join(EDITOR_ROOT, 'components/PropertiesPanel'),
   join(EDITOR_ROOT, 'components/DomPanel'),
   join(EDITOR_ROOT, 'components/Canvas'),
-  join(EDITOR_ROOT, 'components/SelectorsPanel'),
 ]
 
 describe('Canvas-aware selector gate — no raw pages.find in VC-aware panel directories', () => {

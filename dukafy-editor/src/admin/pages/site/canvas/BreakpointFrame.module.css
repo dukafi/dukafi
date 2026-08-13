@@ -58,7 +58,8 @@
 .viewport {
     width: var(--bp-width);
     min-height: 100vh;
-    background: var(--overlay);
+    /* The page sheet, not admin chrome — see --canvas-page-bg. */
+    background: var(--canvas-page-bg);
     box-shadow: 0 2px 12px var(--scrim-30);
     overflow: hidden;
     position: relative;

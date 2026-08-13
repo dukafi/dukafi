@@ -82,4 +82,35 @@ class TailwindCompilerSpec < Minitest::Test
   def test_no_candidates_yields_no_stylesheet
     assert_equal "", TailwindCompiler.call(classes: [])
   end
+
+  # A font token is only USABLE if something can apply it.
+  #
+  # The Styles panel writes `fontFamily` into `styleRules[].styles`, which the
+  # Ruby publisher never emits — it forwards class NAMES to Tailwind and
+  # nothing else. So a merchant who installed a font and made a token had no
+  # publishable way to put it on an element. Registering the token in
+  # Tailwind's `--font-*` theme namespace generates the utility that closes it.
+  def site_with_font_token
+    {
+      "settings" => { "fonts" => {
+        "items" => [{ "id" => "f1", "family" => "Saira", "category" => "Sans Serif", "files" => [] }],
+        "tokens" => [{ "id" => "t1", "name" => "Primary", "variable" => "font-primary",
+                       "familyId" => "f1", "fallback" => "sans-serif", "order" => 0 }],
+      } },
+    }
+  end
+
+  def test_a_font_token_becomes_a_usable_utility_class
+    css = TailwindCompiler.call(classes: ["font-primary"], site: site_with_font_token)
+
+    assert_includes css, ".font-primary"
+    assert_includes css, "font-family:var(--font-primary)"
+    assert_includes css, %(--font-primary:"Saira", sans-serif)
+  end
+
+  def test_a_site_with_no_font_tokens_generates_no_font_utility
+    css = TailwindCompiler.call(classes: ["font-primary"], site: {})
+
+    refute_includes css, ".font-primary{"
+  end
 end

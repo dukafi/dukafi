@@ -75,6 +75,7 @@ const CONDITION_SOURCES: Array<{ value: NodeVisibility['source']; label: string 
   { value: 'parentEntry', label: 'The item around it' },
   { value: 'cart', label: 'The cart' },
   { value: 'payment', label: 'The payment' },
+  { value: 'form', label: 'The form result' },
 ]
 
 const OPERATOR_OPTIONS: Array<{ value: ConditionOperator; label: string }> = [
@@ -96,6 +97,9 @@ const CONDITION_PRESETS: Array<{ label: string; condition: NodeVisibility }> = [
   { label: 'This item is NOT in the cart', condition: { source: 'currentEntry', field: 'inCart', operator: 'isFalse' } },
   { label: 'The cart has something in it', condition: { source: 'cart', field: 'count', operator: 'isTrue' } },
   { label: 'The cart is empty', condition: { source: 'cart', field: 'isEmpty', operator: 'isTrue' } },
+  { label: 'The form came back with an error', condition: { source: 'form', field: 'hasError', operator: 'isTrue' } },
+  { label: 'The visitor IS signed in', condition: { source: 'form', field: 'signedIn', operator: 'isTrue' } },
+  { label: 'The visitor is NOT signed in', condition: { source: 'form', field: 'signedIn', operator: 'isFalse' } },
 ]
 
 const DEFAULT_CONDITION: NodeVisibility = CONDITION_PRESETS[0].condition
@@ -110,6 +114,7 @@ const REGION_OPTIONS: Array<{ value: '' | NodeRegion; label: string }> = [
   { value: '', label: 'No' },
   { value: 'cart', label: 'Cart — re-renders per visitor' },
   { value: 'payment', label: 'Payment — swapped by status updates' },
+  { value: 'form', label: 'Form — shows errors and who is signed in' },
 ]
 
 /**
@@ -126,6 +131,8 @@ const REGION_NOTE: Record<NodeRegion, string> = {
     'This box and everything in it re-loads with the visitor’s own cart, and refreshes whenever the cart changes. Required for cart-wide values — {cart.count}, {cart.subtotalDisplay}, {cart.totalDisplay} — which cannot be baked into a shared page. Put it AROUND your cart lines loop, not inside it.',
   payment:
     'This box is what the payment status fragment swaps while an attempt is in flight, and the only place payment.* values resolve.',
+  form:
+    'Put this AROUND your form. It re-renders after every sign-in or sign-up attempt, and is the only place form.* values resolve — {form.error} for the message, form.hasError for an error banner, form.signedIn to swap the form for a "Hi, {form.name}". Your form still shows immediately on load; only the result comes back from the server.',
 }
 
 const ACTION_OPTIONS: Array<{ value: '' | NodeActionType; label: string }> = [
@@ -135,6 +142,9 @@ const ACTION_OPTIONS: Array<{ value: '' | NodeActionType; label: string }> = [
   { value: 'cart.removeItem', label: 'Cart — remove this line' },
   { value: 'cart.createOrder', label: 'Cart — place order' },
   { value: 'payment.initiate', label: 'Payment — start payment' },
+  { value: 'account.login', label: 'Account — sign in' },
+  { value: 'account.register', label: 'Account — create account' },
+  { value: 'account.logout', label: 'Account — sign out' },
 ]
 
 /**
@@ -155,6 +165,12 @@ const SCOPE_NOTE: Record<NodeActionType, string> = {
     'Submits the fields of the form around it, so the field list is yours. Same-site redirects only.',
   'payment.initiate':
     'Submits the surrounding form and swaps the enclosing payment region for the live status.',
+  'account.login':
+    'Signs in with the email and password fields of the form around it. Put it on the form’s submit button — pressing Enter works too. The result lands in the enclosing Form live region.',
+  'account.register':
+    'Creates an account from the email, password and name fields of the form around it, and signs the visitor in. The result lands in the enclosing Form live region.',
+  'account.logout':
+    'Signs the visitor out. Needs no form and no fields.',
 }
 
 export function NodeActionsPanel({ nodeId, actions, visibleWhen, readOnly }: NodeActionsPanelProps) {

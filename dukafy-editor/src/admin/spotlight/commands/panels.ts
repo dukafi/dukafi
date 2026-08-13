@@ -104,27 +104,6 @@ export function getPanelsCommands(): Command[] {
       },
     },
 
-    // ── Selectors panel ──────────────────────────────────────────────────────
-    {
-      id: 'panels.toggleSelectors',
-      title: 'Toggle Selectors panel',
-      subtitle: 'Show or hide the CSS selectors panel',
-      group: 'editor',
-      iconName: 'code',
-      keywords: ['panel', 'selectors', 'css', 'classes', 'toggle'],
-      workspaces: ['site'],
-      capability: PANEL_CAPABILITY,
-      run: async (ctx) => {
-        ctx.closeSpotlight()
-        try {
-          const { useEditorStore } = await import('@site/store/store')
-          useEditorStore.getState().toggleLeftSidebarPanel('selectors')
-        } catch (err) {
-          console.error('[spotlight] toggleLeftSidebarPanel selectors failed:', err)
-        }
-      },
-    },
-
     // ── Framework panel ──────────────────────────────────────────────────────
     {
       id: 'panels.toggleFramework',
@@ -165,27 +144,6 @@ export function getPanelsCommands(): Command[] {
           store.setExplorerPanelOpen(true)
         } catch (err) {
           console.error('[spotlight] show media failed:', err)
-        }
-      },
-    },
-
-    // ── Dependencies panel ───────────────────────────────────────────────────
-    {
-      id: 'panels.toggleDependencies',
-      title: 'Toggle Dependencies panel',
-      subtitle: 'Show or hide the site dependencies panel',
-      group: 'editor',
-      iconName: 'package-solid',
-      keywords: ['panel', 'dependencies', 'packages', 'plugins', 'toggle'],
-      workspaces: ['site'],
-      capability: PANEL_CAPABILITY,
-      run: async (ctx) => {
-        ctx.closeSpotlight()
-        try {
-          const { useEditorStore } = await import('@site/store/store')
-          useEditorStore.getState().toggleLeftSidebarPanel('dependencies')
-        } catch (err) {
-          console.error('[spotlight] toggleLeftSidebarPanel dependencies failed:', err)
         }
       },
     },

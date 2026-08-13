@@ -11,10 +11,10 @@
  *     padding + 10px gap that previously lived (duplicated) in every
  *     panel's CSS module.
  *
- * Pre-refactor, every panel hand-rolled this shell, which led to drift:
- * DependenciesPanel skipped the `.content` wrapper entirely, so its
- * SearchBar sat flush to the panel edge while every other panel had an
- * 8px inset. Centralizing the shell here makes that impossible.
+ * Pre-refactor, every panel hand-rolled this shell, which led to drift —
+ * one panel skipped the `.content` wrapper entirely, so its SearchBar sat
+ * flush to the panel edge while every other panel had an 8px inset.
+ * Centralizing the shell here makes that impossible.
  *
  * Floating variants (DomPanel / AgentPanel / PropertiesPanel) keep their
  * own positioning shells — they manage drag, resize, and z-index, so

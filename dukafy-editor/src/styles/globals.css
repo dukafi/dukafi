@@ -291,6 +291,21 @@
     --spotlight-width: 640px;
     --progress-shimmer: var(--overlay-40);
 
+    /* The blank sheet a storefront page is previewed on.
+     *
+     * Deliberately NOT part of any theme, and deliberately not `--overlay`:
+     * that token is an INVERTING scale (#ffffff on the dark admin, #111827 on
+     * the light one), so every frame painted with it turned navy the moment
+     * the admin went light — and a merchant page that sets no body background
+     * had nothing to paint over it. It read as deliberate for as long as the
+     * admin was dark-only, which is why it survived this long.
+     *
+     * The canvas shows what a browser shows when opening that page directly,
+     * and a browser's blank page is white. A merchant authoring a dark site
+     * still wins: their own background paints over this. Defined once here,
+     * overridden in no theme block. */
+    --canvas-page-bg: #ffffff;
+
     /* Bespoke surface tints */
     --plugins-hero-tint-a: rgba(35, 92, 72, 0.32);
     --plugins-hero-tint-b: rgba(49, 64, 94, 0.24);

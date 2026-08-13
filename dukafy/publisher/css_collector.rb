@@ -36,13 +36,21 @@ class Dukafy
       # disagreed with the editor canvas.
       LAYER_ORDER = "@layer dukafy-reset, dukafy-modules;".freeze
 
-      def bundle(framework_css: "", tailwind_css: "", page_css: "")
+      def bundle(framework_css: "", tailwind_css: "", page_css: "", fonts_css: "", style_rules_css: "")
         modules_css = to_s
         content = [
           LAYER_ORDER,
           layered("dukafy-reset", RESET_CSS),
+          # Deliberately UNLAYERED. `@font-face` is not a style rule and takes
+          # no part in the cascade, and the `--font-*` token variables have to
+          # resolve for every layer that references them.
+          sanitize(fonts_css),
           framework_css,
           sanitize(tailwind_css),
+          # AFTER Tailwind: where a merchant has attached a declaration to a
+          # utility class name, the value they authored is the one the canvas
+          # shows them, so it must win on equal specificity here too.
+          sanitize(style_rules_css),
           layered("dukafy-modules", modules_css),
           sanitize(page_css),
         ].reject(&:empty?).join("\n")

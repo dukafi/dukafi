@@ -11,7 +11,7 @@
  *
  * §8 exceptions:
  *   §8.1 Settings nav buttons — full-width left-sidebar navigation (SettingsModal)
- *   §8.2 Full-width disclosure toggles — Section, DepsSection,
+ *   §8.2 Full-width disclosure toggles — Section,
  *         PropertyControlRenderer
  *   §8.3 Pill micro-remove buttons — ClassPicker (< 20×20px fixed,
  *         Button's 26px min-height would distort pill layout)
@@ -74,7 +74,6 @@ const ALLOWLIST = new Set([
   // These are collapsible section headers that span the full panel width.
   // Button's inline-flex sizing and padding do not fit a full-width disclosure pattern.
   'admin/pages/site/panels/PropertiesPanel/Section.tsx',
-  'admin/pages/site/panels/DependenciesPanel/DepsSection.tsx',
   'admin/pages/site/property-controls/PropertyControlRenderer.tsx',
 
   // ── §8.4 Toggle switch hit areas ────────────────────────────────────────

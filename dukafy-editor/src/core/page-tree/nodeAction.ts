@@ -23,6 +23,9 @@ const NodeActionTypeSchema = Type.Union([
   Type.Literal('cart.setQuantity'),
   Type.Literal('cart.createOrder'),
   Type.Literal('payment.initiate'),
+  Type.Literal('account.register'),
+  Type.Literal('account.login'),
+  Type.Literal('account.logout'),
 ])
 
 export type NodeActionType = Static<typeof NodeActionTypeSchema>
@@ -68,21 +71,34 @@ export type NodeAction = Static<typeof NodeActionSchema>
  * The cart-items loop is already such a spot, but everything in it repeats
  * per line, which is wrong for a cart-wide total. Marking an enclosing node
  * as the cart region gives those values somewhere to live.
+ *
+ * A `form` region is where a form's OUTCOME lands — the error banner, the
+ * "signed in" state. It exists for a different reason to the other two: the
+ * failing request itself cannot deliver it, because htmx throws away 4xx
+ * bodies. So the POST fires an event, the region hears it, and re-renders
+ * itself with `form.hasError` and `form.error` in scope. Unlike a cart region
+ * it renders its contents at bake time too — a login form is the same for
+ * everybody, and blanking it would make it flash in on every load.
  */
 export const NodeActionsSchema = Type.Object({
   click: Type.Optional(NodeActionSchema),
-  region: Type.Optional(Type.Union([Type.Literal('payment'), Type.Literal('cart')])),
+  region: Type.Optional(Type.Union([
+    Type.Literal('payment'),
+    Type.Literal('cart'),
+    Type.Literal('form'),
+  ])),
 })
 
 export type NodeActions = Static<typeof NodeActionsSchema>
 
 const VALID_TYPES: NodeActionType[] = [
   'cart.addItem', 'cart.removeItem', 'cart.setQuantity', 'cart.createOrder', 'payment.initiate',
+  'account.register', 'account.login', 'account.logout',
 ]
 
 export type NodeRegion = NonNullable<NodeActions['region']>
 
-const VALID_REGIONS: NodeRegion[] = ['payment', 'cart']
+const VALID_REGIONS: NodeRegion[] = ['payment', 'cart', 'form']
 
 function parseNodeAction(raw: unknown): NodeAction | null {
   const r = asPlainObject(raw)

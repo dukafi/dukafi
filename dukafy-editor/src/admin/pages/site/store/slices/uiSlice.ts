@@ -12,9 +12,7 @@ export type FocusedPanel = 'canvas' | 'domTree' | 'properties' | null
 type FormPreviewState = 'default' | 'submitting' | 'success' | 'error'
 export type LeftSidebarPanelId =
   | 'explorer'
-  | 'selectors'
   | 'framework'
-  | 'dependencies'
 /** Tabs inside the consolidated Framework panel. */
 export type FrameworkPanelTab = 'home' | 'colors' | 'typography' | 'spacing'
 /**
@@ -114,13 +112,11 @@ interface UiSlice {
   explorerPanelOpen: boolean
   /** Active tab inside the consolidated Explorer panel. */
   explorerPanelTab: ExplorerPanelTab
-  selectorsPanelOpen: boolean
   frameworkPanelOpen: boolean
   /** Active tab inside the consolidated Framework panel. */
   frameworkPanelTab: FrameworkPanelTab
   /** Whether the Manage Core Framework dialog is open. */
   frameworkManagerOpen: boolean
-  dependenciesPanelOpen: boolean
 
   /**
    * Plugin-registered editor panel currently open in the left sidebar, or
@@ -166,11 +162,9 @@ interface UiSlice {
 
   setExplorerPanelOpen: (open: boolean) => void
   setExplorerPanelTab: (tab: ExplorerPanelTab) => void
-  setSelectorsPanelOpen: (open: boolean) => void
   setFrameworkPanelOpen: (open: boolean) => void
   setFrameworkPanelTab: (tab: FrameworkPanelTab) => void
   setFrameworkManagerOpen: (open: boolean) => void
-  setDependenciesPanelOpen: (open: boolean) => void
   setLeftSidebarPanel: (panel: LeftSidebarPanelId | null) => void
   toggleLeftSidebarPanel: (panel: LeftSidebarPanelId) => void
 
@@ -294,9 +288,7 @@ function getActiveLeftSidebarPanel(state: EditorStore): LeftSidebarPanelId | nul
   // panel is opened, so short-circuit here too.
   if (state.activePluginPanelId !== null) return null
   if (state.explorerPanelOpen) return 'explorer'
-  if (state.selectorsPanelOpen) return 'selectors'
   if (state.frameworkPanelOpen) return 'framework'
-  if (state.dependenciesPanelOpen) return 'dependencies'
   return null
 }
 
@@ -321,11 +313,9 @@ export const createUiSlice: EditorStoreSliceCreator<UiSlice> = (set, get) => ({
   layoutNameDialogRequest: null,
   explorerPanelOpen: true,
   explorerPanelTab: 'layers',
-  selectorsPanelOpen: false,
   frameworkPanelOpen: false,
   frameworkPanelTab: 'home',
   frameworkManagerOpen: false,
-  dependenciesPanelOpen: false,
   activePluginPanelId: null,
   codeEditorPanelOpen: false,
   activeEditorFileId: null,
@@ -444,22 +434,16 @@ export const createUiSlice: EditorStoreSliceCreator<UiSlice> = (set, get) => ({
 
   setExplorerPanelTab: (tab) => set({ explorerPanelTab: tab }),
 
-  setSelectorsPanelOpen: (open) => set({ selectorsPanelOpen: open }),
-
   setFrameworkPanelOpen: (open) => set({ frameworkPanelOpen: open }),
 
   setFrameworkPanelTab: (tab) => set({ frameworkPanelTab: tab }),
 
   setFrameworkManagerOpen: (open) => set({ frameworkManagerOpen: open }),
 
-  setDependenciesPanelOpen: (open) => set({ dependenciesPanelOpen: open }),
-
   setLeftSidebarPanel: (panel) =>
     set((state) => {
       state.explorerPanelOpen = panel === 'explorer'
-      state.selectorsPanelOpen = panel === 'selectors'
       state.frameworkPanelOpen = panel === 'framework'
-      state.dependenciesPanelOpen = panel === 'dependencies'
       // Built-in panels are mutually exclusive with plugin panels.
       state.activePluginPanelId = null
     }),
@@ -479,9 +463,7 @@ export const createUiSlice: EditorStoreSliceCreator<UiSlice> = (set, get) => ({
   setActivePluginPanel: (panelId) =>
     set((state) => {
       state.explorerPanelOpen = false
-      state.selectorsPanelOpen = false
       state.frameworkPanelOpen = false
-      state.dependenciesPanelOpen = false
       state.activePluginPanelId = panelId
     }),
 

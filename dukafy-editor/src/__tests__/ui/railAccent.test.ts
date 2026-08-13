@@ -4,7 +4,9 @@ import { assignRailAccents, railAccent, RAIL_ACCENTS } from '@ui/railAccent'
 describe('railAccent', () => {
   it('uses the full identity, not just the first letter', () => {
     const accents = assignRailAccents(
-      ['site', 'selectors', 'spacing'],
+      // Three ids sharing an initial: the point is that the WHOLE id feeds the
+      // hash, so these must not collide onto one accent.
+      ['site', 'spacing', 'storage'],
       (id) => `site:${id}`,
     )
 
@@ -12,7 +14,7 @@ describe('railAccent', () => {
   })
 
   it('keeps a visible rail group diverse until the palette is exhausted', () => {
-    const items = ['layers', 'site', 'selectors', 'colors', 'typography', 'spacing', 'media', 'dependencies']
+    const items = ['layers', 'site', 'colors', 'typography', 'spacing', 'media']
     const accents = assignRailAccents(items, (id) => `site:${id}`)
 
     expect(new Set(accents).size).toBe(items.length)

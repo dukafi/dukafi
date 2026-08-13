@@ -46,12 +46,15 @@ class Storefront < Roda
     )
     tailwind_html = %(<body class="#{rendered.body_classes.join(' ')}">#{rendered.html}</body>)
     tailwind_css = TailwindCompiler.call(
-      html: tailwind_html, classes: DeclaredClassNames.call([document], state&.site)
+      html: tailwind_html, classes: DeclaredClassNames.call([document], state&.site),
+      site: state&.site
     )
     collector = Dukafy::Publisher::CssCollector.new
     collector.add("page-modules", rendered.css)
     css = collector.bundle(
-      framework_css: Dukafy::Publisher::FrameworkCss.call(state.site), tailwind_css: tailwind_css
+      framework_css: Dukafy::Publisher::FrameworkCss.call(state.site), tailwind_css: tailwind_css,
+      fonts_css: Dukafy::Publisher::FontsCss.call(state.site),
+      style_rules_css: Dukafy::Publisher::StyleRulesCss.call(state.site)
     ).content
     Dukafy::Publisher::HtmlDocument.call(
       title: state.site.dig("settings", "metaTitle") || page.title,
@@ -84,8 +87,11 @@ class Storefront < Roda
     collector.add("page-modules", rendered.css)
     css = collector.bundle(
       framework_css: Dukafy::Publisher::FrameworkCss.call(state.site),
+      fonts_css: Dukafy::Publisher::FontsCss.call(state.site),
+      style_rules_css: Dukafy::Publisher::StyleRulesCss.call(state.site),
       tailwind_css: TailwindCompiler.call(
-        html: tailwind_html, classes: DeclaredClassNames.call([document], state&.site)
+        html: tailwind_html, classes: DeclaredClassNames.call([document], state&.site),
+        site: state&.site
       )
     ).content
     Dukafy::Publisher::HtmlDocument.call(

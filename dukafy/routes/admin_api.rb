@@ -36,6 +36,58 @@ class AdminApi < Roda
     request.halt([204, {}, []])
   end
 
+  # A font request as posted by the picker. Everything is re-checked against
+  # the bundled directory inside `GoogleFonts.resolve` — this only shapes it.
+  def font_selection(request_scope)
+    {
+      family: request_scope.params["family"].to_s,
+      variants: Array(request_scope.params["variants"]),
+      subsets: Array(request_scope.params["subsets"]),
+    }
+  end
+
+  FONT_INSTALL_ERRORS = {
+    "unknown_family" => [422, "unknown_font_family", "That font is not in the bundled Google directory."],
+    "no_faces" => [422, "no_font_faces", "Google returned no matching faces for that selection."],
+    "download_failed" => [502, "font_download_failed", "Could not download the font files from Google."],
+  }.freeze
+
+  def font_install_error(reason)
+    FONT_INSTALL_ERRORS.fetch(reason, [502, "font_install_failed", "Could not install that font."])
+  end
+
+  # Turn posted media-asset ids into FontFile entries.
+  #
+  # The PATH comes from the asset row, never from the request — a client that
+  # supplied its own path could point an `@font-face src` anywhere. The format
+  # is derived from the stored extension for the same reason.
+  FONT_FORMAT_FOR_EXTENSION = {
+    ".woff2" => "woff2", ".woff" => "woff", ".ttf" => "ttf", ".otf" => "otf"
+  }.freeze
+
+  def custom_font_files(entries)
+    return [] unless entries.is_a?(Array)
+
+    entries.filter_map do |entry|
+      next unless entry.is_a?(Hash)
+
+      variant = entry["variant"].to_s
+      next unless variant.match?(/\A\d{3}(italic)?\z/)
+
+      asset = MediaAsset[entry["mediaAssetId"].to_s]
+      next unless asset
+
+      format = FONT_FORMAT_FOR_EXTENSION[File.extname(asset.path.to_s).downcase]
+      next unless format
+
+      {
+        "variant" => variant, "subset" => "latin",
+        "path" => "/#{asset.path}", "format" => format,
+        "mediaAssetId" => asset.id.to_s,
+      }
+    end
+  end
+
   def halt_json(status, code, message)
     request.halt([status, { "content-type" => "application/json" }, [JSON.generate(error_payload(code, message))]])
   end
@@ -318,8 +370,11 @@ class AdminApi < Roda
     collector.add("page-modules", rendered.css)
     bundle = collector.bundle(
       framework_css: Dukafy::Publisher::FrameworkCss.call(site),
+      fonts_css: Dukafy::Publisher::FontsCss.call(site),
+      style_rules_css: Dukafy::Publisher::StyleRulesCss.call(site),
       tailwind_css: TailwindCompiler.call(
-        html: %(<body class="#{rendered.body_classes.join(' ')}">#{rendered.html}</body>)
+        html: %(<body class="#{rendered.body_classes.join(' ')}">#{rendered.html}</body>),
+        site: site
       )
     )
 
@@ -439,6 +494,64 @@ class AdminApi < Roda
         halt_json(422, "invalid_tailwind_classes", "Tailwind classes must be an array of at most 500 class tokens") unless valid
 
         { css: TailwindCompiler.call(classes: classes) }
+      end
+
+      # ── Fonts ───────────────────────────────────────────────────────────
+      #
+      # Fonts are SELF-HOSTED. Installing downloads the woff2 files once, here,
+      # and the published stylesheet points at our own /uploads/ — a storefront
+      # never contacts fonts.googleapis.com, so visitor IPs never reach Google.
+      # See `GoogleFontInstaller` for why that is worth a download step.
+      r.on("fonts") do
+        require_admin!
+
+        # The bundled directory snapshot, served rather than imported so the
+        # editor stays a thin client and both sides read one file.
+        r.get("google") { { families: GoogleFonts.families } }
+
+        r.post("estimate") do
+          { **GoogleFontInstaller.estimate(**font_selection(r)) }
+        end
+
+        r.post("install") do
+          result = GoogleFontInstaller.install(**font_selection(r))
+          unless result.ok?
+            halt_json(*font_install_error(result.reason))
+          end
+          { font: result.font }
+        end
+
+        # Custom fonts are already in the media library — the binaries were
+        # uploaded through the media route. This only turns chosen assets into
+        # a FontEntry; nothing is downloaded or written.
+        r.post("custom") do
+          family = r.params["family"].to_s.strip
+          halt_json(422, "invalid_family", "A font family name is required") if family.empty?
+
+          files = custom_font_files(r.params["files"])
+          halt_json(422, "no_font_files", "No usable font files were supplied") if files.empty?
+
+          now = (Time.now.to_f * 1000).round
+          {
+            font: {
+              "id" => "font-#{GoogleFontInstaller.family_slug(family)}-#{SecureRandom.hex(4)}",
+              "source" => "custom", "family" => family,
+              "variants" => files.map { |file| file["variant"] }.uniq,
+              "subsets" => ["latin"],
+              "files" => files, "category" => "",
+              "createdAt" => now, "updatedAt" => now,
+            },
+          }
+        end
+
+        # Reclaims the installed woff2 files. The site document is the
+        # client's to update; a family with nothing on disk still succeeds so
+        # removing a custom font (whose bytes are shared media assets) is not
+        # an error.
+        r.delete("family", String) do |family|
+          GoogleFontInstaller.remove(family)
+          no_content!
+        end
       end
 
       r.post("runtime", "preview") do

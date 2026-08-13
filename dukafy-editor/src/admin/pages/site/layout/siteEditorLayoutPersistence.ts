@@ -18,9 +18,7 @@ type EditorStoreApi = UseBoundStore<StoreApi<EditorStore>>
 export type SiteLayoutSelection = readonly [
   explorerOpen: boolean,
   propertiesOpen: boolean,
-  selectorsOpen: boolean,
   frameworkOpen: boolean,
-  dependenciesOpen: boolean,
   codeEditorOpen: boolean,
   explorerTab: ExplorerPanelTab,
   propertiesMode: PanelMode,
@@ -70,9 +68,7 @@ export function selectSiteLayoutState(s: EditorStore): SiteLayoutSelection {
   return [
     s.explorerPanelOpen,
     !s.propertiesPanel.collapsed,
-    s.selectorsPanelOpen,
     s.frameworkPanelOpen,
-    s.dependenciesPanelOpen,
     s.codeEditorPanelOpen,
     s.explorerPanelTab,
     s.propertiesPanelMode,
@@ -91,15 +87,11 @@ function deriveSiteActiveLeftPanel(selection: SiteLayoutSelection): string | nul
   const [
     explorerOpen,
     ,
-    selectorsOpen,
     frameworkOpen,
-    dependenciesOpen,
   ] = selection
 
   if (explorerOpen) return 'explorer'
-  if (selectorsOpen) return 'selectors'
   if (frameworkOpen) return 'framework'
-  if (dependenciesOpen) return 'dependencies'
   return null
 }
 
@@ -109,8 +101,6 @@ export function siteLayoutFromSelection(
   const [
     ,
     propertiesOpen,
-    ,
-    ,
     ,
     codeEditorOpen,
     explorerTab,
@@ -146,9 +136,7 @@ export function restoreStoredSiteEditorLayout(
     const leftPanelPatch = applyLeftPanel
       ? {
           explorerPanelOpen: storedActivePanel === 'explorer',
-          selectorsPanelOpen: storedActivePanel === 'selectors',
           frameworkPanelOpen: storedActivePanel === 'framework',
-          dependenciesPanelOpen: storedActivePanel === 'dependencies',
         }
       : {}
 

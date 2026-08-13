@@ -20,6 +20,10 @@
  *   than riding on `currentEntry`, which inside a cart loop is one LINE.
  *   Resolves only where a cart is in scope (the cart-lines fragment render);
  *   elsewhere it falls back like any unresolved binding.
+ * - `form` — the last form outcome (hasError, error, message) and who is
+ *   signed in (signedIn, email, name). Resolves inside a node marked as the
+ *   form region. On a baked page every field reads as "nothing has happened
+ *   yet", which is the correct first paint for a visitor nobody has met.
  *
  * Format tag controls how the resolved value is rendered (plain text, raw
  * HTML, URL, media path). Fallback strategy controls behaviour when the
@@ -46,6 +50,7 @@ export const DynamicBindingSourceSchema = Type.Union([
   Type.Literal('route'),
   Type.Literal('cart'),
   Type.Literal('payment'),
+  Type.Literal('form'),
 ])
 export type DynamicBindingSource = Static<typeof DynamicBindingSourceSchema>
 
@@ -55,7 +60,7 @@ export type DynamicBindingSource = Static<typeof DynamicBindingSourceSchema>
  * copy that can drift.
  */
 export const VALID_BINDING_SOURCES: DynamicBindingSource[] = [
-  'currentEntry', 'parentEntry', 'page', 'site', 'route', 'cart', 'payment',
+  'currentEntry', 'parentEntry', 'page', 'site', 'route', 'cart', 'payment', 'form',
 ]
 
 const DynamicBindingFormatSchema = Type.Union([

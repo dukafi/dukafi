@@ -137,6 +137,10 @@
                         {
                           "const": "payment",
                           "type": "string"
+                        },
+                        {
+                          "const": "form",
+                          "type": "string"
                         }
                       ]
                     },
@@ -210,6 +214,18 @@
                         {
                           "const": "payment.initiate",
                           "type": "string"
+                        },
+                        {
+                          "const": "account.register",
+                          "type": "string"
+                        },
+                        {
+                          "const": "account.login",
+                          "type": "string"
+                        },
+                        {
+                          "const": "account.logout",
+                          "type": "string"
                         }
                       ]
                     },
@@ -241,6 +257,10 @@
                     },
                     {
                       "const": "cart",
+                      "type": "string"
+                    },
+                    {
+                      "const": "form",
                       "type": "string"
                     }
                   ]
@@ -283,6 +303,10 @@
                     },
                     {
                       "const": "payment",
+                      "type": "string"
+                    },
+                    {
+                      "const": "form",
                       "type": "string"
                     }
                   ]

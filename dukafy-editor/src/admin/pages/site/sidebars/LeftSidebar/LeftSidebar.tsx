@@ -3,9 +3,7 @@ import { useEditorStore } from '@site/store/store'
 import type { LeftSidebarPanelId } from '@site/store/slices/uiSlice'
 import { FrameworkPanel } from '@site/panels/FrameworkPanel'
 import { ExplorerPanel } from '@site/panels/ExplorerPanel'
-import { DependenciesPanel } from '@site/panels/DependenciesPanel'
 import { PanelRail } from '@site/sidebars/PanelRail'
-import { SelectorsPanel } from '@site/panels/SelectorsPanel'
 import { FrameworkChangeConfirmProvider } from '@admin/shared/dialogs/FrameworkChangeConfirmDialog'
 import { VCDeletionConfirmProvider } from '@admin/shared/dialogs/VCDeletionConfirmDialog'
 import { SidebarResizeHandle } from '@admin/shared/SidebarResizeHandle'
@@ -30,9 +28,7 @@ function selectActiveLeftSidebarPanel(
   // plugin mount when set.
   if (state.activePluginPanelId !== null) return null
   if (state.explorerPanelOpen) return 'explorer'
-  if (state.selectorsPanelOpen) return 'selectors'
   if (state.frameworkPanelOpen) return 'framework'
-  if (state.dependenciesPanelOpen) return 'dependencies'
   return null
 }
 
@@ -46,7 +42,7 @@ interface LeftSidebarProps {
    *
    * Falsy callers (Viewer / Client) still see the Explorer panel (Layers /
    * Pages / Media navigation surfaces) — they're not editing tools. The
-   * structural Selectors / Framework / Dependencies panels stay hidden. The
+   * structural Framework panel stays hidden. The
    *
    * Each panel is responsible for respecting its own read-only state for
    * the interactions it exposes (TreeNode drag, context menus, etc.).
@@ -62,9 +58,7 @@ interface LeftSidebarProps {
 const READ_ONLY_RAIL_IDS: ReadonlySet<LeftSidebarPanelId> = new Set(['explorer'])
 const PANEL_RESIZE_LABELS: Record<HostedLeftPanelId, string> = {
   explorer: 'Explorer',
-  selectors: 'Selectors',
   framework: 'Framework',
-  dependencies: 'Dependencies',
 }
 
 export function LeftSidebar({
@@ -170,14 +164,8 @@ export function LeftSidebar({
               they have no capability to commit. */}
           {editable && (
             <>
-              <div className={styles.panelMount} hidden={effectiveActivePanel !== 'selectors'}>
-                <SelectorsPanel {...dockablePanelProps} />
-              </div>
               <div className={styles.panelMount} hidden={effectiveActivePanel !== 'framework'}>
                 <FrameworkPanel {...dockablePanelProps} />
-              </div>
-              <div className={styles.panelMount} hidden={effectiveActivePanel !== 'dependencies'}>
-                <DependenciesPanel {...dockablePanelProps} />
               </div>
             </>
           )}

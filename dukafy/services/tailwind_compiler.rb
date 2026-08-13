@@ -5,7 +5,17 @@ require "tmpdir"
 class TailwindCompiler
   class Error < StandardError; end
 
-  def self.call(html: nil, classes: nil, binary: ENV.fetch("TAILWINDCSS_BIN", File.expand_path("../vendor/tailwindcss", __dir__)))
+  # `site` — the site document, for its font tokens. Tailwind v4's `--font-*`
+  # theme namespace generates a font-family utility per entry, so registering
+  # the merchant's tokens turns `--font-primary` into a real `font-primary`
+  # class they can put on any element.
+  #
+  # Without this a font could be installed and tokenised but never APPLIED:
+  # the Styles panel writes `fontFamily` into `styleRules[].styles`, which the
+  # Ruby publisher does not emit (it only forwards class NAMES to Tailwind), so
+  # the only publishable way to set a family is a utility class — and none
+  # existed for a merchant's own token.
+  def self.call(html: nil, classes: nil, site: nil, binary: ENV.fetch("TAILWINDCSS_BIN", File.expand_path("../vendor/tailwindcss", __dir__)))
     # UNION, not either/or.
     #
     # Tailwind is usage-driven: it only emits a utility it has seen. Scanning
@@ -50,6 +60,7 @@ class TailwindCompiler
         @import "tailwindcss/theme.css" layer(theme);
         @import "tailwindcss/utilities.css" source(none);
         @source "./published.html";
+        #{font_theme(site)}
       CSS
       _stdout, stderr, status = Open3.capture3(
         binary, "-i", input_path, "-o", output_path, "--minify", "--cwd", directory
@@ -59,4 +70,17 @@ class TailwindCompiler
       File.binread(output_path)
     end
   end
+
+  # `@theme { --font-primary: "Saira", sans-serif; }` for each of the site's
+  # font tokens. Tailwind reads the theme namespace to decide which utilities
+  # exist, so this is what makes `font-primary` compile; the same variables are
+  # emitted separately by `Publisher::FontsCss` for anything that references
+  # `var(--font-primary)` directly.
+  def self.font_theme(site)
+    declarations = Dukafy::Publisher::FontsCss.theme_declarations(site)
+    return "" if declarations.empty?
+
+    "@theme {\n#{declarations.join("\n")}\n}"
+  end
+  private_class_method :font_theme
 end

@@ -3,7 +3,6 @@ import React from 'react'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { ClassPicker } from '@site/panels/PropertiesPanel/ClassPicker'
 import { PropertiesPanel } from '@site/panels/PropertiesPanel/PropertiesPanel'
-import { SelectorsPanel } from '@site/panels/SelectorsPanel'
 import { useEditorStore } from '@site/store/store'
 import { classKindSelector, type StyleRule } from '@core/page-tree'
 import { makeNode, makePage, makeSite } from '../fixtures'
@@ -55,7 +54,6 @@ function resetStore() {
     selectedNodeId: 'hero',
     activeClassId: null,
     selectedSelectorClassId: null,
-    selectorsPanelOpen: false,
     propertiesPanel: { collapsed: false, x: 0, y: 0, width: 360 },
     propertiesPanelMode: 'docked',
   } as Parameters<typeof useEditorStore.setState>[0])
@@ -105,10 +103,10 @@ describe('generated utility classes in editor panels', () => {
     expect(within(panel).queryByRole('searchbox', { name: /search class style properties to add/i })).toBeNull()
   })
 
-  it('shows the locked state when a generated utility is opened from the selectors panel', () => {
-    // Reproduces the regression where clicking a utility class in the
-    // SelectorsPanel routes through `SelectorInspector` and previously
-    // rendered an editable StyleRuleComposer instead of the locked state.
+  it('shows the locked state for a generated utility opened as a selector', () => {
+    // Reproduces the regression where routing a utility class through
+    // `SelectorInspector` rendered an editable StyleRuleComposer instead of
+    // the locked state.
     useEditorStore.setState({
       selectedNodeId: null,
     selectedNodeIds: [],
@@ -137,23 +135,5 @@ describe('generated utility classes in editor panels', () => {
     const panel = screen.getByTestId('properties-panel')
     expect(within(panel).queryByRole('button', { name: /rename selector \.text-primary/i })).toBeNull()
     expect(within(panel).queryByRole('button', { name: /delete selector \.text-primary/i })).toBeNull()
-  })
-
-  it('marks generated utilities in the selectors panel and disables editing actions', () => {
-    useEditorStore.setState({
-      selectorsPanelOpen: true,
-    } as Parameters<typeof useEditorStore.setState>[0])
-
-    render(<SelectorsPanel variant="docked" />)
-
-    const row = screen.getByRole('button', { name: /edit selector \.text-primary/i })
-    expect(within(row).getByText('Utility')).toBeDefined()
-
-    fireEvent.contextMenu(row)
-
-    expect(screen.getByRole('menuitem', { name: /view utility/i })).toBeDefined()
-    expect(screen.getByRole('menuitem', { name: /rename/i }).hasAttribute('disabled')).toBe(true)
-    expect(screen.getByRole('menuitem', { name: /duplicate/i }).hasAttribute('disabled')).toBe(true)
-    expect(screen.getByRole('menuitem', { name: /delete/i }).hasAttribute('disabled')).toBe(true)
   })
 })

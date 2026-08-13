@@ -1,5 +1,5 @@
 /**
- * System binding sources — `page`, `site`, `route`, `cart`.
+ * System binding sources — `page`, `site`, `route`, `cart`, `form`.
  *
  * The dynamic binding picker lists these alongside post-types and data
  * tables in its left pane. Each entry declares the fields a binding can
@@ -16,7 +16,7 @@
 
 import type { LoopSourceField } from '@core/loops/types'
 
-export type SystemSourceId = 'page' | 'site' | 'route' | 'cart'
+export type SystemSourceId = 'page' | 'site' | 'route' | 'cart' | 'form'
 
 interface SystemSource {
   id: SystemSourceId
@@ -98,6 +98,37 @@ const CART_SOURCE: SystemSource = {
 }
 
 // ---------------------------------------------------------------------------
+// form — the result of the last form the visitor submitted
+//
+// Two halves with different lifetimes. `hasError` / `error` / `message` are
+// ONE-SHOT: they describe the POST that just happened and are cleared the
+// moment they render, so a stale complaint never reappears on the next page.
+// `signedIn` / `email` / `name` are durable session state, re-read every time.
+//
+// Resolves only inside a node marked as the Form live region — that region is
+// what re-fetches itself after a submit. Elsewhere, and on a baked page, these
+// fall back: no error, signed out, which is the right first paint for a
+// visitor the server has never met.
+// ---------------------------------------------------------------------------
+
+const FORM_SOURCE: SystemSource = {
+  id: 'form',
+  label: 'Form result',
+  description: 'Errors from the last submit, and who is signed in. Needs a Form live region around it.',
+  fields: [
+    { id: 'hasError', label: 'Came back with an error' },
+    { id: 'error', label: 'Error message' },
+    { id: 'message', label: 'Message (success or error)' },
+    { id: 'status', label: 'Status (ok / error)' },
+    { id: 'reason', label: 'Reason code' },
+    { id: 'signedIn', label: 'Visitor is signed in' },
+    { id: 'signedOut', label: 'Visitor is signed out' },
+    { id: 'email', label: 'Signed-in email' },
+    { id: 'name', label: 'Signed-in name' },
+  ],
+}
+
+// ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
@@ -106,4 +137,5 @@ export const SYSTEM_SOURCES: readonly SystemSource[] = [
   SITE_SOURCE,
   ROUTE_SOURCE,
   CART_SOURCE,
+  FORM_SOURCE,
 ]

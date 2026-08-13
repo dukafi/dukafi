@@ -14,11 +14,15 @@ class Dukafy
       # cart is per-visitor, so a `cartItems` loop bakes as an htmx placeholder
       # and only renders real lines when the fragment endpoint re-renders that
       # same subtree with a cart in hand.
-      def self.call(document:, registry:, prefetched: {}, breakpoint_id: nil, site: nil, query_params: {}, current_entry: nil, cart: nil, payment: nil, cart_loop_id: nil, page_paths: {})
-        new(document, registry, prefetched, breakpoint_id, site, query_params, current_entry, cart, payment, cart_loop_id, page_paths).call
+      # `form` — the outcome of the last form POST plus who is signed in, for
+      # request-time rendering of a form region. NIL at bake time, exactly like
+      # `cart`: a baked page belongs to no visitor, so it shows the neutral
+      # state (no error, signed out) and the region corrects it.
+      def self.call(document:, registry:, prefetched: {}, breakpoint_id: nil, site: nil, query_params: {}, current_entry: nil, cart: nil, payment: nil, form: nil, cart_loop_id: nil, page_paths: {})
+        new(document, registry, prefetched, breakpoint_id, site, query_params, current_entry, cart, payment, form, cart_loop_id, page_paths).call
       end
 
-      def initialize(document, registry, prefetched, breakpoint_id, site, query_params, current_entry, cart = nil, payment = nil, cart_loop_id = nil, page_paths = {})
+      def initialize(document, registry, prefetched, breakpoint_id, site, query_params, current_entry, cart = nil, payment = nil, form = nil, cart_loop_id = nil, page_paths = {})
         @document = document
         @registry = registry
         @prefetched = prefetched
@@ -38,6 +42,15 @@ class Dukafy
         @current_product = current_entry
         @payment = payment
         @payment_region_id = nil
+        @form = form
+        # Set while rendering inside a node marked as the form region — the
+        # submit button is a DESCENDANT of it, and it has to tell the server
+        # which region an error belongs to.
+        @form_region_id = nil
+        # Whether a `base.form` is an ancestor of the node being rendered. Only
+        # then is it safe to add a `submit from:closest form` trigger; htmx
+        # throws on a `from:` selector that resolves to nothing.
+        @inside_form = false
         # Set when re-rendering ONE cart line standalone: the row's own +/-/
         # remove buttons carry the loop id, and without it they render inert.
         @cart_loop_id = cart_loop_id
@@ -87,16 +100,21 @@ class Dukafy
         # somewhere to live OUTSIDE the per-line loop.
         return cart_region_placeholder(node) if @cart.nil? && cart_region?(node)
 
-        # A payment button needs the id of the region it will swap, and
-        # children render before their parent — so the region is recorded on
-        # the way DOWN, before descending into it.
-        previous_region = @payment_region_id
-        @payment_region_id = node.fetch("id").to_s if node.dig("actions", "region").to_s == "payment"
-        children = begin
-          node.fetch("children", []).map { |child_id| render_node(child_id) }
-        ensure
-          @payment_region_id = previous_region unless node.dig("actions", "region").to_s == "payment"
-        end
+        # A payment button needs the id of the region it will swap, and an auth
+        # button the id of the region its error renders into — but children
+        # render before their parent, so both are recorded on the way DOWN.
+        #
+        # Deliberately NOT restored before `apply_actions` below: a node may be
+        # both the region and the acting element, and it must still see itself.
+        # The restore happens once, after this node is finished.
+        previous_payment_region = @payment_region_id
+        previous_form_region = @form_region_id
+        previous_inside_form = @inside_form
+        region = node.dig("actions", "region").to_s
+        @payment_region_id = node.fetch("id").to_s if region == "payment"
+        @form_region_id = node.fetch("id").to_s if region == "form"
+        @inside_form = true if definition.id == "base.form"
+        children = node.fetch("children", []).map { |child_id| render_node(child_id) }
         props = escaped_props(interpolate_prop_tokens(resolve_dynamic_bindings(node, resolved_props(node, definition))), definition.schema)
         output = definition.render(props, children, prefetched: @prefetched, node: node, current_product: @current_product)
         html = output.fetch(:html)
@@ -108,9 +126,11 @@ class Dukafy
         end
         @css.add(definition.id, output[:css])
         collect_runtimes(output[:runtimes])
-        html = apply_actions(html, node)
+        html = apply_actions(html, node, definition)
         html = apply_region(html, node)
-        @payment_region_id = previous_region
+        @payment_region_id = previous_payment_region
+        @form_region_id = previous_form_region
+        @inside_form = previous_inside_form
         html
       ensure
         @visiting.delete(node_id)
@@ -197,6 +217,7 @@ class Dukafy
       # wiring attributes around them.
       def apply_region(html, node)
         return cart_region_attributes(html, node) if cart_region?(node)
+        return form_region_attributes(html, node) if node.dig("actions", "region").to_s == "form"
         return html unless node.dig("actions", "region").to_s == "payment"
 
         node_id = node.fetch("id").to_s
@@ -241,9 +262,19 @@ class Dukafy
           path: "/fragments/payment/initiate", fields: [], form: true,
           target: "closest [data-dukafy-payment]",
         },
+        # Auth verbs. Dukafy ships no login form — these are what a merchant
+        # points their own submit button at, and `hx-include="closest form"`
+        # carries whatever fields they chose to collect.
+        #
+        # `account: true` means: swap nothing (the response is 204, or a 4xx
+        # htmx discards — either way the merchant's button must survive), and
+        # tell the server which form region an outcome belongs to.
+        "account.register" => { path: "/fragments/account/register", fields: [], form: true, account: true },
+        "account.login" => { path: "/fragments/account/login", fields: [], form: true, account: true },
+        "account.logout" => { path: "/fragments/account/logout", fields: [], form: true, account: true },
       }.freeze
 
-      def apply_actions(html, node)
+      def apply_actions(html, node, definition)
         actions = node["actions"]
         return html unless actions.is_a?(Hash)
 
@@ -279,8 +310,18 @@ class Dukafy
           provider = action["provider"].to_s
           values["provider"] = provider unless provider.empty?
           values["node"] = @payment_region_id if spec[:target] && @payment_region_id
+          if spec[:account]
+            # Which region shows the outcome. Absent when the merchant wired no
+            # form region — the event still fires, there is just nowhere to
+            # render it.
+            values["node"] = @form_region_id if @form_region_id
+          end
           attrs = %( hx-post="#{spec[:path]}" hx-include="closest form")
           attrs += %( hx-target="#{spec[:target]}" hx-swap="outerHTML") if spec[:target]
+          # No target means htmx would swap the response into the button
+          # itself, replacing the merchant's own label with Dukafy's markup.
+          attrs += %( hx-swap="none") if spec[:account]
+          attrs += submit_trigger(definition)
           attrs += %( hx-vals="#{CGI.escapeHTML(JSON.generate(values))}") unless values.empty?
           return inject_attributes(html, attrs)
         end
@@ -320,6 +361,35 @@ class Dukafy
         end
         collect_runtimes([:htmx])
         inject_attributes(html, attrs)
+      end
+
+      # Route the form's own submit through htmx as well as the button's click.
+      #
+      # Every `form: true` verb says "submits the form around it", but the
+      # wiring only ever listened for a CLICK. Pressing Enter in a text field
+      # fires `submit` on the <form> instead, which htmx never sees — so the
+      # browser posted natively to the form's own action and navigated away.
+      # On a login form that is not an edge case; Enter is how people sign in.
+      #
+      # htmx cancels the native submit for an annotated button inside a form
+      # (`shouldCancel`), so clicking fires `click` and never `submit` — the
+      # two paths cannot both run.
+      #
+      # Two conditions, both load-bearing:
+      #
+      #  · inside a `base.form` — htmx resolves `from:` eagerly and calls
+      #    `addEventListener` on the result, so `closest form` matching nothing
+      #    throws and kills every other trigger on the element.
+      #
+      #  · on a `base.submit` — the form fires ONE submit event, so every
+      #    listening node acts on it. A sign-in and a create-account button
+      #    sharing a form would both post on Enter, racing each other. The
+      #    real submit button is the unambiguous owner of that event; put the
+      #    secondary verb on a plain button and it stays click-only.
+      def submit_trigger(definition)
+        return "" unless @inside_form && definition.id == "base.submit"
+
+        %( hx-trigger="click, submit from:closest form")
       end
 
       # Insert attributes into the opening tag of `html`, mirroring how
@@ -420,6 +490,41 @@ class Dukafy
         html = %(<div class="dukafy-cart-region dukafy-cart-region--loading"#{cart_region_wiring(node_id, trigger: CART_REGION_LOAD_TRIGGER)}></div>)
         classes = class_names(node)
         classes.any? ? inject_classes(html, classes) : html
+      end
+
+      # A form region is a live area like the cart's, with one deliberate
+      # difference: it BAKES ITS CONTENTS instead of baking an empty shell.
+      #
+      # A cart region has nothing honest to show before it knows the visitor —
+      # a wrong subtotal is worse than none. A form region's contents are the
+      # form itself, which is the same for everybody, so blanking it would make
+      # every login box flash in after load for no gain. The neutral frame (no
+      # error, signed out) is the correct first paint, and `revealed` corrects
+      # it for someone who is already signed in.
+      FORM_REGION_EVENTS =
+        "dukafy:account-updated from:body, dukafy:account-error from:body, " \
+        "dukafy:form-error from:body, dukafy:form-submitted from:body".freeze
+
+      # `revealed` belongs only on the FIRST render. htmx guards it with a
+      # `data-hx-revealed` attribute stamped on the element, and an outerHTML
+      # swap replaces that element with fresh markup carrying no such
+      # attribute — so the guard resets, the new element is already in view,
+      # and it fires again forever. See the cart region for the same trap.
+      FORM_REGION_LOAD_TRIGGER = "revealed, #{FORM_REGION_EVENTS}".freeze
+
+      def form_region_attributes(html, node)
+        node_id = node.fetch("id").to_s
+        return html unless node_id.match?(SAFE_NODE_ID)
+
+        collect_runtimes([:htmx])
+        # `@form` is nil exactly when this is the bake, which is also exactly
+        # when the region has never fetched itself.
+        trigger = @form.nil? ? FORM_REGION_LOAD_TRIGGER : FORM_REGION_EVENTS
+        attrs = %( data-dukafy-form-region="#{node_id}") +
+                %( hx-get="/fragments/form/region?node=#{node_id}") +
+                %( hx-trigger="#{trigger}") +
+                %( hx-swap="outerHTML" aria-live="polite")
+        inject_attributes(html, attrs)
       end
 
       def cart_region_attributes(html, node)
@@ -538,7 +643,7 @@ class Dukafy
       # server-side frames yet, so those tokens are deliberately left verbatim
       # rather than silently blanked — an unresolvable token should look
       # unresolved, not like empty content.
-      TOKEN_SOURCES = %w[currentEntry parentEntry cart payment].freeze
+      TOKEN_SOURCES = %w[currentEntry parentEntry cart payment form].freeze
       TOKEN_PATTERN = /\{(#{TOKEN_SOURCES.join('|')})\.([a-zA-Z0-9_.]+)(?:\|([^}]*))?\}/
 
       # The frame a binding source reads from. Shared by structured
@@ -555,6 +660,10 @@ class Dukafy
         # The in-flight attempt. Only populated where a payment is in scope
         # (the status fragment), so on a baked page these fall back.
         when "payment" then @payment
+        # The last form outcome plus who is signed in. Populated by the form
+        # region's own fragment render; nil on a baked page, where every field
+        # correctly reads as "nothing has happened yet".
+        when "form" then @form
         end
       end
 

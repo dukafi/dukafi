@@ -55,6 +55,7 @@ class Bake
       # region and the hidden half of every condition publish with class
       # attributes and no CSS.
       tailwind_css = @tailwind_compiler.call(
+        site: @state.site,
         html: tailwind_html,
         classes: DeclaredClassNames.call(source_documents, @state.site),
       )
@@ -169,7 +170,11 @@ class Bake
     collector = Dukafy::Publisher::CssCollector.new
     collector.add("page-modules", entry.rendered.css)
     framework = Dukafy::Publisher::FrameworkCss.call(@state.site)
-    bundle = collector.bundle(framework_css: framework, tailwind_css: tailwind_css)
+    bundle = collector.bundle(
+      framework_css: framework, tailwind_css: tailwind_css,
+      fonts_css: Dukafy::Publisher::FontsCss.call(@state.site),
+      style_rules_css: Dukafy::Publisher::StyleRulesCss.call(@state.site)
+    )
 
     File.write(File.join(slot_path, "assets", bundle.filename), bundle.content)
     destination = File.join(slot_path, relative_html)

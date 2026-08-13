@@ -132,7 +132,11 @@
     width: 1440px;
     height: 900px;
     border: 0;
-    background: var(--overlay);
+    /* A storefront page, not admin chrome — see --canvas-page-bg. An embedded
+     * document with no background of its own must land on white here for the
+     * same reason the design frame does. */
+    color-scheme: light;
+    background: var(--canvas-page-bg);
     transform: scale(var(--site-preview-scale));
     transform-origin: left top;
     pointer-events: none;

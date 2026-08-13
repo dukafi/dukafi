@@ -35,4 +35,20 @@ describe('exported schemas are up to date', () => {
       expect(checkedIn(file)).toBe(`${JSON.stringify(schema, null, 2)}\n`)
     })
   }
+
+  // The Google Fonts directory is copied rather than derived, but drifts the
+  // same way: the picker offers families from the editor's copy while the Ruby
+  // installer validates against its own. A family in one and not the other
+  // installs as a 422 the merchant cannot explain.
+  it('google-fonts.json matches the editor snapshot', () => {
+    const source = readFileSync(
+      new URL('../core/fonts/google-fonts.json', import.meta.url).pathname,
+      'utf-8',
+    )
+    const exported = readFileSync(
+      new URL('../../../dukafy/publisher/fonts/google-fonts.json', import.meta.url).pathname,
+      'utf-8',
+    )
+    expect(exported).toBe(source)
+  })
 })

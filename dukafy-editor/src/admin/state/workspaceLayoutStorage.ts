@@ -37,12 +37,10 @@ export interface PanelSize {
 export type FloatingPanelId =
   | 'properties'
   | 'site'
-  | 'selectors'
   | 'colors'
   | 'typography'
   | 'spacing'
   | 'media'
-  | 'dependencies'
   | 'codeeditor'
   | 'agent'
   | 'agentImagePreview'
@@ -71,7 +69,7 @@ export interface StoredWorkspaceLayout {
   /**
    * Workspace-specific identifier of the panel that is open in the left
    * sidebar. Each workspace uses its own id space:
-   *   - site:    'explorer' | 'selectors' | 'framework' | 'dependencies' | ...
+   *   - site:    'explorer' | 'framework' | ...
    *   - content: 'explorer' | 'agent'
    *   - media:   'folders' | 'storage'
    *   - data:    null (the data workspace has a single toggleable panel)

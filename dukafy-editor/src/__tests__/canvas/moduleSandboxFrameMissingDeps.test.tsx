@@ -98,7 +98,10 @@ describe('ModuleSandboxFrame — missing dependency empty state', () => {
     expect(button.closest('[data-canvas-interactive="true"]')).not.toBeNull()
   })
 
-  it('one-click "Add" writes the declared package into site packageJson and opens the panel', () => {
+  // Writing the declaration is all this button does now. It used to also open
+  // the Dependencies panel, which was removed along with the rest of the npm
+  // surface — Dukafy has no resolver behind it (`runtimeAssets: { scripts: [] }`).
+  it('one-click "Add" writes the declared package into site packageJson', () => {
     render(
       <ModuleSandboxFrame
         moduleDefinition={MODULE}
@@ -108,10 +111,8 @@ describe('ModuleSandboxFrame — missing dependency empty state', () => {
       />,
     )
 
-    expect(useEditorStore.getState().dependenciesPanelOpen).toBe(false)
     fireEvent.click(screen.getByTestId('module-sandbox-missing-deps-add'))
     expect(useEditorStore.getState().packageJson.dependencies.three).toBe('^0.169.0')
-    expect(useEditorStore.getState().dependenciesPanelOpen).toBe(true)
   })
 
   it('mounts the iframe once dependencies are installed', () => {

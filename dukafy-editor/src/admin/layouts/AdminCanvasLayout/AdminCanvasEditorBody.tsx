@@ -9,7 +9,6 @@ import { lazy, Suspense } from 'react'
 import { CanvasRoot } from '@admin/pages/site/canvas'
 import { CodeEditorPanel, CodeEditorSkeleton } from '@admin/pages/site/code-editor'
 import { useActiveLivePath } from '@admin/pages/site/hooks/useActiveLivePath'
-import { useAutoResolveDependencies } from '@admin/pages/site/hooks/useAutoResolveDependencies'
 import { LayoutNameDialog } from '@admin/pages/site/dialogs/LayoutNameDialog'
 import { PropertiesPanel } from '@admin/pages/site/panels/PropertiesPanel'
 import { LeftSidebar } from '@admin/pages/site/sidebars/LeftSidebar'
@@ -49,7 +48,6 @@ export function AdminCanvasEditorBody({
 }: AdminCanvasEditorBodyProps) {
   // Keep `siteRuntime.dependencyLock` in lockstep with `packageJson` while
   // the editor body is open.
-  useAutoResolveDependencies()
   // Own the toolbar's "Open live page" target. Resolves templates to the
   // page / post they're previewed against (templates have no routable slug of
   // their own); lives here, in the lazy body, so the CMS fetch it needs for

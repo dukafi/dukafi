@@ -66,7 +66,6 @@ export function ModuleSandboxFrame({
   const selectNode = useEditorStore((s) => s.selectNode)
   const setFocusedPanel = useEditorStore((s) => s.setFocusedPanel)
   const setDependency = useEditorStore((s) => s.setDependency)
-  const setDependenciesPanelOpen = useEditorStore((s) => s.setDependenciesPanelOpen)
   const runtime = moduleDefinition.editorRuntime?.sandbox
 
   // Dependencies the module declares but the site hasn't installed yet.
@@ -124,13 +123,15 @@ export function ModuleSandboxFrame({
     )
   }
 
-  // Importmap not yet populated for this module's runtime deps —
-  // `useAutoResolveDependencies` triggers a fresh resolve in the
-  // background; mount nothing until the URLs land.
+  // Importmap not yet populated for this module's runtime deps. Nothing
+  // resolves them any more — the Dependencies panel and its auto-resolve loop
+  // were removed with the rest of the npm-package surface, which Dukafy has no
+  // backend for (see `runtimeAssets: { scripts: [] }` in admin_api.rb). Only a
+  // plugin module can reach this branch, and plugins are parked post-1.0.
   if (importmapIncomplete && missingDependencies.length === 0) {
     const status = dependencyResolveStatus === 'error'
-      ? 'Dependency resolve failed — open the Dependencies panel to retry.'
-      : 'Resolving runtime packages…'
+      ? 'Could not resolve this module\u2019s runtime packages.'
+      : 'Resolving runtime packages\u2026'
     return (
       <CanvasModulePlaceholder
         className={mcClassName}
@@ -172,7 +173,6 @@ export function ModuleSandboxFrame({
               for (const dep of missingDependencies) {
                 setDependency(dep.name, dep.version, dep.dev)
               }
-              setDependenciesPanelOpen(true)
             }}
           >
             {buttonLabel}

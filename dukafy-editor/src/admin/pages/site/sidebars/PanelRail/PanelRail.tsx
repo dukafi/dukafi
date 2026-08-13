@@ -3,8 +3,6 @@ import { useEditorStore } from '@site/store/store'
 import type { LeftSidebarPanelId } from '@site/store/slices/uiSlice'
 import type { IconComponent } from 'pixel-art-icons/types'
 import { DatabaseSolidIcon } from 'pixel-art-icons/icons/database-solid'
-import { BoxStackSolidIcon } from 'pixel-art-icons/icons/box-stack-solid'
-import { PaintBucketSolidIcon } from 'pixel-art-icons/icons/paint-bucket-solid'
 import { ColorsSwatchSolidIcon } from 'pixel-art-icons/icons/colors-swatch-solid'
 import { Button } from '@ui/components/Button'
 import { assignRailAccents, railTintVar, type RailAccent } from '@ui/railAccent'
@@ -46,18 +44,6 @@ const PRIMARY_RAIL_ITEMS: PrimaryRailItem[] = [
     icon: ColorsSwatchSolidIcon,
     iconName: 'colors-swatch',
   },
-  {
-    id: 'selectors',
-    label: 'Selectors',
-    icon: PaintBucketSolidIcon,
-    iconName: 'paint-bucket',
-  },
-  {
-    id: 'dependencies',
-    label: 'Dependencies',
-    icon: BoxStackSolidIcon,
-    iconName: 'box-stack',
-  },
 ]
 
 interface PanelRailProps {
@@ -78,9 +64,7 @@ export function PanelRail({
   railOnly = false,
 }: PanelRailProps) {
   const explorerOpen = useEditorStore((s) => s.explorerPanelOpen)
-  const selectorsOpen = useEditorStore((s) => s.selectorsPanelOpen)
   const frameworkOpen = useEditorStore((s) => s.frameworkPanelOpen)
-  const dependenciesOpen = useEditorStore((s) => s.dependenciesPanelOpen)
   const activePluginPanelId = useEditorStore((s) => s.activePluginPanelId)
 
   const toggleLeftSidebarPanel = useEditorStore((s) => s.toggleLeftSidebarPanel)
@@ -100,9 +84,7 @@ export function PanelRail({
 
   const panelOpenById = {
     explorer: explorerOpen,
-    selectors: selectorsOpen,
     framework: frameworkOpen,
-    dependencies: dependenciesOpen,
   } satisfies Record<LeftSidebarPanelId, boolean>
 
   // Read-only callers (Viewer / Client) see only the Explorer panel (the

@@ -22,8 +22,6 @@ function resetStore() {
     activePageId: 'page-1',
     frameworkPanelOpen: true,
     frameworkPanelTab: 'colors',
-    selectorsPanelOpen: false,
-    dependenciesPanelOpen: false,
     _historyPast: [],
     _historyFuture: [],
     canUndo: false,

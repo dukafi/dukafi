@@ -23,7 +23,11 @@
    * Pinning `light` here makes the frame behave like a browser opening that
    * page directly, which is the thing the canvas is supposed to be showing.
    * A merchant who authors a dark site still wins: their own background and
-   * colours are painted over this default. */
+   * colours are painted over this default.
+   *
+   * `color-scheme` alone was not enough: the explicit `background` below used
+   * to be `var(--overlay)`, an inverting admin token that resolves to #111827
+   * under the light theme and painted right over this. */
   color-scheme: light;
 
   /* `height` is set imperatively by `IframeFrameSurface` to match the
@@ -39,7 +43,7 @@
    * Once content exceeds the viewport, the measurement loop sets a larger
    * inline `height` and the frame grows to fit. */
   min-height: 100vh;
-  background: var(--overlay);
+  background: var(--canvas-page-bg);
   box-shadow: 0 2px 12px var(--scrim-30);
   /* `overflow: hidden` would clip pop-out chrome inside the iframe (e.g.
    * a sticky nav that overlaps the page bottom). We rely on the iframe's
