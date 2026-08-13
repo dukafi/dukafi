@@ -199,35 +199,6 @@ describe('sanitizeRichtext() in server runtime', () => {
     }
   })
 
-  it('preserves safe richtext through the explicit server sanitizer without DOM globals', () => {
-    const result = Bun.spawnSync({
-      cmd: [
-        process.execPath,
-        '-e',
-        `
-          await import('./server/richtextSanitizer.ts')
-          if ('window' in globalThis || 'document' in globalThis) {
-            throw new Error('server sanitizer installed DOM globals')
-          }
-          const { sanitizeRichtext } = await import('./src/core/sanitize.ts')
-          const sanitized = sanitizeRichtext('<p><strong>Safe</strong> <a href="https://example.com">Link</a></p>')
-          if (!sanitized.includes('<strong>Safe</strong>')) {
-            throw new Error('lost richtext formatting: ' + sanitized)
-          }
-          if (!sanitized.includes('rel="noopener noreferrer"')) {
-            throw new Error('lost safe link attributes: ' + sanitized)
-          }
-        `,
-      ],
-      stdout: 'pipe',
-      stderr: 'pipe',
-    })
-
-    if (result.exitCode !== 0) {
-      const stderr = new TextDecoder().decode(result.stderr)
-      throw new Error(stderr)
-    }
-  })
 })
 
 // ---------------------------------------------------------------------------

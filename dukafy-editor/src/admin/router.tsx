@@ -51,32 +51,12 @@ function withRouteBoundary(element: ReactElement): ReactElement {
 export function AdminRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
-      <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-      <Route path="/admin/dashboard" element={withRouteBoundary(<AdminEntry section="dashboard" />)} />
+      <Route path="/" element={<Navigate to="/admin/site" replace />} />
+      <Route path="/admin" element={<Navigate to="/admin/site" replace />} />
       <Route path="/admin/site" element={withRouteBoundary(<AdminEntry section="site" />)} />
-      <Route path="/admin/content" element={withRouteBoundary(<AdminEntry section="content" />)} />
-      <Route path="/admin/data" element={withRouteBoundary(<AdminEntry section="data" />)} />
       <Route path="/admin/media" element={withRouteBoundary(<AdminEntry section="media" />)} />
       <Route path="/admin/commerce" element={withRouteBoundary(<AdminEntry section="commerce" />)} />
-      <Route path="/admin/plugins" element={withRouteBoundary(<AdminEntry section="plugins" />)} />
-      <Route path="/admin/users" element={withRouteBoundary(<AdminEntry section="users" />)} />
-      <Route path="/admin/ai" element={withRouteBoundary(<AdminEntry section="ai" />)} />
-      <Route path="/admin/ai/oauth/authorize" element={withRouteBoundary(<AdminEntry section="ai" />)} />
-      <Route path="/admin/account" element={withRouteBoundary(<AdminEntry section="account" />)} />
-      <Route
-        path="/admin/plugins/:pluginId/:pageId"
-        element={withRouteBoundary(<AdminEntry section="pluginPage" />)}
-      />
-      {/* Catch-all for ADMIN paths only — an unknown /admin URL (typo, stale
-          deep link, /admin/login) must never render an empty tree.
-          Redirecting to the dashboard shows the login form when
-          unauthenticated and the dashboard otherwise. Deliberately scoped to
-          /admin/*: public-site 404s have their own treatment (the publish
-          pipeline's NotFound template) and must never be swallowed by the
-          admin SPA. MUST stay the last route: <Routes> takes the first match
-          in declaration order. */}
-      <Route path="/admin/*" element={<Navigate to="/admin/dashboard" replace />} />
+      <Route path="/admin/*" element={<Navigate to="/admin/site" replace />} />
     </Routes>
   )
 }

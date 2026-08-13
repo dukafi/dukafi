@@ -1,0 +1,80 @@
+/* PasteBlockModal — paste a block subtree and see what it carries. */
+
+.body {
+    display: grid;
+    gap: var(--space-m);
+}
+
+.label {
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+}
+
+.input {
+    width: 100%;
+    min-height: 220px;
+    padding: var(--space-m);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-m);
+    background: var(--bg-body);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.input:focus-visible {
+    border-color: var(--border-strong);
+    outline: none;
+}
+
+.error {
+    margin: 0;
+    color: var(--text-danger);
+    font-size: var(--font-size-xs);
+}
+
+/* The summary is the whole point of pasting here rather than picking a file:
+   bindings, cart verbs and conditions are invisible in a node tree. */
+.preview {
+    display: grid;
+    gap: var(--space-s);
+    padding: var(--space-m);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-m);
+    background: var(--bg-surface);
+}
+
+.previewTitle {
+    margin: 0;
+    color: var(--text);
+    font-size: var(--font-size-s);
+    font-weight: 600;
+}
+
+.stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-s) var(--space-l);
+    margin: 0;
+}
+
+.stat {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-xs);
+}
+
+.statLabel {
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+}
+
+.statValue {
+    margin: 0;
+    color: var(--text);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+}

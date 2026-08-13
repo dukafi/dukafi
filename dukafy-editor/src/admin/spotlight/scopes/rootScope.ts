@@ -12,7 +12,6 @@
 import type { Scope } from '../types'
 import { getAllCommands } from '../builtinCommands'
 import { pagesProvider } from '../providers/pagesProvider'
-import { contentProvider } from '../providers/contentProvider'
 import { mediaProvider } from '../providers/mediaProvider'
 import { dataProvider } from '../providers/dataProvider'
 import { pluginPagesProvider } from '../providers/pluginPagesProvider'
@@ -23,7 +22,6 @@ export const rootScope: Scope = {
   commands: () => getAllCommands(),
   providers: [
     pagesProvider,
-    contentProvider,
     mediaProvider,
     dataProvider,
     pluginPagesProvider,

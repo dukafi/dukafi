@@ -19,9 +19,8 @@ import styles from './LeftSidebar.module.css'
 
 // Image preparation and provider catalogue code belong to the AI surface, not
 // the editor startup path. A nested boundary lets the sidebar/canvas render as
-// soon as their parent chunk is ready, then loads the always-mounted AgentPanel
 // independently so its local draft survives panel switches after first load.
-type HostedLeftPanelId = Exclude<LeftSidebarPanelId, 'agent'>
+type HostedLeftPanelId = LeftSidebarPanelId
 
 function selectActiveLeftSidebarPanel(
   state: ReturnType<typeof useEditorStore.getState>,
@@ -48,13 +47,11 @@ interface LeftSidebarProps {
    * Falsy callers (Viewer / Client) still see the Explorer panel (Layers /
    * Pages / Media navigation surfaces) — they're not editing tools. The
    * structural Selectors / Framework / Dependencies panels stay hidden. The
-   * Agent panel is controlled separately by `canUseAiChat`.
    *
    * Each panel is responsible for respecting its own read-only state for
    * the interactions it exposes (TreeNode drag, context menus, etc.).
    */
   editable?: boolean
-  canUseAiChat?: boolean
 }
 
 /**
@@ -74,7 +71,6 @@ export function LeftSidebar({
   workspace = 'site',
   railOnly = false,
   editable = true,
-  canUseAiChat = true,
 }: LeftSidebarProps) {
   const sidebarRef = useRef<HTMLElement | null>(null)
   const activePanel = useEditorStore(selectActiveLeftSidebarPanel)
@@ -87,7 +83,7 @@ export function LeftSidebar({
   // hidden-for-them panel active (selectors, colors, …). Plugin panels are
   // editing-only by definition.
   const effectiveActivePanel =
-    activePanel && canShowBuiltInPanel(activePanel, editable, canUseAiChat)
+    activePanel && canShowBuiltInPanel(activePanel, editable)
       ? activePanel
       : editable
         ? null
@@ -148,7 +144,6 @@ export function LeftSidebar({
       <PanelRail
         workspace={workspace}
         editable={editable}
-        canUseAiChat={canUseAiChat}
         railOnly={railOnly}
       />
 
@@ -214,8 +209,6 @@ export function LeftSidebar({
 function canShowBuiltInPanel(
   panel: LeftSidebarPanelId,
   editable: boolean,
-  canUseAiChat: boolean,
 ): boolean {
-  if (panel === 'agent') return canUseAiChat
   return editable || READ_ONLY_RAIL_IDS.has(panel)
 }

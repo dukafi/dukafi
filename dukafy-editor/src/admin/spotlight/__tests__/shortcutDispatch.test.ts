@@ -52,16 +52,6 @@ function layerTreeTarget() {
 }
 
 describe('command shortcut dispatch', () => {
-  it('registers Cmd/Ctrl+I for opening the AI assistant panel', () => {
-    const binding = getKeybindingForCommand('ai.open')
-
-    expect(binding).toBeDefined()
-    expect(binding?.shortcut).toEqual({ mac: '⌘I', win: 'Ctrl+I' })
-    expect(binding?.scope).toBe('panels')
-    expect(binding?.match(eventLike('i', { metaKey: true }))).toBe(true)
-    expect(binding?.match(eventLike('i', { ctrlKey: true }))).toBe(true)
-  })
-
   it('SpotlightRoot dispatches registered command shortcuts beyond Cmd+K', () => {
     const src = readFileSync(SPOTLIGHT_ROOT, 'utf-8')
 
@@ -69,19 +59,6 @@ describe('command shortcut dispatch', () => {
     expect(src).toContain('void runCommand(shortcutCommand)')
   })
 
-  it('resolves Cmd/Ctrl+I to the AI command only when ai.chat is available', () => {
-    const allowed = findMatchingShortcutCommand(
-      eventLike('i', { metaKey: true }) as KeyboardEvent,
-      context(['site.read', 'ai.chat']),
-    )
-    const denied = findMatchingShortcutCommand(
-      eventLike('i', { metaKey: true }) as KeyboardEvent,
-      context(['site.read']),
-    )
-
-    expect(allowed?.id).toBe('ai.open')
-    expect(denied).toBeNull()
-  })
 
   it('resolves canvas clipboard shortcuts only from the canvas focus surface', () => {
     const ctx = context(['site.read'], {

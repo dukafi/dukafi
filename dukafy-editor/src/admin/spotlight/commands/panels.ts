@@ -190,26 +190,6 @@ export function getPanelsCommands(): Command[] {
       },
     },
 
-    // ── AI Assistant panel ───────────────────────────────────────────────────
-    {
-      id: 'panels.toggleAgent',
-      title: 'Toggle AI Assistant panel',
-      subtitle: 'Show or hide the AI assistant panel',
-      group: 'editor',
-      iconName: 'sparkles-solid',
-      keywords: ['panel', 'ai', 'assistant', 'agent', 'claude', 'toggle'],
-      workspaces: ['site'],
-      capability: PANEL_CAPABILITY,
-      run: async (ctx) => {
-        ctx.closeSpotlight()
-        try {
-          const { useEditorStore } = await import('@site/store/store')
-          useEditorStore.getState().toggleLeftSidebarPanel('agent')
-        } catch (err) {
-          console.error('[spotlight] toggleLeftSidebarPanel agent failed:', err)
-        }
-      },
-    },
 
     // ── Properties panel ─────────────────────────────────────────────────────
     {

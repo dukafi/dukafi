@@ -65,7 +65,7 @@ class RuntimeScriptsSpec < Minitest::Test
   end
 
   def test_end_to_end_a_text_page_ships_no_js_and_a_cart_page_ships_htmx
-    # Uses the REAL module registry, so this breaks if store.cart-badge ever
+    # Uses the REAL module registry, so this breaks if a fragment module ever
     # stops declaring its runtime while still emitting hx- attributes.
     text_only = {
       "rootNodeId" => "r",
@@ -79,7 +79,7 @@ class RuntimeScriptsSpec < Minitest::Test
       "rootNodeId" => "r",
       "nodes" => {
         "r" => node("r", "base.body", children: ["b"]),
-        "b" => node("b", "store.cart-badge"),
+        "b" => node("b", "store.stock-badge"),
       },
     }
 
@@ -87,7 +87,9 @@ class RuntimeScriptsSpec < Minitest::Test
     assert_equal [], plain.runtimes
     refute_includes Dukafy::Publisher::HtmlDocument.call(title: "T", body: plain.html, runtimes: plain.runtimes), "<script"
 
-    carted = Dukafy::Publisher::RenderPage.call(document: cart, registry: Dukafy::Publisher::REGISTRY)
+    carted = Dukafy::Publisher::RenderPage.call(
+      document: cart, registry: Dukafy::Publisher::REGISTRY, prefetched: {}
+    )
     assert_equal [:htmx], carted.runtimes
     assert_includes carted.html, "hx-get"
     assert_includes Dukafy::Publisher::HtmlDocument.call(title: "T", body: carted.html, runtimes: carted.runtimes), "htmx.min.js"
@@ -97,7 +99,7 @@ class RuntimeScriptsSpec < Minitest::Test
   # page silently loses its interactivity. This catches the mismatch directly
   # rather than waiting for someone to notice a dead Add-to-cart button.
   def test_every_module_emitting_hx_attributes_declares_the_htmx_runtime
-    %w[store.buy-button store.stock-badge store.cart-badge].each do |module_id|
+    %w[store.buy-button store.stock-badge].each do |module_id|
       document = {
         "rootNodeId" => "r",
         "nodes" => { "r" => node("r", "base.body", children: ["n"]), "n" => node("n", module_id) },

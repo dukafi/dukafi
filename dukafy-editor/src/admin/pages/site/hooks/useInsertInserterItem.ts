@@ -28,6 +28,8 @@ export function useInsertInserterItem() {
   const insertCartScaffold = useEditorStore((s) => s.insertCartScaffold)
   const insertRelationshipLoop = useEditorStore((s) => s.insertRelationshipLoop)
 
+  const openPasteBlockModal = useEditorStore((s) => s.openPasteBlockModal)
+
   const insertVC = (vcId: string, explicitTarget?: InsertLocation): boolean => {
     if (!canvasPage) return false
     // Same target → location resolution as every other insert flow: explicit
@@ -46,6 +48,16 @@ export function useInsertInserterItem() {
     target: InsertLocation | undefined,
     mode: 'click' | 'drop',
   ): boolean => {
+    // Blocks are the one inserter item whose content is not known up front —
+    // it is JSON the author supplies. Opening the paste dialog rather than
+    // inserting means they see what the block carries (bindings, cart verbs,
+    // live regions, conditions) before it lands, none of which is visible in
+    // the canvas afterwards without clicking every node.
+    if (item.kind === 'block') {
+      openPasteBlockModal()
+      return true
+    }
+
     const inserted =
       item.kind === 'module'
         ? Boolean(insertModule(item.module, target))

@@ -4,10 +4,6 @@ import { readFileSync } from 'fs'
 const CANVAS_ROOT = new URL('../../admin/pages/site/canvas/CanvasRoot.tsx', import.meta.url)
 const CANVAS_NOTCH = new URL('../../admin/pages/site/canvas/CanvasNotch.tsx', import.meta.url)
 const CANVAS_NOTCH_CSS = new URL('../../admin/pages/site/canvas/CanvasNotch.module.css', import.meta.url)
-const CANVAS_MODE_TOGGLE_CSS = new URL(
-  '../../admin/pages/site/canvas/CanvasModeToggle.module.css',
-  import.meta.url,
-)
 const SELECTION_OVERLAY_CSS = new URL(
   '../../admin/pages/site/canvas/BreakpointSelectionOverlay.module.css',
   import.meta.url,
@@ -64,19 +60,14 @@ describe('CanvasNotch', () => {
 
   it('stacks above selection overlay chrome', () => {
     const notchCss = readFileSync(CANVAS_NOTCH_CSS, 'utf-8')
-    const modeToggleCss = readFileSync(CANVAS_MODE_TOGGLE_CSS, 'utf-8')
     const overlayCss = readFileSync(SELECTION_OVERLAY_CSS, 'utf-8')
 
     const notchZIndex = zIndexForRule(cssRule(notchCss, '.shell'))
-    const modeToggleZIndex = zIndexForRule(cssRule(modeToggleCss, '.shell'))
     const selectionToolbarZIndex = zIndexForRule(cssRule(overlayCss, '.selectionToolbar'))
     const treeLadderZIndex = zIndexForRule(cssRule(overlayCss, '.treeLadder'))
 
     expect(notchZIndex).toBeGreaterThan(selectionToolbarZIndex)
     expect(notchZIndex).toBeGreaterThan(treeLadderZIndex)
-    expect(modeToggleZIndex).toBe(notchZIndex)
-    expect(modeToggleZIndex).toBeGreaterThan(selectionToolbarZIndex)
-    expect(modeToggleZIndex).toBeGreaterThan(treeLadderZIndex)
   })
 
   it('moves the Add picker out of the top toolbar', () => {

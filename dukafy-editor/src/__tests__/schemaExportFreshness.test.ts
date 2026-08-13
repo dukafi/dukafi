@@ -13,9 +13,7 @@
  */
 import { describe, it, expect } from 'bun:test'
 import { readFileSync } from 'node:fs'
-import { PageSchema } from '@core/page-tree/page'
-import { NodeTreeSchema } from '@core/page-tree/treeSchema'
-import { SiteShellSchema } from '@core/page-tree/siteDocument'
+import { PageSchema, NodeTreeSchema, SiteShellSchema } from '@core/page-tree'
 import { COMMERCE_ENTITIES } from '@core/commerce/entitySchema'
 
 const OUT = new URL('../../../dukafy/publisher/schemas/', import.meta.url).pathname

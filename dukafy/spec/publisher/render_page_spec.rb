@@ -495,7 +495,7 @@ class RenderPageSpec < Minitest::Test
     html = render_region.html
 
     assert_includes html, 'hx-get="/fragments/cart/region?node=r"'
-    assert_includes html, 'hx-trigger="revealed, dukafy:cart-updated from:body"'
+    assert_includes html, 'hx-trigger="revealed, dukafy:cart-updated from:body, dukafy:cart-line-updated from:body"'
     # The subtree is NOT baked: every value in it would be a guess about a
     # visitor the baker has never met.
     refute_includes html, "Items:"
@@ -531,7 +531,7 @@ class RenderPageSpec < Minitest::Test
   # The placeholder is the one element that DOES need it: it swaps itself away
   # the first time it fires, so the trigger cannot recur.
   def test_the_baked_placeholder_still_loads_itself_on_reveal
-    assert_includes render_region.html, 'hx-trigger="revealed, dukafy:cart-updated from:body"'
+    assert_includes render_region.html, 'hx-trigger="revealed, dukafy:cart-updated from:body, dukafy:cart-line-updated from:body"'
   end
 
   # `visibleWhen` — whether a node renders at all. The third overlay, next to
@@ -623,6 +623,57 @@ class RenderPageSpec < Minitest::Test
 
     # No empty wrapper left behind, and the child never rendered.
     assert_equal "", html
+  end
+
+  # Quantity controls on a PRODUCT card. `currentEntry` there is a product —
+  # it has variants, not a sku — so the line verbs used to render as plain,
+  # dead <button>s. `with_cart_facts` now resolves the cart line's sku, and
+  # outside a cart list the verb swaps nothing and lets the region refresh.
+  def stepper_document
+    cond = ->(op) { { "source" => "currentEntry", "field" => "inCart", "operator" => op } }
+    {
+      "rootNodeId" => "b",
+      "nodes" => {
+        "b" => node("b", "base.body", children: ["state"]),
+        "state" => node("state", "base.container", children: %w[add minus])
+                     .merge("actions" => { "region" => "cart" }),
+        "add" => node("add", "base.button", props: { "label" => "Add" })
+                   .merge("visibleWhen" => cond.call("isFalse"),
+                          "actions" => { "click" => { "type" => "cart.addItem", "quantity" => 1 } }),
+        "minus" => node("minus", "base.button", props: { "label" => "-" })
+                     .merge("visibleWhen" => cond.call("isTrue"),
+                            "actions" => { "click" => { "type" => "cart.setQuantity", "delta" => -1 } }),
+      },
+    }
+  end
+
+  def render_stepper(cart)
+    Dukafy::Publisher::RenderPage.call(
+      document: stepper_document, registry: Dukafy::Publisher::REGISTRY,
+      prefetched: { "products" => { "suit" => { "slug" => "suit" } } },
+      cart: cart, current_entry: { "slug" => "suit" }
+    ).html
+  end
+
+  def test_a_quantity_verb_on_a_product_card_resolves_the_cart_line
+    html = render_stepper(
+      "items" => [{ "productSlug" => "suit", "sku" => "main", "quantity" => 2 }],
+      "cart" => { "count" => 2 },
+    )
+
+    assert_includes html, 'hx-post="/fragments/cart/items/update"'
+    assert_includes html, "variant_sku&quot;:&quot;main"
+    # No row to replace outside a cart list — the region refreshes on the event.
+    assert_includes html, 'hx-swap="none"'
+    refute_includes html, "data-dukafy-cart-line"
+  end
+
+  def test_a_quantity_verb_with_nothing_in_the_cart_stays_inert
+    html = render_stepper("items" => [], "cart" => { "count" => 0 })
+
+    # The "add" branch shows instead, and it IS wired.
+    assert_includes html, 'hx-post="/fragments/cart/items"'
+    refute_includes html, "/fragments/cart/items/update"
   end
 
   def test_a_cart_region_requests_the_htmx_runtime_on_both_paths

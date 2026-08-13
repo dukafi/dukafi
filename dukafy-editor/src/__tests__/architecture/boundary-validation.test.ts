@@ -356,7 +356,8 @@ describe('Boundary validation — HTTP and JSON parse boundaries must use TypeBo
   // ── Sanity: scan roots exist and yield files ──────────────────────────────
 
   test('SCAN_ROOTS all resolve to directories containing .ts/.tsx files', () => {
-    const allRoots = [PERSISTENCE_ROOT, ADMIN_ROOT, SERVER_ROOT]
+    // SERVER_ROOT dropped: the Bun server this forked from no longer exists.
+    const allRoots = [PERSISTENCE_ROOT, ADMIN_ROOT]
     for (const root of allRoots) {
       const count = walk(root).length
       if (count === 0) {

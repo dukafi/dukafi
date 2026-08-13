@@ -18,7 +18,6 @@
  *         component was introduced.
  *   §T.2  src/admin/pages/account/AccountPage.tsx — same pre-existing pattern
  *         as §T.1.
- *   §T.3  src/admin/pages/site/canvas/CanvasModeToggle.tsx — design/preview
  *         segmented-control with icon-only tab buttons; predates the Tabs
  *         primitive and uses its own compact CSS layout.
  *   §T.4  src/admin/pages/content/components/ContentModeToggle/ContentModeToggle.tsx
@@ -80,7 +79,6 @@ const EXACT_ALLOWLIST = new Set<string>([
   join(PROJECT_ROOT, 'src/admin/pages/account/AccountPage.tsx'),
   // §T.3 — icon-only design/preview toggle; compact fixed layout incompatible
   // with the full-width underline-indicator Tabs style.
-  join(PROJECT_ROOT, 'src/admin/pages/site/canvas/CanvasModeToggle.tsx'),
   // §T.4 — Content workspace's Write/Live mode switch mirrors the §T.3
   // pattern: icon-only, compact fixed layout that the full-width Tabs
   // style cannot represent.
@@ -177,7 +175,6 @@ describe('No-plugin-tab-shells — role="tablist" must come from the Tabs primit
         `  src/ui/components/Tabs/   (§T.0 — the primitive itself)\n` +
         `  src/admin/pages/users/UsersPage.tsx   (§T.1)\n` +
         `  src/admin/pages/account/AccountPage.tsx   (§T.2)\n` +
-        `  src/admin/pages/site/canvas/CanvasModeToggle.tsx   (§T.3)\n` +
         `  src/admin/pages/content/components/ContentModeToggle/ContentModeToggle.tsx   (§T.4)`,
     )
   })

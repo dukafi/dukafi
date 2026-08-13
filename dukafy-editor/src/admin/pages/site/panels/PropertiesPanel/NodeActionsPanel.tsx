@@ -21,7 +21,47 @@ import { ControlRow } from '@ui/components/ControlRow'
 import { Select } from '@ui/components/Select'
 import { Input } from '@ui/components/Input'
 import { EmptyState } from '@ui/components/EmptyState'
+import { Tooltip } from '@ui/components/Tooltip'
+import { Button } from '@ui/components/Button'
+import { CircleAlertSolidIcon } from 'pixel-art-icons/icons/circle-alert-solid'
 import styles from './NodeActionsPanel.module.css'
+
+/**
+ * The explanatory notes on this panel are long — they have to be, because
+ * "cart region" and "inCart" are not guessable — but three paragraphs of prose
+ * stacked between four selects buries the controls. So the prose lives behind
+ * an affordance next to the label it explains.
+ *
+ * Tooltip wires `role="tooltip"` + `aria-describedby` onto the trigger, and
+ * `openOnFocus` means keyboard users reach the text the same way pointer users
+ * do — the note is the only place this information exists, so it must not be
+ * hover-only.
+ *
+ * The glyph is `circle-alert-solid` because the vendored icon set is a curated
+ * subset (see `scripts/sync-icons.ts`) synced from a private upstream and
+ * carries no dedicated info glyph; muted and small, a circled mark reads as
+ * "there is a note here" rather than as a warning.
+ *
+ * Wrapped in `Tooltip` by hand rather than using `Button`'s own `tooltip`
+ * prop: that path forwards neither `size="wide"` nor `openOnFocus`, and these
+ * notes are long enough to need the wide bubble and important enough to need
+ * to be reachable without a mouse.
+ */
+function HintTip({ label, text }: { label: string; text: string }) {
+  return (
+    <Tooltip content={text} size="wide" openOnFocus>
+      <Button
+        variant="ghost"
+        size="sm"
+        iconOnly
+        aria-label={`About ${label}`}
+        className={styles.hintTip}
+      >
+        <CircleAlertSolidIcon size={12} aria-hidden="true" />
+      </Button>
+    </Tooltip>
+  )
+}
 
 interface NodeActionsPanelProps {
   nodeId: string
@@ -59,6 +99,12 @@ const CONDITION_PRESETS: Array<{ label: string; condition: NodeVisibility }> = [
 ]
 
 const DEFAULT_CONDITION: NodeVisibility = CONDITION_PRESETS[0].condition
+
+const CONDITION_NOTE =
+  'When this is false the element and everything inside it renders nothing at all — '
+  + 'no empty box left behind. Pair two elements with opposite conditions to build an '
+  + 'either/or. Cart conditions need a cart in scope, so put the element inside a node '
+  + 'marked as the Cart live region above — otherwise it always sees an empty cart.'
 
 const REGION_OPTIONS: Array<{ value: '' | NodeRegion; label: string }> = [
   { value: '', label: 'No' },
@@ -197,7 +243,13 @@ export function NodeActionsPanel({ nodeId, actions, visibleWhen, readOnly }: Nod
 
   return (
     <div className={styles.panel}>
-      <ControlRow propKey="node-action" inputId="node-action" label="On click" layout="stacked">
+      <ControlRow
+        propKey="node-action"
+        inputId="node-action"
+        label="On click"
+        layout="stacked"
+        labelSuffix={click ? <HintTip label={`the ${click.type} verb`} text={SCOPE_NOTE[click.type]} /> : undefined}
+      >
         <Select
           id="node-action"
           value={click?.type ?? ''}
@@ -222,20 +274,19 @@ export function NodeActionsPanel({ nodeId, actions, visibleWhen, readOnly }: Nod
 
       {click?.type === 'cart.createOrder' && textField('redirect', 'After ordering, go to', '/thank-you')}
 
-      {click
-        ? <p className={styles.hint}>{SCOPE_NOTE[click.type]}</p>
-        : (
-            <EmptyState
-              title="No interaction"
-              description="Pick a verb to make this element do something. Any element works — a button, a box, an image."
-            />
-          )}
+      {!click && (
+        <EmptyState
+          title="No interaction"
+          description="Pick a verb to make this element do something. Any element works — a button, a box, an image."
+        />
+      )}
 
       <ControlRow
         propKey="node-region"
         inputId="node-region"
         label="Live region"
         layout="stacked"
+        labelSuffix={region ? <HintTip label="live regions" text={REGION_NOTE[region]} /> : undefined}
       >
         <Select
           id="node-region"
@@ -253,12 +304,16 @@ export function NodeActionsPanel({ nodeId, actions, visibleWhen, readOnly }: Nod
         </Select>
       </ControlRow>
 
-      {region && <p className={styles.hint}>{REGION_NOTE[region]}</p>}
-
       <div className={styles.group}>
         <p className={styles.groupTitle}>Show only when</p>
 
-        <ControlRow propKey="node-condition" inputId="node-condition" label="Condition" layout="stacked">
+        <ControlRow
+          propKey="node-condition"
+          inputId="node-condition"
+          label="Condition"
+          layout="stacked"
+          labelSuffix={<HintTip label="render conditions" text={CONDITION_NOTE} />}
+        >
           <Select
             id="node-condition"
             value={visibleWhen ? (activePreset >= 0 ? String(activePreset) : 'custom') : ''}
@@ -336,11 +391,6 @@ export function NodeActionsPanel({ nodeId, actions, visibleWhen, readOnly }: Nod
           </>
         )}
 
-        <p className={styles.hint}>
-          {visibleWhen
-            ? 'When this is false the element and everything inside it renders nothing at all — no empty box left behind. Pair two elements with opposite conditions to build an either/or.'
-            : 'Cart conditions need a cart in scope, so put this element inside a node marked as the Cart live region above — otherwise it always sees an empty cart.'}
-        </p>
       </div>
     </div>
   )

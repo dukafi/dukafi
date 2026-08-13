@@ -63,8 +63,6 @@ beforeEach(() => {
     activePageId: 'page-1',
     activeDocument: null,
     activeBreakpointId: 'desktop',
-    canvasView: 'design',
-    runScripts: false,
     selectedNodeId: null,
     selectedNodeIds: [],
     hoveredNodeId: null,
@@ -129,7 +127,9 @@ describe('canvas frame mounting', () => {
     expect(queryCanvasNodeInFrame('mobile', 'headline')).toBeNull()
   })
 
-  it('hides root iframe overflow in design mode but leaves live mode scrollable', async () => {
+  // Design frames grow to fit their content on the parent canvas, so the
+  // iframe document must never expose its own root scrollbars.
+  it('hides root iframe overflow and grows the frame to its content', async () => {
     render(<CanvasRoot />)
 
     const designDoc = await waitForCanvasFrameDocument('desktop')
@@ -138,16 +138,5 @@ describe('canvas frame mounting', () => {
     expect(designDoc.body.style.minHeight).toBe(`${CANVAS_VIEWPORT_HEIGHT}px`)
     expect(designDoc.documentElement.style.overflow).toBe('hidden')
     expect(designDoc.body.style.overflow).toBe('hidden')
-
-    cleanup()
-    useEditorStore.setState({ canvasView: 'live' } as Parameters<typeof useEditorStore.setState>[0])
-    render(<CanvasRoot />)
-
-    await flushAnimationFrame()
-    const liveDoc = getCanvasFrameDocument('desktop')
-    expect(liveDoc).toBeTruthy()
-    expect(liveDoc!.body.style.minHeight).toBe('')
-    expect(liveDoc!.documentElement.style.overflow).toBe('')
-    expect(liveDoc!.body.style.overflow).toBe('')
   })
 })

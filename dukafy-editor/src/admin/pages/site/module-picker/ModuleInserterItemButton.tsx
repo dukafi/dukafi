@@ -4,6 +4,7 @@ import type {
 } from 'react'
 import type { IconComponent } from 'pixel-art-icons/types'
 import { BracesIcon } from 'pixel-art-icons/icons/braces'
+import { BoxStackSolidIcon } from 'pixel-art-icons/icons/box-stack-solid'
 import { HandGrabSolidIcon } from 'pixel-art-icons/icons/hand-grab-solid'
 import { LayoutSolidIcon } from 'pixel-art-icons/icons/layout-solid'
 import { PackageSolidIcon } from 'pixel-art-icons/icons/package-solid'
@@ -177,6 +178,9 @@ function ItemIcon({ item }: { item: ModuleInserterItem }) {
   }
   if (item.kind === 'commerceScaffold') {
     return <PackageSolidIcon size={13} aria-hidden="true" />
+  }
+  if (item.kind === 'block') {
+    return <BoxStackSolidIcon size={13} aria-hidden="true" />
   }
   const _exhaustive: never = item
   return _exhaustive

@@ -1,0 +1,1 @@
+export { PasteBlockModal } from './PasteBlockModal'

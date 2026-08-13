@@ -151,17 +151,23 @@ class CartLinesSpec < Minitest::Test
     post "/fragments/cart/items", product_slug: "canvas-bag", variant_sku: "BAG-L", quantity: quantity.to_s
   end
 
-  def test_update_sets_an_exact_quantity_and_rerenders_the_merchants_subtree
+  # A quantity change re-renders ONE row, not the whole list, and announces
+  # itself as a LINE update — `dukafy:cart-updated` would make the lines loop
+  # re-fetch itself wholesale and undo the targeted swap.
+  def test_update_sets_an_exact_quantity_and_rerenders_only_that_line
     publish_page!(cart_document)
     add_to_cart(quantity: 2)
 
     post "/fragments/cart/items/update", variant_sku: "BAG-L", quantity: "3", node: "loop"
 
     assert_equal 200, last_response.status
-    assert_equal "dukafy:cart-updated", last_response.headers.fetch("hx-trigger")
+    assert_equal "dukafy:cart-line-updated", last_response.headers.fetch("hx-trigger")
     assert_equal 3, CartItem.first.quantity
     # Absolute, not a delta — and the response is the merchant's own markup.
     assert_includes last_response.body, "<p>$418.50</p>" # 3 x 139.50
+    # One row, carrying its own key — not the enclosing loop.
+    assert_includes last_response.body, 'data-dukafy-cart-line="BAG-L"'
+    refute_includes last_response.body, "dukafy-collection-loop"
   end
 
   def test_update_to_zero_removes_the_line
@@ -199,8 +205,11 @@ class CartLinesSpec < Minitest::Test
     post "/fragments/cart/items/remove", variant_sku: "BAG-L", node: "loop"
 
     assert_equal 200, last_response.status
-    assert_equal "dukafy:cart-updated", last_response.headers.fetch("hx-trigger")
+    assert_equal "dukafy:cart-line-updated", last_response.headers.fetch("hx-trigger")
     assert_equal 0, CartItem.count
+    # Empty body: an outerHTML swap with nothing in it deletes the row, which
+    # is exactly what "this line is gone" should do to the DOM.
+    assert_empty last_response.body
   end
 
   def test_mutations_only_touch_the_callers_own_cart
@@ -227,7 +236,7 @@ class CartLinesSpec < Minitest::Test
     post "/fragments/cart/items/update", variant_sku: "BAG-L", quantity: "1"
 
     assert_equal 200, last_response.status
-    assert_equal "dukafy:cart-updated", last_response.headers.fetch("hx-trigger")
+    assert_equal "dukafy:cart-line-updated", last_response.headers.fetch("hx-trigger")
     assert_equal 1, CartItem.first.quantity
   end
 

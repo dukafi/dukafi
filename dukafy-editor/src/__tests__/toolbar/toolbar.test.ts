@@ -62,38 +62,18 @@ describe('ZoomControls — zoom percentage display', () => {
 })
 
 // ---------------------------------------------------------------------------
-// 1b — Live mode: zoom pinned to 100% and disabled
+// 1b — Zoom controls reflect the stored canvas zoom
 // ---------------------------------------------------------------------------
 
-describe('ZoomControls — live mode', () => {
+describe('ZoomControls', () => {
   // renderToStaticMarkup would render zustand's INITIAL state (server
-  // snapshot) and ignore setState — these two need a live client render.
+  // snapshot) and ignore setState — this needs a live client render.
   beforeEach(() => {
     cleanup()
   })
 
-  it('pins the display to 100% and disables every control with the reason', () => {
-    useEditorStore.setState({ canvasView: 'live', zoom: 0.5 })
-    const { container } = render(React.createElement(ZoomControls))
-
-    // Display ignores the stored design-canvas zoom (50%), which is preserved
-    // for the return to design mode.
-    expect(container.textContent).toContain('100%')
-    expect(container.textContent).not.toContain('50%')
-    // disabled+tooltip renders aria-disabled (not native disabled) so the
-    // explanatory tooltip still shows on hover — the Button primitive's
-    // zero-friction path.
-    const buttons = [...container.querySelectorAll('button')]
-    expect(buttons).toHaveLength(3)
-    for (const button of buttons) {
-      expect(button.getAttribute('aria-disabled')).toBe('true')
-    }
-    // The reason is surfaced accessibly on the % readout, not only on hover.
-    expect(container.innerHTML).toContain('Live mode always shows 100% zoom.')
-  })
-
-  it('keeps the stored design zoom interactive in design mode', () => {
-    useEditorStore.setState({ canvasView: 'design', zoom: 0.5 })
+  it('shows the stored zoom and keeps every control interactive', () => {
+    useEditorStore.setState({ zoom: 0.5 })
     const { container } = render(React.createElement(ZoomControls))
 
     expect(container.textContent).toContain('50%')
@@ -105,9 +85,6 @@ describe('ZoomControls — live mode', () => {
 })
 
 // ---------------------------------------------------------------------------
-// 2 — UndoRedoButtons — WCAG aria-disabled pattern (Guideline #224)
-// ---------------------------------------------------------------------------
-
 describe('UndoRedoButtons — WCAG aria-disabled pattern (Guideline #224)', () => {
   it('aria-disabled buttons must still be in the DOM (no conditional removal)', () => {
     // Structural assertion: both buttons are always rendered regardless of state.

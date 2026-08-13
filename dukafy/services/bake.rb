@@ -50,7 +50,14 @@ class Bake
       tailwind_html = entries.map do |entry|
         %(<body class="#{entry.rendered.body_classes.join(' ')}">#{entry.rendered.html}</body>)
       end.join("\n")
-      tailwind_css = @tailwind_compiler.call(html: tailwind_html)
+      # Rendered markup PLUS every class the source documents declare — see
+      # DeclaredClassNames. Without the second half, the inside of a cart
+      # region and the hidden half of every condition publish with class
+      # attributes and no CSS.
+      tailwind_css = @tailwind_compiler.call(
+        html: tailwind_html,
+        classes: DeclaredClassNames.call(source_documents, @state.site),
+      )
       entries.each { |entry| bake_entry(entry, tailwind_css, slot_path) }
       flip_current(slot_name)
       flipped = true
@@ -130,6 +137,13 @@ class Bake
 
   def render_page(page, prefetched:, current_entry: nil)
     render_document_data(render_document(page), prefetched:, current_entry:)
+  end
+
+  # Documents as authored, before rendering drops conditional branches and
+  # replaces cart regions with placeholders.
+  def source_documents
+    ([@product_template, @collection_template].compact + @pages)
+      .filter_map { |page| render_document(page) }
   end
 
   def render_document(page)

@@ -32,10 +32,7 @@ import { useRef, useEffect, useEffectEvent, useCallback } from 'react'
 import { EditorView, basicSetup } from 'codemirror'
 import { EditorState } from '@codemirror/state'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
-import { javascript } from '@codemirror/lang-javascript'
 import { css } from '@codemirror/lang-css'
-import { json } from '@codemirror/lang-json'
-import { markdown } from '@codemirror/lang-markdown'
 import { html } from '@codemirror/lang-html'
 import { tags as t } from '@lezer/highlight'
 import type { Extension } from '@codemirror/state'
@@ -228,29 +225,17 @@ const readableSyntaxHighlighting = syntaxHighlighting(readableHighlightStyle)
  * lazy-loaded chunk.
  */
 export type CodeLanguage =
-  | 'tsx'
-  | 'ts'
   | 'css'
-  | 'json'
-  | 'markdown'
   | 'html'
   | 'text'
 
 /** Map a `CodeLanguage` to its CM6 language extension(s). */
 function getLanguageExtensions(language: CodeLanguage): Extension[] {
   switch (language) {
-    case 'tsx':
-      return [javascript({ jsx: true, typescript: true })]
-    case 'ts':
-      return [javascript({ typescript: true })]
     case 'css':
       return [css()]
-    case 'json':
-      return [json()]
-    case 'markdown':
-      return [markdown()]
     case 'html':
-      // Used for inline SVG markup (SVG is HTML-compatible XML).
+      // Inline SVG markup (SVG is HTML-compatible XML) and pasted HTML import.
       return [html()]
     case 'text':
     default:

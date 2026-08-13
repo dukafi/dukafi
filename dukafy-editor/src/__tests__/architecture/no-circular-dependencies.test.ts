@@ -20,7 +20,6 @@ describe('Circular dependencies', () => {
         '--extensions',
         'ts,tsx',
         'src',
-        'server',
       ],
       cwd: ROOT,
       stdout: 'pipe',
@@ -31,7 +30,7 @@ describe('Circular dependencies', () => {
     if (result.exitCode !== 0) {
       throw new Error(
         `Circular dependencies found. Run the same command locally for the full graph:\n` +
-          `bun x madge --circular --ts-config tsconfig.json --extensions ts,tsx src server\n\n` +
+          `bun x madge --circular --ts-config tsconfig.json --extensions ts,tsx src\n\n` +
           output,
       )
     }

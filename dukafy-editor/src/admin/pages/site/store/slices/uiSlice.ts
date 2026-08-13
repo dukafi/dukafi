@@ -15,7 +15,6 @@ export type LeftSidebarPanelId =
   | 'selectors'
   | 'framework'
   | 'dependencies'
-  | 'agent'
 /** Tabs inside the consolidated Framework panel. */
 export type FrameworkPanelTab = 'home' | 'colors' | 'typography' | 'spacing'
 /**
@@ -56,8 +55,9 @@ interface PropCodeBuffer {
   propKey: string
   /** Panel title, e.g. "Edit SVG". */
   title: string
-  /** Highlighting language for the buffer. */
-  language: 'html' | 'css' | 'json' | 'ts' | 'tsx' | 'markdown' | 'text'
+  /** Highlighting language. Mirrors `CodeLanguage` in CodeMirrorEditor.tsx —
+   *  kept as a literal union so the store does not import from the UI layer. */
+  language: 'html' | 'css' | 'text'
 }
 
 interface ComponentizeEditorRequest {
@@ -91,7 +91,6 @@ interface UiSlice {
 
   // Preview overlay — toggle from toolbar (Phase 7)
   previewOpen: boolean
-  isAgentOpen: boolean
 
   // Editor-only form state preview, keyed by base.form node id.
   formPreviewStates: Record<string, FormPreviewState>
@@ -260,6 +259,12 @@ interface UiSlice {
   // ─── Import HTML modal ───────────────────────────────────────────────────────
   /** Whether the Import HTML modal is currently open. */
   importHtmlModalOpen: boolean
+  /**
+   * Paste-a-block modal. Carries the insert target chosen when it was opened
+   * (a drop location from the inserter), so the block lands where the author
+   * asked rather than at the current selection by the time they hit Insert.
+   */
+  pasteBlockModalOpen: boolean
   /** Node id of the parent to insert under, or null to use the page root. */
   importHtmlModalParentId: string | null
   /** HTML pre-filled into the textarea when the modal opens. */
@@ -267,6 +272,8 @@ interface UiSlice {
   /** Open the Import HTML modal, optionally targeting a specific parent node
    *  and pre-filling the textarea from the clipboard or a snippet. */
   openImportHtmlModal: (opts?: { parentId?: string; prefillHtml?: string }) => void
+  openPasteBlockModal: () => void
+  closePasteBlockModal: () => void
   /** Close the Import HTML modal and clear its transient state. */
   closeImportHtmlModal: () => void
 
@@ -307,7 +314,6 @@ export const createUiSlice: EditorStoreSliceCreator<UiSlice> = (set, get) => ({
   leftSidebarMode: 'docked',
   focusedPanel: 'canvas',
   previewOpen: false,
-  isAgentOpen: false,
   formPreviewStates: {},
   insertPickerOpen: false,
   insertPickerParentId: null,
@@ -330,6 +336,7 @@ export const createUiSlice: EditorStoreSliceCreator<UiSlice> = (set, get) => ({
   highlightedSelectorClassId: null,
   selectedSelectorClassIds: [],
   importHtmlModalOpen: false,
+  pasteBlockModalOpen: false,
   importHtmlModalParentId: null,
   importHtmlModalPrefill: '',
 
@@ -449,10 +456,6 @@ export const createUiSlice: EditorStoreSliceCreator<UiSlice> = (set, get) => ({
 
   setLeftSidebarPanel: (panel) =>
     set((state) => {
-      if (panel === 'agent') {
-        state.isAgentOpen = true
-        return
-      }
       state.explorerPanelOpen = panel === 'explorer'
       state.selectorsPanelOpen = panel === 'selectors'
       state.frameworkPanelOpen = panel === 'framework'
@@ -462,12 +465,6 @@ export const createUiSlice: EditorStoreSliceCreator<UiSlice> = (set, get) => ({
     }),
 
   toggleLeftSidebarPanel: (panel) => {
-    if (panel === 'agent') {
-      set((state) => {
-        state.isAgentOpen = !state.isAgentOpen
-      })
-      return
-    }
     // Account for the plugin-panel-takes-precedence rule in
     // getActiveLeftSidebarPanel: if a plugin panel is currently active
     // and the user clicks a built-in rail item, that should open the
@@ -606,6 +603,10 @@ export const createUiSlice: EditorStoreSliceCreator<UiSlice> = (set, get) => ({
 
   closeImportHtmlModal: () =>
     set({ importHtmlModalOpen: false, importHtmlModalParentId: null, importHtmlModalPrefill: '' }),
+
+  openPasteBlockModal: () => set({ pasteBlockModalOpen: true }),
+
+  closePasteBlockModal: () => set({ pasteBlockModalOpen: false }),
 
   openPageInCanvas: (pageId) =>
     // Atomic: clear VC mode + switch to the target page in one store write.

@@ -11,10 +11,7 @@
  * for the rationale.
  *
  * BreakpointFrame is the design-canvas frame (one per breakpoint, panned and
- * zoomed together). Live mode renders a single real-size frame in its own
- * surface (CanvasLiveSurface) using the same `IframeFrameSurface` with
- * `interaction="live"`. Both can run the site's runtime scripts when the
- * "Run scripts" toggle is on — see `runtimeScripts`.
+ * zoomed together) — the single editing surface.
  */
 
 import { useRef, useState, type CSSProperties } from 'react'
@@ -25,10 +22,8 @@ import { BreakpointSelectionOverlay } from './BreakpointSelectionOverlay'
 import { PeerPresenceOverlay } from './PeerPresenceOverlay'
 import { CanvasBreakpointContext, CanvasTemplateContext } from './CanvasContexts'
 import { IframeFrameSurface, type IframeFrameSurfaceHandle } from './IframeFrameSurface'
-import type { InjectableRuntimeScript } from './useRuntimeScriptBuild'
 import { Button } from '@ui/components/Button'
 import { CursorTooltip, type CursorTooltipPoint } from '@ui/components/Tooltip'
-import { ArrowsScaleIcon } from 'pixel-art-icons/icons/arrows-scale'
 import { EyeSolidIcon } from 'pixel-art-icons/icons/eye-solid'
 import { EyeOffSolidIcon } from 'pixel-art-icons/icons/eye-off-solid'
 import { cn } from '@ui/cn'
@@ -46,8 +41,6 @@ interface BreakpointFrameProps {
   activationHintEnabled?: boolean
   onActivate: (breakpointId: string) => void
   templateContext?: TemplateRenderDataContext
-  /** Opt-in runtime scripts injected into this frame; empty/undefined = none. */
-  runtimeScripts?: InjectableRuntimeScript[]
 }
 
 export function BreakpointFrame({
@@ -58,7 +51,6 @@ export function BreakpointFrame({
   activationHintEnabled = false,
   onActivate,
   templateContext,
-  runtimeScripts,
 }: BreakpointFrameProps) {
   // --bp-width drives both label width and viewport width via CSS (dynamic value)
   const bpStyle = { '--bp-width': `${breakpoint.width}px` } as CSSProperties
@@ -84,18 +76,11 @@ export function BreakpointFrame({
   const openPageInCanvas = useEditorStore((s) => s.openPageInCanvas)
   const setActiveDocument = useEditorStore((s) => s.setActiveDocument)
 
-  // Per-frame chrome actions: open this breakpoint in live mode, and collapse
-  // the frame to its slim header so not every breakpoint renders at once. The
-  // collapsed set is ephemeral editor state (see canvasSlice).
-  const setCanvasView = useEditorStore((s) => s.setCanvasView)
-  const setActiveBreakpoint = useEditorStore((s) => s.setActiveBreakpoint)
+  // Per-frame chrome: collapse the frame to its slim header so not every
+  // breakpoint renders at once. Ephemeral editor state (see canvasSlice).
   const toggleBreakpointCollapsed = useEditorStore((s) => s.toggleBreakpointCollapsed)
   const isCollapsed = useEditorStore((s) => s.collapsedBreakpointIds.includes(breakpoint.id))
 
-  const handleOpenLive = () => {
-    setActiveBreakpoint(breakpoint.id)
-    setCanvasView('live')
-  }
   const handleToggleCollapsed = () => toggleBreakpointCollapsed(breakpoint.id)
   const handleReadonlyOpen = (kind: 'page' | 'component', id: string) => {
     if (kind === 'component') {
@@ -177,17 +162,6 @@ export function BreakpointFrame({
             variant="ghost"
             size="sm"
             iconOnly
-            onClick={handleOpenLive}
-            tooltip={`Open ${breakpoint.label} in live mode`}
-            aria-label={`Open ${breakpoint.label} breakpoint in live mode`}
-            data-testid={`canvas-frame-live-${breakpoint.id}`}
-          >
-            <ArrowsScaleIcon size={14} aria-hidden="true" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            iconOnly
             pressed={isCollapsed}
             onClick={handleToggleCollapsed}
             tooltip={isCollapsed ? `Show ${breakpoint.label} frame` : `Collapse ${breakpoint.label} frame`}
@@ -227,7 +201,6 @@ export function BreakpointFrame({
           onCursorMove={handleFrameCursorMove}
           onCursorLeave={handleFrameCursorLeave}
           onReadonlyOpen={handleReadonlyOpen}
-          runtimeScripts={runtimeScripts}
         >
           <CanvasTemplateContext.Provider value={templateContext}>
             <CanvasBreakpointContext.Provider value={breakpoint.id}>

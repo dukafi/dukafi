@@ -14,6 +14,7 @@ import type {
   DukafyPageExportFile,
   DynamicPropBinding,
   NodeAction,
+  NodeRegion,
   NodeVisibility,
   ExplorerPathChangePlan,
   Page,

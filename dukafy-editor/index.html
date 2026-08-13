@@ -4,37 +4,9 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Instatic</title>
+    <title>Dukafy</title>
 
-    <!--
-      Plugin-runtime import map.
-
-      Plugin bundles externalize the names below (`react`, `react-dom`,
-      `react/jsx-runtime`, `@instatic/host-ui`, `@instatic/host-hooks`,
-      `@instatic/plugin-sdk`) so they don't ship their own React or design
-      system. At runtime, the browser resolves those bare specifiers through
-      this import map to the static shim files in `public/runtime/*.js`,
-      which re-export from `globalThis.__instatic` — the live host
-      instances populated by `src/admin/pluginRuntimeBootstrap.ts`.
-
-      Note: import maps must appear BEFORE the first ES module script that
-      depends on them. They're parsed eagerly; any later module-script
-      element with bare-specifier imports uses the map verbatim.
-    -->
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "/runtime/react.js",
-        "react/jsx-runtime": "/runtime/react-jsx-runtime.js",
-        "react/jsx-dev-runtime": "/runtime/react-jsx-dev-runtime.js",
-        "react-dom": "/runtime/react-dom.js",
-        "@instatic/host-ui": "/runtime/host-ui.js",
-        "@instatic/host-hooks": "/runtime/host-hooks.js",
-        "@instatic/plugin-sdk": "/runtime/plugin-sdk.js"
-      }
-    }
-    </script>
-    <style data-initial-loader>
+        <style data-initial-loader>
       html,
       body,
       #root {
@@ -468,7 +440,7 @@
   </head>
   <body>
     <div id="root">
-      <div class="loading" role="status" aria-busy="true" aria-label="Loading Instatic">
+      <div class="loading" role="status" aria-busy="true" aria-label="Loading Dukafy">
         <div class="loader" data-initial-loader-spinner="true" aria-hidden="true">
           <div class="box"></div>
           <div class="box"></div>

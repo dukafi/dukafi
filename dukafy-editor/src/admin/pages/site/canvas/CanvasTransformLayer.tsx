@@ -14,7 +14,6 @@ import { DEFAULT_BREAKPOINTS, type Page, type Breakpoint } from '@core/page-tree
 import type { TemplateRenderDataContext } from '@core/templates/dynamicBindings'
 import { BreakpointFrame } from './BreakpointFrame'
 import { CanvasFrameSkeletonFrame } from '@admin/shared/CanvasFrameSkeleton'
-import type { InjectableRuntimeScript } from './useRuntimeScriptBuild'
 import styles from './CanvasTransformLayer.module.css'
 
 interface CanvasTransformLayerProps {
@@ -26,7 +25,6 @@ interface CanvasTransformLayerProps {
   onBreakpointActivate: (id: string) => void
   templateContext?: TemplateRenderDataContext
   /** Opt-in runtime scripts injected into every frame; empty/undefined = none. */
-  runtimeScripts?: InjectableRuntimeScript[]
   /** React 19: ref is a regular prop on function components. */
   ref?: Ref<HTMLDivElement>
 }
@@ -39,7 +37,6 @@ export function CanvasTransformLayer({
   activationHintEnabled = false,
   onBreakpointActivate,
   templateContext,
-  runtimeScripts,
   ref,
 }: CanvasTransformLayerProps) {
   const framedBreakpoints: Breakpoint[] = []
@@ -79,7 +76,6 @@ export function CanvasTransformLayer({
             activationHintEnabled={activationHintEnabled}
             onActivate={onBreakpointActivate}
             templateContext={templateContext}
-            runtimeScripts={runtimeScripts}
           />
         ))
       ) : (

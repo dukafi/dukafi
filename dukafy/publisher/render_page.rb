@@ -14,11 +14,11 @@ class Dukafy
       # cart is per-visitor, so a `cartItems` loop bakes as an htmx placeholder
       # and only renders real lines when the fragment endpoint re-renders that
       # same subtree with a cart in hand.
-      def self.call(document:, registry:, prefetched: {}, breakpoint_id: nil, site: nil, query_params: {}, current_entry: nil, cart: nil, payment: nil)
-        new(document, registry, prefetched, breakpoint_id, site, query_params, current_entry, cart, payment).call
+      def self.call(document:, registry:, prefetched: {}, breakpoint_id: nil, site: nil, query_params: {}, current_entry: nil, cart: nil, payment: nil, cart_loop_id: nil)
+        new(document, registry, prefetched, breakpoint_id, site, query_params, current_entry, cart, payment, cart_loop_id).call
       end
 
-      def initialize(document, registry, prefetched, breakpoint_id, site, query_params, current_entry, cart = nil, payment = nil)
+      def initialize(document, registry, prefetched, breakpoint_id, site, query_params, current_entry, cart = nil, payment = nil, cart_loop_id = nil)
         @document = document
         @registry = registry
         @prefetched = prefetched
@@ -38,6 +38,9 @@ class Dukafy
         @current_product = current_entry
         @payment = payment
         @payment_region_id = nil
+        # Set when re-rendering ONE cart line standalone: the row's own +/-/
+        # remove buttons carry the loop id, and without it they render inert.
+        @cart_loop_id = cart_loop_id
         @css = CssCollector.new
         @visiting = {}
         @body_classes = []
@@ -152,7 +155,8 @@ class Dukafy
           # a nested loop's children can still resolve product-bound props.
           @current_product = source_entity(source) == "product" ? item : previous_product
           begin
-            render_node(child_ids[(child_cycle_offset + index) % child_ids.length])
+            row = render_node(child_ids[(child_cycle_offset + index) % child_ids.length])
+            source.start_with?("cart.") ? cart_line_key(row, item) : row
           ensure
             @entry_stack.pop
             @current_product = previous_product
@@ -279,20 +283,39 @@ class Dukafy
           return inject_attributes(html, attrs)
         end
 
-        # Line verbs are only meaningful inside a cart loop — that's where the
-        # SKU comes from. Outside one, render the node inert rather than
-        # emitting a request that could never resolve a target.
-        sku = current_entry.is_a?(Hash) ? current_entry["sku"].to_s : ""
-        return html if sku.empty? || @cart_loop_id.nil?
+        # A line verb needs to know WHICH line. Two ways to know:
+        #
+        #  · inside a cart loop, `currentEntry` IS the line and carries `sku`
+        #  · on a product card, `currentEntry` is a product — no sku of its
+        #    own, but `with_cart_facts` resolved `cartSku` from the cart
+        #
+        # Without the second case a quantity stepper on a product card
+        # rendered as a plain, dead <button>.
+        entry = current_entry.is_a?(Hash) ? current_entry : {}
+        sku = entry["sku"].to_s
+        sku = entry["cartSku"].to_s if sku.empty?
+        # Nothing in the cart to act on — inert beats a request that cannot
+        # resolve a line.
+        return html if sku.empty?
 
-        values = { "variant_sku" => sku, "node" => @cart_loop_id }
+        values = { "variant_sku" => sku }
+        values["node"] = @cart_loop_id if @cart_loop_id
         spec[:fields].each do |field|
           next unless action.key?(field)
 
           number = Integer(action[field].to_s, exception: false)
           values[field] = number.to_s if number
         end
-        attrs = %( hx-post="#{spec[:path]}" hx-vals="#{CGI.escapeHTML(JSON.generate(values))}" hx-target="closest .dukafy-collection-loop" hx-swap="outerHTML")
+        attrs = %( hx-post="#{spec[:path]}" hx-vals="#{CGI.escapeHTML(JSON.generate(values))}")
+        attrs += if @cart_loop_id
+          # In a cart list: swap just this row (see `cart_line_fragment`).
+          %( hx-target="closest [data-dukafy-cart-line]" hx-swap="outerHTML")
+        else
+          # Outside a list there is no row to replace. Swap nothing and let the
+          # `dukafy:cart-line-updated` event the endpoint fires bring the
+          # enclosing cart region back with the new state.
+          %( hx-swap="none")
+        end
         collect_runtimes([:htmx])
         inject_attributes(html, attrs)
       end
@@ -320,6 +343,26 @@ class Dukafy
       end
 
       SAFE_NODE_ID = /\A[A-Za-z0-9_-]{1,64}\z/
+      SAFE_SKU = /\A[A-Za-z0-9._-]{1,64}\z/
+
+      # Stamp a CART line with its own identity. Cart-only on purpose: a
+      # variant row also carries a `sku`, and a variants loop rendering
+      # `<option>`s has no mutation path — stamping those would be noise in the
+      # markup and, in a `<select>`, noise the browser has to carry.
+      #
+      # Loop rows are otherwise anonymous <div>s, so the only way to update one
+      # was to re-render the WHOLE list — every row rebuilt to change a single
+      # quantity, losing focus and scroll position with it. The SKU is the
+      # natural key: unique within a cart, already what the mutation endpoints
+      # take, and stable across re-renders.
+      def cart_line_key(html, item)
+        return html unless item.is_a?(Hash)
+
+        sku = item["sku"].to_s
+        return html unless sku.match?(SAFE_SKU)
+
+        inject_attributes(html, %( data-dukafy-cart-line="#{CGI.escapeHTML(sku)}"))
+      end
 
       def cart_region?(node)
         node.dig("actions", "region").to_s == "cart"
@@ -360,8 +403,8 @@ class Dukafy
           %( hx-swap="outerHTML" aria-live="polite")
       end
 
-      CART_REGION_LOAD_TRIGGER = "revealed, dukafy:cart-updated from:body".freeze
-      CART_REGION_LIVE_TRIGGER = "dukafy:cart-updated from:body".freeze
+      CART_REGION_LOAD_TRIGGER = "revealed, dukafy:cart-updated from:body, dukafy:cart-line-updated from:body".freeze
+      CART_REGION_LIVE_TRIGGER = "dukafy:cart-updated from:body, dukafy:cart-line-updated from:body".freeze
 
       # Baked stand-in for a cart region: the node's own classes so layout does
       # not collapse, and nothing else. The subtree is deliberately NOT
@@ -541,12 +584,21 @@ class Dukafy
         return item unless @cart.is_a?(Hash) && item.is_a?(Hash)
 
         lines = @cart["items"] || []
+        # The SKU of the cart line this entity resolves to, so the quantity
+        # verbs work on a PRODUCT card too — there `currentEntry` is a product,
+        # which has variants rather than a sku, and without this the -/+/remove
+        # buttons rendered inert.
+        matched_sku = nil
         quantity = case entity
         when "product"
           slug = item["slug"].to_s
           return item if slug.empty?
 
-          lines.sum { |line| line["productSlug"].to_s == slug ? line["quantity"].to_i : 0 }
+          mine = lines.select { |line| line["productSlug"].to_s == slug }
+          # A product with several variants in the cart has several lines; the
+          # first is the only unambiguous choice from a product alone.
+          matched_sku = mine.first&.fetch("sku", nil)
+          mine.sum { |line| line["quantity"].to_i }
         when "variant"
           sku = item["sku"].to_s
           return item if sku.empty?
@@ -558,7 +610,9 @@ class Dukafy
           return item
         end
 
-        item.merge("cartQuantity" => quantity, "inCart" => quantity.positive?)
+        facts = { "cartQuantity" => quantity, "inCart" => quantity.positive? }
+        facts["cartSku"] = matched_sku if matched_sku
+        item.merge(facts)
       end
 
       # Walk a dotted field path through a frame. One implementation, because

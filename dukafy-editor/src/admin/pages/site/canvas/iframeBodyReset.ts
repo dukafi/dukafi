@@ -17,17 +17,12 @@ import { CANVAS_VIEWPORT_HEIGHT } from './resolveViewportUnits'
  *   forwarded to the parent for pan/zoom, the iframe grows to its content
  *   height (no inner scrollbar), and the canvas-chrome CSS neutralises
  *   cursors / text selection so the frame reads as a click-to-select preview.
- * - 'live': a single real-size frame. The iframe is its own scroll viewport
- *   (published height behaviour), real cursors and text selection apply, and
- *   no events are forwarded — there is nothing to pan.
  */
-export type IframeInteraction = 'canvas' | 'live'
 
 /**
  * Inline declarations owned by the design-frame sizing contract. Authored
- * body styles still publish normally and apply in live mode, but these fields
- * cannot replace the design iframe's grow-to-content/scrollbar reset after it
- * has mounted.
+ * body styles still publish normally, but these fields cannot replace the
+ * design iframe's grow-to-content/scrollbar reset after it has mounted.
  */
 export const CANVAS_BODY_RESET_PROPERTIES = new Set([
   'height',
@@ -64,20 +59,9 @@ const CANVAS_CHROME_CSS = [
 export function applyIframeBodyReset(
   iframeDoc: Document,
   breakpointId: string,
-  interaction: IframeInteraction,
 ): void {
   iframeDoc.body.setAttribute('data-breakpoint-id', breakpointId)
-  iframeDoc.body.dataset.instaticIframeInteraction = interaction
-  // Live frames render the page exactly as published: html/body keep the
-  // `:where(html, body) { height: 100% }` reset (the iframe is the scroll
-  // viewport, short pages still fill it), and the canvas-chrome CSS
-  // (cursor / user-select / nested-iframe overrides) is NOT applied — real
-  // cursors, text selection, and embedded iframes behave like the live site.
-  if (interaction === 'live') {
-    iframeDoc.documentElement.style.height = ''
-    iframeDoc.documentElement.style.overflow = ''
-    return
-  }
+  iframeDoc.body.dataset.instaticIframeInteraction = 'canvas'
   iframeDoc.documentElement.style.height = 'auto'
   iframeDoc.body.style.height = 'auto'
   iframeDoc.body.style.minHeight = `${CANVAS_VIEWPORT_HEIGHT}px`

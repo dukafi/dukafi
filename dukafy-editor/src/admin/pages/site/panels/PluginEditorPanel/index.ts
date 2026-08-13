@@ -1,1 +1,0 @@
-export { PluginEditorPanel } from './PluginEditorPanel'

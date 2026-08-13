@@ -62,7 +62,7 @@ interface AdminEntryProps {
   section?: AdminSection
 }
 
-export default function AdminEntry({ section = 'dashboard' }: AdminEntryProps) {
+export default function AdminEntry({ section = 'site' }: AdminEntryProps) {
   useEditorAppearancePreferences()
   const boot = useAdminBoot()
   const [override, setOverride] = useState<PreAuthOverride | null>(null)

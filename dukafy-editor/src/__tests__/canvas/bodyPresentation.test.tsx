@@ -40,7 +40,6 @@ beforeEach(() => {
     activeDocument: null,
     activeBreakpointId: 'desktop',
     activeConditionId: null,
-    canvasView: 'design',
     collapsedBreakpointIds: [],
     selectedNodeId: null,
     selectedNodeIds: [],
@@ -202,36 +201,6 @@ describe('canvas iframe body presentation', () => {
     })
   })
 
-  it('keeps authored root sizing and overflow in the live published-behaviour frame', async () => {
-    const root = bodyNode('page-root', [], 'rgb(20, 24, 32)')
-    root.inlineStyles = {
-      ...root.inlineStyles,
-      height: '40px',
-      minHeight: '10px',
-      overflow: 'scroll',
-    }
-    const page = makePage({
-      id: 'page',
-      rootNodeId: root.id,
-      nodes: { [root.id]: root },
-    })
-
-    useEditorStore.setState({
-      site: makeSite({ pages: [page] }),
-      activePageId: page.id,
-      canvasView: 'live',
-    } as Parameters<typeof useEditorStore.setState>[0])
-
-    renderCanvas()
-    const frameDocument = await waitForCanvasFrameDocument('desktop')
-
-    await waitFor(() => {
-      expect(frameDocument.body.style.backgroundColor).toBe('rgb(20, 24, 32)')
-      expect(frameDocument.body.style.height).toBe('40px')
-      expect(frameDocument.body.style.minHeight).toBe('10px')
-      expect(frameDocument.body.style.overflow).toBe('scroll')
-    })
-  })
 
   it('uses the outer wrapper body class and inline background, matching publisher ownership', async () => {
     const outerBodyClass: StyleRule = {

@@ -14,26 +14,6 @@ interface AgentSnapshotCaptureRequest {
   breakpointId: string
 }
 
-/**
- * Canvas render mode.
- *
- * - 'design': the multi-breakpoint editing canvas — every breakpoint frame is
- *   shown side-by-side with pan/zoom. Fully reactive to property edits.
- * - 'live': a single editable frame at 100% (fluid full-width, optionally
- *   clamped to a breakpoint width) with normal vertical scrolling, like a
- *   conventional visual editor's live view. It reuses the SAME editable iframe
- *   the design canvas uses (React-rendered node tree), so selection, the
- *   properties panel, and structural edits all keep working — it is not a
- *   read-only preview.
- *
- * Both views render the editable node tree; `live` just drops the infinite
- * canvas (pan/zoom, multiple frames) in favour of a single, real-size frame.
- * Whether the site's runtime scripts also execute inside the editable frames
- * is governed by the orthogonal `runScripts` flag below — it applies to both
- * views.
- */
-type CanvasView = 'design' | 'live'
-
 interface CanvasSlice {
   zoom: number
   panX: number
@@ -58,16 +38,6 @@ interface CanvasSlice {
   previousActivePageId: string | null
   /** Current editor interaction mode */
   canvasMode: CanvasMode
-  /** Current canvas render mode — 'design' (multi-breakpoint canvas) or 'live' (single real-size editable frame) */
-  canvasView: CanvasView
-  /**
-   * When true, the site's runtime scripts are bundled and injected into the
-   * editable canvas iframes (both 'design' and 'live' views), so authored
-   * behaviour runs in-place while the page stays editable. Opt-in (default
-   * off): scripts mutate the same DOM React renders, so a Refresh re-runs them
-   * after edits that React reconciles away.
-   */
-  runScripts: boolean
   /**
    * Breakpoint IDs whose design-canvas frame is collapsed to a slim header
    * (heavy iframe dropped) so the author can avoid rendering every breakpoint
@@ -92,9 +62,6 @@ interface CanvasSlice {
   setActiveConditionId: (id: string | null) => void
   setActivePage: (pageId: string) => void
   setCanvasMode: (mode: CanvasMode) => void
-  setCanvasView: (view: CanvasView) => void
-  /** Toggle (or set) whether runtime scripts run inside the editable iframes. */
-  setRunScripts: (run: boolean) => void
   /** Toggle whether a breakpoint's design-canvas frame is collapsed to its slim header. */
   toggleBreakpointCollapsed: (id: string) => void
   /** Mount or release the agent's one-shot offscreen snapshot frame. */
@@ -128,8 +95,6 @@ export const createCanvasSlice: EditorStoreSliceCreator<CanvasSlice> = (set, get
   activePageId: null,
   previousActivePageId: null,
   canvasMode: 'select',
-  canvasView: 'design',
-  runScripts: false,
   collapsedBreakpointIds: [],
   agentSnapshotCaptureRequest: null,
 
@@ -152,10 +117,6 @@ export const createCanvasSlice: EditorStoreSliceCreator<CanvasSlice> = (set, get
   setActivePage: (pageId) => set({ activePageId: pageId }),
 
   setCanvasMode: (mode) => set({ canvasMode: mode }),
-
-  setCanvasView: (view) => set({ canvasView: view }),
-
-  setRunScripts: (run) => set({ runScripts: run }),
 
   toggleBreakpointCollapsed: (id) => set((s) => {
     const idx = s.collapsedBreakpointIds.indexOf(id)

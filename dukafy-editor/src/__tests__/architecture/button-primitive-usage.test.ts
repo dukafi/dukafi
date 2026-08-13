@@ -95,7 +95,6 @@ const ALLOWLIST = new Set([
   // Button's token-driven sizing would distort the segmented-toggle look.
   // The same pill also hosts the Run-scripts toggle + Refresh and the inline
   // breakpoint switcher, which share the 22px icon-tab geometry.
-  'admin/pages/site/canvas/CanvasModeToggle.tsx',
   // Content workspace's Write / Live mode switch — mirrors the canvas
   // mode toggle's segmented pill pattern and shares the same constraints.
   'admin/pages/content/components/ContentModeToggle/ContentModeToggle.tsx',

@@ -11,7 +11,7 @@
  * never an interactive control that silently does nothing. (Wheel/keyboard
  * zoom is already gated off in live mode by useCanvas's `enabled` flag.)
  *
- * Performance: subscribes only to `zoom` + `canvasView` — no re-render when
+ * Performance: subscribes only to `zoom` — no re-render when
  * other canvas state changes.
  *
  * Keyboard shortcuts (handled in useCanvas, documented here for screen readers):
@@ -43,12 +43,9 @@ function getCanvasCenter(): { x: number; y: number } | null {
   return { x: rect.width / 2, y: rect.height / 2 }
 }
 
-const LIVE_ZOOM_REASON = 'Live mode always shows 100% zoom.'
-
 export function ZoomControls() {
-  // Subscribe only to zoom + view — no re-render when other canvas state changes
+  // Subscribe only to zoom — no re-render when other canvas state changes
   const zoom = useEditorStore((s) => s.zoom)
-  const isLive = useEditorStore((s) => s.canvasView === 'live')
   const zoomIn = useEditorStore((s) => s.zoomIn)
   const zoomOut = useEditorStore((s) => s.zoomOut)
   const resetView = useEditorStore((s) => s.resetView)
@@ -65,9 +62,7 @@ export function ZoomControls() {
     else zoomOut()
   }
 
-  // The live frame renders real-size regardless of the stored design-canvas
-  // zoom, which is preserved for the return to design view.
-  const pct = isLive ? 100 : Math.round(zoom * 100)
+  const pct = Math.round(zoom * 100)
 
   return (
     <div
@@ -83,8 +78,7 @@ export function ZoomControls() {
         iconOnly
         aria-label="Zoom out"
         aria-keyshortcuts="-"
-        tooltip={isLive ? LIVE_ZOOM_REASON : 'Zoom out (−)'}
-        disabled={isLive}
+        tooltip="Zoom out (−)"
         onClick={handleZoomOut}
       >
         <MinusIcon size={14} />
@@ -94,9 +88,8 @@ export function ZoomControls() {
       <Button
         variant="ghost"
         size="sm"
-        aria-label={isLive ? LIVE_ZOOM_REASON : `Current zoom ${pct}%. Click to reset to 100%.`}
-        tooltip={isLive ? LIVE_ZOOM_REASON : 'Reset to 100% (Cmd/Ctrl+0)'}
-        disabled={isLive}
+        aria-label={`Current zoom ${pct}%. Click to reset to 100%.`}
+        tooltip="Reset to 100% (Cmd/Ctrl+0)"
         onClick={resetView}
         numeric
         className={styles.zoomPct}
@@ -111,8 +104,7 @@ export function ZoomControls() {
         iconOnly
         aria-label="Zoom in"
         aria-keyshortcuts="="
-        tooltip={isLive ? LIVE_ZOOM_REASON : 'Zoom in (+)'}
-        disabled={isLive}
+        tooltip="Zoom in (+)"
         onClick={handleZoomIn}
       >
         <PlusIcon size={14} />

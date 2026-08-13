@@ -2,7 +2,6 @@ import { useSyncExternalStore, type CSSProperties } from 'react'
 import { useEditorStore } from '@site/store/store'
 import type { LeftSidebarPanelId } from '@site/store/slices/uiSlice'
 import type { IconComponent } from 'pixel-art-icons/types'
-import { AiSettingsSolidIcon } from 'pixel-art-icons/icons/ai-settings-solid'
 import { DatabaseSolidIcon } from 'pixel-art-icons/icons/database-solid'
 import { BoxStackSolidIcon } from 'pixel-art-icons/icons/box-stack-solid'
 import { PaintBucketSolidIcon } from 'pixel-art-icons/icons/paint-bucket-solid'
@@ -61,19 +60,9 @@ const PRIMARY_RAIL_ITEMS: PrimaryRailItem[] = [
   },
 ]
 
-const GLOBAL_RAIL_ITEMS: PrimaryRailItem[] = [
-  {
-    id: 'agent',
-    label: 'AI assistant',
-    icon: AiSettingsSolidIcon,
-    iconName: 'ai-settings-solid',
-  },
-]
-
 interface PanelRailProps {
   workspace?: 'site' | 'content' | 'media'
   editable?: boolean
-  canUseAiChat?: boolean
   railOnly?: boolean
 }
 
@@ -86,14 +75,12 @@ const SERVER_PLUGIN_PANELS_SNAPSHOT: ReturnType<typeof getPluginPanelsSnapshot> 
 export function PanelRail({
   workspace = 'site',
   editable = true,
-  canUseAiChat = true,
   railOnly = false,
 }: PanelRailProps) {
   const explorerOpen = useEditorStore((s) => s.explorerPanelOpen)
   const selectorsOpen = useEditorStore((s) => s.selectorsPanelOpen)
   const frameworkOpen = useEditorStore((s) => s.frameworkPanelOpen)
   const dependenciesOpen = useEditorStore((s) => s.dependenciesPanelOpen)
-  const agentOpen = useEditorStore((s) => s.isAgentOpen)
   const activePluginPanelId = useEditorStore((s) => s.activePluginPanelId)
 
   const toggleLeftSidebarPanel = useEditorStore((s) => s.toggleLeftSidebarPanel)
@@ -113,7 +100,6 @@ export function PanelRail({
 
   const panelOpenById = {
     explorer: explorerOpen,
-    agent: agentOpen,
     selectors: selectorsOpen,
     framework: frameworkOpen,
     dependencies: dependenciesOpen,
@@ -121,13 +107,12 @@ export function PanelRail({
 
   // Read-only callers (Viewer / Client) see only the Explorer panel (the
   // Layers / Pages / Media navigation surfaces). Style/runtime editing panels
-  // only appear when the user can edit structure. The AI assistant follows
-  // `ai.chat`, independent of editability.
+  // only appear when the user can edit structure.
   const READ_ONLY_RAIL_IDS = new Set<LeftSidebarPanelId>(['explorer'])
   const visiblePrimaryItems = editable
     ? PRIMARY_RAIL_ITEMS
     : PRIMARY_RAIL_ITEMS.filter((item) => READ_ONLY_RAIL_IDS.has(item.id))
-  const visibleGlobalItems = canUseAiChat ? GLOBAL_RAIL_ITEMS : []
+  const visibleGlobalItems: PrimaryRailItem[] = []
 
   function railIdentity(item: PrimaryRailItem) {
     return `${workspace}:${item.id}:${item.label}`

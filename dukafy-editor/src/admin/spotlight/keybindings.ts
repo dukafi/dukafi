@@ -156,20 +156,6 @@ export const KEYBINDINGS: ReadonlyArray<KeybindingDefinition> = [
     scope: 'panels',
   },
 
-  {
-    commandId: 'ai.open',
-    shortcut: { mac: '⌘I', win: 'Ctrl+I' },
-    ariaKeyshortcuts: isPlatformMac() ? 'Meta+I' : 'Control+I',
-    match: (e) =>
-      (e.metaKey || e.ctrlKey) &&
-      !e.shiftKey &&
-      !e.altKey &&
-      e.key.toLowerCase() === 'i',
-    scope: 'panels',
-    ignoreInEditableField: true,
-    capability: 'ai.chat',
-  },
-
   // ── Canvas + Layers tree (layer operations) ─────────────────────────────────
 
   {

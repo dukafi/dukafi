@@ -9,7 +9,6 @@ import {
 interface UseIframeFrameAutoHeightOptions {
   iframeRef: RefObject<HTMLIFrameElement | null>
   iframeDoc: Document | null
-  isLive: boolean
 }
 
 /**
@@ -23,10 +22,9 @@ interface UseIframeFrameAutoHeightOptions {
 export function useIframeFrameAutoHeight({
   iframeRef,
   iframeDoc,
-  isLive,
 }: UseIframeFrameAutoHeightOptions): void {
   useEffect(() => {
-    if (isLive || !iframeDoc) return
+    if (!iframeDoc) return
     const iframe = iframeRef.current
     if (!iframe) return
     const observerDocument = getIframeObserverDocument(iframe, iframeDoc)
@@ -79,5 +77,5 @@ export function useIframeFrameAutoHeight({
       ro.disconnect()
       mo?.disconnect()
     }
-  }, [iframeDoc, iframeRef, isLive])
+  }, [iframeDoc, iframeRef])
 }

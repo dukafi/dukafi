@@ -50,7 +50,7 @@ export interface DukafyPageExportFile {
 }
 
 /** Every style rule referenced by any node in `nodes`, from `siteClasses`. */
-function collectReferencedClasses(
+export function collectReferencedClasses(
   nodes: Record<string, PageNode>,
   siteClasses: Record<string, StyleRule>,
 ): Record<string, StyleRule> {

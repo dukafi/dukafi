@@ -74,14 +74,12 @@ import { cn } from '@ui/cn'
 import { ClassStyleInjector } from './ClassStyleInjector'
 import { UserStylesheetInjector } from './UserStylesheetInjector'
 import { EditorChromeInjector } from './EditorChromeInjector'
-import { RuntimeScriptInjector } from './RuntimeScriptInjector'
-import type { InjectableRuntimeScript } from './useRuntimeScriptBuild'
 import { useIframeCursorBridge } from './useIframeCursorBridge'
 import { iframeLocalPointToParentClientPoint } from './iframeEventCoordinates'
 import { useCanvasFormControlSuppression } from './useCanvasFormControlSuppression'
 import { CANVAS_VIEWPORT_HEIGHT, type CanvasViewport } from './resolveViewportUnits'
 import { useIframeFrameAutoHeight } from './useIframeFrameAutoHeight'
-import { applyIframeBodyReset, type IframeInteraction } from './iframeBodyReset'
+import { applyIframeBodyReset } from './iframeBodyReset'
 import {
   isCanvasSpacePanActive,
   setCanvasSpacePanActive,
@@ -115,7 +113,6 @@ function claimIframeSrcDocument(doc: Document): boolean {
 }
 
 /** Stable empty list so a script-less frame doesn't churn the injector's deps. */
-const EMPTY_RUNTIME_SCRIPTS: InjectableRuntimeScript[] = []
 
 /**
  * Elements whose default click/activation navigates the frame. Anchors and
@@ -153,8 +150,6 @@ interface IframeFrameSurfaceProps {
    * iframe boundary.
    */
   dataAttrs?: Record<string, string | undefined>
-  /** Interaction model — see {@link IframeInteraction}. Defaults to 'canvas'. */
-  interaction?: IframeInteraction
   /**
    * Double-click handler for read-only composed regions (template chrome,
    * inlined components, outlet previews). Resolved from the nearest ancestor
@@ -167,7 +162,6 @@ interface IframeFrameSurfaceProps {
    * (the "Run scripts" toggle drives this), so authored behaviour can run
    * alongside the live editor.
    */
-  runtimeScripts?: InjectableRuntimeScript[]
 }
 
 export interface IframeFrameSurfaceHandle {
@@ -193,19 +187,16 @@ export const IframeFrameSurface = forwardRef<IframeFrameSurfaceHandle, IframeFra
       onCursorLeave,
       children,
       dataAttrs,
-      interaction = 'canvas',
-      runtimeScripts,
       onReadonlyOpen,
     },
     ref,
     ) {
-      const isLive = interaction === 'live'
       const iframeRef = useRef<HTMLIFrameElement | null>(null)
       const [iframeDoc, setIframeDoc] = useState<Document | null>(null)
 
     useIframeCursorBridge(iframeRef, iframeDoc, { onCursorMove, onCursorLeave })
-    useCanvasFormControlSuppression(iframeDoc, { breakpointId, enabled: !isLive })
-    useIframeFrameAutoHeight({ iframeRef, iframeDoc, isLive })
+    useCanvasFormControlSuppression(iframeDoc, { breakpointId, enabled: true })
+    useIframeFrameAutoHeight({ iframeRef, iframeDoc })
 
     // Bridge the iframe handle out to the parent (selection overlay reads
     // `iframeElement` to translate inside-iframe rects into editor coordinates).
@@ -281,7 +272,7 @@ export const IframeFrameSurface = forwardRef<IframeFrameSurfaceHandle, IframeFra
     // against `:where()` (zero-specificity) so the override is safe.
     useEffect(() => {
       if (!iframeDoc?.body) return
-      applyIframeBodyReset(iframeDoc, breakpointId, interaction)
+      applyIframeBodyReset(iframeDoc, breakpointId)
       if (!onClick) return
       // Empty-frame click: ONLY fire when the click target is the body
       // itself (not a child node bubbling up). Without this guard, every
@@ -299,7 +290,7 @@ export const IframeFrameSurface = forwardRef<IframeFrameSurfaceHandle, IframeFra
       return () => {
         iframeDoc.body.removeEventListener('click', handler)
       }
-    }, [iframeDoc, breakpointId, onClick, interaction])
+    }, [iframeDoc, breakpointId, onClick])
 
     // ── Navigation guard ─────────────────────────────────────────────────
     // The canvas iframe is an EDITING surface, never a browsing surface.
@@ -369,7 +360,6 @@ export const IframeFrameSurface = forwardRef<IframeFrameSurfaceHandle, IframeFra
     // canvas root and useGesture's handler picks it up.
     useEffect(() => {
       // Live frames scroll natively — no pan to forward to.
-      if (isLive) return
       if (!iframeDoc) return
       const iframe = iframeRef.current
       if (!iframe) return
@@ -408,7 +398,7 @@ export const IframeFrameSurface = forwardRef<IframeFrameSurfaceHandle, IframeFra
       return () => {
         iframeDoc.removeEventListener('wheel', onWheel)
       }
-    }, [iframeDoc, isLive])
+    }, [iframeDoc])
 
     // ── Forward pointer events for canvas pan gestures + parent-doc canvas drags ────
     // The canvas pan gesture (useCanvas via @use-gesture) and the canvas
@@ -438,7 +428,6 @@ export const IframeFrameSurface = forwardRef<IframeFrameSurfaceHandle, IframeFra
     useEffect(() => {
       // Pan-gesture / parent-doc canvas-drag relay is canvas-only. Live frames
       // neither pan nor host the cross-frame canvas drag.
-      if (isLive) return
       if (!iframeDoc) return
       const iframe = iframeRef.current
       if (!iframe) return
@@ -618,7 +607,7 @@ export const IframeFrameSurface = forwardRef<IframeFrameSurfaceHandle, IframeFra
         iframeDoc.removeEventListener('pointerup', maybeForward)
         iframeDoc.removeEventListener('pointercancel', maybeForward)
       }
-    }, [iframeDoc, isLive])
+    }, [iframeDoc])
 
     const dataAttrSpread = dataAttrs
       ? Object.fromEntries(
@@ -639,11 +628,11 @@ export const IframeFrameSurface = forwardRef<IframeFrameSurfaceHandle, IframeFra
           // `srcDoc` is what creates the iframe document; an empty
           // `<html><body>` so we can portal React content into the body.
           srcDoc={IFRAME_SRC_DOC}
-          className={cn(styles.iframe, isLive && styles.iframeLive, className)}
+          className={cn(styles.iframe, className)}
           // Canvas frames are sized to the breakpoint width and grow to content
           // height. Live frames fill the surface-controlled wrapper and scroll
           // internally, so they take 100% in both axes.
-          style={isLive ? { ...style, width: '100%', height: '100%' } : { ...style, width: `${width}px` }}
+          style={{ ...style, width: `${width}px` }}
           title={`Canvas frame for ${breakpointId}`}
           {...dataAttrSpread}
           // Allow the same-origin policy so the parent can read/write the
@@ -662,7 +651,6 @@ export const IframeFrameSurface = forwardRef<IframeFrameSurfaceHandle, IframeFra
                 {children}
                 {/* Runtime scripts (opt-in) run against the node tree mounted
                     above. Empty list = no-op, so this is safe to always mount. */}
-                <RuntimeScriptInjector targetDocument={iframeDoc} scripts={runtimeScripts ?? EMPTY_RUNTIME_SCRIPTS} />
               </CanvasDocumentContext.Provider>
             </CanvasFrameElementContext.Provider>,
             iframeDoc.body,

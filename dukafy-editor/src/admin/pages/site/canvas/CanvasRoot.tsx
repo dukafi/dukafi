@@ -33,11 +33,8 @@ import { getKeybindingForCommand } from '@admin/spotlight/keybindings'
 import { useCanvas } from '@site/hooks/useCanvas'
 import { useEditorPermissions } from '@site/editorPermissionsContext'
 import { CanvasTransformLayer } from './CanvasTransformLayer'
-import { CanvasLiveSurface } from './CanvasLiveSurface'
 import { AgentSnapshotFrame } from './AgentSnapshotFrame'
-import { useRuntimeScriptBuild } from './useRuntimeScriptBuild'
 import { CanvasNotch } from './CanvasNotch'
-import { CanvasModeToggle } from './CanvasModeToggle'
 import { CanvasContextSelector } from './CanvasContextSelector'
 import { useCurrentAdminUser } from '@admin/sessionContext'
 import { usePublishEditorPresence } from '@site/collab/awarenessState'
@@ -102,11 +99,8 @@ export function CanvasRoot({ editable = true }: CanvasRootProps) {
   const canvasPage = useEditorStore(selectActiveCanvasPage)
   const breakpoints = useEditorStore((s) => s.site?.breakpoints ?? EMPTY_BREAKPOINTS)
   const activeBreakpointId = useEditorStore((s) => s.activeBreakpointId)
-  const canvasView = useEditorStore((s) => s.canvasView)
   const agentSnapshotCaptureRequest = useEditorStore((s) => s.agentSnapshotCaptureRequest)
   const rightSidebarExpanded = useEditorStore(selectRightSidebarExpanded)
-  const isLive = canvasView === 'live'
-  const runScripts = useEditorStore((s) => s.runScripts)
   // selectedNodeId is needed here for canvas-level keyboard shortcuts (Delete, Ctrl+D).
   // hoveredNodeId is NOT subscribed here — NodeRenderer handles its own hover state
   // via per-node selectors to avoid O(N) re-renders on every hover event (#495).
@@ -177,7 +171,6 @@ export function CanvasRoot({ editable = true }: CanvasRootProps) {
   }
 
   // Canvas gesture hook (pan/zoom). Disabled in preview mode — preview owns
-  // its own surface (CanvasLiveSurface) and pan/zoom is meaningless on a
   // single sandboxed iframe. Critically, this also stops wheel events from
   // silently mutating transformRef while in preview, which would otherwise
   // make the design canvas visibly jump on the first interaction after
@@ -185,7 +178,7 @@ export function CanvasRoot({ editable = true }: CanvasRootProps) {
   const { bind, handleKeyDown: canvasKeyDown, panBy, centerOnBreakpointFrame } = useCanvas({
     canvasRootRef: canvasRef,
     transformLayerRef,
-    enabled: !isLive,
+    enabled: true,
   })
 
   // ─── Focus the chosen viewport frame: loading skeleton → page → switches ───
@@ -223,7 +216,6 @@ export function CanvasRoot({ editable = true }: CanvasRootProps) {
   // that has no preview frame at all.
   const canvasPageId = canvasPage?.id ?? null
   useEffect(() => {
-    if (isLive) return
 
     let timerId: ReturnType<typeof setTimeout> | undefined
     let attempts = 0
@@ -240,7 +232,7 @@ export function CanvasRoot({ editable = true }: CanvasRootProps) {
     }
     tryCenter()
     return () => clearTimeout(timerId)
-  }, [canvasPageId, isLive, centerOnBreakpointFrame])
+  }, [canvasPageId, centerOnBreakpointFrame])
 
   // ─── Modals & overlays ─────────────────────────────────────────────────────
 
@@ -325,7 +317,7 @@ export function CanvasRoot({ editable = true }: CanvasRootProps) {
    */
   const onNodeDoubleClick = (nodeId: string, e: React.MouseEvent, breakpointId?: string) => {
     e.stopPropagation()
-    if (isLive || !editable || !permissions.canEditContent) return
+    if (!editable || !permissions.canEditContent) return
     startInlineEdit(nodeId, breakpointId ?? activeBreakpointId)
   }
 
@@ -372,7 +364,7 @@ export function CanvasRoot({ editable = true }: CanvasRootProps) {
   })
 
   useEffect(() => {
-    if (isLive || !editable) return
+    if (!editable) return
     const deleteBinding = getKeybindingForCommand('layers.delete')
     if (!deleteBinding) return
 
@@ -402,7 +394,7 @@ export function CanvasRoot({ editable = true }: CanvasRootProps) {
 
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [editable, isLive])
+  }, [editable])
 
   // ─── Canvas background click → deselect ───────────────────────────────────
 
@@ -411,28 +403,8 @@ export function CanvasRoot({ editable = true }: CanvasRootProps) {
     clearSelection()
   }
 
-  // Resolve the active breakpoint object for the live surface (which wants the
-  // full Breakpoint, not just the id, to read .width).
-  const activeBreakpoint = breakpoints.find((bp) => bp.id === activeBreakpointId) ?? breakpoints[0] ?? null
 
-  // Runtime scripts (opt-in "Run scripts" toggle). Built once here and shared
-  // by every editable frame — the design canvas's per-breakpoint frames AND
-  // the live surface's single frame — so the same bundle runs everywhere
-  // without rebuilding per frame. Idle (no build) while the toggle is off.
-  const scriptBuild = useRuntimeScriptBuild({
-    page: canvasPage,
-    breakpointId: activeBreakpointId,
-    templateContext: templatePreviewContext,
-    enabled: runScripts,
-  })
-  const runtimeScripts = scriptBuild.scripts
-
-  // Live mode skips canvas-level pan/zoom gestures and shortcuts: the single
-  // real-size frame scrolls natively. Spreading {} keeps the outer div's prop
-  // shape stable when toggling.
-  const gestureBindings = isLive ? {} : bind()
-  const onCanvasKeyDown = isLive ? undefined : handleKeyDown
-  const onCanvasClick = isLive ? undefined : handleCanvasClick
+  const gestureBindings = bind()
 
   return (
     <CanvasViewportActionsContext.Provider value={viewportActionsContextValue}>
@@ -445,14 +417,12 @@ export function CanvasRoot({ editable = true }: CanvasRootProps) {
           data-testid="canvas-root"
           data-instatic-canvas-root="true"
           data-canvas-state={canvasPage ? 'canvas-ready' : 'canvas-empty'}
-          data-canvas-view={canvasView}
           data-vc-mode={activeDocument?.kind === 'visualComponent' ? 'true' : undefined}
-          onKeyDown={onCanvasKeyDown}
-          onClick={onCanvasClick}
+          onKeyDown={handleKeyDown}
+          onClick={handleCanvasClick}
           onFocus={() => setFocusedPanel('canvas')}
           className={styles.canvas}
           // Spread gesture handlers from useGesture (wheel, drag, pinch).
-          // Empty in preview mode — see gestureBindings above.
           {...gestureBindings}
         >
           {/* CSS for prefers-reduced-motion — no transitions for accessibility */}
@@ -476,7 +446,6 @@ export function CanvasRoot({ editable = true }: CanvasRootProps) {
             (peek) and rolls down on hover instead of overlaying the page. */}
           {editable && (
             <CanvasNotch
-              peek={isLive}
               floatingControl={
                 activeDocument?.kind === 'visualComponent' ? (
                   <Suspense fallback={null}>
@@ -491,20 +460,11 @@ export function CanvasRoot({ editable = true }: CanvasRootProps) {
             />
           )}
 
-          {/* Design / Live view toggle — top-left chrome. In live mode this
-            also hosts inline breakpoint switcher buttons, and the toggle owns
-            the "Run scripts" switch + its build status / Refresh. */}
-          <CanvasModeToggle
-            peek={isLive}
-            scriptStatus={scriptBuild.status}
-            onRefreshScripts={scriptBuild.refresh}
-          />
-
           {/* The editing-context switcher targets per-context style overrides
               (viewports + custom conditions), so it's only meaningful for
               callers who can edit style or structure. Content-only Clients and
               pure Viewers get the same plain frames without this affordance. */}
-          {!isLive && rightSidebarExpanded && (permissions.canEditStyle || permissions.canEditStructure) && (
+          {rightSidebarExpanded && (permissions.canEditStyle || permissions.canEditStructure) && (
             <CanvasContextSelector />
           )}
 
@@ -517,28 +477,18 @@ export function CanvasRoot({ editable = true }: CanvasRootProps) {
         */}
           <ErrorBoundary
             location="canvas"
-            resetKeys={[canvasPage?.id ?? null, activeDocument?.kind ?? null, canvasView]}
+            resetKeys={[canvasPage?.id ?? null, activeDocument?.kind ?? null]}
           >
-            {isLive ? (
-              <CanvasLiveSurface
-                page={canvasPage}
-                activeBreakpoint={activeBreakpoint}
-                templateContext={templatePreviewContext}
-                runtimeScripts={runtimeScripts}
-              />
-            ) : (
-              <CanvasTransformLayer
-                ref={transformLayerRef}
-                page={canvasPage}
-                breakpoints={breakpoints}
-                activeBreakpointId={activeBreakpointId}
-                dimInactiveBreakpoints={focusActiveBreakpoint}
-                activationHintEnabled={preserveSelectionWhenActivatingBreakpoint}
-                onBreakpointActivate={setActiveBreakpoint}
-                templateContext={templatePreviewContext}
-                runtimeScripts={runtimeScripts}
-              />
-            )}
+            <CanvasTransformLayer
+              ref={transformLayerRef}
+              page={canvasPage}
+              breakpoints={breakpoints}
+              activeBreakpointId={activeBreakpointId}
+              dimInactiveBreakpoints={focusActiveBreakpoint}
+              activationHintEnabled={preserveSelectionWhenActivatingBreakpoint}
+              onBreakpointActivate={setActiveBreakpoint}
+              templateContext={templatePreviewContext}
+            />
           </ErrorBoundary>
 
           {/*
@@ -547,7 +497,7 @@ export function CanvasRoot({ editable = true }: CanvasRootProps) {
           (editable) mode — preview-mode canvases don't need overlays and
           plugin code shouldn't paint over the visitor preview.
         */}
-          {!isLive && editable && contextMenu.position && (
+          {editable && contextMenu.position && (
             <CanvasLayerContextMenu
               position={contextMenu.position}
               onClose={contextMenu.close}
@@ -564,7 +514,7 @@ export function CanvasRoot({ editable = true }: CanvasRootProps) {
             />
           )}
 
-          {!isLive && editable && renameDialog.state && (
+          {editable && renameDialog.state && (
             <CanvasRenameDialog
               state={renameDialog.state}
               onChange={renameDialog.replace}

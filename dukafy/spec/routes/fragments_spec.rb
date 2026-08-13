@@ -25,13 +25,16 @@ class FragmentsSpec < Minitest::Test
     )
   end
 
-  def test_add_item_creates_an_anonymous_cart_and_returns_a_fragment
+  # 204 and an EMPTY body on purpose. This endpoint has no hx-target, so htmx
+  # swaps the response into the merchant's own button — any markup here would
+  # overwrite their label. htmx skips the swap on 204; the cart badge and cart
+  # regions refresh themselves off `dukafy:cart-updated` instead.
+  def test_add_item_creates_an_anonymous_cart_and_returns_no_markup
     post "/fragments/cart/items", product_slug: "canvas-bag", variant_sku: "BAG-L", quantity: "2"
 
-    assert_equal 200, last_response.status
+    assert_equal 204, last_response.status
     assert_equal "dukafy:cart-updated", last_response.headers.fetch("hx-trigger")
-    assert_includes last_response.body, 'data-cart-count="2"'
-    assert_includes last_response.body, "Added Canvas Bag — Large."
+    assert_empty last_response.body
     assert_equal 2, CartItem.first.quantity
 
     post "/fragments/cart/items", product_slug: "canvas-bag", variant_sku: "BAG-L", quantity: "1"
@@ -62,8 +65,7 @@ class FragmentsSpec < Minitest::Test
   def test_add_item_without_a_sku_uses_the_only_variant
     post "/fragments/cart/items", product_slug: "canvas-bag", quantity: "2"
 
-    assert_equal 200, last_response.status
-    assert_includes last_response.body, "Added Canvas Bag — Large."
+    assert_equal 204, last_response.status
     assert_equal @variant.id, CartItem.first.variant_id
   end
 
@@ -93,6 +95,26 @@ class FragmentsSpec < Minitest::Test
     assert_equal 0, Cart.count
   end
 
+  # htmx discards 4xx bodies by default, so a rejected add was completely
+  # silent — the visitor clicked and nothing happened. htmx processes
+  # `HX-Trigger` before it decides whether to swap, so failures ride that
+  # instead, keeping "Dukafy fires events, the merchant owns the markup".
+  def test_a_rejected_add_announces_the_reason_as_an_event
+    post "/fragments/cart/items", product_slug: "canvas-bag", variant_sku: "BAG-L", quantity: "99"
+
+    assert_equal 409, last_response.status
+    assert_equal({ "dukafy:cart-error" => { "message" => "Only 3 available." } },
+                 JSON.parse(last_response.headers.fetch("hx-trigger")))
+
+    post "/fragments/cart/items", product_slug: "ghost", quantity: "1"
+    assert_equal 404, last_response.status
+    assert_includes last_response.headers.fetch("hx-trigger"), "Product option not found."
+
+    post "/fragments/cart/items", product_slug: "canvas-bag", variant_sku: "BAG-L", quantity: "0"
+    assert_equal 422, last_response.status
+    assert_includes last_response.headers.fetch("hx-trigger"), "Choose a valid quantity."
+  end
+
   def test_stock_fragment_reports_variant_and_product_inventory
     get "/fragments/stock", product_slug: "canvas-bag", variant_sku: "BAG-L", low_stock_threshold: "3"
 
@@ -114,27 +136,5 @@ class FragmentsSpec < Minitest::Test
     refute_includes last_response.body, "missing"
   end
 
-  def test_cart_badge_tracks_the_session_and_does_not_create_empty_carts
-    get "/fragments/cart/badge", label: "Basket", href: "/basket"
 
-    assert_equal 200, last_response.status
-    assert_equal "no-store", last_response.headers.fetch("cache-control")
-    assert_includes last_response.body, '>0</span>'
-    assert_includes last_response.body, 'href="/basket"'
-    assert_equal 0, Cart.count
-
-    post "/fragments/cart/items", product_slug: "canvas-bag", variant_sku: "BAG-L", quantity: "2"
-    get "/fragments/cart/badge", label: "Basket", href: "/basket"
-
-    assert_includes last_response.body, '>2</span>'
-    assert_includes last_response.body, "Basket: 2 items"
-  end
-
-  def test_cart_badge_sanitizes_its_label_and_href
-    get "/fragments/cart/badge", label: '<Bad "label">', href: 'javascript:alert(1)'
-
-    refute_includes last_response.body, "javascript:"
-    assert_includes last_response.body, 'href="/cart"'
-    assert_includes last_response.body, '&lt;Bad &quot;label&quot;&gt;'
-  end
 end

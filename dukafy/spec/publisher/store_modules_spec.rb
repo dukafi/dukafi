@@ -484,14 +484,5 @@ class StoreModulesSpec < Minitest::Test
     refute_includes output.fetch(:html), "data-stock="
   end
 
-  def test_cart_badge_always_renders_a_session_fragment_placeholder
-    definition = Dukafy::Publisher::REGISTRY.fetch("store.cart-badge")
-    output = definition.render({ "label" => "Basket", "href" => "/cart" }, [], prefetched: {})
-
-    assert_equal :fragment, Dukafy::Publisher::DYNAMIC_MAP.fetch("store.cart-badge")
-    assert_equal File.read(File.expand_path("../golden/cart_badge.html", __dir__)).chomp, output.fetch(:html)
-    assert_includes output.fetch(:css), ".dukafy-cart-badge{"
-    refute_match(/>\d+<\/span>/, output.fetch(:html))
-  end
 
 end

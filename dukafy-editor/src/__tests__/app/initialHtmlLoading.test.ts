@@ -16,7 +16,7 @@ describe('initial HTML loading shell', () => {
     expect(scriptIndex).toBeGreaterThan(rootIndex)
     expect(styleIndex).toBeLessThan(rootIndex)
     expect(html).toContain('role="status"')
-    expect(html).toContain('aria-label="Loading Instatic"')
+    expect(html).toContain('aria-label="Loading Dukafy"')
     expect(html).toContain('data-initial-loader-spinner="true"')
     expect(html).not.toContain('<div id="root"></div>')
   })

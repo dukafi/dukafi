@@ -43,18 +43,6 @@ const REQUIRED_BOUNDARIES: BoundaryPlacement[] = [
   { file: 'admin/router.tsx', location: 'admin-route' },
   { file: 'admin/pages/site/canvas/CanvasRoot.tsx', location: 'canvas' },
   { file: 'admin/pages/site/canvas/NodeRenderer.tsx', location: 'node-renderer' },
-  {
-    file: 'admin/pages/plugins/components/PluginPageRenderer/PluginPageRenderer.tsx',
-    location: 'plugin-page',
-  },
-  {
-    file: 'admin/pages/site/panels/PluginEditorPanel/PluginEditorPanel.tsx',
-    location: 'plugin-editor-panel',
-  },
-  {
-    file: 'admin/pages/site/canvas/PluginCanvasOverlayLayer/PluginCanvasOverlayLayer.tsx',
-    location: 'plugin-canvas-overlay',
-  },
 ]
 
 const MAIN_FILE = join(SRC_ROOT, 'admin/main.tsx')

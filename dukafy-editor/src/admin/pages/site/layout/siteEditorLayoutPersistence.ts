@@ -22,7 +22,6 @@ export type SiteLayoutSelection = readonly [
   frameworkOpen: boolean,
   dependenciesOpen: boolean,
   codeEditorOpen: boolean,
-  agentOpen: boolean,
   explorerTab: ExplorerPanelTab,
   propertiesMode: PanelMode,
   leftSidebarMode: PanelMode,
@@ -75,7 +74,6 @@ export function selectSiteLayoutState(s: EditorStore): SiteLayoutSelection {
     s.frameworkPanelOpen,
     s.dependenciesPanelOpen,
     s.codeEditorPanelOpen,
-    s.isAgentOpen,
     s.explorerPanelTab,
     s.propertiesPanelMode,
     s.leftSidebarMode,
@@ -115,7 +113,6 @@ export function siteLayoutFromSelection(
     ,
     ,
     codeEditorOpen,
-    agentOpen,
     explorerTab,
     propertiesMode,
     leftSidebarMode,
@@ -135,7 +132,6 @@ export function siteLayoutFromSelection(
     codeEditorPanelOpen: codeEditorOpen,
     propertiesPanelMode: propertiesMode,
     leftSidebarMode,
-    agentPanelOpen: agentOpen,
   }
 }
 
@@ -147,9 +143,6 @@ export function restoreStoredSiteEditorLayout(
     const propertiesOpen = boolOrCurrent(layout.rightOpen, !state.propertiesPanel.collapsed)
     const storedActivePanel = layout.activeLeftPanel
     const applyLeftPanel = storedActivePanel !== undefined
-    const storedAgentOpen = layout.agentPanelOpen
-      ?? (storedActivePanel === 'agent' ? true : state.isAgentOpen)
-
     const leftPanelPatch = applyLeftPanel
       ? {
           explorerPanelOpen: storedActivePanel === 'explorer',
@@ -170,7 +163,6 @@ export function restoreStoredSiteEditorLayout(
       leftSidebarWidth: leftSidebarWidth(layout, state.leftSidebarWidth),
       explorerPanelTab: explorerTab(layout.explorerPanelTab, state.explorerPanelTab),
       codeEditorPanelOpen: boolOrCurrent(layout.codeEditorPanelOpen, state.codeEditorPanelOpen),
-      isAgentOpen: storedAgentOpen,
       activeEditorFileId: layout.activeEditorFileId !== undefined
         ? layout.activeEditorFileId
         : state.activeEditorFileId,

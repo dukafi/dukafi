@@ -6,7 +6,19 @@ class TailwindCompiler
   class Error < StandardError; end
 
   def self.call(html: nil, classes: nil, binary: ENV.fetch("TAILWINDCSS_BIN", File.expand_path("../vendor/tailwindcss", __dir__)))
-    candidates = (classes || html.to_s.scan(/\bclass\s*=\s*(["'])(.*?)\1/m)
+    # UNION, not either/or.
+    #
+    # Tailwind is usage-driven: it only emits a utility it has seen. Scanning
+    # the rendered HTML alone misses every class that CAN appear but did not
+    # this time — the inside of a cart region (which bakes as an empty
+    # placeholder) and the losing side of every `visibleWhen` condition. Those
+    # markups arrive later, from a fragment endpoint, by which point the
+    # stylesheet is already written and has no rule for them.
+    #
+    # Callers that know the document therefore pass its DECLARED class names
+    # as well, so a utility is compiled if it is reachable, not merely if it
+    # happened to render.
+    candidates = (Array(classes) + html.to_s.scan(/\bclass\s*=\s*(["'])(.*?)\1/m)
       .flat_map { |_quote, value| value.split })
       .select { |candidate| candidate.is_a?(String) && !candidate.empty? }
       .uniq

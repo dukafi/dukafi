@@ -45,7 +45,9 @@ class Storefront < Roda
       prefetched: CommercePrefetcher.call, query_params:
     )
     tailwind_html = %(<body class="#{rendered.body_classes.join(' ')}">#{rendered.html}</body>)
-    tailwind_css = TailwindCompiler.call(html: tailwind_html)
+    tailwind_css = TailwindCompiler.call(
+      html: tailwind_html, classes: DeclaredClassNames.call([document], state&.site)
+    )
     collector = Dukafy::Publisher::CssCollector.new
     collector.add("page-modules", rendered.css)
     css = collector.bundle(
@@ -82,7 +84,9 @@ class Storefront < Roda
     collector.add("page-modules", rendered.css)
     css = collector.bundle(
       framework_css: Dukafy::Publisher::FrameworkCss.call(state.site),
-      tailwind_css: TailwindCompiler.call(html: tailwind_html)
+      tailwind_css: TailwindCompiler.call(
+        html: tailwind_html, classes: DeclaredClassNames.call([document], state&.site)
+      )
     ).content
     Dukafy::Publisher::HtmlDocument.call(
       title: collection.fetch("title"), language: state.site.dig("settings", "language") || "en",

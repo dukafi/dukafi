@@ -23,7 +23,6 @@ beforeEach(() => {
     activePageId: null,
     activeDocument: null,
     activeBreakpointId: 'desktop',
-    canvasView: 'design',
     selectedNodeId: null,
     selectedNodeIds: [],
     hoveredNodeId: null,

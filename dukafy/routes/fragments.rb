@@ -1,4 +1,5 @@
 require "cgi"
+require "json"
 require "securerandom"
 
 class Fragments < Roda
@@ -14,16 +15,6 @@ class Fragments < Roda
   def current_cart
     key = session["cart_key"]
     key && Cart.first(session_key: key, status: "active")
-  end
-
-  # `cart` may be nil: a REJECTED add must not conjure a cart row just to
-  # report the rejection. Using `active_cart` on the error paths left an empty
-  # cart behind for every failed click.
-  def cart_fragment(cart, notice: nil)
-    items = cart ? CartItem.where(cart_id: cart.id).all : []
-    count = items.sum(&:quantity)
-    message = notice ? %(<p class="dukafy-cart-notice" role="status">#{CGI.escapeHTML(notice)}</p>) : ""
-    %(<div id="dukafy-cart-summary" class="dukafy-buy-result dukafy-cart-summary" data-cart-count="#{count}">#{message}<span>#{count} #{count == 1 ? 'item' : 'items'} in cart</span></div>)
   end
 
   def stock_fragment(product, variant_sku, threshold)
@@ -58,7 +49,19 @@ class Fragments < Roda
   def find_published_node(node_id)
     return unless node_id.match?(SAFE_NODE_ID)
 
-    Page.where(status: "published").order(:id).each do |page|
+    # Ask SQLite which documents even contain this node, instead of loading
+    # and JSON-parsing every published page until one matches. That scan is
+    # linear in page count and was paid once per cart region — thirty times on
+    # a thirty-card grid. `node_id` is validated above, so interpolating it
+    # into the JSON path is safe; the quotes let ids containing `-` resolve.
+    candidates = Page.where(status: "published").where(
+      Sequel.lit(
+        "json_extract(COALESCE(published_document, document), ?) IS NOT NULL",
+        %($.nodes."#{node_id}"),
+      ),
+    )
+
+    candidates.order(:id).each do |page|
       document = page.published_document_data || page.document_data
       node = document.is_a?(Hash) ? document.dig("nodes", node_id) : nil
       next unless node.is_a?(Hash)
@@ -113,13 +116,47 @@ class Fragments < Roda
     Array(product["variants"]).find { |variant| variant["sku"].to_s == variant_sku.to_s } || product
   end
 
+  # Modules whose render reads the prefetched catalogue. A region built only
+  # from `base.*` nodes — a count, a button, two conditional branches, which is
+  # what a per-card cart region actually is — needs nothing but its own
+  # product, so it must not pay for the whole catalogue.
+  CATALOGUE_MODULES = %w[
+    store.relationship-loop store.collection-loop store.price store.variant-picker
+    store.buy-button store.image-gallery store.product-card
+  ].freeze
+
+  def needs_catalogue?(document, node)
+    nodes = document["nodes"]
+    return true unless nodes.is_a?(Hash)
+
+    seen = {}
+    stack = [node.fetch("id")]
+    until stack.empty?
+      id = stack.pop
+      next if seen[id]
+
+      seen[id] = true
+      current = nodes[id]
+      next unless current.is_a?(Hash)
+      return true if CATALOGUE_MODULES.include?(current["moduleId"])
+
+      stack.concat(Array(current["children"]))
+    end
+    false
+  end
+
   def cart_region_fragment(node_id, product_slug: nil, variant_sku: nil)
     found = find_cart_region(node_id)
     return unless found
 
-    prefetched = CommercePrefetcher.call
+    document, node = found
+    prefetched = if needs_catalogue?(document, node)
+      CommercePrefetcher.call
+    else
+      CommercePrefetcher.for_product(product_slug)
+    end
     render_cart_subtree(
-      *found, prefetched: prefetched,
+      document, node, prefetched: prefetched,
       current_entry: region_entry(prefetched, product_slug, variant_sku)
     )
   end
@@ -171,8 +208,34 @@ class Fragments < Roda
     end
   end
 
+  # A rejected cart mutation, announced as an EVENT rather than as markup.
+  #
+  # htmx discards 4xx bodies by default (`responseHandling` maps `[45]..` to
+  # `swap: false`), so returning a rendered notice meant every failure was
+  # silent — a visitor clicking "add" past the stock limit saw nothing happen
+  # at all. htmx DOES process `HX-Trigger` before it decides whether to swap,
+  # so the message reaches the page either way.
+  #
+  # This keeps the contract merchants already have: Dukafy fires events, the
+  # merchant's own markup reacts. Listen with
+  # `hx-trigger="dukafy:cart-error from:body"`, or read `event.detail.message`.
+  #
+  # The body is still emitted for callers that opt into showing 4xx responses
+  # (`hx-swap` with an error-swapping `responseHandling` override).
+  def cart_error_headers(message)
+    {
+      "content-type" => "text/html; charset=utf-8",
+      # Lowercase: Rack 3 requires it, and this is a RAW response triplet —
+      # it bypasses Roda's response object, which would otherwise normalise the
+      # casing for us. `Rack::Lint` only runs under the dev server, so a
+      # capitalised name here 500s in development and passes every Rack::Test
+      # spec. See `spec/routes/rack_conformance_spec.rb`.
+      "hx-trigger" => JSON.generate({ "dukafy:cart-error" => { "message" => message } }),
+    }
+  end
+
   def halt_cart_error(status, message)
-    request.halt([status, { "content-type" => "text/html; charset=utf-8" },
+    request.halt([status, cart_error_headers(message),
                   [%(<p class="dukafy-cart-notice" role="status">#{CGI.escapeHTML(message)}</p>)]])
   end
 
@@ -185,6 +248,55 @@ class Fragments < Roda
     response["Cache-Control"] = "no-store"
     response["HX-Trigger"] = "dukafy:cart-updated"
     cart_lines_fragment(node_id) || ""
+  end
+
+  # Re-render ONE cart line.
+  #
+  # Changing a quantity used to swap the whole list, rebuilding every row to
+  # move one number — and taking focus and scroll position with it. Rows now
+  # carry `data-dukafy-cart-line="<sku>"`, so the +/-/remove verbs target their
+  # own row and only that row comes back.
+  #
+  # Returns "" when the line is gone (quantity stepped to zero, or removed):
+  # an outerHTML swap with an empty body deletes the element, which is exactly
+  # the right result.
+  #
+  # Falls back to the whole loop when the loop has several children, because
+  # the loop round-robins them across items — which child renders a given line
+  # depends on its position, and that is not recoverable from a SKU alone.
+  def cart_line_fragment(node_id, sku)
+    found = find_cart_loop(node_id)
+    return unless found
+
+    document, node = found
+    children = node.fetch("children", [])
+    return cart_lines_fragment(node_id) unless children.length == 1
+    return "" unless sku.match?(/\A[A-Za-z0-9._-]{1,64}\z/)
+
+    payload = CartPayload.call(current_cart, discount_code: session["discount_code"])
+    item = payload.fetch("items").find { |line| line["sku"].to_s == sku }
+    return "" unless item
+
+    state = SiteState.first
+    html = Dukafy::Publisher::RenderPage.call(
+      document: document.merge("rootNodeId" => children.first),
+      registry: Dukafy::Publisher::REGISTRY, site: state&.site,
+      prefetched: CommercePrefetcher.call, cart: payload,
+      current_entry: item, cart_loop_id: node.fetch("id"),
+    ).html
+    html.sub(/<([a-zA-Z][\w-]*)/) { %(<#{Regexp.last_match(1)} data-dukafy-cart-line="#{CGI.escapeHTML(sku)}") }
+  end
+
+  # A line-level change. Distinct from `dukafy:cart-updated` on purpose: the
+  # cart-lines loop listens to that one and re-fetches itself wholesale, which
+  # is right when the SET of lines changed (an add, an order) but would undo
+  # the per-line swap we just made. Cart regions listen to both, so totals and
+  # badges still update.
+  def cart_line_response(node_id, sku)
+    response["Content-Type"] = "text/html; charset=utf-8"
+    response["Cache-Control"] = "no-store"
+    response["HX-Trigger"] = "dukafy:cart-line-updated"
+    cart_line_fragment(node_id, sku) || ""
   end
 
   # Which order this payment is for: an explicit token (an order-status page
@@ -258,20 +370,6 @@ class Fragments < Roda
     value.start_with?("/") ? !value.start_with?("//") : value.match?(%r{\Ahttps://})
   end
 
-  def cart_badge_fragment(cart, label, href)
-    count = cart ? CartItem.where(cart_id: cart.id).sum(:quantity).to_i : 0
-    safe_label = CGI.escapeHTML(label)
-    valid_href = href.match?(%r{\A/[a-zA-Z0-9_/?=&%.-]*\z}) ? href : "/cart"
-    query = "label=#{CGI.escape(label)}&href=#{CGI.escape(valid_href)}"
-    # NO `revealed` here — this is the RESPONSE, and it replaces itself via
-    # outerHTML. htmx guards `revealed` with a `data-hx-revealed` attribute
-    # stamped on the element, so fresh server markup arrives with the guard
-    # cleared, is already in view, and fires again at once: an infinite
-    # request loop. The baked placeholder in `store.cart-badge` carries
-    # `revealed` to load it the first time; from then on the badge only needs
-    # to hear about cart changes.
-    %(<a class="dukafy-cart-badge" href="#{CGI.escapeHTML(valid_href)}" hx-get="/fragments/cart/badge?#{CGI.escapeHTML(query)}" hx-trigger="dukafy:cart-updated from:body" hx-swap="outerHTML" aria-label="#{safe_label}: #{count} #{count == 1 ? 'item' : 'items'}">#{safe_label} <span class="dukafy-cart-badge__count">#{count}</span></a>)
-  end
 
   route do |r|
     r.get("stock") do
@@ -352,28 +450,39 @@ class Fragments < Roda
           else
             "Product option not found."
           end
-          request.halt([404, { "content-type" => "text/html; charset=utf-8" },
-                        [cart_fragment(current_cart, notice: notice)]])
+          halt_cart_error(404, notice)
         end
 
         quantity = Integer(r.params.fetch("quantity", "1"), exception: false)
-        request.halt([422, { "content-type" => "text/html; charset=utf-8" }, [cart_fragment(current_cart, notice: "Choose a valid quantity.")]]) unless quantity&.positive?
+        halt_cart_error(422, "Choose a valid quantity.") unless quantity&.positive?
 
         # Check stock against the EXISTING cart before creating one, so a
         # rejected add leaves no empty cart row behind either.
         existing = current_cart
         item = existing && CartItem.first(cart_id: existing.id, variant_id: variant.id)
         new_quantity = (item&.quantity || 0) + quantity
-        request.halt([409, { "content-type" => "text/html; charset=utf-8" }, [cart_fragment(existing, notice: "Only #{variant.stock} available.")]]) if new_quantity > variant.stock
+        halt_cart_error(409, "Only #{variant.stock} available.") if new_quantity > variant.stock
 
         cart = active_cart
         now = Time.now
         item ? item.update(quantity: new_quantity, updated_at: now) : CartItem.create(
           cart_id: cart.id, variant_id: variant.id, quantity:, created_at: now, updated_at: now
         )
-        response["Content-Type"] = "text/html; charset=utf-8"
+        # 204, deliberately: this endpoint returns NO markup.
+        #
+        # `cart.addItem` is the one verb with no hx-target, so htmx swaps the
+        # response into the element that triggered it — the merchant's own
+        # button. Returning a rendered notice therefore DESTROYED their button
+        # label and replaced it with Dukafy's markup, which is exactly the
+        # thing this whole design refuses to do.
+        #
+        # htmx skips the swap on 204, so the button is left alone. The cart
+        # badge and every cart region re-fetch themselves off the
+        # `dukafy:cart-updated` event below, so the visitor still sees the
+        # result — in the merchant's own design.
         response["HX-Trigger"] = "dukafy:cart-updated"
-        cart_fragment(cart, notice: "Added #{product.title} — #{variant.title}.")
+        response.status = 204
+        nil
       end
 
       # Set a line to an exact quantity (not a delta — POST items is the
@@ -398,7 +507,7 @@ class Fragments < Roda
         halt_cart_error(409, "Only #{variant.stock} available.") if quantity > variant.stock
 
         quantity.zero? ? item.destroy : item.update(quantity: quantity, updated_at: Time.now)
-        cart_mutation_response(r.params["node"].to_s)
+        cart_line_response(r.params["node"].to_s, r.params["variant_sku"].to_s)
       end
 
       r.post("items", "remove") do
@@ -407,7 +516,7 @@ class Fragments < Roda
         halt_cart_error(404, "That item is not in your cart.") unless item
 
         item.destroy
-        cart_mutation_response(r.params["node"].to_s)
+        cart_line_response(r.params["node"].to_s, r.params["variant_sku"].to_s)
       end
 
       # Apply a code. Stored on the SESSION, not the cart row: applying is not
@@ -493,11 +602,6 @@ class Fragments < Roda
         html
       end
 
-      r.get("badge") do
-        response["Content-Type"] = "text/html; charset=utf-8"
-        response["Cache-Control"] = "no-store"
-        cart_badge_fragment(current_cart, r.params.fetch("label", "Cart").to_s[0, 80], r.params.fetch("href", "/cart").to_s)
-      end
     end
 
     r.get do

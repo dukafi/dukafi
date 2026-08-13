@@ -21,17 +21,6 @@ const CONTENT_ACCESS_CAPABILITIES: CoreCapability[] = [
   'content.manage',
 ]
 
-const DATA_WORKSPACE_READ_CAPABILITIES: CoreCapability[] = [
-  'data.custom.tables.read',
-  'data.custom.tables.manage',
-  'data.system.tables.read',
-  'data.system.tables.manage',
-  // Also accept any `content.*` cap so the loop / template pickers in
-  // the site editor can still resolve data tables for someone whose
-  // workspace gate is content rather than data.
-  ...CONTENT_ACCESS_CAPABILITIES,
-]
-
 const PLUGIN_READ_CAPABILITIES: CoreCapability[] = [
   'plugins.read',
   'plugins.configure',
@@ -244,18 +233,6 @@ export function canUseAiChat(user: CmsCurrentUser | null): boolean {
 // Workspace gating
 // ---------------------------------------------------------------------------
 
-function canAccessUsersWorkspace(user: CmsCurrentUser | null): boolean {
-  return hasAnyCapability(user, ['users.manage', 'roles.manage', 'audit.read'])
-}
-
-function canAccessAiWorkspace(user: CmsCurrentUser | null): boolean {
-  return hasAnyCapability(user, ['ai.providers.manage', 'ai.audit.read'])
-}
-
-function canAccessDataWorkspace(user: CmsCurrentUser | null): boolean {
-  return hasAnyCapability(user, DATA_WORKSPACE_READ_CAPABILITIES)
-}
-
 function canAccessPluginsWorkspace(user: CmsCurrentUser | null): boolean {
   return hasAnyCapability(user, PLUGIN_READ_CAPABILITIES)
 }
@@ -269,67 +246,33 @@ export function canRunPluginBackgroundWork(user: CmsCurrentUser | null): boolean
 
 export function canAccessWorkspace(user: CmsCurrentUser | null, workspace: AdminWorkspace): boolean {
   switch (workspace) {
-    case 'dashboard':
-      return hasCapability(user, 'dashboard.read')
     case 'site':
       // site.read covers the read-only canvas viewer. Editors of any flavour
       // (structure / content / style) also have site.read on a well-formed
       // role, so this single check is sufficient.
       return hasCapability(user, 'site.read')
-    case 'content':
-      return canAccessContent(user)
-    case 'data':
-      return canAccessDataWorkspace(user)
     case 'media':
       return canReadMedia(user)
     case 'commerce':
       return hasCapability(user, 'content.manage')
-    case 'plugins':
-    case 'pluginPage':
-      return canAccessPluginsWorkspace(user)
-    case 'users':
-      return canAccessUsersWorkspace(user)
-    case 'ai':
-      return canAccessAiWorkspace(user)
-    case 'account':
-      // Self-targeted page — every authenticated user can manage their own
-      // profile + devices. Anonymous visitors fall through to false.
-      return user !== null
   }
 }
 
 export function firstAccessibleWorkspace(user: CmsCurrentUser | null): AdminWorkspace | null {
-  // Dashboard comes first — it's the canonical admin home. Falls through to
-  // the next accessible workspace for users whose role doesn't grant
-  // `dashboard.read` (rare; only happens with hand-edited custom roles).
-  const order: AdminWorkspace[] = ['dashboard', 'site', 'commerce', 'content', 'data', 'media', 'plugins', 'users', 'ai']
+  // Site is the canonical admin home — it is the editor. Falls through for
+  // roles that lack `site.read`.
+  const order: AdminWorkspace[] = ['site', 'commerce', 'media']
   return order.find((workspace) => canAccessWorkspace(user, workspace)) ?? null
 }
 
 export function workspacePath(workspace: AdminWorkspace): string {
   switch (workspace) {
-    case 'dashboard':
-      return '/admin/dashboard'
     case 'site':
       return '/admin/site'
-    case 'content':
-      return '/admin/content'
-    case 'data':
-      return '/admin/data'
     case 'media':
       return '/admin/media'
     case 'commerce':
       return '/admin/commerce'
-    case 'plugins':
-      return '/admin/plugins'
-    case 'users':
-      return '/admin/users'
-    case 'ai':
-      return '/admin/ai'
-    case 'pluginPage':
-      return '/admin/plugins'
-    case 'account':
-      return '/admin/account'
   }
 }
 

@@ -20,10 +20,11 @@ import {
 export type ModuleInserterAccent = 'mint' | 'lilac' | 'sky' | 'peach' | 'rose'
 export type ModuleInserterSectionId =
   | 'modules'
+  | 'blocks'
   | 'layouts'
   | 'components'
   | 'recent'
-type ModuleInserterItemKind = 'module' | 'savedLayout' | 'component' | 'commerceScaffold'
+type ModuleInserterItemKind = 'module' | 'savedLayout' | 'component' | 'commerceScaffold' | 'block'
 type ModuleInserterRecentRef = ModuleInserterItemRef
 
 export interface RegistryModuleForInserter {
@@ -84,11 +85,22 @@ interface ModuleInserterCommerceScaffoldItem extends BaseInserterItem {
   scaffoldId: CommerceScaffoldId
 }
 
+/**
+ * "Import block…" — opens a file picker rather than inserting a fixed tree.
+ * A block is a structured JSON subtree (see `@core/page-tree/blockTransfer`),
+ * so unlike every other inserter item its content isn't known until a file is
+ * chosen; `wire` is a placeholder outline, not a preview of what lands.
+ */
+interface ModuleInserterBlockItem extends BaseInserterItem {
+  kind: 'block'
+}
+
 export type ModuleInserterItem =
   | ModuleInserterModuleItem
   | ModuleInserterSavedLayoutItem
   | ModuleInserterComponentItem
   | ModuleInserterCommerceScaffoldItem
+  | ModuleInserterBlockItem
 
 const HIDDEN_MODULE_IDS = new Set([
   'base.body',
@@ -404,6 +416,34 @@ function getCommerceScaffoldItems(): ModuleInserterCommerceScaffoldItem[] {
   }))
 }
 
+/**
+ * The single "Paste block…" entry. Always available: a block can go anywhere a
+ * subtree can, and whether the JSON is valid is a question for the paste
+ * dialog, not the picker.
+ */
+function getBlockItem(): ModuleInserterBlockItem {
+  const name = 'Paste block…'
+  const description = 'Paste a .dukafy-block.json subtree — see its bindings, cart actions and conditions before inserting.'
+  return {
+    key: recentKey({ kind: 'block', id: 'import' }),
+    id: 'import',
+    kind: 'block',
+    name,
+    description,
+    accent: moduleAccentForCategory('Commerce'),
+    wire: wireFromTree({
+      rootNodeId: 'block-import',
+      nodes: {
+        'block-import': {
+          id: 'block-import', moduleId: 'base.container', props: {},
+          breakpointOverrides: {}, children: [], classIds: [],
+        },
+      },
+    }),
+    searchText: searchText([name, 'block', 'import', 'paste', 'template', 'json', description]),
+  }
+}
+
 function toWireTree(snapshot: { rootNodeIds: string[]; nodes: Record<string, import('@core/page-tree').PageNode> }) {
   return { rootNodeId: snapshot.rootNodeIds[0], nodes: snapshot.nodes }
 }
@@ -414,6 +454,12 @@ interface BuiltModuleInserterItems {
   savedLayoutItems: ModuleInserterSavedLayoutItem[]
   componentItems: ModuleInserterComponentItem[]
   commerceScaffoldItems: ModuleInserterCommerceScaffoldItem[]
+  /**
+   * What the "Blocks" section shows: the code-defined commerce scaffolds and
+   * the paste-a-block entry. Whole subtrees rather than single modules —
+   * "insert a cart", not "insert a div".
+   */
+  blockItems: ModuleInserterItem[]
   /** Every visible item — including disabled ones (carrying `disabledReason`). */
   allItems: ModuleInserterItem[]
 }
@@ -433,16 +479,19 @@ export function buildModuleInserterItems({
   const savedLayoutItems = getSavedLayoutItems(savedLayouts, context, visualComponents)
   const componentItems = getComponentItems(visualComponents)
   const commerceScaffoldItems = getCommerceScaffoldItems()
+  const blockItems: ModuleInserterItem[] = [...commerceScaffoldItems, getBlockItem()]
   return {
     moduleItems,
     savedLayoutItems,
     componentItems,
     commerceScaffoldItems,
+    blockItems,
     allItems: [
       ...moduleItems,
       ...savedLayoutItems,
       ...componentItems,
       ...commerceScaffoldItems,
+      getBlockItem(),
     ],
   }
 }

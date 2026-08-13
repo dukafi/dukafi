@@ -3,7 +3,7 @@
  *
  * Replaces the duplicated `.emptyState` blocks that lived in every panel
  * (ColorsPanel, SelectorsPanel, FrameworkScalePanel, SiteExplorerPanel,
- * ContentExplorerPanel, AgentPanel, CodeEditorPanel, PropertiesPanel,
+ * ContentExplorerPanel, CodeEditorPanel, PropertiesPanel,
  * BreakpointFrame). One primitive, two visual variants:
  *
  *   - variant="card" (default) — surfaced rounded card with muted text.

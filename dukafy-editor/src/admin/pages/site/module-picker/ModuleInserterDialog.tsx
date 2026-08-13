@@ -90,6 +90,10 @@ const EMPTY_COMPONENTS: VisualComponent[] = []
 const EMPTY_LAYOUTS: SavedLayout[] = []
 const SECTIONS: readonly SectionDefinition[] = [
   { id: 'modules', name: 'Modules', accent: 'lilac', icon: AppGridPlusGlyphIcon },
+  // Whole subtrees rather than single modules: the commerce scaffolds and
+  // "Paste block…". Both existed before this section did and were unreachable
+  // — the dialog renders per-section and nothing routed them anywhere.
+  { id: 'blocks', name: 'Blocks', accent: 'peach', icon: BoxStackSolidIcon },
   { id: 'layouts', name: 'Layouts', accent: 'sky', icon: LayoutSolidIcon },
   { id: 'components', name: 'Components', accent: 'mint', icon: BoxStackSolidIcon },
   { id: 'recent', name: 'Recent', accent: 'rose', icon: CalendarSolidIcon },
@@ -128,6 +132,7 @@ export function ModuleInserterDialog({
     moduleItems,
     savedLayoutItems,
     componentItems,
+    blockItems,
     allItems,
   } = buildModuleInserterItems({
     modules: registry.list(),
@@ -140,6 +145,7 @@ export function ModuleInserterDialog({
   const filteredModules = filterInserterItems(moduleItems, query)
   const filteredSavedLayouts = filterInserterItems(savedLayoutItems, query)
   const filteredComponents = filterInserterItems(componentItems, query)
+  const filteredBlocks = filterInserterItems(blockItems, query)
   const filteredRecent = filterInserterItems(recentItems, query)
   // Layouts section order: the user's saved layouts, then one group per plugin
   // (labelled with the plugin's display name). All sourced from `data_rows`.
@@ -149,6 +155,7 @@ export function ModuleInserterDialog({
   )
   const items = itemsForSection(section, {
     modules: filteredModules,
+    blocks: filteredBlocks,
     layouts: layoutsSection.items,
     components: filteredComponents,
     recent: filteredRecent,
@@ -164,6 +171,7 @@ export function ModuleInserterDialog({
   const selectedSection = SECTIONS.find((item) => item.id === section) ?? SECTIONS[0]
   const sectionCounts = {
     modules: filteredModules.length,
+    blocks: filteredBlocks.length,
     layouts: layoutsSection.items.length,
     components: filteredComponents.length,
     recent: filteredRecent.length,
@@ -637,11 +645,13 @@ function itemsForSection(
   section: ModuleInserterSectionId,
   groups: {
     modules: ModuleInserterItem[]
+    blocks: ModuleInserterItem[]
     layouts: ModuleInserterItem[]
     components: ModuleInserterItem[]
     recent: ModuleInserterItem[]
   },
 ): ModuleInserterItem[] {
+  if (section === 'blocks') return groups.blocks
   if (section === 'layouts') return groups.layouts
   if (section === 'components') return groups.components
   if (section === 'recent') return groups.recent
@@ -649,12 +659,14 @@ function itemsForSection(
 }
 
 function emptyTitleForSection(section: ModuleInserterSectionId): string {
+  if (section === 'blocks') return 'No blocks'
   if (section === 'components') return 'No components yet'
   if (section === 'recent') return 'No recent inserts'
   return 'Nothing to insert'
 }
 
 function emptyDescriptionForSection(section: ModuleInserterSectionId): string {
+  if (section === 'blocks') return 'Insert a product, a cart, or paste a block from JSON.'
   if (section === 'components') return 'Create a Visual Component to insert it from here.'
   if (section === 'recent') return 'Inserted modules and layouts will appear here.'
   return 'This section has no available items.'

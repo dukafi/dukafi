@@ -22,15 +22,9 @@ import { editorScope } from './scopes/editorScope'
 import { pagesScope } from './scopes/pagesScope'
 import { breakpointsScope } from './scopes/breakpointsScope'
 import { vcScope } from './scopes/vcScope'
-import { contentScope } from './scopes/contentScope'
-import { dataScope } from './scopes/dataScope'
 import { mediaScope } from './scopes/mediaScope'
-import { pluginsScope } from './scopes/pluginsScope'
-import { usersScope } from './scopes/usersScope'
 import { settingsScope } from './scopes/settingsScope'
 import { helpScope } from './scopes/helpScope'
-import { codeEditorScope } from './scopes/codeEditorScope'
-import { pluginCommandsScope } from './scopes/pluginCommandsScope'
 
 // ─── Scope registry ───────────────────────────────────────────────────────────
 
@@ -40,15 +34,9 @@ const SCOPE_REGISTRY: Map<string, Scope> = new Map([
   ['pages', pagesScope],
   ['breakpoints', breakpointsScope],
   ['visualComponents', vcScope],
-  ['content', contentScope],
-  ['data', dataScope],
   ['media', mediaScope],
-  ['plugins', pluginsScope],
-  ['users', usersScope],
   ['settings', settingsScope],
   ['help', helpScope],
-  ['codeEditor', codeEditorScope],
-  ['pluginCommands', pluginCommandsScope],
 ])
 
 export function getScope(id: string): Scope | undefined {

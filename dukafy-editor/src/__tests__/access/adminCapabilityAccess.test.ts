@@ -89,42 +89,30 @@ function row(input: {
 }
 
 describe('admin capability access helpers', () => {
+  // Three workspaces, matching `docs/architecture/admin-store.md`: Site owns
+  // presentation, Commerce owns catalogue data, Media owns uploads. Instatic's
+  // dashboard / content / data / plugins / users / ai / account workspaces were
+  // removed — none had a Ruby API behind it.
   it('maps capability families to the expected admin workspaces', () => {
-    const operator = user('operator', [
-      'dashboard.read',
-      'site.read',
-      'site.content.edit',
-      'content.create',
-      'data.custom.tables.read',
-      'media.read',
-    ])
-    expect(canAccessWorkspace(operator, 'dashboard')).toBe(true)
+    const operator = user('operator', ['site.read', 'site.content.edit', 'media.read'])
     expect(canAccessWorkspace(operator, 'site')).toBe(true)
-    expect(canAccessWorkspace(operator, 'content')).toBe(true)
-    expect(canAccessWorkspace(operator, 'data')).toBe(true)
     expect(canAccessWorkspace(operator, 'media')).toBe(true)
-    expect(canAccessWorkspace(operator, 'plugins')).toBe(false)
-    expect(canAccessWorkspace(operator, 'users')).toBe(false)
-    expect(canAccessWorkspace(operator, 'ai')).toBe(false)
-    expect(canAccessWorkspace(operator, 'account')).toBe(true)
-    expect(firstAccessibleWorkspace(operator)).toBe('dashboard')
+    // No `content.manage`, so the catalogue stays closed.
+    expect(canAccessWorkspace(operator, 'commerce')).toBe(false)
+    expect(firstAccessibleWorkspace(operator)).toBe('site')
 
-    const userManager = user('user-manager', ['users.manage'])
-    expect(canAccessWorkspace(userManager, 'users')).toBe(true)
-    expect(firstAccessibleWorkspace(userManager)).toBe('users')
+    const merchant = user('merchant', ['content.manage', 'media.read'])
+    expect(canAccessWorkspace(merchant, 'commerce')).toBe(true)
+    expect(canAccessWorkspace(merchant, 'site')).toBe(false)
+    expect(firstAccessibleWorkspace(merchant)).toBe('commerce')
 
-    const pluginOperator = user('plugin-operator', ['plugins.lifecycle'])
-    expect(canAccessWorkspace(pluginOperator, 'plugins')).toBe(true)
-    expect(canAccessWorkspace(pluginOperator, 'pluginPage')).toBe(true)
-    expect(firstAccessibleWorkspace(pluginOperator)).toBe('plugins')
+    const mediaOnly = user('media-only', ['media.read'])
+    expect(firstAccessibleWorkspace(mediaOnly)).toBe('media')
 
-    const aiAuditor = user('ai-auditor', ['ai.audit.read'])
-    expect(canAccessWorkspace(aiAuditor, 'ai')).toBe(true)
-    expect(firstAccessibleWorkspace(aiAuditor)).toBe('ai')
-
-    expect(canAccessWorkspace(null, 'account')).toBe(false)
     expect(firstAccessibleWorkspace(null)).toBeNull()
-    expect(workspacePath('pluginPage')).toBe('/admin/plugins')
+    expect(workspacePath('site')).toBe('/admin/site')
+    expect(workspacePath('media')).toBe('/admin/media')
+    expect(workspacePath('commerce')).toBe('/admin/commerce')
   })
 
   it('keeps editor write modes independent in the UI policy layer', () => {

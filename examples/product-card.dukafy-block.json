@@ -1,0 +1,789 @@
+{
+  "dukafyExport": "block",
+  "version": 1,
+  "exportedAt": 0,
+  "block": {
+    "name": "Product card with quantity stepper",
+    "rootNodeIds": [
+      "card"
+    ],
+    "nodes": {
+      "card": {
+        "id": "card",
+        "moduleId": "base.container",
+        "children": [
+          "image",
+          "title",
+          "price",
+          "cartstate"
+        ],
+        "props": {
+          "tag": "div"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-group",
+          "tw-flex",
+          "tw-flex_col",
+          "tw-overflow_hidden",
+          "tw-rounded_xl",
+          "tw-border",
+          "tw-border_zinc_200",
+          "tw-bg_white"
+        ]
+      },
+      "image": {
+        "id": "image",
+        "moduleId": "base.image",
+        "children": [],
+        "props": {
+          "src": "",
+          "alt": ""
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-aspect_square",
+          "tw-w_full",
+          "tw-object_cover"
+        ],
+        "dynamicBindings": {
+          "src": {
+            "source": "currentEntry",
+            "field": "imageUrl",
+            "format": "media",
+            "fallback": "empty"
+          }
+        }
+      },
+      "title": {
+        "id": "title",
+        "moduleId": "base.text",
+        "children": [],
+        "props": {
+          "text": "Product title",
+          "tag": "h3"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-px_4",
+          "tw-pt_4",
+          "tw-text_base",
+          "tw-font_semibold",
+          "tw-text_zinc_900"
+        ],
+        "dynamicBindings": {
+          "text": {
+            "source": "currentEntry",
+            "field": "title",
+            "format": "plain",
+            "fallback": "static"
+          }
+        }
+      },
+      "price": {
+        "id": "price",
+        "moduleId": "base.text",
+        "children": [],
+        "props": {
+          "text": "$0.00",
+          "tag": "span"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-px_4",
+          "tw-pb_3",
+          "tw-text_sm",
+          "tw-text_zinc_600"
+        ],
+        "dynamicBindings": {
+          "text": {
+            "source": "currentEntry",
+            "field": "priceDisplay",
+            "format": "plain",
+            "fallback": "static"
+          }
+        }
+      },
+      "cartstate": {
+        "id": "cartstate",
+        "moduleId": "base.container",
+        "children": [
+          "add",
+          "minus",
+          "count",
+          "plus",
+          "remove"
+        ],
+        "props": {
+          "tag": "div"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-flex",
+          "tw-items_center",
+          "tw-gap_2",
+          "tw-px_4",
+          "tw-pb_4"
+        ],
+        "actions": {
+          "region": "cart"
+        }
+      },
+      "add": {
+        "id": "add",
+        "moduleId": "base.button",
+        "children": [],
+        "props": {
+          "label": "Add to cart",
+          "href": ""
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-w_full",
+          "tw-rounded_md",
+          "tw-bg_zinc_900",
+          "tw-px_4",
+          "tw-py_2",
+          "tw-text_sm",
+          "tw-font_medium",
+          "tw-text_white",
+          "tw-hover_bg_zinc_700"
+        ],
+        "visibleWhen": {
+          "source": "currentEntry",
+          "field": "inCart",
+          "operator": "isFalse"
+        },
+        "actions": {
+          "click": {
+            "type": "cart.addItem",
+            "quantity": 1
+          }
+        }
+      },
+      "minus": {
+        "id": "minus",
+        "moduleId": "base.button",
+        "children": [],
+        "props": {
+          "label": "\u2212",
+          "href": ""
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-grid",
+          "tw-h_9",
+          "tw-w_9",
+          "tw-place_items_center",
+          "tw-rounded_md",
+          "tw-border",
+          "tw-border_zinc_300",
+          "tw-text_lg",
+          "tw-leading_none",
+          "tw-text_zinc_700",
+          "tw-hover_bg_zinc_100"
+        ],
+        "visibleWhen": {
+          "source": "currentEntry",
+          "field": "inCart",
+          "operator": "isTrue"
+        },
+        "actions": {
+          "click": {
+            "type": "cart.setQuantity",
+            "delta": -1
+          }
+        }
+      },
+      "count": {
+        "id": "count",
+        "moduleId": "base.text",
+        "children": [],
+        "props": {
+          "text": "0",
+          "tag": "span"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-min_w_8",
+          "tw-text_center",
+          "tw-text_sm",
+          "tw-font_semibold",
+          "tw-tabular_nums",
+          "tw-text_zinc_900"
+        ],
+        "visibleWhen": {
+          "source": "currentEntry",
+          "field": "inCart",
+          "operator": "isTrue"
+        },
+        "dynamicBindings": {
+          "text": {
+            "source": "currentEntry",
+            "field": "cartQuantity",
+            "format": "plain",
+            "fallback": "static"
+          }
+        }
+      },
+      "plus": {
+        "id": "plus",
+        "moduleId": "base.button",
+        "children": [],
+        "props": {
+          "label": "+",
+          "href": ""
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-grid",
+          "tw-h_9",
+          "tw-w_9",
+          "tw-place_items_center",
+          "tw-rounded_md",
+          "tw-border",
+          "tw-border_zinc_300",
+          "tw-text_lg",
+          "tw-leading_none",
+          "tw-text_zinc_700",
+          "tw-hover_bg_zinc_100"
+        ],
+        "visibleWhen": {
+          "source": "currentEntry",
+          "field": "inCart",
+          "operator": "isTrue"
+        },
+        "actions": {
+          "click": {
+            "type": "cart.setQuantity",
+            "delta": 1
+          }
+        }
+      },
+      "remove": {
+        "id": "remove",
+        "moduleId": "base.button",
+        "children": [],
+        "props": {
+          "label": "Empty",
+          "href": ""
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-ml_auto",
+          "tw-text_xs",
+          "tw-text_zinc_500",
+          "tw-underline",
+          "tw-hover_text_zinc_900"
+        ],
+        "visibleWhen": {
+          "source": "currentEntry",
+          "field": "inCart",
+          "operator": "isTrue"
+        },
+        "actions": {
+          "click": {
+            "type": "cart.removeItem"
+          }
+        }
+      }
+    },
+    "classes": {
+      "tw-group": {
+        "id": "tw-group",
+        "name": "group",
+        "kind": "class",
+        "selector": ".group",
+        "order": 0,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-flex": {
+        "id": "tw-flex",
+        "name": "flex",
+        "kind": "class",
+        "selector": ".flex",
+        "order": 1,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-flex_col": {
+        "id": "tw-flex_col",
+        "name": "flex-col",
+        "kind": "class",
+        "selector": ".flex-col",
+        "order": 2,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-overflow_hidden": {
+        "id": "tw-overflow_hidden",
+        "name": "overflow-hidden",
+        "kind": "class",
+        "selector": ".overflow-hidden",
+        "order": 3,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-rounded_xl": {
+        "id": "tw-rounded_xl",
+        "name": "rounded-xl",
+        "kind": "class",
+        "selector": ".rounded-xl",
+        "order": 4,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-border": {
+        "id": "tw-border",
+        "name": "border",
+        "kind": "class",
+        "selector": ".border",
+        "order": 5,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-border_zinc_200": {
+        "id": "tw-border_zinc_200",
+        "name": "border-zinc-200",
+        "kind": "class",
+        "selector": ".border-zinc-200",
+        "order": 6,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-bg_white": {
+        "id": "tw-bg_white",
+        "name": "bg-white",
+        "kind": "class",
+        "selector": ".bg-white",
+        "order": 7,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-aspect_square": {
+        "id": "tw-aspect_square",
+        "name": "aspect-square",
+        "kind": "class",
+        "selector": ".aspect-square",
+        "order": 8,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-w_full": {
+        "id": "tw-w_full",
+        "name": "w-full",
+        "kind": "class",
+        "selector": ".w-full",
+        "order": 9,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-object_cover": {
+        "id": "tw-object_cover",
+        "name": "object-cover",
+        "kind": "class",
+        "selector": ".object-cover",
+        "order": 10,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-px_4": {
+        "id": "tw-px_4",
+        "name": "px-4",
+        "kind": "class",
+        "selector": ".px-4",
+        "order": 11,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-pt_4": {
+        "id": "tw-pt_4",
+        "name": "pt-4",
+        "kind": "class",
+        "selector": ".pt-4",
+        "order": 12,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_base": {
+        "id": "tw-text_base",
+        "name": "text-base",
+        "kind": "class",
+        "selector": ".text-base",
+        "order": 13,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-font_semibold": {
+        "id": "tw-font_semibold",
+        "name": "font-semibold",
+        "kind": "class",
+        "selector": ".font-semibold",
+        "order": 14,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_zinc_900": {
+        "id": "tw-text_zinc_900",
+        "name": "text-zinc-900",
+        "kind": "class",
+        "selector": ".text-zinc-900",
+        "order": 15,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-pb_3": {
+        "id": "tw-pb_3",
+        "name": "pb-3",
+        "kind": "class",
+        "selector": ".pb-3",
+        "order": 16,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_sm": {
+        "id": "tw-text_sm",
+        "name": "text-sm",
+        "kind": "class",
+        "selector": ".text-sm",
+        "order": 17,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_zinc_600": {
+        "id": "tw-text_zinc_600",
+        "name": "text-zinc-600",
+        "kind": "class",
+        "selector": ".text-zinc-600",
+        "order": 18,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-items_center": {
+        "id": "tw-items_center",
+        "name": "items-center",
+        "kind": "class",
+        "selector": ".items-center",
+        "order": 19,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-gap_2": {
+        "id": "tw-gap_2",
+        "name": "gap-2",
+        "kind": "class",
+        "selector": ".gap-2",
+        "order": 20,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-pb_4": {
+        "id": "tw-pb_4",
+        "name": "pb-4",
+        "kind": "class",
+        "selector": ".pb-4",
+        "order": 21,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-rounded_md": {
+        "id": "tw-rounded_md",
+        "name": "rounded-md",
+        "kind": "class",
+        "selector": ".rounded-md",
+        "order": 22,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-bg_zinc_900": {
+        "id": "tw-bg_zinc_900",
+        "name": "bg-zinc-900",
+        "kind": "class",
+        "selector": ".bg-zinc-900",
+        "order": 23,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-py_2": {
+        "id": "tw-py_2",
+        "name": "py-2",
+        "kind": "class",
+        "selector": ".py-2",
+        "order": 24,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-font_medium": {
+        "id": "tw-font_medium",
+        "name": "font-medium",
+        "kind": "class",
+        "selector": ".font-medium",
+        "order": 25,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_white": {
+        "id": "tw-text_white",
+        "name": "text-white",
+        "kind": "class",
+        "selector": ".text-white",
+        "order": 26,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-hover_bg_zinc_700": {
+        "id": "tw-hover_bg_zinc_700",
+        "name": "hover:bg-zinc-700",
+        "kind": "class",
+        "selector": ".hover:bg-zinc-700",
+        "order": 27,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-grid": {
+        "id": "tw-grid",
+        "name": "grid",
+        "kind": "class",
+        "selector": ".grid",
+        "order": 28,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-h_9": {
+        "id": "tw-h_9",
+        "name": "h-9",
+        "kind": "class",
+        "selector": ".h-9",
+        "order": 29,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-w_9": {
+        "id": "tw-w_9",
+        "name": "w-9",
+        "kind": "class",
+        "selector": ".w-9",
+        "order": 30,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-place_items_center": {
+        "id": "tw-place_items_center",
+        "name": "place-items-center",
+        "kind": "class",
+        "selector": ".place-items-center",
+        "order": 31,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-border_zinc_300": {
+        "id": "tw-border_zinc_300",
+        "name": "border-zinc-300",
+        "kind": "class",
+        "selector": ".border-zinc-300",
+        "order": 32,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_lg": {
+        "id": "tw-text_lg",
+        "name": "text-lg",
+        "kind": "class",
+        "selector": ".text-lg",
+        "order": 33,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-leading_none": {
+        "id": "tw-leading_none",
+        "name": "leading-none",
+        "kind": "class",
+        "selector": ".leading-none",
+        "order": 34,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_zinc_700": {
+        "id": "tw-text_zinc_700",
+        "name": "text-zinc-700",
+        "kind": "class",
+        "selector": ".text-zinc-700",
+        "order": 35,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-hover_bg_zinc_100": {
+        "id": "tw-hover_bg_zinc_100",
+        "name": "hover:bg-zinc-100",
+        "kind": "class",
+        "selector": ".hover:bg-zinc-100",
+        "order": 36,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-min_w_8": {
+        "id": "tw-min_w_8",
+        "name": "min-w-8",
+        "kind": "class",
+        "selector": ".min-w-8",
+        "order": 37,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_center": {
+        "id": "tw-text_center",
+        "name": "text-center",
+        "kind": "class",
+        "selector": ".text-center",
+        "order": 38,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-tabular_nums": {
+        "id": "tw-tabular_nums",
+        "name": "tabular-nums",
+        "kind": "class",
+        "selector": ".tabular-nums",
+        "order": 39,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-ml_auto": {
+        "id": "tw-ml_auto",
+        "name": "ml-auto",
+        "kind": "class",
+        "selector": ".ml-auto",
+        "order": 40,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_xs": {
+        "id": "tw-text_xs",
+        "name": "text-xs",
+        "kind": "class",
+        "selector": ".text-xs",
+        "order": 41,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_zinc_500": {
+        "id": "tw-text_zinc_500",
+        "name": "text-zinc-500",
+        "kind": "class",
+        "selector": ".text-zinc-500",
+        "order": 42,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-underline": {
+        "id": "tw-underline",
+        "name": "underline",
+        "kind": "class",
+        "selector": ".underline",
+        "order": 43,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-hover_text_zinc_900": {
+        "id": "tw-hover_text_zinc_900",
+        "name": "hover:text-zinc-900",
+        "kind": "class",
+        "selector": ".hover:text-zinc-900",
+        "order": 44,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      }
+    }
+  }
+}

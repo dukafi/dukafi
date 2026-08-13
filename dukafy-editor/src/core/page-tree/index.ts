@@ -174,6 +174,11 @@ export {
   type DukafyPageExportFile,
   type DukafySiteExportFile,
 } from './pageTransfer'
+export {
+  buildBlockExport,
+  parseBlockExport,
+  type DukafyBlockExportFile,
+} from './blockTransfer'
 
 export { cloneScopedClassesForNodeMap } from './scopedClassClone'
 

@@ -3,8 +3,8 @@
  *
  * In-house admin router: wildcard (`*`) matching and the AdminRoutes
  * catch-all. Unknown ADMIN URLs (e.g. /admin/login, a typo, a stale deep
- * link) must never render an empty tree — they redirect to /admin/dashboard,
- * which shows the login form when unauthenticated and the dashboard when
+ * link) must never render an empty tree — they redirect to /admin/site,
+ * which shows the login form when unauthenticated and the editor when
  * authenticated. The catch-all is scoped to /admin/* so public-site 404s —
  * which have their own treatment in the publish pipeline (NotFound template)
  * — are never claimed by the admin SPA.
@@ -48,13 +48,13 @@ describe('Routes — catch-all route', () => {
     render(
       <MemoryRouter initialEntries={['/admin/login']}>
         <Routes>
-          <Route path="/admin/dashboard" element={<LocationProbe />} />
-          <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/admin/site" element={<LocationProbe />} />
+          <Route path="*" element={<Navigate to="/admin/site" replace />} />
         </Routes>
       </MemoryRouter>,
     )
     const probe = await screen.findByTestId('probe')
-    expect(probe.textContent).toBe('/admin/dashboard')
+    expect(probe.textContent).toBe('/admin/site')
   })
 
   it('prefers an earlier explicit match over the catch-all', () => {
@@ -72,7 +72,7 @@ describe('Routes — catch-all route', () => {
 })
 
 describe('AdminRoutes — unknown admin URLs never render an empty tree', () => {
-  it('declares a final /admin/* catch-all redirecting to /admin/dashboard', () => {
+  it('declares a final /admin/* catch-all redirecting to /admin/site', () => {
     // Inspect the declared route table (no DOM mount — AdminEntry is heavy).
     const routes = AdminRoutes()
     const routeElements = React.Children.toArray(routes.props.children) as Array<
@@ -83,7 +83,7 @@ describe('AdminRoutes — unknown admin URLs never render an empty tree', () => 
     expect(last.props.element.type).toBe(Navigate)
     expect(
       (last.props.element as React.ReactElement<{ to: string; replace?: boolean }>).props.to,
-    ).toBe('/admin/dashboard')
+    ).toBe('/admin/site')
   })
 
   it('does not claim non-admin paths (public 404s keep their own treatment)', () => {

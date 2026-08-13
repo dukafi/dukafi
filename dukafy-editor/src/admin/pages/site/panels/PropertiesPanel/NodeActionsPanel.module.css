@@ -6,11 +6,11 @@
     padding: var(--space-l) var(--space-xl);
 }
 
-.hint {
-    margin: 0;
+/* The note affordance beside a label. Muted and small so it reads as "there is
+   an explanation here" rather than competing with the control it annotates. */
+.hintTip {
     color: var(--text-muted);
-    font-size: var(--font-size-xs);
-    line-height: 1.4;
+    cursor: help;
 }
 
 /* A titled group, so "what this node does" and "whether it renders at all"
@@ -19,7 +19,7 @@
     display: grid;
     gap: var(--space-m);
     padding-top: var(--space-m);
-    border-top: 1px solid var(--border-subtle, rgba(128, 128, 128, 0.2));
+    border-top: 1px solid var(--border-subtle);
 }
 
 .groupTitle {

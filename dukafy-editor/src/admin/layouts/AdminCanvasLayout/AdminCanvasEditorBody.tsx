@@ -29,6 +29,9 @@ import '@modules/base'
 import '@modules/store'
 import '@core/loops/sources'
 
+const PasteBlockModal = lazy(() =>
+  import('@admin/modals/PasteBlock').then((m) => ({ default: m.PasteBlockModal })),
+)
 const ImportHtmlModal = lazy(() =>
   import('@admin/modals/ImportHtml').then((m) => ({ default: m.ImportHtmlModal })),
 )
@@ -36,14 +39,12 @@ const ImportHtmlModal = lazy(() =>
 interface AdminCanvasEditorBodyProps {
   canEditDraftSite: boolean
   canSaveSite: boolean
-  canUseAiChat: boolean
   loadError: string | null
 }
 
 export function AdminCanvasEditorBody({
   canEditDraftSite,
   canSaveSite,
-  canUseAiChat,
   loadError,
 }: AdminCanvasEditorBodyProps) {
   // Keep `siteRuntime.dependencyLock` in lockstep with `packageJson` while
@@ -93,7 +94,6 @@ export function AdminCanvasEditorBody({
             <LeftSidebar
               workspace="site"
               editable={canEditDraftSite}
-              canUseAiChat={canUseAiChat}
               railOnly={hasRightSidebar && narrowChrome}
             />
             <div
@@ -143,8 +143,26 @@ export function AdminCanvasEditorBody({
           <ImportHtmlModal />
         </Suspense>
       )}
+
+      {/* Paste-a-block modal — same lazy treatment, opened from the inserter. */}
+      <Suspense fallback={null}>
+        <PasteBlockHost />
+      </Suspense>
     </>
   )
+}
+
+/**
+ * Bridges the paste-block modal to the store: it is opened from the module
+ * inserter, and inserting is `insertBlock`, so neither the modal nor the
+ * inserter needs to know about the other.
+ */
+function PasteBlockHost() {
+  const open = useEditorStore((s) => s.pasteBlockModalOpen)
+  const close = useEditorStore((s) => s.closePasteBlockModal)
+  const insertBlock = useEditorStore((s) => s.insertBlock)
+  if (!open) return null
+  return <PasteBlockModal open onClose={close} onInsert={(block) => insertBlock(block)} />
 }
 
 function ImportHtmlModalLoading() {

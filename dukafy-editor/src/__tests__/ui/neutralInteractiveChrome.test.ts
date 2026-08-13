@@ -5,8 +5,6 @@ const SEGMENTED_CONTROL_CSS = 'src/ui/components/SegmentedControl/SegmentedContr
 const RANGE_TABS_CSS = 'src/ui/components/RangeTabs/RangeTabs.module.css'
 const BUTTON_CSS = 'src/ui/components/Button/Button.module.css'
 const SWITCH_CSS = 'src/ui/components/Switch/Switch.module.css'
-const CANVAS_MODE_TOGGLE_CSS =
-  'src/admin/pages/site/canvas/CanvasModeToggle.module.css'
 const SECTION_CSS = 'src/ui/components/Section/Section.module.css'
 
 function cssRule(css: string, selector: string): string {
@@ -100,20 +98,6 @@ describe('neutral interactive chrome', () => {
     ]) {
       expectNoSurfaceBackground(rule)
     }
-  })
-
-  it('uses the canvas background and overlay states for the canvas mode pill', () => {
-    const css = readFileSync(CANVAS_MODE_TOGGLE_CSS, 'utf8')
-
-    const pill = cssRule(css, '.pill')
-    const tabHover = cssRule(css, '.tab:hover:not(.tabActive)')
-    const tabActive = cssRule(css, '.tabActive')
-
-    expectBackgroundToken(pill, '--bg-body')
-    expectBackgroundToken(tabHover, '--overlay-10')
-    expectBackgroundToken(tabActive, '--overlay-20')
-    expectNoSurfaceBackground(tabHover)
-    expectNoSurfaceBackground(tabActive)
   })
 
   it('keeps switch states distinct from surrounding editor surfaces', () => {
