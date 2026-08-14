@@ -1,8 +1,8 @@
-# Dukafy
+# Dukafi
 
 **Own your store. One click to live.**
 
-Dukafy is a self-hosted, ecommerce-focused visual CMS. Merchants manage a
+Dukafi is a self-hosted, ecommerce-focused visual CMS. Merchants manage a
 catalog and design the customer-facing store in one editor. Publishing turns
 the design into static HTML and a content-hashed CSS bundle, while genuinely
 live concerns such as inventory and carts remain small server-rendered
@@ -89,7 +89,7 @@ makes one template dynamic across the whole catalog.
 | --- | --- | --- |
 | Server | Ruby 3.4, Roda, Puma, Rack | API, storefront routing, fragments |
 | Data | SQLite in WAL mode, Sequel | CMS, catalog, sessions, dependencies |
-| Editor | `dukafy-editor/` — a Dukafy fork of Instatic, React 19 + Vite, Bun | Authenticated visual CMS |
+| Editor | `dukafi-editor/` — a Dukafi fork of Instatic, React 19 + Vite, Bun | Authenticated visual CMS |
 | Storefront | Static semantic HTML, HTMX 2 fragments | Fast public experience |
 | Publisher | Plain Ruby modules | Deterministic page rendering |
 | CSS | Tailwind CSS 4 standalone + framework/module CSS | Used-class-only bundle |
@@ -105,9 +105,9 @@ Requirements: Ruby 3.4+, Bundler, Bun 1.x+, and libvips.
 
 ```bash
 sudo apt-get install libvips
-cd dukafy
+cd dukafi
 bundle install
-cd ../dukafy-editor
+cd ../dukafi-editor
 bun install
 cd ..
 ./bin/dev
@@ -126,7 +126,7 @@ Open:
 On first use, complete the owner setup form. To seed demo commerce data:
 
 ```bash
-cd dukafy
+cd dukafi
 bundle exec ruby scripts/seed_demo_store.rb
 ```
 
@@ -152,7 +152,7 @@ and activates the customer-facing files.
 
 ```text
 bin/dev                         one-command development launcher
-dukafy/                         Ruby product
+dukafi/                         Ruby product
   config/                       database and runtime configuration
   db/migrations/                ordered schema migrations
   models/                       Sequel models
@@ -162,12 +162,12 @@ dukafy/                         Ruby product
   spec/                         Minitest and golden-output tests
   published/                    generated two-slot output (ignored)
   uploads/                      merchant originals/variants (ignored)
-dukafy-editor/                  Dukafy's fork of Instatic's editor client (tracked)
+dukafi-editor/                  Dukafi's fork of Instatic's editor client (tracked)
 reference/instatic/             full upstream Instatic clone; diff-only, gitignored, never executed
 docs/                           focused architecture and workflow guides
 ```
 
-`dukafy-editor/` is a fork of [Instatic](https://github.com/corebunch/instatic)
+`dukafi-editor/` is a fork of [Instatic](https://github.com/corebunch/dukafi)
 and is tracked as part of this monorepo like everything else — Ruby API changes
 and editor changes land in the same commit. `reference/instatic/` is a separate,
 full clone of upstream kept only so the fork can be diffed against it; it's
@@ -176,15 +176,15 @@ gitignored and never built or run.
 ## Tests
 
 ```bash
-cd dukafy
+cd dukafi
 bundle exec rake test
 
-cd ../dukafy-editor
+cd ../dukafi-editor
 bun run build
 ```
 
 Publisher modules use golden HTML tests, and a purity test prevents database,
-filesystem, or network access from leaking into `dukafy/publisher/`.
+filesystem, or network access from leaking into `dukafi/publisher/`.
 
 ## Important invariants
 
@@ -214,6 +214,6 @@ filesystem, or network access from leaking into `dukafy/publisher/`.
 ## Attribution
 
 The visual editing experience is derived from
-[Instatic](https://github.com/corebunch/instatic), © David Babinec, under the
-MIT License. Dukafy reimplements the server contract in Ruby and keeps the
+[Instatic](https://github.com/corebunch/dukafi), © David Babinec, under the
+MIT License. Dukafi reimplements the server contract in Ruby and keeps the
 upstream server copy as read-only reference material.

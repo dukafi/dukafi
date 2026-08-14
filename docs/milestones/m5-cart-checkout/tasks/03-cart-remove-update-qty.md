@@ -4,7 +4,7 @@
 
 ## Scope
 
-`dukafy/routes/fragments.rb`'s `r.on("cart")` block (~line 62) currently only
+`dukafi/routes/fragments.rb`'s `r.on("cart")` block (~line 62) currently only
 has `POST items` (add) and `GET badge`. Add, following the exact same
 `active_cart`/`CartItem`/`request.halt` idioms already in that file:
 
@@ -13,7 +13,7 @@ has `POST items` (add) and `GET badge`. Add, following the exact same
   a `cart_fragment` notice); quantity `0` removes the row.
 - `DELETE /fragments/cart/items/:id` — remove a line item outright.
 - Both return the drawer fragment (task 02) with `HX-Trigger:
-  dukafy:cart-updated`, same as add-to-cart does today (line 81).
+  dukafi:cart-updated`, same as add-to-cart does today (line 81).
 
 ## Acceptance
 

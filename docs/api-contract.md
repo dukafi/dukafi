@@ -1,7 +1,7 @@
-# Dukafy editor API contract
+# Dukafi editor API contract
 
 The vendored editor uses `/admin/api/cms` as its API root. Shapes were checked
-against `dukafy-editor/src/core/persistence/` and `reference/instatic/server/handlers/cms/`.
+against `dukafi-editor/src/core/persistence/` and `reference/instatic/server/handlers/cms/`.
 
 ## Authentication and bootstrap
 
@@ -38,7 +38,7 @@ mutations are not exposed in the M1 UI.
 | POST | `/tailwind/compile` | `{classes: string[]}` | `{css}` |
 
 The editor loads the four document GET endpoints in parallel. Pages are translated
-between Dukafy's `pages.document` JSON and Instatic's page `DataRow` wire
+between Dukafi's `pages.document` JSON and Instatic's page `DataRow` wire
 shape. `PUT /site-document` is atomic and is the primary canvas save path.
 
 Page slugs must match lowercase alphanumeric/hyphenated segments with optional
@@ -92,7 +92,7 @@ These routes are outside the CMS API and use the anonymous cart session:
 | POST | `/fragments/cart/items` | Add a positive quantity of an active product variant |
 
 The add endpoint returns HTML, checks requested quantity against current stock,
-and emits `HX-Trigger: dukafy:cart-updated` on success. Cart drawer, remove, and
+and emits `HX-Trigger: dukafi:cart-updated` on success. Cart drawer, remove, and
 quantity-update endpoints are not implemented yet. `/checkout` currently
 returns 501.
 

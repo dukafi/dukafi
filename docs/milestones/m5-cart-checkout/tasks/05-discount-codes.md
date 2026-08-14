@@ -4,7 +4,7 @@
 
 ## Scope
 
-- `dukafy/services/discount_lookup.rb` (or similar): given a code + cart
+- `dukafi/services/discount_lookup.rb` (or similar): given a code + cart
   subtotal, validate `starts_at`/`ends_at` window and `usage_limit` vs
   `usage_count`, return the computed discount amount for `percentage` or
   `fixed` kind. Case-insensitive code match (compare uppercased).

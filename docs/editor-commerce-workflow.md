@@ -1,6 +1,6 @@
 # Editor and commerce workflow
 
-This guide explains how catalog data becomes customer-facing pages. Dukafy
+This guide explains how catalog data becomes customer-facing pages. Dukafi
 keeps administration in the authenticated editor and keeps the storefront
 strictly public-facing.
 
@@ -95,7 +95,7 @@ semantic HTML and a `/assets/site-<hash>.css` link rather than a React app.
 
 ## Catalog edits and partial rebakes
 
-Product and variant mutations invoke dependency-aware partial baking. Dukafy
+Product and variant mutations invoke dependency-aware partial baking. Dukafi
 tracks which generated paths use each product. A product edit rerenders its own
 page and affected authored/collection pages while copying the unaffected live
 slot content and atomically activating the result. This avoids regenerating an

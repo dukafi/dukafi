@@ -10,9 +10,9 @@ so two customers can both add the last unit before either pays. Add a
 recheck that runs **inside the same DB transaction** as order creation
 (task 07 will call into this):
 
-- A service (e.g. `dukafy/services/checkout_stock_check.rb`) that, given a
+- A service (e.g. `dukafi/services/checkout_stock_check.rb`) that, given a
   cart, re-verifies every `CartItem`'s quantity against current
-  `variant.stock` — Dukafy's SQLite single-writer model (see VISION.md
+  `variant.stock` — Dukafi's SQLite single-writer model (see VISION.md
   "Money is exact... Stock is checked at the write, inside the one writer
   SQLite gives us") makes this safe without row locking.
 - On failure: which line(s) are now short, so checkout (task 06) can show

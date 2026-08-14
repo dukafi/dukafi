@@ -9,12 +9,12 @@ Publishing combines three persisted inputs:
 - Prefetched catalog/media hashes: plain data prepared before rendering
 
 The output is a directory of HTML pages and hashed CSS assets under
-`dukafy/published/`. The pure publisher never reads SQLite or files itself.
+`dukafi/published/`. The pure publisher never reads SQLite or files itself.
 
 ## Document contract
 
 Editor page documents are validated against exported JSON schemas in
-`dukafy/publisher/schemas/`. A page includes its id, title, slug, root node id,
+`dukafi/publisher/schemas/`. A page includes its id, title, slug, root node id,
 node map, and optional template target. Ruby validates the document on
 assignment and independently validates the route slug.
 

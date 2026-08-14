@@ -1,0 +1,66 @@
+.brandRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-m);
+  margin-bottom: var(--space-4xl);
+  color: var(--text-muted);
+  font-size: var(--text-s);
+  font-weight: 600;
+}
+
+.brandIcon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--overlay-10);
+  color: var(--text);
+}
+
+/* Operator-provided favicon used as the login brand mark. Object-fit cover
+   so the asset crops cleanly regardless of aspect ratio; the rounded tile
+   keeps it visually paired with the default brandIcon background. */
+.brandFavicon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.form {
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-xs);
+  color: var(--text-muted);
+  font-size: var(--text-s);
+  font-weight: 600;
+}
+
+/* Secondary note inside a field label — lighter than the label it follows. */
+.hint {
+  color: var(--text-subtle);
+  font-weight: 400;
+}
+
+@keyframes dukafiAdminSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinIcon {
+  animation: dukafiAdminSpin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinIcon {
+    animation: none;
+  }
+}

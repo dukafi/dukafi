@@ -1,24 +1,24 @@
 db/*.sqlite3
 db/*.sqlite3-*
-dukafy/db/*.sqlite3
-dukafy/db/*.sqlite3-*
+dukafi/db/*.sqlite3
+dukafi/db/*.sqlite3-*
 /published/
 /uploads/
 /public/admin/
-dukafy/published/*
-!dukafy/published/.keep
-dukafy/uploads/*
-!dukafy/uploads/.keep
-dukafy/public/admin/*
-!dukafy/public/admin/.keep
+dukafi/published/*
+!dukafi/published/.keep
+dukafi/uploads/*
+!dukafi/uploads/.keep
+dukafi/public/admin/*
+!dukafi/public/admin/.keep
 node_modules/
 .env
-dukafy/vendor/tailwindcss
+dukafi/vendor/tailwindcss
 
-# dukafy-editor/ is our fork of Instatic and is tracked as part of this
+# dukafi-editor/ is our fork of Instatic and is tracked as part of this
 # monorepo. Only its build output and dependencies are ignored.
-dukafy-editor/dist/
-dukafy-editor/.tmp-lint/
+dukafi-editor/dist/
+dukafi-editor/.tmp-lint/
 
 # Full upstream Instatic clone, kept only as a diffing/reference baseline.
 # Has its own .git — never tracked as part of this repo.

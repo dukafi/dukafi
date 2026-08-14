@@ -13,19 +13,19 @@ jobs:
         with:
           ruby-version: "3.4"
           bundler-cache: true
-          working-directory: dukafy
+          working-directory: dukafi
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-        working-directory: dukafy-editor
+        working-directory: dukafi-editor
       - run: bun run scripts/export-schemas.ts
-        working-directory: dukafy-editor
+        working-directory: dukafi-editor
       - uses: actions/cache@v4
         with:
-          path: dukafy/vendor/tailwindcss
+          path: dukafi/vendor/tailwindcss
           key: tailwindcss-4.3.0-linux-x64
       - run: bundle exec ruby scripts/install_tailwind.rb
-        working-directory: dukafy
+        working-directory: dukafi
       - run: bundle exec rake test
-        working-directory: dukafy
+        working-directory: dukafi
       - run: bun run build
-        working-directory: dukafy-editor
+        working-directory: dukafi-editor

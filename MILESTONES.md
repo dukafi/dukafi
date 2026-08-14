@@ -1,4 +1,4 @@
-# Dukafy — Milestones
+# Dukafi — Milestones
 
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 
@@ -15,7 +15,7 @@ Goal: repo exists, editor builds, Ruby app boots, schema contract exported.
 - [x] Execute SETUP.md end to end
 - [x] Editor compiles after AI/plugin-host pruning (`bun run build` exits 0)
 - [x] Ruby app boots; migrations 001–008 apply on a fresh DB
-- [x] `scripts/export-schemas.ts` writes JSON Schemas to `dukafy/publisher/schemas/`
+- [x] `scripts/export-schemas.ts` writes JSON Schemas to `dukafi/publisher/schemas/`
 - [x] `Page#document=` validates against schema via json_schemer (spec proves a
       malformed tree is rejected)
 - [x] Purity spec: nothing in `publisher/` references DB/File/Net
@@ -30,7 +30,7 @@ on :9292, and both processes stop together with Ctrl-C.
 
 Goal: the vendored editor persists documents to SQLite through the Ruby API.
 
-- [x] Catalogue the editor's API surface: grep `dukafy-editor/src/admin` for fetch
+- [x] Catalogue the editor's API surface: grep `dukafi-editor/src/admin` for fetch
       calls; write `docs/api-contract.md` listing every endpoint + payload shape
       the editor actually uses (cross-check against `reference/instatic`)
 - [x] Auth: `POST /admin/api/auth/login`, session cookie, `GET /admin/api/auth/me`;

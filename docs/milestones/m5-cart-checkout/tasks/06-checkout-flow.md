@@ -4,7 +4,7 @@
 
 ## Scope
 
-`dukafy/routes/checkout.rb` is currently a bare `response.status = 501` stub
+`dukafi/routes/checkout.rb` is currently a bare `response.status = 501` stub
 (6 lines) — this task builds it from scratch:
 
 - Server-rendered (not baked — matches VISION.md's "dynamic by necessity"

@@ -1,0 +1,31 @@
+# Watch ONLY the Ruby the running server actually loads.
+#
+# Previously this was `--dir . --dir ../dukafi-editor/src`, which restarted the
+# server constantly for reasons that had nothing to do with Ruby:
+#   - published/ and uploads/ are rewritten by every publish and every media
+#     upload (this is also what caused rerun's "directory is already being
+#     watched" warning — published/current is a symlink into published/slot_N)
+#   - the editor's TS/CSS source is served by Vite, not Ruby, so a restart on
+#     every editor keystroke bought nothing
+#   - the default pattern also picks up .js/.css/.md, so vendor/ and
+#     public/js/htmx.min.js counted as "source" too
+#
+# Anything not listed here still works, it just doesn't trigger a restart:
+# migrations are applied by scripts/migrate.rb, and specs run in their own process.
+#
+# Two flags, both purely about noise:
+#
+# --no-notify   rerun defaults to notify: true, and once notify-send exists on
+#               the box that means a DESKTOP popup per lifecycle event —
+#               "launched" at boot, then "restarting" AND "restarted" on every
+#               single save. The foreman log already says all of this in the
+#               terminal you are looking at.
+#
+# --background  rerun's interactive keys (r/c/q) run in a thread that polls
+#               stdin once a second via `stty raw opost` + `stty -raw`. foreman
+#               does not give its children a tty, so BOTH calls fail and print
+#               "stty: standard input: Inappropriate ioctl for device" — two
+#               lines per second, drowning the actual server log. The keys
+#               cannot work under foreman regardless, so nothing is lost.
+web:    bundle exec rerun --no-notify --background --dir . --pattern '**/*.{rb,ru,erb}' --ignore 'published/*' --ignore 'uploads/*' --ignore 'public/*' --ignore 'vendor/*' --ignore 'spec/*' --ignore 'scripts/*' --ignore 'db/*' -- rackup -p 9292
+editor: sh -c "cd ../dukafi-editor && bun run dev"

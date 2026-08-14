@@ -3,7 +3,7 @@
 Date: 2026-08-01. Written after reading `VISION.md`, `MILESTONES.md`,
 `docs/architecture/admin-store.md`, `docs/architecture/publishing.md`,
 `docs/editor-commerce-workflow.md`, `docs/api-contract.md`, and the relevant
-`dukafy-editor/` and `dukafy/` source (module registry, publisher, prefetcher,
+`dukafi-editor/` and `dukafi/` source (module registry, publisher, prefetcher,
 Commerce workspace). This is a planning document, not a changelog — nothing
 in the codebase has been changed yet.
 
@@ -17,14 +17,14 @@ open questions that need a decision before implementation starts.
 
 ### Current state
 
-- The Commerce admin lives at `dukafy-editor/src/admin/pages/commerce/CommercePage.tsx`.
+- The Commerce admin lives at `dukafi-editor/src/admin/pages/commerce/CommercePage.tsx`.
   It's a single ~55-line hand-rolled component: inline hex colors
   (`#4f46e5`, `#d4d4d8`, `#dc2626`...) in `CommercePage.module.css` instead of
   the design tokens the rest of the admin uses, no `Panel`/`PanelHeader`
   shared chrome, raw `<button>`/`<form>` markup. It works, but looks and
   behaves nothing like Site, Media, or Dashboard.
 - Top-level workspace switching is handled by
-  `dukafy-editor/src/admin/shared/AdminSectionNavigation/AdminSectionNavigation.tsx`,
+  `dukafi-editor/src/admin/shared/AdminSectionNavigation/AdminSectionNavigation.tsx`,
   which renders three flat items: Commerce, Site, Media
   (`docs/architecture/admin-store.md:13-19` confirms these are the only three
   authenticated destinations). Switching to Commerce replaces the whole
@@ -32,7 +32,7 @@ open questions that need a decision before implementation starts.
   no way to jump to a specific product/collection from within the Site
   canvas editor.
 - By contrast, the Site workspace has a real navigation surface:
-  `dukafy-editor/src/admin/pages/site/sidebars/LeftSidebar/` (a page tree,
+  `dukafi-editor/src/admin/pages/site/sidebars/LeftSidebar/` (a page tree,
   `PanelRail`, `RightSidebar` for properties). Commerce has nothing
   equivalent — products/collections are two flat `<select>`-driven lists
   inside one page.
@@ -79,11 +79,11 @@ the *opposite* way from what you're describing.
 
 ### Current state — monolithic card modules
 
-`dukafy-editor/src/modules/store/productCard/index.ts` registers
+`dukafi-editor/src/modules/store/productCard/index.ts` registers
 `store.product-card` as one opaque module: `canHaveChildren: false`, one
 icon, one editor component. Dropping it on canvas gives you a single
 non-decomposable block. Its Ruby counterpart,
-`dukafy/publisher/modules/store/modules.rb:28-48`, builds the entire
+`dukafi/publisher/modules/store/modules.rb:28-48`, builds the entire
 `<a><img/><strong/><span/></a>` markup as one hardcoded HTML string inside
 the module's `render` block — title, image, and price are baked into that
 one function, not separate elements a merchant can select, restyle, or
@@ -91,7 +91,7 @@ reorder independently. The same pattern repeats for `store.image-gallery`,
 `store.variant-picker`, and `store.buy-button` in the same file.
 
 This is inconsistent with how `ProductTemplate` *already* builds the title:
-`dukafy/services/product_template.rb:20-22` uses a plain `base.text` node
+`dukafi/services/product_template.rb:20-22` uses a plain `base.text` node
 with `tag: "h1"` and a `dynamicBindings: {"text": {"source": "currentEntry",
 "field": "title", ...}}` binding. That's precisely the shape you're asking
 for — a predefined HTML element, individually selectable, wired to a data
@@ -99,19 +99,19 @@ field by binding rather than by being hardcoded into a bespoke component.
 The gallery/price/variant-picker/card modules never adopted that pattern;
 they're pre-Instatic-style "smart components" bolted onto a system whose
 binding primitive (`dynamicBindings` + `currentEntry`, resolved generically
-in `dukafy/publisher/render_page.rb:97-112`) already supports what you want.
+in `dukafi/publisher/render_page.rb:97-112`) already supports what you want.
 
 ### Current state — relationships (collection → products, product → variants)
 
 `store.collection-loop` is the one relationship-hydration mechanism that
 exists today, and it's special-cased rather than generic:
-- `CommercePrefetcher.call` (`dukafy/services/commerce_prefetcher.rb`) always
+- `CommercePrefetcher.call` (`dukafi/services/commerce_prefetcher.rb`) always
   eager-loads **every** active product with **every** variant, and **every**
   collection with its **full** resolved product list — regardless of
   whether a given page's document even references price, images, or
   variants. This is the overfetching you flagged: there's no step that
   looks at what a document actually binds to before deciding what to load.
-- `RenderPage#render_collection_loop` (`dukafy/publisher/render_page.rb:62-95`)
+- `RenderPage#render_collection_loop` (`dukafi/publisher/render_page.rb:62-95`)
   hardcodes the relationship path: it reads `prefetched["collections"][slug]["products"]`,
   then re-renders the loop's single child subtree once per product, with
   `current_entry` swapped to that product. The child subtree today is always

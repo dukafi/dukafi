@@ -1,6 +1,6 @@
 # Store administration surface
 
-Dukafy uses a dedicated **Commerce workspace inside the Instatic admin shell**
+Dukafi uses a dedicated **Commerce workspace inside the Instatic admin shell**
 at `/admin/commerce`. Products, variants, collections, imports, and eventually
 orders and discounts are managed beside Site and Media rather than through a
 separate Ruby-rendered admin application.

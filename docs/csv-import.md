@@ -7,8 +7,8 @@ Required columns:
 
 ```csv
 product_title,product_slug,vendor,status,description_html,sku,variant_title,price_cents,currency,stock,position
-Canvas Bag,canvas-bag,Dukafy,active,"<p>A durable bag.</p>",BAG-BLACK,Black,12900,USD,8,0
-Canvas Bag,canvas-bag,Dukafy,active,"<p>A durable bag.</p>",BAG-NATURAL,Natural,12900,USD,5,1
+Canvas Bag,canvas-bag,Dukafi,active,"<p>A durable bag.</p>",BAG-BLACK,Black,12900,USD,8,0
+Canvas Bag,canvas-bag,Dukafi,active,"<p>A durable bag.</p>",BAG-NATURAL,Natural,12900,USD,5,1
 ```
 
 `price_cents`, `stock`, and `position` are integers. Status is `draft` or

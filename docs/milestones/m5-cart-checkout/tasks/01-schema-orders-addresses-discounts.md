@@ -27,5 +27,5 @@ this task may consume more than one file if the schema warrants it).
 
 - Fresh DB migrates cleanly; `bundle exec ruby scripts/migrate.rb` idempotent.
 - Sequel models added (`Order`, `OrderItem`, `Address`, `Discount`) mirroring
-  the existing bare-model style (`Product`, `Variant` in `dukafy/models/`).
+  the existing bare-model style (`Product`, `Variant` in `dukafi/models/`).
 - No route/service code yet — this task is schema only.

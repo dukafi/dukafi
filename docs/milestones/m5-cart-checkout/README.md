@@ -11,9 +11,9 @@ needing a re-bake.
 **Already shipped** (do not redo): anonymous session cart (`carts`/`cart_items`,
 migration 014), add-to-cart with a stock check, the cart-count badge fragment,
 and the `hx-trigger="revealed"` skeleton pattern baked pages use to hydrate
-live fragments. All three live in `dukafy/routes/fragments.rb`.
+live fragments. All three live in `dukafi/routes/fragments.rb`.
 
-**Not started at all:** `dukafy/routes/checkout.rb` is currently a bare
+**Not started at all:** `dukafi/routes/checkout.rb` is currently a bare
 `response.status = 501` stub — every task from 06 onward starts from nothing.
 
 ## Tasks

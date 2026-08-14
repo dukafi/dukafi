@@ -1,4 +1,4 @@
-# Dukafy setup and operations guide
+# Dukafi setup and operations guide
 
 This guide describes the repository as it exists now. It covers a development
 installation, database/bootstrap behavior, common commands, local data, and
@@ -38,29 +38,29 @@ vips --version
 
 ## 2. Repository layout: the editor is tracked here
 
-`dukafy-editor/` is a fork of Instatic's React/Vite admin client, tracked as
-part of this monorepo. It carries local Dukafy integrations including:
+`dukafi-editor/` is a fork of Instatic's React/Vite admin client, tracked as
+part of this monorepo. It carries local Dukafi integrations including:
 
 - Vite base path `/admin/`
 - proxying `/admin/api` to `http://localhost:9292`
 - the Commerce workspace
-- Dukafy canvas commerce modules
+- Dukafi canvas commerce modules
 - API clients matching [docs/api-contract.md](docs/api-contract.md)
 
 A full, unmodified clone of the upstream project is kept separately at
 `reference/instatic/` — it has its own `.git` (so it can be `git fetch`-ed to
-diff against `dukafy-editor/`), is gitignored, and is never run or imported
-into Dukafy.
+diff against `dukafi-editor/`), is gitignored, and is never run or imported
+into Dukafi.
 
 ## 3. Install dependencies
 
 From the repository root:
 
 ```bash
-cd dukafy
+cd dukafi
 bundle install
 
-cd ../dukafy-editor
+cd ../dukafi-editor
 bun install
 
 cd ..
@@ -74,7 +74,7 @@ cd ..
 
 The launcher performs three actions:
 
-1. Runs `dukafy/scripts/install_tailwind.rb`, downloading and checksum-verifying
+1. Runs `dukafi/scripts/install_tailwind.rb`, downloading and checksum-verifying
    the pinned standalone compiler when absent.
 2. Runs every unapplied Sequel migration against the configured database.
 3. Starts Puma/Roda and Vite together through Foreman.
@@ -103,7 +103,7 @@ store name, owner email, and password of at least 12 characters.
 Alternatively, create/update the owner from the terminal:
 
 ```bash
-cd dukafy
+cd dukafi
 ADMIN_EMAIL=owner@example.com \
 ADMIN_PASSWORD='replace-with-a-long-password' \
 bundle exec ruby scripts/seed_admin.rb
@@ -117,7 +117,7 @@ bundle exec ruby scripts/seed_demo_store.rb
 
 ## 6. Database and migrations
 
-The default database is `dukafy/db/dukafy.sqlite3`. Override it with an absolute
+The default database is `dukafi/db/dukafy.sqlite3`. Override it with an absolute
 or process-resolvable path:
 
 ```bash
@@ -128,7 +128,7 @@ SQLite runs in WAL mode with foreign keys, a busy timeout, and a single Puma
 worker. Apply migrations manually with:
 
 ```bash
-cd dukafy
+cd dukafi
 bundle exec ruby scripts/migrate.rb
 ```
 
@@ -144,8 +144,8 @@ slashes between segments.
 
 ## 7. Tailwind CSS
 
-Dukafy pins the Tailwind CSS 4 standalone compiler. The default binary lives at
-`dukafy/vendor/tailwindcss` and is ignored by Git.
+Dukafi pins the Tailwind CSS 4 standalone compiler. The default binary lives at
+`dukafi/vendor/tailwindcss` and is ignored by Git.
 
 On unsupported platforms, install a compatible standalone executable and set:
 
@@ -160,7 +160,7 @@ published document. See [docs/tailwind.md](docs/tailwind.md).
 
 ## 8. Media
 
-Original uploads and generated variants live under `dukafy/uploads/`, which is
+Original uploads and generated variants live under `dukafi/uploads/`, which is
 ignored by Git. Raster uploads generate WebP variants at widths below the
 original from this set: 320, 640, 960, 1280, and 1920 pixels. Metadata and
 variant paths are stored in SQLite; image modules emit `srcset` and `sizes`.
@@ -174,18 +174,18 @@ its managed variants.
 Run all Ruby tests:
 
 ```bash
-cd dukafy
+cd dukafi
 bundle exec rake test
 ```
 
 Build the editor:
 
 ```bash
-cd dukafy-editor
+cd dukafi-editor
 bun run build
 ```
 
-The build writes production editor assets to `dukafy/public/admin/`, which is
+The build writes production editor assets to `dukafi/public/admin/`, which is
 ignored. Useful smoke checks while `./bin/dev` is running:
 
 ```bash
@@ -204,7 +204,7 @@ Saving and publishing are separate:
 - **Save** writes draft site/page state to SQLite.
 - **Publish** renders ordinary pages and all active products/collections,
   compiles the used Tailwind classes, writes the inactive output slot, then
-  atomically switches `dukafy/published/current`.
+  atomically switches `dukafi/published/current`.
 
 Generated output is ignored by Git. The two physical slots are `slot_0` and
 `slot_1`; only a completed slot becomes current. A failed publish removes the
@@ -236,9 +236,9 @@ complete authoring flow and module behavior.
 
 The important mutable paths are:
 
-- `dukafy/db/dukafy.sqlite3` plus temporary `-wal`/`-shm` files
-- `dukafy/uploads/`
-- `dukafy/published/` (rebuildable, but useful for immediate static serving)
+- `dukafi/db/dukafy.sqlite3` plus temporary `-wal`/`-shm` files
+- `dukafi/uploads/`
+- `dukafi/published/` (rebuildable, but useful for immediate static serving)
 
 Production-grade Litestream automation and a restore drill are not implemented
 yet. For a consistent manual development backup, stop the server first, then
@@ -255,7 +255,7 @@ state. The next `./bin/dev` recreates the schema, but not the lost content.
 Run current migrations and restart:
 
 ```bash
-cd dukafy
+cd dukafi
 bundle exec ruby scripts/migrate.rb
 ```
 
@@ -293,11 +293,11 @@ publish completed. Then use port 9292 and the exact slug:
 ## 14. Development invariants
 
 - Never use floats for money.
-- Do not add DB, filesystem, or network access to `dukafy/publisher/`.
+- Do not add DB, filesystem, or network access to `dukafi/publisher/`.
 - Keep editor and Ruby module implementations behaviorally aligned.
 - Regenerate schemas whenever editor core document types change.
 - Treat `reference/` as read-only.
 - Preserve Instatic MIT attribution.
-- `dukafy-editor/` is tracked and committed like any other part of this repo.
+- `dukafi-editor/` is tracked and committed like any other part of this repo.
   Do not commit `reference/instatic/`, databases, uploads, generated published
   output, built editor assets, or the local Tailwind executable.

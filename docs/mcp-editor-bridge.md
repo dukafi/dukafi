@@ -3,7 +3,7 @@
 Status: **designed, not started.** Everything below was settled in discussion;
 no code exists yet.
 
-Goal: let a merchant drive their own Dukafy from Cursor, Claude Code or Claude
+Goal: let a merchant drive their own Dukafi from Cursor, Claude Code or Claude
 Desktop — read the site, and edit it — using the tools they already pay for.
 
 ---
@@ -61,7 +61,7 @@ hang on nothing listening. Instatic accepted the same constraint.
 ### Auth
 
 A **personal access token generated in the admin**, not OAuth. Instatic built
-hosted OAuth with S256 PKCE because it was multi-tenant; one Dukafy deploy is
+hosted OAuth with S256 PKCE because it was multi-tenant; one Dukafi deploy is
 one store with one owner, so a bearer token is the correct primitive and is
 perhaps 60 lines against several hundred.
 

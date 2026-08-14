@@ -5,7 +5,7 @@
 ## Scope
 
 Add an **Orders** section to the Commerce workspace (see
-`dukafy-editor/src/admin/pages/commerce/CommercePage.tsx` — currently
+`dukafi-editor/src/admin/pages/commerce/CommercePage.tsx` — currently
 Products / Collections / Import; this is a 4th section, same
 `workspaceNavigation` pattern already used there).
 
@@ -14,7 +14,7 @@ Products / Collections / Import; this is a 4th section, same
 - Detail: line items, addresses, status history, a manual status transition
   (`paid → fulfilled → shipped`), refund action calling the Stripe API.
 - Ruby API: `GET/PATCH /admin/api/cms/commerce/orders(/:id)` mirroring the
-  existing products/collections endpoints in `dukafy/routes/admin_api.rb`
+  existing products/collections endpoints in `dukafi/routes/admin_api.rb`
   (`commerce_product_payload`-style serializer, `require_admin!` guard).
 
 ## Acceptance

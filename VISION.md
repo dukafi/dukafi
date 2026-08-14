@@ -1,15 +1,15 @@
-# Dukafy — Vision
+# Dukafi — Vision
 
 **Own your store. One click to live.**
 
-Dukafy is a self-hosted, ecommerce-only visual CMS. One Ruby server holds the
+Dukafi is a self-hosted, ecommerce-only visual CMS. One Ruby server holds the
 visual editor, the catalog, the cart, checkout, media, and the publisher. You
 deploy it with one click, and what it ships to your customers is plain semantic
 HTML and compact CSS — pages fast enough to feel instant and clean enough to
 read in view-source.
 
 Instatic proved the shape: one server, canvas editor in, static files out,
-dynamic islands only where reality demands them. Dukafy takes that shape and
+dynamic islands only where reality demands them. Dukafi takes that shape and
 bets it even narrower: **commerce only.** No generic content modeling, no
 build-anything ambition. Every feature exists to help one person sell things
 online without renting their store from a platform.
@@ -76,7 +76,7 @@ nothing re-bakes.
 
 The whole store — design, content, orders, customers — is one database file
 and one folder, on a server the merchant controls, exportable as plain HTML
-that would survive the company behind Dukafy disappearing.
+that would survive the company behind Dukafi disappearing.
 
 ## Product principles
 
@@ -96,7 +96,7 @@ that would survive the company behind Dukafy disappearing.
 - **Extend later, and safely.** Dynamic tables and a sandboxed plugin system
   come after 1.0, on top of the fixed core — never instead of it.
 
-## What Dukafy is not
+## What Dukafi is not
 
 - Not a general CMS, blog platform, or site builder. (Instatic exists.)
 - Not multi-tenant SaaS in v1. One deploy = one store.
