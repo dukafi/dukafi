@@ -1,0 +1,259 @@
+#!/usr/bin/env bash
+# Build, smoke-test and push the Dukafi image to GitHub Container Registry.
+#
+#   sudo ./deploy-image --tag 1.0.0      # pushes :1.0.0 and moves :latest
+#   sudo ./deploy-image --tag @latest    # pushes :latest only
+#   sudo ./deploy-image --tag 1.1.0-rc1  # prerelease: does NOT move :latest
+#   sudo ./deploy-image --dry-run        # build + smoke test, push nothing
+#
+# Options
+#   --tag <value>   version to publish. "@latest" means latest only.
+#                   Omitted: derived from `git describe`.
+#   --no-latest     never move :latest, whatever the tag looks like
+#   --skip-smoke    push without booting the image first (not advised)
+#   --dry-run       do everything except log in and push
+#   -h, --help      this text
+#
+# Token: GHCR needs a CLASSIC personal access token with write:packages
+# (fine-grained tokens cannot write packages). The script looks for it in,
+# in order: $GHCR_TOKEN, $CR_PAT, the file named by $GHCR_TOKEN_FILE,
+# ./.ghcr-token, or ~/.config/dukafi/ghcr-token belonging to the invoking
+# user. Create one at https://github.com/settings/tokens
+
+set -euo pipefail
+
+IMAGE="ghcr.io/dukafi/dukafi"
+REGISTRY="ghcr.io"
+PLATFORM="linux/amd64"
+SMOKE_CONTAINER="dukafi-smoke-$$"
+
+TAG=""
+MOVE_LATEST="auto"
+DRY_RUN=0
+SKIP_SMOKE=0
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+RED=$'\033[31m'; GREEN=$'\033[32m'; DIM=$'\033[2m'; OFF=$'\033[0m'
+[ -t 1 ] || { RED=""; GREEN=""; DIM=""; OFF=""; }
+
+say()  { echo "${GREEN}==>${OFF} $*"; }
+note() { echo "${DIM}    $*${OFF}"; }
+die()  { echo "${RED}error:${OFF} $*" >&2; exit 1; }
+
+cleanup() {
+  docker rm -f "$SMOKE_CONTAINER" > /dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+# ── Arguments ────────────────────────────────────────────────────────────────
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    # The `-` guard stops `--tag --dry-run` from silently publishing an image
+    # tagged "--dry-run" instead of doing what was meant.
+    --tag)         [ $# -ge 2 ] && [ "${2#-}" = "$2" ] || die "--tag needs a value"
+                   TAG="$2"; shift 2 ;;
+    --tag=*)       TAG="${1#*=}"; shift ;;
+    --no-latest)   MOVE_LATEST="never"; shift ;;
+    --skip-smoke)  SKIP_SMOKE=1; shift ;;
+    --dry-run)     DRY_RUN=1; shift ;;
+    -h|--help)     sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *)             die "unknown argument: $1 (try --help)" ;;
+  esac
+done
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$REPO_ROOT"
+
+# Under sudo, git refuses to read a repo owned by another user unless the path
+# is trusted. Scoped to this one command rather than mutating global config.
+git_() { git -c safe.directory="$REPO_ROOT" "$@"; }
+
+# ── Work out the tags ────────────────────────────────────────────────────────
+#
+# Deliberately ahead of the docker checks: a mistyped tag should say so
+# immediately rather than hiding behind "cannot reach the docker daemon",
+# which is what you hit when testing the invocation without sudo.
+
+LATEST_ONLY=0
+if [ "$TAG" = "@latest" ] || [ "$TAG" = "latest" ]; then
+  LATEST_ONLY=1
+  VERSION="latest"
+elif [ -n "$TAG" ]; then
+  # Accept 1.0.0 and v1.0.0 alike, publish the bare form.
+  VERSION="${TAG#v}"
+else
+  VERSION="$(git_ describe --tags --always --dirty 2>/dev/null || echo dev)"
+  VERSION="${VERSION#v}"
+  note "no --tag given, using ${VERSION} from git"
+fi
+
+[ -n "$VERSION" ] || die "empty tag"
+case "$VERSION" in
+  *[!A-Za-z0-9._-]*) die "tag '${VERSION}' has characters a docker tag cannot hold" ;;
+esac
+
+TAG_ARGS=(--tag "${IMAGE}:${VERSION}")
+PUSHED=("${IMAGE}:${VERSION}")
+
+# :latest should mean "the current stable release", so it moves for a plain
+# version and NOT for a prerelease like 1.1.0-rc1 or a git-describe string.
+if [ "$LATEST_ONLY" -eq 0 ] && [ "$MOVE_LATEST" != "never" ]; then
+  if [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+    TAG_ARGS+=(--tag "${IMAGE}:latest")
+    PUSHED+=("${IMAGE}:latest")
+  else
+    note "'${VERSION}' is not a plain version, so :latest will not be moved"
+  fi
+fi
+
+# ── Refuse to label a dirty tree with a release version ───────────────────────
+
+DIRTY="$(git_ status --porcelain 2>/dev/null || true)"
+if [ -n "$DIRTY" ] && [ "$DRY_RUN" -eq 0 ]; then
+  if [ "$LATEST_ONLY" -eq 1 ] || [[ "$VERSION" =~ ^[0-9] ]]; then
+    die "working tree is dirty — a version tag must name a committed tree.
+  Commit or stash first, or use --dry-run to build anyway."
+  fi
+fi
+
+REVISION="$(git_ rev-parse HEAD 2>/dev/null || echo unknown)"
+BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+# ── Preflight ────────────────────────────────────────────────────────────────
+
+command -v docker > /dev/null || die "docker is not installed"
+
+if ! docker info > /dev/null 2>&1; then
+  die "cannot reach the docker daemon.
+  Either run this with sudo, or add yourself to the docker group:
+      sudo usermod -aG docker \$USER && newgrp docker"
+fi
+
+docker buildx version > /dev/null 2>&1 || die "docker buildx is required"
+
+# ── Token ────────────────────────────────────────────────────────────────────
+
+find_token() {
+  [ -n "${GHCR_TOKEN:-}" ] && { printf '%s' "$GHCR_TOKEN"; return; }
+  [ -n "${CR_PAT:-}" ]     && { printf '%s' "$CR_PAT"; return; }
+
+  local candidates=()
+  [ -n "${GHCR_TOKEN_FILE:-}" ] && candidates+=("$GHCR_TOKEN_FILE")
+  candidates+=("${REPO_ROOT}/.ghcr-token")
+  # sudo resets $HOME, so look up the invoking user's home explicitly.
+  if [ -n "${SUDO_USER:-}" ]; then
+    local home
+    home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+    [ -n "$home" ] && candidates+=("${home}/.config/dukafi/ghcr-token")
+  fi
+  candidates+=("${HOME:-/root}/.config/dukafi/ghcr-token")
+
+  for file in "${candidates[@]}"; do
+    if [ -r "$file" ]; then
+      tr -d '\r\n' < "$file"
+      return
+    fi
+  done
+}
+
+if [ "$DRY_RUN" -eq 0 ]; then
+  TOKEN="$(find_token)"
+  if [ -z "$TOKEN" ]; then
+    # The overwhelmingly common cause: `sudo` dropped the variable.
+    die "no GHCR token found.
+  sudo does not pass environment variables through, so an exported
+  GHCR_TOKEN is invisible here. Either:
+      echo 'ghp_xxx' > ${REPO_ROOT}/.ghcr-token && chmod 600 ${REPO_ROOT}/.ghcr-token
+  or:
+      sudo -E ./deploy-image --tag ${VERSION}"
+  fi
+fi
+
+# ── Build ────────────────────────────────────────────────────────────────────
+
+say "building ${IMAGE}:${VERSION}  (${PLATFORM})"
+note "revision ${REVISION}"
+
+docker buildx build \
+  --platform "$PLATFORM" \
+  --file Dockerfile \
+  "${TAG_ARGS[@]}" \
+  --label "org.opencontainers.image.source=https://github.com/dukafi/core" \
+  --label "org.opencontainers.image.revision=${REVISION}" \
+  --label "org.opencontainers.image.version=${VERSION}" \
+  --label "org.opencontainers.image.created=${BUILD_DATE}" \
+  --label "org.opencontainers.image.licenses=MIT" \
+  --label "org.opencontainers.image.title=Dukafi" \
+  --label "org.opencontainers.image.description=Self-hosted commerce CMS — SQLite or Postgres" \
+  --load \
+  .
+
+docker image ls "${IMAGE}:${VERSION}" --format '    size: {{.Size}}'
+
+# ── Smoke test ───────────────────────────────────────────────────────────────
+#
+# A registry tag is public and effectively permanent, so the image gets booted
+# before anyone can pull it. This catches the failures a successful build does
+# not: a broken entrypoint, a migration that does not apply, a missing runtime
+# library. Bound to loopback on a high port so it cannot collide with a real
+# server on 9292.
+
+if [ "$SKIP_SMOKE" -eq 1 ]; then
+  note "skipping smoke test (--skip-smoke)"
+else
+  SMOKE_PORT="$(shuf -i 20000-29999 -n 1)"
+  say "smoke test: booting on 127.0.0.1:${SMOKE_PORT}"
+
+  docker run -d --name "$SMOKE_CONTAINER" \
+    -e SESSION_SECRET="smoke-test-only-$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')" \
+    -p "127.0.0.1:${SMOKE_PORT}:9292" \
+    "${IMAGE}:${VERSION}" > /dev/null
+
+  healthy=0
+  for _ in $(seq 1 45); do
+    if curl -fsS "http://127.0.0.1:${SMOKE_PORT}/health" > /dev/null 2>&1; then
+      healthy=1
+      break
+    fi
+    # A container that has already exited will never become healthy.
+    if [ "$(docker inspect -f '{{.State.Running}}' "$SMOKE_CONTAINER" 2>/dev/null)" != "true" ]; then
+      break
+    fi
+    sleep 1
+  done
+
+  if [ "$healthy" -ne 1 ]; then
+    echo "${RED}--- container log ---${OFF}" >&2
+    docker logs "$SMOKE_CONTAINER" 2>&1 | tail -40 >&2
+    die "image did not become healthy — refusing to push"
+  fi
+  note "/health responded, migrations applied"
+fi
+
+# ── Push ─────────────────────────────────────────────────────────────────────
+
+if [ "$DRY_RUN" -eq 1 ]; then
+  say "dry run complete — nothing pushed"
+  printf '    would push: %s\n' "${PUSHED[@]}"
+  exit 0
+fi
+
+say "logging in to ${REGISTRY}"
+printf '%s' "$TOKEN" | docker login "$REGISTRY" \
+  --username "${GHCR_USER:-dukafi}" --password-stdin > /dev/null
+
+say "pushing"
+for ref in "${PUSHED[@]}"; do
+  docker push "$ref"
+done
+
+echo
+say "published"
+printf '    %s\n' "${PUSHED[@]}"
+echo
+note "GHCR packages start PRIVATE. Make it pullable at:"
+note "https://github.com/orgs/dukafi/packages"
+echo
+note "docker pull ${IMAGE}:${VERSION}"

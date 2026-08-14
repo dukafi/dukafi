@@ -5,7 +5,7 @@ class PartialBake
   Result = Data.define(:page_count, :paths, :slot)
   SAFE_PATH = %r{\A/(?:[a-zA-Z0-9_-]+/?)*\z}
 
-  def self.call(product: nil, collection: nil, old_slug: nil, state: SiteState.first, output_root: ENV.fetch("DUKAFY_PUBLISHED_ROOT", File.expand_path("../published", __dir__)))
+  def self.call(product: nil, collection: nil, old_slug: nil, state: SiteState.first, output_root: Paths.published_root)
     raise ArgumentError, "PartialBake needs exactly one of product: or collection:" if product.nil? == collection.nil?
 
     new(product:, collection:, old_slug:, state:, output_root:).call

@@ -1,0 +1,44 @@
+# Keep the build context small and, more importantly, keep local state OUT of
+# the image. Without these, `docker build` would bake this machine's database,
+# uploaded media and published storefront into a public image.
+
+# Local state — never in an image
+dukafi/db/*.sqlite3
+dukafi/db/*.sqlite3-*
+dukafi/published/*
+dukafi/uploads/*
+dukafi/public/admin/*
+.env
+.env.*
+
+# Dependencies and build output — reinstalled/rebuilt inside the image
+**/node_modules
+dukafi-editor/dist
+dukafi-editor/.tmp-lint
+# The vendored Tailwind binary is 119 MB and the image fetches its own,
+# checksummed, for the target platform.
+dukafi/vendor/tailwindcss
+
+# The full upstream clone: ~100 MB of source with its own .git, reference only
+reference/
+
+# Not needed to build or run
+.git
+.github
+.claude
+docs/
+examples/
+**/*.md
+!README.md
+dukafi/spec
+dukafi-editor/docs
+dukafi-editor/scripts/bench
+# NOTE: the editor's test tree is deliberately NOT excluded. `bun run build`
+# runs `tsc -b` first, and the project's tsconfig compiles src/ as one graph —
+# dropping files out from under it risks a build failure for a trivial saving.
+
+# Editor / OS noise
+.DS_Store
+*.swp
+.idea
+.vscode

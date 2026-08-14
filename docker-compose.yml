@@ -1,0 +1,76 @@
+# Local runs of the real image, on either engine.
+#
+#   docker compose up dukafi                      # SQLite on a volume
+#   docker compose --profile postgres up dukafi-pg # Postgres
+#
+# This is the rehearsal for a Railway deploy: same image, same environment
+# variables, same volume mount. If it works here it works there, with the one
+# difference that Railway assigns PORT rather than us fixing it.
+
+name: dukafi
+
+services:
+  # ── SQLite: the default deployment ─────────────────────────────────────────
+  dukafi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/dukafi/dukafi:dev
+    ports:
+      - "9292:9292"
+    environment:
+      # Never commit a real one. `openssl rand -hex 64` for anything reachable.
+      SESSION_SECRET: ${SESSION_SECRET:-local-development-secret-not-for-production-0123456789abcdef}
+      PORT: 9292
+    volumes:
+      - dukafi-data:/data
+    restart: unless-stopped
+
+  # ── Postgres: what a managed platform gives you ────────────────────────────
+  #
+  # The volume is still here, and that is the point: Postgres holds the
+  # database, but published HTML and uploaded media are files this process
+  # serves off disk. Postgres alone does not make the container stateless.
+  dukafi-pg:
+    profiles: ["postgres"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/dukafi/dukafi:dev
+    ports:
+      - "9293:9292"
+    environment:
+      SESSION_SECRET: ${SESSION_SECRET:-local-development-secret-not-for-production-0123456789abcdef}
+      PORT: 9292
+      # Deliberately the postgresql:// spelling rather than postgres://:
+      # Render publishes this form, Sequel accepts both, and using the less
+      # common one here means the compose run would catch it if that changed.
+      DATABASE_URL: postgresql://dukafi:dukafi@postgres:5432/dukafi
+    volumes:
+      - dukafi-pg-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    profiles: ["postgres"]
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: dukafi
+      POSTGRES_PASSWORD: dukafi
+      POSTGRES_DB: dukafi
+    volumes:
+      - dukafi-postgres:/var/lib/postgresql/data
+    healthcheck:
+      # Without this the app would race the database on first boot and die in
+      # its migration step.
+      test: ["CMD-SHELL", "pg_isready -U dukafi -d dukafi"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  dukafi-data:
+  dukafi-pg-data:
+  dukafi-postgres:

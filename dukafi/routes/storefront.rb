@@ -4,7 +4,7 @@ class Storefront < Roda
   SAFE_SLUG = /\A[a-zA-Z0-9][a-zA-Z0-9_\/-]*\z/
 
   def published_root
-    File.expand_path(ENV.fetch("DUKAFY_PUBLISHED_ROOT", File.expand_path("../published", __dir__)))
+    Paths.published_root
   end
 
   def canonical_query_empty?(params)

@@ -23,3 +23,6 @@ dukafi-editor/.tmp-lint/
 # Full upstream Instatic clone, kept only as a diffing/reference baseline.
 # Has its own .git — never tracked as part of this repo.
 /reference/instatic/
+
+# GHCR token for ./deploy-image — never commit this
+.ghcr-token

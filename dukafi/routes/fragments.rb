@@ -126,16 +126,13 @@ class Fragments < Roda
   def find_published_node(node_id)
     return unless node_id.match?(SAFE_NODE_ID)
 
-    # Ask SQLite which documents even contain this node, instead of loading
-    # and JSON-parsing every published page until one matches. That scan is
-    # linear in page count and was paid once per cart region — thirty times on
-    # a thirty-card grid. `node_id` is validated above, so interpolating it
-    # into the JSON path is safe; the quotes let ids containing `-` resolve.
-    candidates = Page.where(status: "published").where(
-      Sequel.lit(
-        "json_extract(COALESCE(published_document, document), ?) IS NOT NULL",
-        %($.nodes."#{node_id}"),
-      ),
+    # Ask the DATABASE which documents even contain this node, instead of
+    # loading and JSON-parsing every published page until one matches. That
+    # scan is linear in page count and was paid once per cart region — thirty
+    # times on a thirty-card grid.
+    document = Sequel.function(:coalesce, :published_document, :document)
+    candidates = Page.where(status: "published").exclude(
+      JsonPath.value(document, "nodes", node_id) => nil,
     )
 
     candidates.order(:id).each do |page|

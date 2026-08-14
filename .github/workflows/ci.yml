@@ -5,8 +5,37 @@ on:
   pull_request:
 
 jobs:
+  # The Ruby suite runs against BOTH engines. The image ships both adapters, so
+  # a Postgres-only regression that SQLite never sees would otherwise reach a
+  # deploy — config/json_path.rb is the one place they genuinely diverge and
+  # this matrix is what keeps it honest.
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [sqlite, postgres]
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: dukafi
+          POSTGRES_PASSWORD: dukafi
+          POSTGRES_DB: dukafi_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dukafi"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Empty for the sqlite leg, which is exactly what config/database.rb
+      # treats as "no Postgres configured".
+      DATABASE_URL: ${{ matrix.database == 'postgres' && 'postgresql://dukafi:dukafi@localhost:5432/dukafi_test' || '' }}
+
     steps:
       - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1
@@ -27,5 +56,52 @@ jobs:
         working-directory: dukafi
       - run: bundle exec rake test
         working-directory: dukafi
+
+  editor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+        working-directory: dukafi-editor
       - run: bun run build
         working-directory: dukafi-editor
+
+  # Builds the real image on every push. Catches a broken Dockerfile at the
+  # commit that broke it rather than at release time. Never pushes — that is
+  # bin/publish-image, run deliberately.
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: dukafi:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Proves the image actually BOOTS, not merely that it builds: migrations
+      # run, Roda loads, the database connects and /health answers.
+      - name: Boot the image and hit /health
+        run: |
+          docker run -d --name dukafi-ci \
+            -e SESSION_SECRET=ci-secret-not-used-anywhere-real-0123456789abcdef \
+            -p 9292:9292 dukafi:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:9292/health; then
+              echo && echo "booted after ${i}s" && exit 0
+            fi
+            sleep 1
+          done
+          echo "did not become healthy; container log:" >&2
+          docker logs dukafi-ci >&2
+          exit 1
+
+      - name: Container log
+        if: always()
+        run: docker logs dukafi-ci 2>&1 | tail -50 || true

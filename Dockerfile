@@ -1,0 +1,120 @@
+# syntax=docker/dockerfile:1
+
+# Dukafi — one image, either database.
+#
+# Three stages so the runtime carries none of the toolchain: Bun and the whole
+# node_modules tree build the admin client and are thrown away; the gem build
+# chain compiles pg/sqlite3/ruby-vips and is thrown away; the final stage keeps
+# only the runtime libraries.
+#
+# amd64 only, deliberately. The publish path shells out to the Tailwind
+# standalone binary at RUNTIME (services/tailwind_compiler.rb), and upstream
+# ships it per-architecture; scripts/install_tailwind.rb pins the linux-x64
+# checksum. Adding arm64 means pinning a second checksum, not just a buildx
+# flag.
+
+ARG RUBY_VERSION=3.4.4
+ARG BUN_VERSION=1.3.0
+
+# ── Stage 1: the admin client ────────────────────────────────────────────────
+FROM oven/bun:${BUN_VERSION} AS editor
+
+WORKDIR /editor
+
+# Dependencies first: this layer is reused by every build that does not change
+# the lockfile, which is the overwhelming majority of them.
+COPY dukafi-editor/package.json dukafi-editor/bun.lock ./
+RUN bun install --frozen-lockfile
+
+COPY dukafi-editor/ ./
+
+# vite.config.ts sets outDir to ../dukafi/public/admin, so the build writes
+# outside its own root. Nothing is READ from there, so an empty directory at
+# the right relative path is all it needs.
+RUN mkdir -p /dukafi/public/admin && bun run build
+
+
+# ── Stage 2: gems ────────────────────────────────────────────────────────────
+FROM ruby:${RUBY_VERSION}-slim AS gems
+
+# pg, sqlite3 and ruby-vips all build native extensions.
+RUN apt-get update -qq && apt-get install --no-install-recommends -y \
+      build-essential \
+      libpq-dev \
+      libsqlite3-dev \
+      libvips-dev \
+      pkg-config \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY dukafi/Gemfile dukafi/Gemfile.lock ./
+RUN bundle config set --local without 'development test' \
+ && bundle install --jobs 4 --retry 3 \
+ && rm -rf /usr/local/bundle/cache
+
+
+# ── Stage 3: runtime ─────────────────────────────────────────────────────────
+FROM ruby:${RUBY_VERSION}-slim AS runtime
+
+# The runtime halves of the build libraries: libvips42 not libvips-dev,
+# libpq5 not libpq-dev. curl serves the healthcheck and fetches Tailwind.
+RUN apt-get update -qq && apt-get install --no-install-recommends -y \
+      ca-certificates \
+      curl \
+      libpq5 \
+      libsqlite3-0 \
+      libvips42 \
+ && rm -rf /var/lib/apt/lists/*
+
+# Tailwind standalone, pinned and checksummed exactly as
+# scripts/install_tailwind.rb does. Fetched here rather than by running that
+# script so the layer caches independently of the application source.
+ARG TAILWIND_VERSION=4.3.0
+ARG TAILWIND_SHA256=73f0e5459054e5cfaa8ab6f3b940f3fbe0f13cc7fd83bc24e7c655033c203400
+RUN curl -fsSL -o /usr/local/bin/tailwindcss \
+      "https://github.com/tailwindlabs/tailwindcss/releases/download/v${TAILWIND_VERSION}/tailwindcss-linux-x64" \
+ && echo "${TAILWIND_SHA256}  /usr/local/bin/tailwindcss" | sha256sum -c - \
+ && chmod +x /usr/local/bin/tailwindcss
+
+COPY --from=gems /usr/local/bundle /usr/local/bundle
+
+WORKDIR /app
+COPY dukafi/ ./
+COPY --from=editor /dukafi/public/admin ./public/admin
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint
+
+# The container starts as root only long enough for the entrypoint to take
+# ownership of a freshly mounted volume, then drops to this user via setpriv.
+# Verified at BUILD time so a missing setpriv fails the build rather than
+# leaving a container that silently runs as root.
+RUN chmod +x /usr/local/bin/entrypoint \
+ && command -v setpriv > /dev/null \
+ && useradd --system --create-home --shell /usr/sbin/nologin --uid 1000 dukafi \
+ && mkdir -p /data \
+ && chown -R dukafi:dukafi /app /data
+
+# Everything the merchant owns lives on the volume, never in the image.
+# TAILWINDCSS_BIN points the publish path at the binary above instead of the
+# vendored one, which is not in the image.
+ENV RACK_ENV=production
+ENV APP_ENV=production
+ENV PORT=9292
+ENV TAILWINDCSS_BIN=/usr/local/bin/tailwindcss
+ENV DUKAFI_DB=/data/dukafi.sqlite3
+ENV DUKAFI_PUBLISHED_ROOT=/data/published
+ENV DUKAFI_STORAGE_ROOT=/data
+ENV BUNDLE_WITHOUT="development:test"
+
+VOLUME ["/data"]
+EXPOSE 9292
+
+# Hits the app's own /health route, which boots Roda and therefore proves the
+# database connected — a TCP check would pass on a broken DATABASE_URL.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
+  CMD curl -fsS "http://127.0.0.1:${PORT}/health" || exit 1
+
+ENTRYPOINT ["/usr/local/bin/entrypoint"]
+
+# Shell form so ${PORT} expands: Railway assigns the port at run time and the
+# process must bind to whatever it is handed.
+CMD ["sh", "-c", "exec bundle exec puma -b tcp://0.0.0.0:${PORT}"]

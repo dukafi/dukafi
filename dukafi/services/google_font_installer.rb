@@ -37,7 +37,10 @@ class GoogleFontInstaller
   # one and stops a bad response filling the disk.
   MAX_FILE_BYTES = 5 * 1024 * 1024
 
-  UPLOADS_ROOT = File.expand_path("../uploads", __dir__).freeze
+  # A method rather than a constant: in a container the uploads directory is a
+  # mounted volume named by an environment variable, and a constant frozen at
+  # require time would still point inside the image.
+  def self.uploads_root = Paths.uploads_root
 
   # `/* latin */` immediately before a rule is how CSS2 labels each slice.
   FACE_BLOCK = %r{/\*\s*([a-z0-9\-\[\]]+)\s*\*/\s*@font-face\s*\{(.*?)\}}m
@@ -70,7 +73,7 @@ class GoogleFontInstaller
     slug = family_slug(resolved.fetch("family"))
     return Result.new(font: nil, reason: "unknown_family") if slug.empty?
 
-    directory = File.join(UPLOADS_ROOT, "fonts", slug)
+    directory = File.join(uploads_root, "fonts", slug)
     FileUtils.mkdir_p(directory)
 
     files = faces.each_with_index.filter_map do |face, index|
@@ -113,10 +116,10 @@ class GoogleFontInstaller
     slug = family_slug(family)
     return false if slug.empty?
 
-    directory = File.join(UPLOADS_ROOT, "fonts", slug)
+    directory = File.join(uploads_root, "fonts", slug)
     # Belt and braces against a slug that somehow escaped `family_slug`: never
     # delete outside the fonts directory.
-    return false unless File.expand_path(directory).start_with?(File.join(UPLOADS_ROOT, "fonts"))
+    return false unless File.expand_path(directory).start_with?(File.join(uploads_root, "fonts"))
     return false unless Dir.exist?(directory)
 
     FileUtils.rm_rf(directory)

@@ -29,7 +29,7 @@ class MediaVariants
     attr_writer :processor
   end
 
-  def self.call(source:, relative_path:, mime:, storage_root: File.expand_path("..", __dir__), processor: (@processor ||= VipsProcessor.new))
+  def self.call(source:, relative_path:, mime:, storage_root: Paths.storage_root, processor: (@processor ||= VipsProcessor.new))
     return { width: nil, height: nil, variants: [] } unless RASTER_MIMES.include?(mime)
 
     width, height = processor.dimensions(source)

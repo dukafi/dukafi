@@ -1,5 +1,6 @@
 require_relative "session_secret"
 require_relative "database"
+require_relative "json_path"
 require "roda"
 
 class Dukafi < Roda

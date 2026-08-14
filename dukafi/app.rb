@@ -15,7 +15,7 @@ class Dukafi < Roda
     r.public
 
     r.on("uploads") do
-      r.run Rack::Files.new(File.expand_path("uploads", __dir__))
+      r.run Rack::Files.new(Paths.uploads_root)
     end
 
     r.on("admin") do

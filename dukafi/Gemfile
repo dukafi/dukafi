@@ -3,6 +3,9 @@ source "https://rubygems.org"
 gem "roda"
 gem "sequel"
 gem "sqlite3"
+# Both engines ship in the image so one artifact covers a SQLite-on-a-volume
+# deploy and a managed-Postgres one; DATABASE_URL picks at boot.
+gem "pg"
 gem "phlex"
 gem "puma"
 gem "json_schemer"

@@ -184,7 +184,7 @@ class AdminApi < Roda
   end
 
   def media_payload(asset)
-    full_path = File.expand_path("../#{asset.path}", __dir__)
+    full_path = Paths.storage_file(asset.path)
     {
       id: asset.id.to_s, filename: File.basename(asset.path), mimeType: asset.mime,
       sizeBytes: File.exist?(full_path) ? File.size(full_path) : 0,
@@ -355,9 +355,7 @@ class AdminApi < Roda
     return Page[id.to_i] if id.match?(/\A\d+\z/)
     return nil if id.empty?
 
-    by_document = Page.where(
-      Sequel.lit("json_extract(document, '$.id') = ?", id)
-    ).first
+    by_document = Page.where(JsonPath.text(:document, "id") => id).first
     by_document || (slug && Page.first(slug: slug))
   end
 
@@ -919,7 +917,8 @@ class AdminApi < Roda
             safe_name = original.gsub(/[^a-zA-Z0-9._-]/, "-")
             stored_name = "#{SecureRandom.hex(8)}-#{safe_name}"
             relative_path = File.join("uploads", stored_name)
-            destination = File.expand_path("../#{relative_path}", __dir__)
+            destination = Paths.storage_file(relative_path)
+            FileUtils.mkdir_p(File.dirname(destination))
             FileUtils.copy_file(upload[:tempfile].path, destination)
             mime = upload[:type] || "application/octet-stream"
             processed = MediaVariants.call(source: destination, relative_path:, mime:)
@@ -941,10 +940,10 @@ class AdminApi < Roda
         r.on(String) do |id|
           asset = MediaAsset[id.to_i] || halt_json(404, "media_not_found", "Media asset not found")
           r.delete do
-            path = File.expand_path("../#{asset.path}", __dir__)
+            path = Paths.storage_file(asset.path)
             File.delete(path) if File.file?(path)
             asset.variants.each do |variant|
-              variant_path = File.expand_path("../#{variant.fetch('path').delete_prefix('/')}", __dir__)
+              variant_path = Paths.storage_file(variant.fetch("path"))
               File.delete(variant_path) if File.file?(variant_path)
             end
             asset.destroy

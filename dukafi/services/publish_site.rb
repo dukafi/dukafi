@@ -4,7 +4,7 @@ class PublishSite
   def self.call(
     state: SiteState.first,
     pages: Page.where(kind: "page").order(:id).all,
-    output_root: ENV.fetch("DUKAFY_PUBLISHED_ROOT", File.expand_path("../published", __dir__))
+    output_root: Paths.published_root
   )
     raise ArgumentError, "site state is required" unless state
     raise ArgumentError, "site must contain at least one page" if pages.empty?
