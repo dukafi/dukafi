@@ -14,6 +14,7 @@ import type {
   DukafyPageExportFile,
   DynamicPropBinding,
   NodeAction,
+  NodeOverlay,
   NodeRegion,
   NodeVisibility,
   ExplorerPathChangePlan,
@@ -250,6 +251,9 @@ export interface SiteSlice {
    * from `setNodeAction`: a node can both perform a verb and be a region.
    */
   setNodeRegion: (nodeId: string, region: NodeRegion) => void
+  /** Mark a container as a sheet or modal, or stop it being one. */
+  setNodeOverlay: (nodeId: string, overlay: NodeOverlay) => void
+  clearNodeOverlay: (nodeId: string) => void
   clearNodeRegion: (nodeId: string) => void
   /**
    * Condition this node's rendering. When false the node and its subtree

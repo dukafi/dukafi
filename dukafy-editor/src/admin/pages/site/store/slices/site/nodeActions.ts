@@ -71,6 +71,8 @@ type NodeActions = Pick<
   | 'setNodeAction'
   | 'clearNodeAction'
   | 'setNodeRegion'
+  | 'setNodeOverlay'
+  | 'clearNodeOverlay'
   | 'clearNodeRegion'
   | 'setNodeVisibility'
   | 'clearNodeVisibility'
@@ -630,6 +632,15 @@ export function createNodeActions(helpers: SiteSliceHelpers): NodeActions {
         return true
       })
     },
+    setNodeOverlay: (nodeId, overlay) => {
+      mutateActiveTree((tree) => {
+        const node = tree.nodes[nodeId]
+        if (!node) return false
+        if (node.actions?.overlay === overlay) return false
+        node.actions = { ...(node.actions ?? {}), overlay }
+        return true
+      })
+    },
 
     setNodeVisibility: (nodeId, condition) => {
       mutateActiveTree((tree) => {
@@ -664,6 +675,15 @@ export function createNodeActions(helpers: SiteSliceHelpers): NodeActions {
         const node = tree.nodes[nodeId]
         if (!node?.actions?.region) return false
         delete node.actions.region
+        if (Object.keys(node.actions).length === 0) delete node.actions
+        return true
+      })
+    },
+    clearNodeOverlay: (nodeId) => {
+      mutateActiveTree((tree) => {
+        const node = tree.nodes[nodeId]
+        if (!node?.actions?.overlay) return false
+        delete node.actions.overlay
         if (Object.keys(node.actions).length === 0) delete node.actions
         return true
       })

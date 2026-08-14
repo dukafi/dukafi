@@ -3,6 +3,7 @@ import { useEditorStore } from '@site/store/store'
 import type { LeftSidebarPanelId } from '@site/store/slices/uiSlice'
 import { FrameworkPanel } from '@site/panels/FrameworkPanel'
 import { ExplorerPanel } from '@site/panels/ExplorerPanel'
+import { AiPanel } from '@site/panels/AiPanel'
 import { PanelRail } from '@site/sidebars/PanelRail'
 import { FrameworkChangeConfirmProvider } from '@admin/shared/dialogs/FrameworkChangeConfirmDialog'
 import { VCDeletionConfirmProvider } from '@admin/shared/dialogs/VCDeletionConfirmDialog'
@@ -29,6 +30,7 @@ function selectActiveLeftSidebarPanel(
   if (state.activePluginPanelId !== null) return null
   if (state.explorerPanelOpen) return 'explorer'
   if (state.frameworkPanelOpen) return 'framework'
+  if (state.aiPanelOpen) return 'ai'
   return null
 }
 
@@ -59,6 +61,7 @@ const READ_ONLY_RAIL_IDS: ReadonlySet<LeftSidebarPanelId> = new Set(['explorer']
 const PANEL_RESIZE_LABELS: Record<HostedLeftPanelId, string> = {
   explorer: 'Explorer',
   framework: 'Framework',
+  ai: 'Assistant',
 }
 
 export function LeftSidebar({
@@ -166,6 +169,9 @@ export function LeftSidebar({
             <>
               <div className={styles.panelMount} hidden={effectiveActivePanel !== 'framework'}>
                 <FrameworkPanel {...dockablePanelProps} />
+              </div>
+              <div className={styles.panelMount} hidden={effectiveActivePanel !== 'ai'}>
+                <AiPanel {...dockablePanelProps} />
               </div>
             </>
           )}

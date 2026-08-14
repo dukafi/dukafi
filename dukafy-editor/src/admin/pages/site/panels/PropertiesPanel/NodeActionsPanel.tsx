@@ -13,6 +13,7 @@ import type {
   ConditionOperator,
   NodeAction,
   NodeActionType,
+  NodeOverlay,
   NodeRegion,
   NodeVisibility,
 } from '@core/page-tree'
@@ -65,7 +66,7 @@ function HintTip({ label, text }: { label: string; text: string }) {
 
 interface NodeActionsPanelProps {
   nodeId: string
-  actions: { click?: NodeAction; region?: NodeRegion } | undefined
+  actions: { click?: NodeAction; region?: NodeRegion; overlay?: NodeOverlay } | undefined
   visibleWhen?: NodeVisibility
   readOnly: boolean
 }
@@ -118,6 +119,24 @@ const REGION_OPTIONS: Array<{ value: '' | NodeRegion; label: string }> = [
 ]
 
 /**
+ * A sheet or modal is a flag on a container, not a module: its contents stay
+ * ordinary nodes, so a loop, a cart region and a form all work inside one.
+ */
+const OVERLAY_OPTIONS: Array<{ value: '' | NodeOverlay; label: string }> = [
+  { value: '', label: 'No' },
+  { value: 'modal', label: 'Modal — centred' },
+  { value: 'sheet-right', label: 'Sheet — from the right' },
+  { value: 'sheet-left', label: 'Sheet — from the left' },
+  { value: 'sheet-bottom', label: 'Sheet — from the bottom' },
+]
+
+const OVERLAY_NOTE =
+  'This box is hidden until something opens it, and publishes as a <dialog> — so the browser '
+  + 'gives it a focus trap, Escape to close, a backdrop and an inert background. Point any '
+  + 'element at it with the "Overlay — open" action. Position and animation are your own '
+  + 'Tailwind classes; the variant only says which edge it belongs to.'
+
+/**
  * Why a merchant would ever reach for this.
  *
  * A published page is ONE file served to everybody, so nothing per-visitor can
@@ -145,6 +164,8 @@ const ACTION_OPTIONS: Array<{ value: '' | NodeActionType; label: string }> = [
   { value: 'account.login', label: 'Account — sign in' },
   { value: 'account.register', label: 'Account — create account' },
   { value: 'account.logout', label: 'Account — sign out' },
+  { value: 'overlay.open', label: 'Overlay — open a sheet or modal' },
+  { value: 'overlay.close', label: 'Overlay — close' },
 ]
 
 /**
@@ -171,6 +192,10 @@ const SCOPE_NOTE: Record<NodeActionType, string> = {
     'Creates an account from the email, password and name fields of the form around it, and signs the visitor in. The result lands in the enclosing Form live region.',
   'account.logout':
     'Signs the visitor out. Needs no form and no fields.',
+  'overlay.open':
+    'Opens the sheet or modal you name below. Works on any element — a button, a box, an image.',
+  'overlay.close':
+    'Closes the overlay this element sits inside. Name one below only to close a different overlay.',
 }
 
 export function NodeActionsPanel({ nodeId, actions, visibleWhen, readOnly }: NodeActionsPanelProps) {
@@ -178,10 +203,13 @@ export function NodeActionsPanel({ nodeId, actions, visibleWhen, readOnly }: Nod
   const clearNodeAction = useEditorStore((s) => s.clearNodeAction)
   const setNodeRegion = useEditorStore((s) => s.setNodeRegion)
   const clearNodeRegion = useEditorStore((s) => s.clearNodeRegion)
+  const setNodeOverlay = useEditorStore((s) => s.setNodeOverlay)
+  const clearNodeOverlay = useEditorStore((s) => s.clearNodeOverlay)
   const setNodeVisibility = useEditorStore((s) => s.setNodeVisibility)
   const clearNodeVisibility = useEditorStore((s) => s.clearNodeVisibility)
   const click = actions?.click
   const region = actions?.region
+  const overlay = actions?.overlay
 
   function patchCondition(next: Partial<NodeVisibility>) {
     setNodeVisibility(nodeId, { ...(visibleWhen ?? DEFAULT_CONDITION), ...next })
@@ -235,7 +263,7 @@ export function NodeActionsPanel({ nodeId, actions, visibleWhen, readOnly }: Nod
   }
 
   function textField(
-    key: 'productSlug' | 'variantSku' | 'redirect',
+    key: 'productSlug' | 'variantSku' | 'redirect' | 'target',
     label: string,
     placeholder: string,
   ) {
@@ -290,6 +318,9 @@ export function NodeActionsPanel({ nodeId, actions, visibleWhen, readOnly }: Nod
 
       {click?.type === 'cart.createOrder' && textField('redirect', 'After ordering, go to', '/thank-you')}
 
+      {(click?.type === 'overlay.open' || click?.type === 'overlay.close') &&
+        textField('target', 'Overlay', click.type === 'overlay.close' ? 'Blank = the one around this' : 'Node id of the sheet')}
+
       {!click && (
         <EmptyState
           title="No interaction"
@@ -315,6 +346,29 @@ export function NodeActionsPanel({ nodeId, actions, visibleWhen, readOnly }: Nod
           }}
         >
           {REGION_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </Select>
+      </ControlRow>
+
+      <ControlRow
+        propKey="node-overlay"
+        inputId="node-overlay"
+        label="Sheet or modal"
+        layout="stacked"
+        labelSuffix={overlay ? <HintTip label="overlays" text={OVERLAY_NOTE} /> : undefined}
+      >
+        <Select
+          id="node-overlay"
+          value={overlay ?? ''}
+          disabled={readOnly}
+          onChange={(event) => {
+            const value = event.currentTarget.value
+            if (value === '') clearNodeOverlay(nodeId)
+            else setNodeOverlay(nodeId, value as NodeOverlay)
+          }}
+        >
+          {OVERLAY_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
         </Select>

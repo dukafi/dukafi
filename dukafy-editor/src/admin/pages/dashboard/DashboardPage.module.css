@@ -432,3 +432,14 @@
     text-align: right;
     word-break: break-word;
 }
+
+/* Forms — the bar above a single form's submissions. Its own class rather than
+   `.sectionHeader`, which styles an h2/p pair this does not have. */
+.formsBackBar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    margin-bottom: var(--space-s);
+    color: var(--text-muted);
+    font-size: var(--text-s);
+}

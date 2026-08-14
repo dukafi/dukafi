@@ -41,8 +41,9 @@ export {   parsePageTemplate } from './pageTemplate'
 // Types — derived from schemas. Schemas are the source of truth.
 export type { Breakpoint } from './breakpoint'
 export type { DynamicPropBinding } from './dynamicBinding'
-export type { NodeAction, NodeActionType, NodeActions, NodeRegion } from './nodeAction'
+export type { NodeAction, NodeActionType, NodeActions, NodeOverlay, NodeRegion } from './nodeAction'
 export { parseNodeActions } from './nodeAction'
+export { parseDynamicBindings } from './dynamicBinding'
 export type { NodeVisibility, ConditionOperator } from './visibility'
 export {
   parseNodeVisibility,

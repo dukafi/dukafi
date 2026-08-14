@@ -18,6 +18,7 @@ import { createInlineEditSlice } from './slices/inlineEditSlice'
 import { createLayoutsSlice } from './slices/layoutsSlice'
 import { createCommerceScaffoldSlice } from './slices/commerceScaffoldSlice'
 import { createBlocksSlice } from './slices/blocksSlice'
+import { createAiSlice } from './slices/aiSlice'
 import { initCollabBinding } from './slices/site/collabBinding'
 import { bindPluginRuntimeStoreApi } from '@core/plugins/runtime'
 import { useAdminUi } from '@admin/state/adminUi'
@@ -78,6 +79,7 @@ export const useEditorStore = create<EditorStore>()(
         ...createLayoutsSlice(...args),
         ...createCommerceScaffoldSlice(...args),
         ...createBlocksSlice(...args),
+        ...createAiSlice(...args),
       }),
       { enableAutoFreeze: true },
     )

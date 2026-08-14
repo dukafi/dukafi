@@ -6,7 +6,8 @@
  */
 import type { ReactNode } from 'react'
 
-export type CommerceSection = 'products' | 'collections' | 'orders' | 'plugins' | 'import' | 'settings'
+export type CommerceSection =
+  | 'products' | 'collections' | 'orders' | 'forms' | 'plugins' | 'import' | 'settings'
 
 export interface CommerceSettings {
   currency: string
@@ -147,4 +148,23 @@ export interface Plugin {
   configured: boolean
   paymentProviders: string[]
   settings: PluginSettingField[]
+}
+
+/** One form the site has received something through, newest activity first. */
+export interface FormSummary {
+  id: string
+  count: number
+  lastAt: string | null
+}
+
+/**
+ * One submission. `fields` is whatever the merchant's own inputs were named —
+ * schemaless by design, so there is no fixed set of columns to render.
+ */
+export interface FormSubmission {
+  id: number
+  createdAt: string | null
+  fields: Record<string, unknown>
+  orderId: number | null
+  customerId: number | null
 }

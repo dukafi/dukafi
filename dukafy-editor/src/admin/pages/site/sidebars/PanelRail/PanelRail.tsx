@@ -1,5 +1,6 @@
 import { useSyncExternalStore, type CSSProperties } from 'react'
 import { useEditorStore } from '@site/store/store'
+import { SparklesSolidIcon } from 'pixel-art-icons/icons/sparkles-solid'
 import type { LeftSidebarPanelId } from '@site/store/slices/uiSlice'
 import type { IconComponent } from 'pixel-art-icons/types'
 import { DatabaseSolidIcon } from 'pixel-art-icons/icons/database-solid'
@@ -39,6 +40,12 @@ const PRIMARY_RAIL_ITEMS: PrimaryRailItem[] = [
     iconName: 'database-solid',
   },
   {
+    id: 'ai',
+    label: 'Assistant',
+    icon: SparklesSolidIcon,
+    iconName: 'sparkles',
+  },
+  {
     id: 'framework',
     label: 'Framework',
     icon: ColorsSwatchSolidIcon,
@@ -65,6 +72,7 @@ export function PanelRail({
 }: PanelRailProps) {
   const explorerOpen = useEditorStore((s) => s.explorerPanelOpen)
   const frameworkOpen = useEditorStore((s) => s.frameworkPanelOpen)
+  const aiOpen = useEditorStore((s) => s.aiPanelOpen)
   const activePluginPanelId = useEditorStore((s) => s.activePluginPanelId)
 
   const toggleLeftSidebarPanel = useEditorStore((s) => s.toggleLeftSidebarPanel)
@@ -85,6 +93,7 @@ export function PanelRail({
   const panelOpenById = {
     explorer: explorerOpen,
     framework: frameworkOpen,
+    ai: aiOpen,
   } satisfies Record<LeftSidebarPanelId, boolean>
 
   // Read-only callers (Viewer / Client) see only the Explorer panel (the

@@ -98,7 +98,10 @@ class Dukafy
         # fetches itself — the same trade the cart loop already makes, lifted
         # to any node so cart-wide values (count, subtotal, total) have
         # somewhere to live OUTSIDE the per-line loop.
-        return cart_region_placeholder(node) if @cart.nil? && cart_region?(node)
+        # A cart drawer is BOTH — an overlay containing a cart region — and this
+        # path returns early, so the overlay wrapping has to happen here too or
+        # the drawer publishes as a plain hidden div that nothing can open.
+        return apply_overlay(cart_region_placeholder(node), node) if @cart.nil? && cart_region?(node)
 
         # A payment button needs the id of the region it will swap, and an auth
         # button the id of the region its error renders into — but children
@@ -128,6 +131,7 @@ class Dukafy
         collect_runtimes(output[:runtimes])
         html = apply_actions(html, node, definition)
         html = apply_region(html, node)
+        html = apply_overlay(html, node)
         @payment_region_id = previous_payment_region
         @form_region_id = previous_form_region
         @inside_form = previous_inside_form
@@ -274,6 +278,12 @@ class Dukafy
         "account.logout" => { path: "/fragments/account/logout", fields: [], form: true, account: true },
       }.freeze
 
+      # Overlay verbs. Unlike every other action these make NO request — the
+      # sheet is already in the page, hidden. They are attributes the overlay
+      # runtime reads, and they are the reason a trigger can be any node: a
+      # button, a div wrapping an icon, a product image.
+      OVERLAY_ACTIONS = %w[overlay.open overlay.close].freeze
+
       def apply_actions(html, node, definition)
         actions = node["actions"]
         return html unless actions.is_a?(Hash)
@@ -281,7 +291,10 @@ class Dukafy
         action = actions["click"]
         return html unless action.is_a?(Hash)
 
-        spec = CART_ACTIONS[action["type"].to_s]
+        type = action["type"].to_s
+        return apply_overlay_action(html, type, action) if OVERLAY_ACTIONS.include?(type)
+
+        spec = CART_ACTIONS[type]
         return html unless spec
 
         if spec[:form]
@@ -361,6 +374,95 @@ class Dukafy
         end
         collect_runtimes([:htmx])
         inject_attributes(html, attrs)
+      end
+
+      # A trigger for an overlay.
+      #
+      # `overlay.close` with no target closes the overlay it sits inside, which
+      # is what a drawer's own X button wants and saves the merchant wiring a
+      # node id to itself.
+      def apply_overlay_action(html, type, action)
+        target = action["target"].to_s
+        return html if type == "overlay.open" && !target.match?(SAFE_NODE_ID)
+        return html if !target.empty? && !target.match?(SAFE_NODE_ID)
+
+        collect_runtimes([:overlay])
+        attrs = %( data-dukafy-overlay-#{type.split('.').last}="#{target}")
+        inject_attributes(html, attrs)
+      end
+
+      # A container marked as an overlay publishes as a native <dialog>.
+      #
+      # The element is the feature: the browser gives focus trapping, Escape to
+      # close, a backdrop, an inert background and `aria-modal` for free, and
+      # `showModal()` is the only way to get all of that without writing it.
+      # The runtime we ship is therefore wiring, not an implementation.
+      #
+      # The merchant's own classes stay on it, so position and animation are
+      # theirs; the variant only says which edge it belongs to.
+      OVERLAY_VARIANTS = %w[modal sheet-left sheet-right sheet-bottom].freeze
+
+      # A closed <dialog> is `display: none` from the UA stylesheet — but that is
+      # a USER-AGENT rule, and any author `display` utility outranks it. A sheet
+      # laid out with Tailwind's `flex` therefore renders permanently open, on
+      # the canvas and on the live site.
+      #
+      # `!important` is deliberate and is the point: this has to win against
+      # whatever display utility the merchant put on their own element, and
+      # "is this overlay open" is not a thing their styling gets a vote on. When
+      # it IS open, `[open]` excludes the rule and their classes apply normally.
+      # Two jobs, and only two.
+      #
+      # 1. Keep it shut. A closed <dialog> is `display:none` from the USER AGENT
+      #    stylesheet, and any author `display` utility outranks that — a sheet
+      #    laid out with Tailwind's `flex` renders permanently open otherwise.
+      #    `!important` is the point: whether an overlay is open is not
+      #    something the merchant's styling gets a vote on.
+      #
+      # 2. Get the UA's own chrome out of the way. The default `<dialog>` has a
+      #    solid border, 1em of padding, a `fit-content` size and `margin:auto`
+      #    that centres it — so a sheet meant to hug the right edge floats in
+      #    the middle with a border round it, and `w-full` cannot win against
+      #    `max-width: calc(100% - 6px - 2em)`. Reset, so the merchant's classes
+      #    are the ONLY thing deciding how it looks.
+      #
+      # The variant then does the one thing classes cannot: anchor it, since a
+      # dialog is positioned by the UA rather than by the normal flow.
+      OVERLAY_CSS = <<~CSS.gsub(/\s*\n\s*/, "").freeze
+        dialog[data-dukafy-overlay]:not([open]){display:none !important}
+        dialog[data-dukafy-overlay]{
+          border:0;padding:0;margin:0;max-width:none;max-height:none;
+          background:transparent;color:inherit;overflow:visible;
+        }
+        dialog[data-dukafy-overlay-variant="sheet-right"]{
+          position:fixed;inset:0 0 0 auto;height:100%;
+        }
+        dialog[data-dukafy-overlay-variant="sheet-left"]{
+          position:fixed;inset:0 auto 0 0;height:100%;
+        }
+        dialog[data-dukafy-overlay-variant="sheet-bottom"]{
+          position:fixed;inset:auto 0 0 0;width:100%;
+        }
+        dialog[data-dukafy-overlay-variant="modal"]{
+          position:fixed;inset:0;margin:auto;height:fit-content;width:fit-content;
+        }
+        dialog[data-dukafy-overlay]::backdrop{background:rgb(0 0 0 / 0.5)}
+      CSS
+
+      def apply_overlay(html, node)
+        variant = node.dig("actions", "overlay").to_s
+        return html unless OVERLAY_VARIANTS.include?(variant)
+
+        node_id = node.fetch("id").to_s
+        return html unless node_id.match?(SAFE_NODE_ID)
+
+        @css.add("overlay", OVERLAY_CSS)
+        collect_runtimes([:overlay])
+        # Rewritten to <dialog> rather than wrapped: a wrapper would break the
+        # merchant's own layout classes, which sit on this element.
+        dialog = html.sub(/\A<([a-zA-Z][\w-]*)/) { "<dialog" }
+                     .sub(%r{</[a-zA-Z][\w-]*>\z}, "</dialog>")
+        inject_attributes(dialog, %( data-dukafy-overlay="#{node_id}" data-dukafy-overlay-variant="#{variant}"))
       end
 
       # Route the form's own submit through htmx as well as the button's click.

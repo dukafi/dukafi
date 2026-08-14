@@ -226,6 +226,14 @@
                         {
                           "const": "account.logout",
                           "type": "string"
+                        },
+                        {
+                          "const": "overlay.open",
+                          "type": "string"
+                        },
+                        {
+                          "const": "overlay.close",
+                          "type": "string"
                         }
                       ]
                     },
@@ -246,6 +254,9 @@
                     },
                     "variantSku": {
                       "type": "string"
+                    },
+                    "target": {
+                      "type": "string"
                     }
                   }
                 },
@@ -261,6 +272,26 @@
                     },
                     {
                       "const": "form",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "overlay": {
+                  "anyOf": [
+                    {
+                      "const": "modal",
+                      "type": "string"
+                    },
+                    {
+                      "const": "sheet-left",
+                      "type": "string"
+                    },
+                    {
+                      "const": "sheet-right",
+                      "type": "string"
+                    },
+                    {
+                      "const": "sheet-bottom",
                       "type": "string"
                     }
                   ]

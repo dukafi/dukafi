@@ -47,6 +47,7 @@ import { parseHtml } from './parseHtml'
 import { stripUnsafe, collectStyleCss } from './stripUnsafe'
 import type { StripReport } from './stripUnsafe'
 import { harvestInlineStyles } from './inlineStyle'
+import { isOverlayAttribute, readModuleOverride, readOverlayAttributes } from './overlayAttributes'
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -183,6 +184,18 @@ function collectHtmlAttributes(el: Element, moduleId?: string): Record<string, s
   for (const attr of Array.from(el.attributes)) {
     const name = normalizeHtmlAttributeName(attr.name)
     if (generatedNames.has(name)) continue
+    // `uid` is the editor's own read-surface annotation (`annotateNodeIds`
+    // stamps it so the assistant can target existing nodes). It is never
+    // authored content, and a model asked to write HTML routinely echoes it
+    // onto NEW elements — where it would survive as an htmlAttribute and
+    // publish as raw `uid="…"` markup on the live storefront. Observed in the
+    // first end-to-end run against a local model.
+    if (name === 'uid') continue
+    // Consumed by `readOverlayAttributes` into the node's own overlay fields.
+    // Kept here as well they would publish as raw markup too, duplicating the
+    // overlay — and `data-dukafy-region` would collide with the attribute the
+    // publisher writes for the live region it drives.
+    if (isOverlayAttribute(name)) continue
     const safeValue = sanitizeRenderableHtmlAttribute(name, attr.value)
     if (safeValue === null) continue
     attrs[name] = safeValue
@@ -312,7 +325,12 @@ function mapChildNodes(parent: Element, ctx: WalkContext): string[] {
  */
 function processElement(el: Element, ctx: WalkContext): string {
   const rule = matchRule(el)
-  const { moduleId, props: ruleProps } = rule.map(el)
+  const mapped = rule.map(el)
+  // A `data-dukafy-loop` / `-component` attribute changes which MODULE the
+  // element becomes, so it is applied before the node is built.
+  const override = readModuleOverride(el)
+  const moduleId = override?.moduleId ?? mapped.moduleId
+  const ruleProps = override ? { ...mapped.props, ...override.props } : mapped.props
   const props = { ...ruleProps }
   if (HTML_ATTRIBUTE_MODULES.has(moduleId)) {
     Object.assign(props, collectElementProps(el, moduleId))
@@ -335,6 +353,11 @@ function processElement(el: Element, ctx: WalkContext): string {
   // the editor's first-class per-node `style=""` layer.
   const inline = ctx.inlineStyles.get(el)
   if (inline) node.inlineStyles = inline
+
+  // Commerce overlays declared as `data-dukafy-*` attributes. Structure and
+  // styling come from the markup; what the node DOES, whether it renders, and
+  // where its text comes from have no HTML spelling of their own.
+  Object.assign(node, readOverlayAttributes(el))
 
   const shouldRecurse =
     typeof rule.recurse === 'function' ? rule.recurse(el) : Boolean(rule.recurse)

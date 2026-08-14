@@ -12,6 +12,7 @@ class Dukafy
         register_link(registry)
         register_list(registry)
         BaseFormModules.register(registry)
+        BaseMediaModules.register(registry)
         registry
       end
 

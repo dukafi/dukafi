@@ -42,6 +42,7 @@ export type FloatingPanelId =
   | 'spacing'
   | 'media'
   | 'codeeditor'
+  | 'ai'
   | 'agent'
   | 'agentImagePreview'
   | 'mediaUploadQueue'

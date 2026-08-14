@@ -6,7 +6,9 @@
  * `docs/architecture/publishing.md`) — callers don't need to know that, they
  * just get the updated row back.
  */
-import type { Collection, CommerceSettings, Order, Plugin, Product, Variant } from './types'
+import type {
+  Collection, CommerceSettings, FormSubmission, FormSummary, Order, Plugin, Product, Variant,
+} from './types'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/admin/api/cms/commerce${path}`, {
@@ -66,6 +68,22 @@ export const commerceApi = {
   // the first ones (payment providers) are configured. Path differs from the
   // rest of this client, hence the explicit leading `../`-style absolute call.
   listPlugins: () => requestAbsolute<{ plugins: Plugin[] }>('/admin/api/cms/plugins'),
+
+  // Form submissions. The payload is schemaless — the merchant named the
+  // fields — so `fields` comes back as whatever arrived rather than a shape
+  // this client can type in advance.
+  listForms: () => requestAbsolute<{ forms: FormSummary[] }>('/admin/api/cms/forms'),
+  listSubmissions: (formId: string, offset = 0) =>
+    requestAbsolute<{
+      formId: string
+      submissions: FormSubmission[]
+      total: number
+      hasMore: boolean
+    }>(`/admin/api/cms/forms/${encodeURIComponent(formId)}?offset=${offset}`),
+  deleteSubmission: (formId: string, id: number) =>
+    requestAbsolute<void>(`/admin/api/cms/forms/${encodeURIComponent(formId)}/${id}`, {
+      method: 'DELETE',
+    }),
   savePluginSettings: (id: string, settings: Record<string, string>) =>
     requestAbsolute<{ ok: boolean; configured: boolean }>(`/admin/api/cms/plugins/${id}/settings`, {
       method: 'PUT',

@@ -19,6 +19,7 @@ export type SiteLayoutSelection = readonly [
   explorerOpen: boolean,
   propertiesOpen: boolean,
   frameworkOpen: boolean,
+  aiOpen: boolean,
   codeEditorOpen: boolean,
   explorerTab: ExplorerPanelTab,
   propertiesMode: PanelMode,
@@ -69,6 +70,7 @@ export function selectSiteLayoutState(s: EditorStore): SiteLayoutSelection {
     s.explorerPanelOpen,
     !s.propertiesPanel.collapsed,
     s.frameworkPanelOpen,
+    s.aiPanelOpen,
     s.codeEditorPanelOpen,
     s.explorerPanelTab,
     s.propertiesPanelMode,
@@ -88,10 +90,12 @@ function deriveSiteActiveLeftPanel(selection: SiteLayoutSelection): string | nul
     explorerOpen,
     ,
     frameworkOpen,
+    aiOpen,
   ] = selection
 
   if (explorerOpen) return 'explorer'
   if (frameworkOpen) return 'framework'
+  if (aiOpen) return 'ai'
   return null
 }
 
@@ -101,6 +105,7 @@ export function siteLayoutFromSelection(
   const [
     ,
     propertiesOpen,
+    ,
     ,
     codeEditorOpen,
     explorerTab,
@@ -137,6 +142,7 @@ export function restoreStoredSiteEditorLayout(
       ? {
           explorerPanelOpen: storedActivePanel === 'explorer',
           frameworkPanelOpen: storedActivePanel === 'framework',
+          aiPanelOpen: storedActivePanel === 'ai',
         }
       : {}
 

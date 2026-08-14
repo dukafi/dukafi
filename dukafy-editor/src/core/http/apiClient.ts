@@ -70,6 +70,14 @@ export async function responseErrorMessage(res: Response, fallback: string): Pro
   try {
     const body = await parseJsonResponse(res.clone(), ErrorEnvelopeSchema)
     if (typeof body.error === 'string' && body.error.trim()) return body.error
+    // The CMS envelope is `{ error: { code, message } }` — an OBJECT. Reading
+    // only the string form meant every Dukafy API failure fell through to
+    // `res.text()` and surfaced the raw JSON to the user, message buried inside
+    // punctuation.
+    if (body.error && typeof body.error === 'object') {
+      const message = (body.error as { message?: unknown }).message
+      if (typeof message === 'string' && message.trim()) return message
+    }
   } catch {
     // Not a JSON error envelope — fall through to text.
   }

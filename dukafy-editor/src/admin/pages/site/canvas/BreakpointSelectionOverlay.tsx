@@ -82,6 +82,7 @@ import { TrashSolidIcon } from 'pixel-art-icons/icons/trash-solid'
 import { HandGrabSolidIcon } from 'pixel-art-icons/icons/hand-grab-solid'
 import { CanvasViewportActionsContext } from './CanvasContexts'
 import { CanvasInsertModuleButton } from './CanvasInsertModuleButton'
+import { CanvasAiButton } from './CanvasAiButton'
 import { useCanvasReorderDrag } from './useCanvasReorderDrag'
 import { useCanvasTreeLadderOverlay } from './CanvasTreeLadderOverlay'
 import { CanvasNodeElementCache } from './canvasNodeLookup'
@@ -201,7 +202,8 @@ export function BreakpointSelectionOverlay({
     return () => cancelAnimationFrame(frame)
   }, [viewportActions])
 
-  // Selection toolbar (drag / duplicate / delete) is purely structural —
+  // Selection toolbar (drag / insert / ask AI / duplicate / delete) is purely
+  // structural —
   // hidden for callers without `site.structure.edit`. Content-only Clients
   // still get the selection ring (they click to select for content edit),
   // but no action chrome.
@@ -209,6 +211,7 @@ export function BreakpointSelectionOverlay({
   // Pure Viewers (no edit caps at all) see neither rings nor toolbar — the
   // canvas is a read-only inspection surface for them; selection ribbons
   // would just be visual clutter with no follow-on action available.
+  const aiPending = useEditorStore((state) => state.aiPending)
   const permissions = useEditorPermissions()
   const anyEditCap =
     permissions.canEditStructure || permissions.canEditContent || permissions.canEditStyle
@@ -218,6 +221,15 @@ export function BreakpointSelectionOverlay({
     permissions.canEditStructure &&
     selectedNodeIds.length > 0 &&
     activeBreakpointId === breakpointId
+
+  // While the assistant is working, mark the selected element itself. Disabling
+  // the toolbar button says a request is in flight but not WHERE it will land,
+  // and a local model can take a minute — long enough to wonder whether the
+  // click registered at all.
+  //
+  // Gated to the active breakpoint for the same reason the toolbar is: every
+  // frame renders its own rings, so without it three spinners appear at once.
+  const aiBusy = aiPending && activeBreakpointId === breakpointId
 
   // Prefer the canvas root as the portal target so overlay chrome sits inside
   // the canvas's stacking + clipping context. The root is captured into state
@@ -388,6 +400,9 @@ export function BreakpointSelectionOverlay({
         <HandGrabSolidIcon size={13} color="var(--text)" />
       </Button>
       <CanvasInsertModuleButton buttonClassName={styles.selectionToolbarButton} />
+      {/* The open-ended verb, next to the fixed ones: describe a change to the
+          selected element instead of picking from a list. */}
+      <CanvasAiButton buttonClassName={styles.selectionToolbarButton} />
 
       <Button
         variant="secondary"
@@ -440,7 +455,13 @@ export function BreakpointSelectionOverlay({
           className={cn(styles.ring, styles.selection)}
           data-canvas-selection-ring="true"
           data-node-id={id}
-        />
+        >
+          {aiBusy && (
+            <span className={styles.aiBusy} data-testid="canvas-ai-busy">
+              <span className={styles.aiBusySpinner} />
+            </span>
+          )}
+        </div>
       ))}
       {showHover && hoverRingNodeId && (
         <div

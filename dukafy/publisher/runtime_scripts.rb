@@ -13,6 +13,9 @@ class Dukafy
     module RuntimeScripts
       DEFINITIONS = {
         htmx: { src: "/js/htmx.min.js", defer: true },
+        # Wiring for `<dialog>`-based sheets and modals. Ships only on pages
+        # that actually contain one — a page with no overlay stays JS-free.
+        overlay: { src: "/js/dukafy-overlay.js", defer: true },
       }.freeze
 
       KNOWN = DEFINITIONS.keys.freeze

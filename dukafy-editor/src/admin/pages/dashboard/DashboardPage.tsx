@@ -8,6 +8,7 @@
  * table; create/edit happens in a `Dialog`, never inline.
  */
 import { useParams } from '@admin/lib/routing'
+import { FileTextSolidIcon } from 'pixel-art-icons/icons/file-text-solid'
 import { useAdminNavigate } from '@admin/lib/useAdminNavigate'
 import { Button } from '@ui/components/Button'
 import { AdminPageLayout } from '@admin/layouts/AdminPageLayout'
@@ -21,6 +22,7 @@ import { useCommerceData } from './hooks/useCommerceData'
 import { CollectionsSection } from './sections/CollectionsSection'
 import { ImportSection } from './sections/ImportSection'
 import { OrdersSection } from './sections/OrdersSection'
+import { FormsSection } from './sections/FormsSection'
 import { PluginsSection } from './sections/PluginsSection'
 import { ProductsSection } from './sections/ProductsSection'
 import { SettingsSection } from './sections/SettingsSection'
@@ -31,6 +33,7 @@ const SECTION_LABELS: Record<CommerceSection, string> = {
   products: 'Products',
   collections: 'Collections',
   orders: 'Orders',
+  forms: 'Forms',
   plugins: 'Plugins',
   import: 'Import',
   settings: 'Settings',
@@ -40,12 +43,13 @@ const SECTION_ICONS = {
   products: PackageSolidIcon,
   collections: BoxStackSolidIcon,
   orders: ListBoxSolidIcon,
+  forms: FileTextSolidIcon,
   plugins: PlugSolidIcon,
   import: CloudUploadSolidIcon,
   settings: Settings2SolidIcon,
 } satisfies Record<CommerceSection, typeof PackageSolidIcon>
 
-const SECTIONS: CommerceSection[] = ['products', 'collections', 'orders', 'plugins', 'import', 'settings']
+const SECTIONS: CommerceSection[] = ['products', 'collections', 'orders', 'forms', 'plugins', 'import', 'settings']
 
 /** `products` is the landing area; anything unrecognised falls back to it. */
 export function sectionFromParam(value: string | undefined): CommerceSection {
@@ -98,6 +102,7 @@ export function DashboardPage() {
         <div className={styles.workspaceContent} aria-labelledby="dashboard-title">
           {section === 'products' && <ProductsSection data={data} />}
           {section === 'orders' && <OrdersSection data={data} />}
+          {section === 'forms' && <FormsSection />}
           {section === 'plugins' && <PluginsSection data={data} />}
           {section === 'collections' && <CollectionsSection data={data} />}
           {section === 'import' && <ImportSection data={data} />}

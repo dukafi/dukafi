@@ -26,6 +26,11 @@ const NodeActionTypeSchema = Type.Union([
   Type.Literal('account.register'),
   Type.Literal('account.login'),
   Type.Literal('account.logout'),
+  // Open or close an overlay. `target` is the uid of the container marked as
+  // one; omitted on close means "the overlay I am inside", which is what a
+  // close button in a drawer wants.
+  Type.Literal('overlay.open'),
+  Type.Literal('overlay.close'),
 ])
 
 export type NodeActionType = Static<typeof NodeActionTypeSchema>
@@ -54,6 +59,8 @@ export const NodeActionSchema = Type.Object({
    */
   productSlug: Type.Optional(Type.String()),
   variantSku: Type.Optional(Type.String()),
+  /** Node id of the overlay `overlay.open` / `overlay.close` acts on. */
+  target: Type.Optional(Type.String()),
 })
 
 export type NodeAction = Static<typeof NodeActionSchema>
@@ -87,6 +94,22 @@ export const NodeActionsSchema = Type.Object({
     Type.Literal('cart'),
     Type.Literal('form'),
   ])),
+  /**
+   * Marks this container as an overlay: hidden until something opens it,
+   * published as a `<dialog>`.
+   *
+   * A flag rather than a module, for the same reason `region` is: the contents
+   * are ordinary nodes, so a loop, a cart region and a form all work inside a
+   * drawer with no extra machinery. `modal` centres; the `sheet-*` variants
+   * anchor to an edge. Position and animation are the merchant's Tailwind
+   * classes — this only decides the open/close mechanics.
+   */
+  overlay: Type.Optional(Type.Union([
+    Type.Literal('modal'),
+    Type.Literal('sheet-left'),
+    Type.Literal('sheet-right'),
+    Type.Literal('sheet-bottom'),
+  ])),
 })
 
 export type NodeActions = Static<typeof NodeActionsSchema>
@@ -94,11 +117,16 @@ export type NodeActions = Static<typeof NodeActionsSchema>
 const VALID_TYPES: NodeActionType[] = [
   'cart.addItem', 'cart.removeItem', 'cart.setQuantity', 'cart.createOrder', 'payment.initiate',
   'account.register', 'account.login', 'account.logout',
+  'overlay.open', 'overlay.close',
 ]
 
 export type NodeRegion = NonNullable<NodeActions['region']>
 
 const VALID_REGIONS: NodeRegion[] = ['payment', 'cart', 'form']
+
+export type NodeOverlay = NonNullable<NodeActions['overlay']>
+
+const VALID_OVERLAYS: NodeOverlay[] = ['modal', 'sheet-left', 'sheet-right', 'sheet-bottom']
 
 function parseNodeAction(raw: unknown): NodeAction | null {
   const r = asPlainObject(raw)
@@ -112,6 +140,7 @@ function parseNodeAction(raw: unknown): NodeAction | null {
   if (typeof r.provider === 'string' && r.provider.length > 0) action.provider = r.provider
   if (typeof r.productSlug === 'string' && r.productSlug.length > 0) action.productSlug = r.productSlug
   if (typeof r.variantSku === 'string' && r.variantSku.length > 0) action.variantSku = r.variantSku
+  if (typeof r.target === 'string' && r.target.length > 0) action.target = r.target
   return action
 }
 
@@ -124,6 +153,13 @@ export function parseNodeActions(raw: unknown): NodeActions | undefined {
   const region = VALID_REGIONS.includes(r.region as NodeRegion)
     ? (r.region as NodeRegion)
     : undefined
-  if (!click && !region) return undefined
-  return { ...(click ? { click } : {}), ...(region ? { region } : {}) }
+  const overlay = VALID_OVERLAYS.includes(r.overlay as NodeOverlay)
+    ? (r.overlay as NodeOverlay)
+    : undefined
+  if (!click && !region && !overlay) return undefined
+  return {
+    ...(click ? { click } : {}),
+    ...(region ? { region } : {}),
+    ...(overlay ? { overlay } : {}),
+  }
 }

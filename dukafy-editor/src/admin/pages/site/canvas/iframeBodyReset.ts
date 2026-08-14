@@ -54,6 +54,12 @@ const CANVAS_CHROME_CSS = [
   '  outline: none !important;',
   '}',
   'iframe { pointer-events: none; }',
+  // An overlay is hidden on the published page until opened, so on the canvas
+  // it must not cover the page either — a contact sheet sitting on the hero is
+  // not the page the merchant is editing. It reveals itself while it, or
+  // anything inside it, is selected, which is the moment you want to see it.
+  // Editor-only: this stylesheet is never published.
+  '[data-canvas-overlay]:not([data-canvas-overlay-open]) { display: none !important; }',
 ].join('\n')
 
 export function applyIframeBodyReset(

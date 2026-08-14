@@ -15,6 +15,7 @@ describe('parseNodeActions', () => {
   const VERBS: NodeActionType[] = [
     'cart.addItem', 'cart.removeItem', 'cart.setQuantity', 'cart.createOrder',
     'payment.initiate', 'account.register', 'account.login', 'account.logout',
+    'overlay.open', 'overlay.close',
   ]
 
   it.each(VERBS)('keeps the %s verb', (type) => {
@@ -38,6 +39,29 @@ describe('parseNodeActions', () => {
     // Tolerant, not fatal — an action from a newer Dukafy must not take down
     // the whole document.
     expect(parseNodeActions({ click: { type: 'account.deleteEverything' } })).toBeUndefined()
+  })
+
+  // A sheet is a flag on a container, like `region` — its contents stay
+  // ordinary nodes, so a loop or a cart region works inside one.
+  it.each(['modal', 'sheet-left', 'sheet-right', 'sheet-bottom'] as const)(
+    'keeps the %s overlay', (overlay) => {
+      expect(parseNodeActions({ overlay })).toEqual({ overlay })
+    },
+  )
+
+  it('carries the overlay target on an open trigger', () => {
+    expect(parseNodeActions({ click: { type: 'overlay.open', target: 'sheet1' } }))
+      .toEqual({ click: { type: 'overlay.open', target: 'sheet1' } })
+  })
+
+  // A cart drawer is both at once.
+  it('carries an overlay and a cart region together', () => {
+    expect(parseNodeActions({ overlay: 'sheet-right', region: 'cart' }))
+      .toEqual({ overlay: 'sheet-right', region: 'cart' })
+  })
+
+  it('drops an unknown overlay variant', () => {
+    expect(parseNodeActions({ overlay: 'lightbox' })).toBeUndefined()
   })
 
   it('drops an unknown region', () => {

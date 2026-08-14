@@ -1,0 +1,691 @@
+{
+  "dukafyExport": "block",
+  "version": 1,
+  "exportedAt": 0,
+  "block": {
+    "name": "Contact \u2014 sheet with details and a form",
+    "rootNodeIds": [
+      "contact"
+    ],
+    "nodes": {
+      "contact": {
+        "id": "contact",
+        "moduleId": "base.container",
+        "children": [
+          "trigger",
+          "sheet"
+        ],
+        "props": {
+          "tag": "div"
+        },
+        "breakpointOverrides": {},
+        "classIds": []
+      },
+      "trigger": {
+        "id": "trigger",
+        "moduleId": "base.button",
+        "children": [],
+        "props": {
+          "label": "Contact us",
+          "href": ""
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-rounded_md",
+          "tw-bg_black",
+          "tw-px_4",
+          "tw-py_2",
+          "tw-text_sm",
+          "tw-text_white"
+        ],
+        "actions": {
+          "click": {
+            "type": "overlay.open",
+            "target": "sheet"
+          }
+        }
+      },
+      "sheet": {
+        "id": "sheet",
+        "moduleId": "base.container",
+        "children": [
+          "close",
+          "heading",
+          "blurb",
+          "phone",
+          "email",
+          "hours",
+          "divider",
+          "formheading",
+          "form"
+        ],
+        "props": {
+          "tag": "div"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-flex",
+          "tw-w_full",
+          "tw-max_w_md",
+          "tw-flex_col",
+          "tw-gap_4",
+          "tw-overflow_y_auto",
+          "tw-bg_white",
+          "tw-p_8"
+        ],
+        "actions": {
+          "overlay": "sheet-right"
+        }
+      },
+      "close": {
+        "id": "close",
+        "moduleId": "base.button",
+        "children": [],
+        "props": {
+          "label": "Close",
+          "href": ""
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-ml_auto",
+          "tw-text_sm",
+          "tw-text_gray_500",
+          "tw-underline"
+        ],
+        "actions": {
+          "click": {
+            "type": "overlay.close"
+          }
+        }
+      },
+      "heading": {
+        "id": "heading",
+        "moduleId": "base.text",
+        "children": [],
+        "props": {
+          "text": "Get in touch",
+          "tag": "h2"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-text_2xl",
+          "tw-font_semibold"
+        ]
+      },
+      "blurb": {
+        "id": "blurb",
+        "moduleId": "base.text",
+        "children": [],
+        "props": {
+          "text": "We answer every message ourselves, usually the same day.",
+          "tag": "p"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-text_sm",
+          "tw-text_gray_600"
+        ]
+      },
+      "phone": {
+        "id": "phone",
+        "moduleId": "base.link",
+        "children": [],
+        "props": {
+          "text": "+254 700 000 000",
+          "href": "tel:+254700000000"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-text_lg",
+          "tw-font_medium",
+          "tw-underline"
+        ]
+      },
+      "email": {
+        "id": "email",
+        "moduleId": "base.link",
+        "children": [],
+        "props": {
+          "text": "hello@example.com",
+          "href": "mailto:hello@example.com"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-text_sm",
+          "tw-underline"
+        ]
+      },
+      "hours": {
+        "id": "hours",
+        "moduleId": "base.text",
+        "children": [],
+        "props": {
+          "text": "Mon\u2013Fri, 9am\u20135pm EAT",
+          "tag": "p"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-text_sm",
+          "tw-text_gray_500"
+        ]
+      },
+      "divider": {
+        "id": "divider",
+        "moduleId": "base.container",
+        "children": [],
+        "props": {
+          "tag": "div"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-border_t",
+          "tw-my_2"
+        ]
+      },
+      "formheading": {
+        "id": "formheading",
+        "moduleId": "base.text",
+        "children": [],
+        "props": {
+          "text": "Or send a message",
+          "tag": "h3"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-text_base",
+          "tw-font_medium"
+        ]
+      },
+      "form": {
+        "id": "form",
+        "moduleId": "base.form",
+        "children": [
+          "namelabel",
+          "name",
+          "emaillabel",
+          "emailfield",
+          "messagelabel",
+          "message",
+          "send"
+        ],
+        "props": {
+          "mode": "cms",
+          "formId": "contact",
+          "targetTableId": "",
+          "action": "",
+          "method": "post",
+          "successBehavior": "message",
+          "successMessage": "Thanks \u2014 we will be in touch.",
+          "redirectUrl": "",
+          "honeypotName": "company",
+          "minSubmitSeconds": 2,
+          "htmlAttributes": {}
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-flex",
+          "tw-flex_col",
+          "tw-gap_3"
+        ]
+      },
+      "namelabel": {
+        "id": "namelabel",
+        "moduleId": "base.label",
+        "children": [],
+        "props": {
+          "text": "Your name"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-text_sm",
+          "tw-font_medium"
+        ]
+      },
+      "name": {
+        "id": "name",
+        "moduleId": "base.input",
+        "children": [],
+        "props": {
+          "inputType": "text",
+          "name": "name",
+          "fieldId": "name",
+          "id": "contact-name",
+          "placeholder": "Ada Lovelace",
+          "autocomplete": "name",
+          "required": true
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-rounded_md",
+          "tw-border",
+          "tw-border_gray_300",
+          "tw-px_3",
+          "tw-py_2",
+          "tw-text_sm"
+        ]
+      },
+      "emaillabel": {
+        "id": "emaillabel",
+        "moduleId": "base.label",
+        "children": [],
+        "props": {
+          "text": "Email"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-text_sm",
+          "tw-font_medium"
+        ]
+      },
+      "emailfield": {
+        "id": "emailfield",
+        "moduleId": "base.input",
+        "children": [],
+        "props": {
+          "inputType": "email",
+          "name": "email",
+          "fieldId": "email",
+          "id": "contact-email",
+          "placeholder": "you@example.com",
+          "autocomplete": "email",
+          "required": true
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-rounded_md",
+          "tw-border",
+          "tw-border_gray_300",
+          "tw-px_3",
+          "tw-py_2",
+          "tw-text_sm"
+        ]
+      },
+      "messagelabel": {
+        "id": "messagelabel",
+        "moduleId": "base.label",
+        "children": [],
+        "props": {
+          "text": "Message"
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-text_sm",
+          "tw-font_medium"
+        ]
+      },
+      "message": {
+        "id": "message",
+        "moduleId": "base.textarea",
+        "children": [],
+        "props": {
+          "name": "message",
+          "fieldId": "message",
+          "id": "contact-message",
+          "rows": 4,
+          "placeholder": "How can we help?",
+          "required": true
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-rounded_md",
+          "tw-border",
+          "tw-border_gray_300",
+          "tw-px_3",
+          "tw-py_2",
+          "tw-text_sm"
+        ]
+      },
+      "send": {
+        "id": "send",
+        "moduleId": "base.submit",
+        "children": [],
+        "props": {
+          "label": "Send message",
+          "disabled": false,
+          "formId": ""
+        },
+        "breakpointOverrides": {},
+        "classIds": [
+          "tw-rounded_md",
+          "tw-bg_black",
+          "tw-px_4",
+          "tw-py_2",
+          "tw-text_sm",
+          "tw-text_white"
+        ]
+      }
+    },
+    "classes": {
+      "tw-rounded_md": {
+        "id": "tw-rounded_md",
+        "name": "rounded-md",
+        "kind": "class",
+        "selector": ".rounded-md",
+        "order": 0,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-bg_black": {
+        "id": "tw-bg_black",
+        "name": "bg-black",
+        "kind": "class",
+        "selector": ".bg-black",
+        "order": 1,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-px_4": {
+        "id": "tw-px_4",
+        "name": "px-4",
+        "kind": "class",
+        "selector": ".px-4",
+        "order": 2,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-py_2": {
+        "id": "tw-py_2",
+        "name": "py-2",
+        "kind": "class",
+        "selector": ".py-2",
+        "order": 3,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_sm": {
+        "id": "tw-text_sm",
+        "name": "text-sm",
+        "kind": "class",
+        "selector": ".text-sm",
+        "order": 4,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_white": {
+        "id": "tw-text_white",
+        "name": "text-white",
+        "kind": "class",
+        "selector": ".text-white",
+        "order": 5,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-ml_auto": {
+        "id": "tw-ml_auto",
+        "name": "ml-auto",
+        "kind": "class",
+        "selector": ".ml-auto",
+        "order": 6,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-flex": {
+        "id": "tw-flex",
+        "name": "flex",
+        "kind": "class",
+        "selector": ".flex",
+        "order": 7,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-h_full": {
+        "id": "tw-h_full",
+        "name": "h-full",
+        "kind": "class",
+        "selector": ".h-full",
+        "order": 8,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-w_full": {
+        "id": "tw-w_full",
+        "name": "w-full",
+        "kind": "class",
+        "selector": ".w-full",
+        "order": 9,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-max_w_md": {
+        "id": "tw-max_w_md",
+        "name": "max-w-md",
+        "kind": "class",
+        "selector": ".max-w-md",
+        "order": 10,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-flex_col": {
+        "id": "tw-flex_col",
+        "name": "flex-col",
+        "kind": "class",
+        "selector": ".flex-col",
+        "order": 11,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-gap_4": {
+        "id": "tw-gap_4",
+        "name": "gap-4",
+        "kind": "class",
+        "selector": ".gap-4",
+        "order": 12,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-overflow_y_auto": {
+        "id": "tw-overflow_y_auto",
+        "name": "overflow-y-auto",
+        "kind": "class",
+        "selector": ".overflow-y-auto",
+        "order": 13,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-bg_white": {
+        "id": "tw-bg_white",
+        "name": "bg-white",
+        "kind": "class",
+        "selector": ".bg-white",
+        "order": 14,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-p_8": {
+        "id": "tw-p_8",
+        "name": "p-8",
+        "kind": "class",
+        "selector": ".p-8",
+        "order": 15,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_gray_500": {
+        "id": "tw-text_gray_500",
+        "name": "text-gray-500",
+        "kind": "class",
+        "selector": ".text-gray-500",
+        "order": 16,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-underline": {
+        "id": "tw-underline",
+        "name": "underline",
+        "kind": "class",
+        "selector": ".underline",
+        "order": 17,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_2xl": {
+        "id": "tw-text_2xl",
+        "name": "text-2xl",
+        "kind": "class",
+        "selector": ".text-2xl",
+        "order": 18,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-font_semibold": {
+        "id": "tw-font_semibold",
+        "name": "font-semibold",
+        "kind": "class",
+        "selector": ".font-semibold",
+        "order": 19,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_gray_600": {
+        "id": "tw-text_gray_600",
+        "name": "text-gray-600",
+        "kind": "class",
+        "selector": ".text-gray-600",
+        "order": 20,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_lg": {
+        "id": "tw-text_lg",
+        "name": "text-lg",
+        "kind": "class",
+        "selector": ".text-lg",
+        "order": 21,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-font_medium": {
+        "id": "tw-font_medium",
+        "name": "font-medium",
+        "kind": "class",
+        "selector": ".font-medium",
+        "order": 22,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-border_t": {
+        "id": "tw-border_t",
+        "name": "border-t",
+        "kind": "class",
+        "selector": ".border-t",
+        "order": 23,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-my_2": {
+        "id": "tw-my_2",
+        "name": "my-2",
+        "kind": "class",
+        "selector": ".my-2",
+        "order": 24,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-text_base": {
+        "id": "tw-text_base",
+        "name": "text-base",
+        "kind": "class",
+        "selector": ".text-base",
+        "order": 25,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-gap_3": {
+        "id": "tw-gap_3",
+        "name": "gap-3",
+        "kind": "class",
+        "selector": ".gap-3",
+        "order": 26,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-border": {
+        "id": "tw-border",
+        "name": "border",
+        "kind": "class",
+        "selector": ".border",
+        "order": 27,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-border_gray_300": {
+        "id": "tw-border_gray_300",
+        "name": "border-gray-300",
+        "kind": "class",
+        "selector": ".border-gray-300",
+        "order": 28,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      },
+      "tw-px_3": {
+        "id": "tw-px_3",
+        "name": "px-3",
+        "kind": "class",
+        "selector": ".px-3",
+        "order": 29,
+        "styles": {},
+        "contextStyles": {},
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000
+      }
+    }
+  }
+}

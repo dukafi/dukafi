@@ -68,6 +68,20 @@ export function cloneNodeWithRemap(
       Object.entries(node.dynamicBindings).map(([k, v]) => [k, { ...v }]),
     )
   }
+  if (node.actions) {
+    cloned.actions = { ...node.actions }
+    if (node.actions.click) {
+      const click = { ...node.actions.click }
+      // `target` is a NODE ID — the overlay this trigger opens. Copied
+      // verbatim it survives a clone pointing at the original, so a duplicated
+      // drawer, a pasted block or a saved layout would open the wrong sheet or
+      // nothing at all. Remapped when the target came along in the same
+      // subtree; left alone when it points outside it, which is a trigger
+      // deliberately aimed at an overlay elsewhere on the page.
+      if (click.target) click.target = idMap.get(click.target) ?? click.target
+      cloned.actions.click = click
+    }
+  }
 
   return cloned
 }

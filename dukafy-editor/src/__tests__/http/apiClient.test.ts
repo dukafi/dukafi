@@ -175,3 +175,32 @@ describe('isAbortError', () => {
     expect(isAbortError('nope')).toBe(false)
   })
 })
+
+describe('responseErrorMessage — the CMS error envelope', () => {
+  // Dukafy's Ruby side answers `{ error: { code, message } }` (see
+  // `error_payload` in admin_api.rb). Reading only the string form meant every
+  // API failure surfaced as raw JSON in the toast, with the sentence buried
+  // inside punctuation.
+  it('reads the message out of an object envelope', async () => {
+    const res = new Response(
+      JSON.stringify({ error: { code: 'ai_provider_error', message: 'Your credit balance is too low.' } }),
+      { status: 502, headers: { 'content-type': 'application/json' } },
+    )
+
+    expect(await responseErrorMessage(res, 'fallback')).toBe('Your credit balance is too low.')
+  })
+
+  it('still reads a bare string envelope', async () => {
+    const res = new Response(JSON.stringify({ error: 'plain text reason' }), {
+      status: 500, headers: { 'content-type': 'application/json' },
+    })
+
+    expect(await responseErrorMessage(res, 'fallback')).toBe('plain text reason')
+  })
+
+  it('falls back when there is no envelope at all', async () => {
+    const res = new Response('', { status: 500 })
+
+    expect(await responseErrorMessage(res, 'fallback')).toBe('fallback')
+  })
+})

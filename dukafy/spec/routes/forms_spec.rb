@@ -136,16 +136,59 @@ class FormsSpec < Minitest::Test
     assert_equal 0, FormSubmission.count
   end
 
-  def test_redirect_behaviour_is_honoured_for_same_site_paths_only
+  # A CMS form is a real <form> doing a real POST. `HX-Redirect` is an htmx
+  # INSTRUCTION — on a native submit the browser ignored it and rendered the
+  # message div as a bare page, so the merchant's chosen destination never
+  # happened.
+  def test_a_native_submit_really_navigates_to_the_chosen_page
     publish!(form_document(props: { "successBehavior" => "redirect", "redirectUrl" => "/thanks" }))
-    post "/forms/contact", name: "Ada"
-    assert_equal "/thanks", last_response.headers["hx-redirect"]
 
+    post "/forms/contact", name: "Ada"
+
+    assert_equal 303, last_response.status
+    assert_equal "/thanks", last_response.headers["location"]
+  end
+
+  # 303 specifically, so a refresh on the destination cannot resubmit the form.
+  def test_a_native_submit_returns_to_the_form_page_when_no_destination_was_chosen
+    publish!(form_document)
+
+    post "/forms/contact", { name: "Ada" }, { "HTTP_REFERER" => "http://example.org/contact" }
+
+    assert_equal 303, last_response.status
+    assert_equal "/contact", last_response.headers["location"]
+  end
+
+  # An htmx caller is not navigating, so it keeps the header form.
+  def test_an_htmx_submit_still_gets_the_header
+    publish!(form_document(props: { "successBehavior" => "redirect", "redirectUrl" => "/thanks" }))
+
+    post "/forms/contact", { name: "Ada" }, { "HTTP_HX_REQUEST" => "true" }
+
+    assert_equal 200, last_response.status
+    assert_equal "/thanks", last_response.headers["hx-redirect"]
+  end
+
+  def test_an_offsite_destination_is_refused_on_both_paths
     publish!(form_document(slug: "evil", form_id: "evilform",
                            props: { "successBehavior" => "redirect",
                                     "redirectUrl" => "//evil.example.com" }))
+
     post "/forms/evilform", name: "Ada"
+    refute_equal "//evil.example.com", last_response.headers["location"]
+
+    post "/forms/evilform", { name: "Ada" }, { "HTTP_HX_REQUEST" => "true" }
     assert_nil last_response.headers["hx-redirect"]
+  end
+
+  # A Referer from another site must not become a redirect target.
+  def test_an_offsite_referer_is_not_followed
+    publish!(form_document)
+
+    post "/forms/contact", { name: "Ada" }, { "HTTP_REFERER" => "https://evil.example.com/x" }
+
+    # Falls through to the message body rather than navigating anywhere.
+    assert_equal 200, last_response.status
   end
 
   # ---------------------------------------------------------------------

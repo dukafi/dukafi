@@ -72,6 +72,21 @@ export const NodeRenderer = memo(function NodeRenderer({ nodeId }: NodeRendererP
   // to a boolean, so per-node memoization isn't disturbed — only rows whose
   // `includes(nodeId)` result flips will re-render.
   const isSelected = useEditorStore((s) => s.selectedNodeIds.includes(nodeId))
+  // True when the selection is a DESCENDANT of this node — so selecting a field
+  // inside a sheet keeps the sheet open while you edit it.
+  const selectionIsInside = useEditorStore((s) => {
+    if (!node?.actions?.overlay) return false
+    const tree = s.site?.pages.find((page) => page.id === s.activePageId)?.nodes
+    if (!tree) return false
+    return s.selectedNodeIds.some((selected) => {
+      let current = tree[selected]
+      while (current?.parentId) {
+        if (current.parentId === nodeId) return true
+        current = tree[current.parentId]
+      }
+      return false
+    })
+  })
   const isHovered = useEditorStore(
     (s) =>
       s.hoveredNodeId === nodeId &&
@@ -274,10 +289,26 @@ export const NodeRenderer = memo(function NodeRenderer({ nodeId }: NodeRendererP
   // `:nth-child()`, etc.) because it sat between every authored element.
   // Moving the bag onto the module's own root removes the wrapper entirely
   // and the canvas DOM matches the published DOM exactly.
+  // An overlay is hidden on the published page until something opens it, so on
+  // the canvas it must not sit on top of the page either — a contact sheet
+  // covering the hero is not the page the merchant is editing.
+  //
+  // It reveals itself while it, or anything inside it, is selected: clicking it
+  // in Layers is how you get at it, and that is the moment you want to see it.
+  // Editor-only, never published.
+  const overlayVariant = node?.actions?.overlay
+  const overlayOpen = overlayVariant ? isSelected || selectionIsInside : false
+
   const nodeWrapperProps: NodeWrapperPropsType = {
     'data-node-id': nodeId,
     'data-module-id': node.moduleId,
     tabIndex: 0,
+    ...(overlayVariant
+      ? {
+          'data-canvas-overlay': overlayVariant,
+          'data-canvas-overlay-open': overlayOpen ? 'true' as const : undefined,
+        }
+      : {}),
     ...(isSelected ? { 'data-canvas-selected': 'true' as const } : {}),
     ...(inlineStyle ? { style: inlineStyle } : {}),
     ...(isHovered && !isSelected ? { 'data-hovered': 'true' as const } : {}),

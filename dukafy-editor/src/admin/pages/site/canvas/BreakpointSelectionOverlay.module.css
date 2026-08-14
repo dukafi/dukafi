@@ -302,3 +302,51 @@
     box-shadow: inset 0 0 0 1px var(--danger);
     background: var(--danger-10);
 }
+
+/* ── Assistant working on this element ──────────────────────────────────────
+ *
+ * Nested INSIDE `.ring`, so it inherits the rect the RAF tick already measures
+ * for the selection ring — there is no second measurement path that could
+ * drift from the first. `inset: 0` fills exactly the element the merchant
+ * selected, which is the whole point: a disabled toolbar button says a request
+ * is in flight but not where it will land.
+ */
+.aiBusy {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Enough to read as "busy", light enough to keep the content legible —
+       the merchant is watching to see what changes. */
+    background: color-mix(in srgb, var(--canvas-selection-ring-color) 12%, transparent);
+    /* A tall element would otherwise let the spinner escape its own ring. */
+    overflow: hidden;
+    pointer-events: none;
+    border-radius: 1px;
+}
+
+.aiBusySpinner {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid color-mix(in srgb, var(--canvas-selection-ring-color) 30%, transparent);
+    /* One coloured arc is what makes the rotation readable. */
+    border-top-color: var(--canvas-selection-ring-color);
+    animation: aiBusySpin 700ms linear infinite;
+}
+
+@keyframes aiBusySpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Motion is decorative here — the scrim alone still says "working". */
+@media (prefers-reduced-motion: reduce) {
+    .aiBusySpinner {
+        animation: none;
+        border-color: var(--canvas-selection-ring-color);
+        opacity: 0.6;
+    }
+}

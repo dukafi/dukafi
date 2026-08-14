@@ -52,6 +52,32 @@ class AdminApi < Roda
     "download_failed" => [502, "font_download_failed", "Could not download the font files from Google."],
   }.freeze
 
+  # Reason -> HTTP. `not_configured` is 409 rather than 500: nothing is broken,
+  # the merchant simply has not chosen a model yet, and the editor uses that to
+  # point them at the settings form instead of showing a failure.
+  AI_CHAT_ERRORS = {
+    "not_configured" => [409, "ai_not_configured", "Add a model and base URL in the AI plugin settings first."],
+    "invalid_base_url" => [422, "ai_invalid_base_url",
+                           "That base URL is not usable. Use https://, or http:// only for a local model."],
+    "empty_conversation" => [422, "ai_empty_conversation", "There was nothing to send."],
+    "request_too_large" => [413, "ai_request_too_large", "That conversation is too large to send."],
+    "provider_rejected" => [502, "ai_provider_rejected", "The provider rejected the API key."],
+    "provider_unreachable" => [502, "ai_provider_unreachable", "Could not reach the model."],
+    "empty_reply" => [502, "ai_empty_reply", "The model returned nothing."],
+  }.freeze
+
+  # Timestamps reach us as a Time from a model read and as a String from an
+  # aggregate; the client only ever wants one shape.
+  def iso_time(value)
+    return nil if value.nil?
+
+    value.respond_to?(:iso8601) ? value.iso8601 : value.to_s
+  end
+
+  def ai_chat_error(reason)
+    AI_CHAT_ERRORS.fetch(reason, [502, "ai_provider_error", "The model could not answer."])
+  end
+
   def font_install_error(reason)
     FONT_INSTALL_ERRORS.fetch(reason, [502, "font_install_failed", "Could not install that font."])
   end
@@ -924,6 +950,131 @@ class AdminApi < Roda
             asset.destroy
             no_content!
           end
+        end
+      end
+
+      # ── Forms ────────────────────────────────────────────────────────────
+      #
+      # Every merchant-defined form posts to /forms/<id> and lands in
+      # `form_submissions` with a SCHEMALESS payload — the merchant invents the
+      # fields, so there is no fixed column set to render. Submissions have been
+      # collected since the forms route shipped with no way to read them back,
+      # which makes a contact form a black hole.
+      r.on("forms") do
+        require_admin!
+
+        # One row per form the site has ever received, newest activity first —
+        # the list is derived from submissions rather than from published
+        # documents, so a form deleted from a page still shows what it caught.
+        r.get(true) do
+          rows = FormSubmission.group_and_count(:form_id).all.map do |row|
+            # `max` is an aggregate, so it comes back as a raw String from
+            # SQLite rather than through Sequel's column typecasting.
+            latest = FormSubmission.where(form_id: row[:form_id]).max(:created_at)
+            { id: row[:form_id], count: row[:count], lastAt: iso_time(latest) }
+          end
+          { forms: rows.sort_by { |row| row[:lastAt].to_s }.reverse }
+        end
+
+        # Paged rather than capped. A busy contact form quietly loses its
+        # oldest messages behind a fixed limit, and those are exactly the ones
+        # a merchant goes looking for — the enquiry from three weeks ago.
+        #
+        # `total` comes back so the UI can say how many remain instead of
+        # guessing from a short page.
+        r.get(String) do |form_id|
+          rows = FormSubmission.where(form_id: form_id)
+          total = rows.count
+          limit = [[Integer(r.params.fetch("limit", "50"), exception: false) || 50, 1].max, 200].min
+          offset = [Integer(r.params.fetch("offset", "0"), exception: false) || 0, 0].max
+
+          submissions = rows
+            .order(Sequel.desc(:created_at), Sequel.desc(:id))
+            .limit(limit, offset)
+            .map do |submission|
+              {
+                id: submission.id,
+                createdAt: iso_time(submission.created_at),
+                # The payload is whatever the merchant's own fields were named.
+                fields: submission.payload_data,
+                orderId: submission.order_id,
+                customerId: submission.customer_id,
+              }
+            end
+          {
+            formId: form_id, submissions: submissions, total: total,
+            # Derived here rather than compared client-side: a page that
+            # happens to be exactly `limit` long is not proof there is more.
+            hasMore: offset + submissions.length < total,
+          }
+        end
+
+        r.delete(String, Integer) do |_form_id, id|
+          submission = FormSubmission[id]
+          halt_json(404, "not_found", "That submission no longer exists.") unless submission
+
+          submission.destroy
+          no_content!
+        end
+      end
+
+      # ── AI assistant ─────────────────────────────────────────────────────
+      # A thin authenticated proxy. The editor composes the whole conversation
+      # (system prompt, page snapshot, user turn); this attaches the stored
+      # credential and returns the reply verbatim. Nothing here interprets the
+      # model's output — the editor validates and applies it, so a hallucinated
+      # edit can never reach the document without passing the same parser a
+      # hand-pasted one does.
+      r.on("ai") do
+        require_admin!
+
+        r.post("chat") do
+          result = AiChat.call(messages: r.params["messages"])
+          unless result.ok?
+            status, code, message = ai_chat_error(result.reason)
+            # The provider's own words, appended verbatim. Debugging a rejected
+            # request without them means guessing between a wrong model id, a
+            # max_tokens over the model's ceiling, an expired key and a DNS
+            # failure — all of which looked identical before.
+            message = "#{message} #{result.detail}".strip if result.detail
+            halt_json(status, code, message)
+          end
+
+          { reply: result.reply }
+        end
+
+        # Everything the assistant's own settings popover needs, so choosing a
+        # model is a two-click job in the panel rather than a trip to the
+        # plugin admin. `hasKey` — never the key itself.
+        r.is("config") do
+          r.get do
+            settings = AiChat.settings
+            {
+              baseUrl: settings[:base_url].to_s,
+              model: settings[:model].to_s,
+              hasKey: !settings[:api_key].to_s.strip.empty?,
+            }
+          end
+
+          r.put do
+            settings = AiChat.settings
+            settings[:base_url] = r.params["baseUrl"].to_s.strip
+            settings[:model] = r.params["model"].to_s.strip
+            # Same rule the generic plugin form follows: a blank key means
+            # "leave it alone", because the form was never shown the current
+            # one to resubmit. Clearing is explicit, via `clearKey`.
+            key = r.params["apiKey"].to_s
+            settings[:api_key] = "" if r.params["clearKey"] == true
+            settings[:api_key] = key.strip unless key.strip.empty?
+            no_content!
+          end
+        end
+
+        # The provider's catalogue, so the merchant picks a model instead of
+        # typing an id. Accepts the not-yet-saved base URL and key from the
+        # popover — the key goes browser -> server only, never back.
+        r.post("models") do
+          { models: AiChat.list_models(base_url: r.params["baseUrl"], api_key: r.params["apiKey"]) }
         end
       end
 
