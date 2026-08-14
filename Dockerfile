@@ -23,7 +23,13 @@ WORKDIR /editor
 
 # Dependencies first: this layer is reused by every build that does not change
 # the lockfile, which is the overwhelming majority of them.
+#
+# vendor/ comes along because `pixel-art-icons` is a file: dependency living
+# there — bun resolves it during install, so package.json and the lockfile
+# alone are not enough. It is 1.5 MB and changes about never, so it belongs in
+# the cached dependency layer rather than with the source.
 COPY dukafi-editor/package.json dukafi-editor/bun.lock ./
+COPY dukafi-editor/vendor/ ./vendor/
 RUN bun install --frozen-lockfile
 
 COPY dukafi-editor/ ./
@@ -64,6 +70,7 @@ RUN apt-get update -qq && apt-get install --no-install-recommends -y \
       libpq5 \
       libsqlite3-0 \
       libvips42 \
+      util-linux \
  && rm -rf /var/lib/apt/lists/*
 
 # Tailwind standalone, pinned and checksummed exactly as
@@ -84,9 +91,12 @@ COPY --from=editor /dukafi/public/admin ./public/admin
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint
 
 # The container starts as root only long enough for the entrypoint to take
-# ownership of a freshly mounted volume, then drops to this user via setpriv.
-# Verified at BUILD time so a missing setpriv fails the build rather than
-# leaving a container that silently runs as root.
+# ownership of a freshly mounted volume, then drops to this user via setpriv
+# (from util-linux above — installed explicitly rather than relied on, since
+# what a -slim image ships is not a stable contract).
+#
+# The check stays: it is cheap, and a silently-root container is exactly the
+# kind of thing that goes unnoticed until it matters.
 RUN chmod +x /usr/local/bin/entrypoint \
  && command -v setpriv > /dev/null \
  && useradd --system --create-home --shell /usr/sbin/nologin --uid 1000 dukafi \
