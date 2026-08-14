@@ -59,16 +59,42 @@ while [ $# -gt 0 ]; do
     --skip-smoke)  SKIP_SMOKE=1; shift ;;
     --dry-run)     DRY_RUN=1; shift ;;
     -h|--help)     sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    *)             die "unknown argument: $1 (try --help)" ;;
+    -*)            die "unknown argument: $1 (try --help)" ;;
+    # A bare version, so `./deploy-image 1.0.0` works as well as --tag 1.0.0.
+    *)             [ -z "$TAG" ] || die "two versions given: '${TAG}' and '$1'"
+                   TAG="$1"; shift ;;
   esac
 done
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$REPO_ROOT"
 
-# Under sudo, git refuses to read a repo owned by another user unless the path
-# is trusted. Scoped to this one command rather than mutating global config.
-git_() { git -c safe.directory="$REPO_ROOT" "$@"; }
+# Git, seeing exactly what the invoking user sees.
+#
+# Two things go wrong under sudo, and both make this script disagree with the
+# `git status` you just ran:
+#
+#   · ownership — git refuses to read a repo owned by another user unless the
+#     path is trusted, so safe.directory is set for this command only rather
+#     than mutating anyone's global config.
+#
+#   · HOME — sudo resets it to /root, and git's global ignore file lives at
+#     ~/.config/git/ignore. Losing it makes files YOU have globally ignored
+#     show up as untracked, which read as a dirty tree and blocked a release
+#     from a genuinely clean checkout.
+if [ -n "${SUDO_USER:-}" ]; then
+  USER_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+else
+  USER_HOME="${HOME:-}"
+fi
+
+git_() {
+  if [ -n "$USER_HOME" ]; then
+    HOME="$USER_HOME" git -c safe.directory="$REPO_ROOT" "$@"
+  else
+    git -c safe.directory="$REPO_ROOT" "$@"
+  fi
+}
 
 # ── Work out the tags ────────────────────────────────────────────────────────
 #
