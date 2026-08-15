@@ -19,7 +19,9 @@ import { Settings2SolidIcon } from 'pixel-art-icons/icons/settings-2-solid'
 import { ListBoxSolidIcon } from 'pixel-art-icons/icons/list-box-solid'
 import { PlugSolidIcon } from 'pixel-art-icons/icons/plug-solid'
 import { useCommerceData } from './hooks/useCommerceData'
+import { CommandIcon } from 'pixel-art-icons/icons/command'
 import { CollectionsSection } from './sections/CollectionsSection'
+import { ConnectSection } from './sections/ConnectSection'
 import { ImportSection } from './sections/ImportSection'
 import { OrdersSection } from './sections/OrdersSection'
 import { FormsSection } from './sections/FormsSection'
@@ -36,6 +38,7 @@ const SECTION_LABELS: Record<CommerceSection, string> = {
   forms: 'Forms',
   plugins: 'Plugins',
   import: 'Import',
+  connect: 'Connect',
   settings: 'Settings',
 }
 
@@ -46,10 +49,11 @@ const SECTION_ICONS = {
   forms: FileTextSolidIcon,
   plugins: PlugSolidIcon,
   import: CloudUploadSolidIcon,
+  connect: CommandIcon,
   settings: Settings2SolidIcon,
 } satisfies Record<CommerceSection, typeof PackageSolidIcon>
 
-const SECTIONS: CommerceSection[] = ['products', 'collections', 'orders', 'forms', 'plugins', 'import', 'settings']
+const SECTIONS: CommerceSection[] = ['products', 'collections', 'orders', 'forms', 'plugins', 'import', 'connect', 'settings']
 
 /** `products` is the landing area; anything unrecognised falls back to it. */
 export function sectionFromParam(value: string | undefined): CommerceSection {
@@ -106,6 +110,7 @@ export function DashboardPage() {
           {section === 'plugins' && <PluginsSection data={data} />}
           {section === 'collections' && <CollectionsSection data={data} />}
           {section === 'import' && <ImportSection data={data} />}
+          {section === 'connect' && <ConnectSection />}
           {section === 'settings' && <SettingsSection />}
         </div>
       </div>

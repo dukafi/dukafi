@@ -175,7 +175,7 @@ class AdminApi < Roda
         title: page.title, slug: page.slug,
         body: { nodes: document.fetch("nodes"), rootNodeId: document.fetch("rootNodeId") },
       },
-      slug: page.slug, status: page.status == "published" ? "published" : "draft", seq: 0,
+      slug: page.slug, status: page.status == "published" ? "published" : "draft", seq: page.seq.to_i,
       authorUserId: nil, createdByUserId: nil, updatedByUserId: nil, publishedByUserId: nil,
       author: nil, createdBy: nil, updatedBy: nil, publishedBy: nil,
       createdAt: page.created_at.utc.iso8601, updatedAt: now, publishedAt: nil,
@@ -357,6 +357,55 @@ class AdminApi < Roda
 
     by_document = Page.where(JsonPath.text(:document, "id") => id).first
     by_document || (slug && Page.first(slug: slug))
+  end
+
+  # Rows this save would overwrite that have moved on since the client loaded
+  # them. Empty means the save is safe.
+  #
+  # Only in `incremental` mode: a `replace` is an import or a bootstrap, which
+  # replaces deliberately and has nothing to conflict with.
+  # A MISSING base is treated as "no information", not as a conflict.
+  #
+  # `core/persistence/saveConflict.ts` says a shipped row the client has no
+  # base for should also be rejected. That is stricter than is safe to enforce:
+  # a client that ships no base seqs at all — an older build, a script, a
+  # test — would get a 409 it can never clear, because reloading does not give
+  # it a mechanism it lacks. A save that can never succeed is worse than a
+  # missed conflict.
+  #
+  # The case that actually matters is still caught: the editor DOES send bases,
+  # so when MCP writes a page the open tab is holding, the tab's base is stale
+  # and the overwrite is refused.
+  def save_conflicts(state, params)
+    return [] unless params["mode"].to_s == "incremental"
+
+    base_seqs = params["baseSeqs"].is_a?(Hash) ? params["baseSeqs"] : {}
+    conflicts = []
+
+    # The shell is checked coarsely, and only when the incoming one actually
+    # differs — otherwise every save that merely touches a page would collide
+    # with any unrelated settings change.
+    shell_base = params["shellBaseSeq"]
+    if shell_base && params.key?("site") && state.site != params["site"] &&
+       state.seq > shell_base.to_i
+      conflicts << { table: "site", rowId: "default", seq: state.seq }
+    end
+
+    ids = params.fetch("changedPages", []).filter_map { |page| page["id"] } +
+          params.fetch("deletedPageIds", [])
+
+    ids.each do |id|
+      base = base_seqs[id.to_s]
+      next if base.nil?
+
+      page = find_page_for(id)
+      # No row means the client is CREATING one — nothing to overwrite.
+      next if page.nil? || page.seq.to_i <= base.to_i
+
+      conflicts << { table: "pages", rowId: id.to_s, seq: page.seq.to_i }
+    end
+
+    conflicts
   end
 
   def save_page!(raw)
@@ -607,6 +656,17 @@ class AdminApi < Roda
         { site: state.site, seq: state.seq }
       end
 
+      # Just the version, for polling.
+      #
+      # Deliberately its own route rather than reusing GET /site: an open
+      # editor asks this every few seconds, and shipping the whole site
+      # document each time to compare one integer would be absurd.
+      r.get("site-version") do
+        require_admin!
+        state = SiteState.first || halt_json(404, "site_not_found", "Site has not been created")
+        { seq: state.seq }
+      end
+
       r.get("pages") do
         require_admin!
         ProductTemplate.ensure!
@@ -636,6 +696,37 @@ class AdminApi < Roda
       # set, but the value never travels back to a browser. Sending a token to
       # the client so a form can prefill it is how tokens end up in screen
       # recordings and browser caches.
+      # Bearer tokens for machine clients (Cursor, Lovable) to reach
+      # /admin/api/mcp. Same rule as plugin secrets above: the token is
+      # returned exactly once, by the request that creates it, and is never
+      # readable afterwards.
+      r.on("tokens") do
+        require_admin!
+        r.is do
+          r.get { { tokens: PersonalAccessToken.order(Sequel.desc(:created_at)).map(&:to_payload) } }
+
+          r.post do
+            name = r.params["name"].to_s
+            halt_json(422, "name_required", "Give the token a name so you can recognise it later") if name.strip.empty?
+
+            record, plaintext = PersonalAccessToken.issue!(name: name)
+            response.status = 201
+            # `token` appears here and nowhere else, ever.
+            { token: record.to_payload.merge(token: plaintext) }
+          end
+        end
+
+        r.on(String) do |id|
+          token = PersonalAccessToken[id.to_i] || halt_json(404, "token_not_found", "No such token")
+          # Revoked rather than deleted: `lastUsedAt` on a revoked row is how
+          # a merchant answers "was this being used before I killed it?".
+          r.delete do
+            token.revoke!
+            no_content!
+          end
+        end
+      end
+
       r.on("plugins") do
         require_admin!
         r.is do
@@ -869,11 +960,24 @@ class AdminApi < Roda
         require_admin!
         state = SiteState.first || halt_json(404, "site_not_found", "Site has not been created")
         changed_pages = r.params.fetch("changedPages", [])
+
+        # The editor has always shipped these; until MCP existed there was no
+        # second writer to conflict with, so nothing checked them. Now there
+        # is. See `core/persistence/saveConflict.ts` for the shared contract.
+        conflicts = save_conflicts(state, r.params)
+        if conflicts.any?
+          # 409 and NOTHING is written — a partial save would leave the store
+          # in a state neither writer intended.
+          request.halt([409, { "content-type" => "application/json" },
+                        [JSON.generate({ error: "save_conflict", conflicts: conflicts })]])
+        end
+
         DB.transaction do
           state.site = r.params.fetch("site")
-          state.seq += 1
-          state.save
-          changed_pages.each { |page| save_page!(page) }
+          seq = state.bump_seq!
+          # Each page records the site seq it was written at, which is what a
+          # later save compares its base against.
+          changed_pages.each { |page| save_page!(page)&.update(seq: seq) }
           # Deleting by slug fallback would be wrong here — a stale id must not
           # take out whatever page happens to hold that slug now.
           r.params.fetch("deletedPageIds", []).each { |id| find_page_for(id)&.destroy }

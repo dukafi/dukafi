@@ -3,6 +3,12 @@ set -euo pipefail
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project_root/dukafi"
+
+# Ruby and the edit sidecar authenticate to each other with a shared token.
+# Exported here so both foreman children inherit the SAME value — set it
+# yourself to override. In production the container's entrypoint mints a fresh
+# random one per boot instead; this only ever travels over loopback.
+export DUKAFI_SIDECAR_TOKEN="${DUKAFI_SIDECAR_TOKEN:-dev-sidecar-token}"
 bundle exec ruby scripts/install_tailwind.rb
 bundle exec ruby scripts/migrate.rb
 exec bundle exec foreman start -f Procfile.dev

@@ -7,7 +7,7 @@
 import type { ReactNode } from 'react'
 
 export type CommerceSection =
-  | 'products' | 'collections' | 'orders' | 'forms' | 'plugins' | 'import' | 'settings'
+  | 'products' | 'collections' | 'orders' | 'forms' | 'plugins' | 'import' | 'connect' | 'settings'
 
 export interface CommerceSettings {
   currency: string

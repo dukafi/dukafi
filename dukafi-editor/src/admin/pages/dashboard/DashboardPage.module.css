@@ -443,3 +443,65 @@
     color: var(--text-muted);
     font-size: var(--text-s);
 }
+
+/* ── Connect an AI client ─────────────────────────────────────────────────── */
+
+.connectCard {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-m);
+    max-width: 720px;
+    padding: var(--space-xl);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.connectCard h3 {
+    margin: 0;
+    color: var(--text-bright);
+    font-size: var(--text-xl);
+    font-weight: 600;
+}
+
+.connectCard h4 {
+    margin: var(--space-m) 0 0;
+    color: var(--text-bright);
+    font-size: var(--text-m);
+    font-weight: 600;
+}
+
+.connectHint {
+    margin: 0;
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+    line-height: 1.55;
+}
+
+/* Commands and tokens are for copying, so they wrap rather than scroll —
+   a horizontally clipped credential is one a merchant pastes half of. */
+.codeBlock {
+    margin: 0;
+    padding: var(--space-m);
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: var(--radius);
+    background: var(--bg-surface-3);
+    color: var(--text-bright);
+    font-size: var(--text-s);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    user-select: all;
+}
+
+.inlineForm {
+    display: flex;
+    gap: var(--space-s);
+    align-items: center;
+    width: 100%;
+    max-width: 520px;
+}
+
+.inlineForm > :first-child {
+    flex: 1;
+}

@@ -18,8 +18,39 @@ class Dukafi < Roda
       r.run Rack::Files.new(Paths.uploads_root)
     end
 
+    # OAuth discovery. These paths are fixed by RFC 9728 and RFC 8414 — a
+    # client constructs them itself, so they cannot live anywhere else.
+    #
+    # `.well-known` is reserved by RFC 8615, so mounting it here shadows no
+    # page slug a merchant would ever choose.
+    r.on(".well-known") do
+      r.get("oauth-protected-resource") { OauthMetadata.protected_resource(r.env) }
+      r.get("oauth-authorization-server") { OauthMetadata.authorization_server(r.env) }
+      # Some clients probe the OpenID discovery path first.
+      r.get("openid-configuration") { OauthMetadata.authorization_server(r.env) }
+    end
+
+
     r.on("admin") do
-      r.on("api") { r.run AdminApi }
+      r.on("api") do
+        # Before AdminApi: MCP authenticates with a bearer token rather than
+        # the admin session, so it must not fall through to a route that
+        # would answer 401 for the wrong reason.
+        #
+        # Under /admin rather than a top-level /mcp so it cannot shadow a
+        # merchant page whose slug happens to be "mcp" — the same reason the
+        # health route is not at /health.
+        r.on("mcp") { r.run Mcp }
+        r.run AdminApi
+      end
+
+      # The OAuth endpoints. Their paths are advertised in the authorization
+      # server metadata, so unlike `.well-known` they can live anywhere —
+      # which means they need not reserve a top-level slug a merchant might
+      # want for a page. Under /admin is also where they belong: approving a
+      # connection is something only the store owner can do.
+      r.on("oauth") { r.run Oauth }
+
       r.root { r.redirect "/admin/site" }
       r.get do
         File.read(File.expand_path("public/admin/index.html", __dir__))

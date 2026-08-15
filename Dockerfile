@@ -39,6 +39,11 @@ COPY dukafi-editor/ ./
 # the right relative path is all it needs.
 RUN mkdir -p /dukafi/public/admin && bun run build
 
+# The edit sidecar, bundled to one file so the runtime needs the Bun binary but
+# not node_modules. It carries the TypeScript half of the write path —
+# `importHtml`, which Ruby has no equivalent of.
+RUN bun build server/sidecar.ts --target=bun --outdir=/sidecar
+
 
 # ── Stage 2: gems ────────────────────────────────────────────────────────────
 FROM ruby:${RUBY_VERSION}-slim AS gems
@@ -85,9 +90,15 @@ RUN curl -fsSL -o /usr/local/bin/tailwindcss \
 
 COPY --from=gems /usr/local/bundle /usr/local/bundle
 
+# Bun, purely to run the edit sidecar. ~90 MB, and it is what buys writes that
+# work with no editor tab open — the difference between a cloud agent being
+# able to edit a store and not.
+COPY --from=editor /usr/local/bin/bun /usr/local/bin/bun
+
 WORKDIR /app
 COPY dukafi/ ./
 COPY --from=editor /dukafi/public/admin ./public/admin
+COPY --from=editor /sidecar/sidecar.js ./sidecar/sidecar.js
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint
 
 # The container starts as root only long enough for the entrypoint to take
@@ -113,6 +124,11 @@ ENV TAILWINDCSS_BIN=/usr/local/bin/tailwindcss
 ENV DUKAFI_DB=/data/dukafi.sqlite3
 ENV DUKAFI_PUBLISHED_ROOT=/data/published
 ENV DUKAFI_STORAGE_ROOT=/data
+# Where Ruby reaches the edit sidecar. Loopback only — it applies arbitrary
+# edits, so it must never be published. The entrypoint mints its shared token
+# per boot, so there is nothing here for a deployer to configure.
+ENV DUKAFI_SIDECAR_PORT=9293
+ENV DUKAFI_SIDECAR_URL=http://127.0.0.1:9293
 ENV BUNDLE_WITHOUT="development:test"
 
 VOLUME ["/data"]

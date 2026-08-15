@@ -26,3 +26,6 @@ dukafi-editor/.tmp-lint/
 
 # GHCR token for ./deploy-image — never commit this
 .ghcr-token
+
+# Sidecar bundle build output
+dukafi-editor/.tmp-sidecar/

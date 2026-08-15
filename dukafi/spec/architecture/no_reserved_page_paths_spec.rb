@@ -21,9 +21,20 @@ class NoReservedPagePathsSpec < Minitest::Test
   # Everything the top-level router claims before Storefront sees it.
   RESERVED = %w[admin uploads fragments forms payments].freeze
 
-  # `api` is mounted INSIDE the admin block (`/admin/api`), so it reserves
-  # nothing at the site root — but it still shows up in a flat scan of app.rb.
-  NESTED = %w[api].freeze
+  # Mounted INSIDE the admin block, so they reserve nothing at the site root —
+  # but they still show up in a flat scan of app.rb.
+  #
+  # `mcp` and `oauth` are here rather than at top level for exactly the reason
+  # this file exists: a merchant could plausibly want a page at either, and a
+  # top-level mount would silently eat it. Both are reachable because their
+  # paths are advertised in OAuth metadata, so nothing depends on where they
+  # sit.
+  #
+  # `.well-known` IS mounted at the root and is not listed, because the scan
+  # below only matches `[a-z-]+` and a dot excludes it. That is harmless: RFC
+  # 8615 reserves the whole `.well-known/` prefix, so no page can legitimately
+  # claim it, and the RFCs fix those two paths exactly.
+  NESTED = %w[api mcp oauth].freeze
 
   # Slugs a merchant would reasonably choose. If a mount ever swallows one of
   # these, this fails and names it.

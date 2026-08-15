@@ -99,3 +99,16 @@ export {
   TooManyFilesError,
   PathTraversalError,
 } from './types'
+
+// ── Shared class-name linking ─────────────────────────────────────────────────
+//
+// Used by every path that merges imported nodes into a document — single
+// fragment insert, whole-site Super Import, and AI edits — so they all reuse
+// one canonical name→id algorithm instead of three that drift.
+export {
+  createStyleRuleOrderAllocator,
+  indexStyleRulesByName,
+  linkImportedClassNames,
+  mergeImportedStyleRules,
+  type StyleRuleOrderAllocator,
+} from './importLinking'

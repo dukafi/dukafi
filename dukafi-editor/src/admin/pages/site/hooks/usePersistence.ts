@@ -8,6 +8,8 @@ import { getErrorMessage } from '@core/utils/errorMessage'
 import { pushToast } from '@ui/components/Toast'
 import { readEditorSelectPreference } from '@site/preferences/editorPreferences'
 import { consumePendingCmsSiteReload, hasPendingCmsSiteReload } from '@admin/state/adminEvents'
+import { recordSiteSeq } from '@site/sync/siteSyncSeq'
+import { useExternalSiteChanges } from '@site/sync/useExternalSiteChanges'
 
 export interface PersistenceSaveStatus {
   state: 'loading' | 'synced' | 'connecting' | 'offline' | 'error'
@@ -81,7 +83,10 @@ export function usePersistence(
           const snapshot = pendingSite
           pendingSite = null
           setSaveStatus({ state: 'connecting' })
-          await adapterRef.current.saveSite(snapshot)
+          // The seq this save landed at. Recording it is what stops the
+          // change-poller reporting our own write back to us.
+          const saved = await adapterRef.current.saveSite(snapshot)
+          recordSiteSeq(saved.seq)
           if (!cancelled) setSaveStatus({ state: 'synced' })
         }
       } catch (err) {
@@ -124,12 +129,15 @@ export function usePersistence(
           if (cancelled) return
           if (result) {
             if (pendingReload) consumePendingCmsSiteReload()
+            // The baseline every later poll is compared against.
+            recordSiteSeq(result.shellSeq)
             loadSite(result.site)
             applyDefaultBreakpointPreference(result.site.breakpoints)
           } else {
             const created = createSite('Dukafi Store')
             applyDefaultBreakpointPreference(created.breakpoints)
-            await adapterRef.current.saveSite(created)
+            const saved = await adapterRef.current.saveSite(created)
+            recordSiteSeq(saved.seq)
           }
         }
 
@@ -169,6 +177,30 @@ export function usePersistence(
       cancelled = true
     }
   }, [enabled, requestedSiteId])
+
+  // Something else wrote to the store — an MCP client, or this merchant in
+  // another tab. Told, not acted on: reloading for them could throw away
+  // whatever they are part-way through typing.
+  const changedElsewhere = useExternalSiteChanges({ enabled })
+
+  useEffect(() => {
+    if (!changedElsewhere) return
+
+    pushToast({
+      kind: 'info',
+      title: 'This store changed somewhere else',
+      body: 'An AI client or another tab edited it. Reload to see the current version — '
+        + 'anything unsaved here will be lost.',
+      location: 'site-editor:external-change',
+      // Held until acted on. A notice that vanishes after four seconds is one
+      // a merchant misses, and then saves over the change it was warning about.
+      durationMs: null,
+      action: {
+        label: 'Reload',
+        onSelect: () => { window.location.reload() },
+      },
+    })
+  }, [changedElsewhere])
 
   return { saveStatus }
 }

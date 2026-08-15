@@ -69,6 +69,41 @@ else
   $RUN_AS bundle exec ruby scripts/migrate.rb
 fi
 
+# ── The edit sidecar ─────────────────────────────────────────────────────────
+#
+# Owns the TypeScript half of the write path (`importHtml`), which Ruby has no
+# equivalent of. Only MCP writes need it — the storefront, the admin and every
+# read work without it — so a failure here degrades one feature rather than
+# taking the container down.
+#
+# The shared token is minted per boot rather than configured. It only ever
+# travels over loopback between two processes in this container, so a fresh
+# random value each start is strictly better than anything a deployer would
+# paste into a dashboard.
+SIDECAR_JS=/app/sidecar/sidecar.js
+
+if [ "$SKIP_SIDECAR" = "1" ]; then
+  log "edit sidecar disabled (SKIP_SIDECAR=1) — MCP writes will be unavailable"
+elif [ ! -f "$SIDECAR_JS" ]; then
+  log "no edit sidecar in this image — MCP writes will be unavailable"
+else
+  DUKAFI_SIDECAR_TOKEN="$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+  export DUKAFI_SIDECAR_TOKEN
+
+  # Restarted if it exits. A crash should cost one request, not every edit for
+  # the life of the container. The sleep keeps a persistent failure from
+  # becoming a hot loop.
+  (
+    while true; do
+      # shellcheck disable=SC2086
+      $RUN_AS bun "$SIDECAR_JS" || true
+      log "edit sidecar exited; restarting in 2s"
+      sleep 2
+    done
+  ) &
+  log "edit sidecar starting on 127.0.0.1:${DUKAFI_SIDECAR_PORT:-9293}"
+fi
+
 log "starting: $*"
 # shellcheck disable=SC2086
 exec $RUN_AS "$@"

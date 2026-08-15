@@ -9,3 +9,9 @@ export {
   parseAiEdits,
   type AiEdit,
 } from './editSchema'
+
+export {
+  applyEditsToTree,
+  type EditableSite,
+  type EditableTree,
+} from './applyEdits'

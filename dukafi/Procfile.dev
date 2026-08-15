@@ -29,3 +29,11 @@
 #               cannot work under foreman regardless, so nothing is lost.
 web:    bundle exec rerun --no-notify --background --dir . --pattern '**/*.{rb,ru,erb}' --ignore 'published/*' --ignore 'uploads/*' --ignore 'public/*' --ignore 'vendor/*' --ignore 'spec/*' --ignore 'scripts/*' --ignore 'db/*' -- rackup -p 9292
 editor: sh -c "cd ../dukafi-editor && bun run dev"
+
+# The edit sidecar — owns `importHtml`, which is TypeScript, so MCP writes go
+# through it. Reads and the editor work without it; only `apply_edits` needs it.
+#
+# The token is fixed in development on purpose: it never leaves loopback, and a
+# value that survives restarts means you are not re-pasting one into a test
+# script every time foreman cycles.
+sidecar: sh -c "cd ../dukafi-editor && DUKAFI_SIDECAR_TOKEN=${DUKAFI_SIDECAR_TOKEN:-dev-sidecar-token} bun run server/sidecar.ts"

@@ -42,7 +42,7 @@ import {
   indexStyleRulesByName,
   linkImportedClassNames,
   mergeImportedStyleRules,
-} from './importLinking'
+} from '@core/siteImport'
 import type { SiteSlice, SiteSliceHelpers } from './types'
 
 type NodeActions = Pick<
