@@ -118,10 +118,16 @@ ENV BUNDLE_WITHOUT="development:test"
 VOLUME ["/data"]
 EXPOSE 9292
 
-# Hits the app's own /health route, which boots Roda and therefore proves the
-# database connected — a TCP check would pass on a broken DATABASE_URL.
+# The health route lives INSIDE AdminApi, which is mounted at /admin/api — a
+# bare /health falls through to the storefront and 404s. Not adding a
+# top-level /health on purpose: it would shadow any merchant page with the
+# slug "health", which a store could plausibly want.
+#
+# Hitting the app rather than the port proves the process booted, which in
+# turn proves the database connected: config/database.rb connects at load, so
+# a bad DATABASE_URL never gets as far as listening.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
-  CMD curl -fsS "http://127.0.0.1:${PORT}/health" || exit 1
+  CMD curl -fsS "http://127.0.0.1:${PORT}/admin/api/health" || exit 1
 
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
 

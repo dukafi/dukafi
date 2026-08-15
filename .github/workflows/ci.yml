@@ -86,14 +86,14 @@ jobs:
           cache-to: type=gha,mode=max
 
       # Proves the image actually BOOTS, not merely that it builds: migrations
-      # run, Roda loads, the database connects and /health answers.
-      - name: Boot the image and hit /health
+      # run, Roda loads, the database connects and the health route answers.
+      - name: Boot the image and hit the health endpoint
         run: |
           docker run -d --name dukafi-ci \
             -e SESSION_SECRET=ci-secret-not-used-anywhere-real-0123456789abcdef \
             -p 9292:9292 dukafi:ci
           for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:9292/health; then
+            if curl -fsS http://127.0.0.1:9292/admin/api/health; then
               echo && echo "booted after ${i}s" && exit 0
             fi
             sleep 1

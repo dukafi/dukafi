@@ -71,8 +71,14 @@ upgrade procedure**.
    Skip this entirely to stay on SQLite.
 5. **Settings → Networking → Generate Domain.**
 
-Health checks hit `/health`, which boots Roda and therefore proves the database
-connected — a TCP check would pass against a broken `DATABASE_URL`.
+Health checks hit **`/admin/api/health`**, not `/health`. The route is mounted
+inside `AdminApi`, and a bare `/health` falls through to the storefront as a
+404 — there is deliberately no top-level one, because it would shadow a
+merchant page with the slug `health`. It needs no authentication.
+
+Hitting the app rather than the port proves the process booted, which proves
+the database connected: `config/database.rb` connects at load, so a bad
+`DATABASE_URL` never gets as far as listening.
 
 ### Publishing this as a Railway template
 
@@ -144,8 +150,8 @@ The token lives in a gitignored file because `sudo` does not pass environment
 variables through — an exported `GHCR_TOKEN` is invisible to the script.
 `sudo -E ./deploy-image` works too.
 
-Before pushing, the script **boots the image it just built and waits for
-`/health`**. A registry tag is public and effectively permanent, so a broken
+Before pushing, the script **boots the image it just built and waits for the
+health endpoint**. A registry tag is public and effectively permanent, so a broken
 entrypoint or an unapplied migration should stop the release rather than ship.
 `--skip-smoke` opts out.
 

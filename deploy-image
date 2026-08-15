@@ -239,7 +239,7 @@ else
 
   healthy=0
   for _ in $(seq 1 45); do
-    if curl -fsS "http://127.0.0.1:${SMOKE_PORT}/health" > /dev/null 2>&1; then
+    if curl -fsS "http://127.0.0.1:${SMOKE_PORT}/admin/api/health" > /dev/null 2>&1; then
       healthy=1
       break
     fi
@@ -255,7 +255,7 @@ else
     docker logs "$SMOKE_CONTAINER" 2>&1 | tail -40 >&2
     die "image did not become healthy — refusing to push"
   fi
-  note "/health responded, migrations applied"
+  note "health endpoint responded, migrations applied"
 fi
 
 # ── Push ─────────────────────────────────────────────────────────────────────
