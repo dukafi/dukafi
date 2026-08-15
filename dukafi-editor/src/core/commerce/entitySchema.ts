@@ -56,7 +56,9 @@ export interface EntitySchema {
   fields: EntityField[]
 }
 
-export type EntityId = 'product' | 'variant' | 'image' | 'imageVariant' | 'collection' | 'cartItem'
+export type EntityId =
+  | 'product' | 'variant' | 'image' | 'imageVariant' | 'collection' | 'cartItem'
+  | 'review' | 'star'
 
 const scalar = (id: string, label: string, format: EntityFieldFormat = 'plain'): EntityScalarField =>
   ({ id, label, kind: 'scalar', format })
@@ -152,6 +154,41 @@ export const COMMERCE_ENTITIES: Record<EntityId, EntitySchema> = {
       scalar('description', 'Description'),
       scalar('id', 'ID'),
       list('products', 'Products', 'product'),
+    ],
+  },
+
+  review: {
+    id: 'review',
+    label: 'Review',
+    fields: [
+      scalar('body', 'What they said'),
+      scalar('authorName', 'Customer'),
+      scalar('rating', 'Rating (1–5)'),
+      // The whole rating as text — five characters, no loop needed.
+      scalar('ratingStars', 'Rating as ★★★★☆'),
+      scalar('verified', 'Verified buyer?'),
+      // Supplied rather than composed, because `visibleWhen` compares strings
+      // and there is no if/else in the binding language.
+      scalar('verifiedLabel', 'Verified label'),
+      scalar('productSlug', 'Product slug'),
+      scalar('productTitle', 'Product'),
+      scalar('date', 'Date'),
+      scalar('createdAt', 'Created at'),
+      scalar('id', 'ID'),
+      // The alternative to `ratingStars`: loop these to build a rating out of
+      // elements you can style — an icon per star, gold when filled.
+      list('stars', 'Stars', 'star'),
+    ],
+  },
+
+  star: {
+    id: 'star',
+    label: 'Star',
+    fields: [
+      scalar('symbol', 'Symbol (★ or ☆)'),
+      scalar('filled', 'Filled?'),
+      scalar('state', 'State (filled/empty)'),
+      scalar('position', 'Position (1–5)'),
     ],
   },
 

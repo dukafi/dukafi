@@ -642,8 +642,10 @@ class Dukafi
       #   products                        every active product
       #   collections/featured.products   one collection's products
       #   products/canvas-bag.variants    one product's variants
+      #   reviews                         every approved review
       #   currentEntry.images             a list field of the entity in scope
       #   currentEntry.variants
+      #   currentEntry.stars              the five stars of a review's rating
       #   cart.items
       #
       # The relative form is what makes nesting composable: loop a list field
@@ -671,6 +673,7 @@ class Dukafi
       SOURCE_ENTITIES = {
         "products" => "product", "variants" => "variant",
         "images" => "image", "items" => "cartItem",
+        "reviews" => "review", "stars" => "star",
       }.freeze
 
       def source_entity(source)
@@ -698,6 +701,9 @@ class Dukafi
           slug ? (@prefetched.dig("products", slug) || {}) : { "products" => @prefetched.fetch("products", {}).values }
         when "collections"
           slug ? (@prefetched.dig("collections", slug) || {}) : { "collections" => @prefetched.fetch("collections", {}).values }
+        # Approved reviews. A flat array rather than a slug-keyed hash, so it
+        # resolves straight through `source_items` without a lookup segment.
+        when "reviews" then @prefetched.fetch("reviews", [])
         when "currentEntry" then current_entry
         when "parentEntry" then parent_entry
         when "cart" then @cart

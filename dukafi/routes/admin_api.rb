@@ -183,6 +183,21 @@ class AdminApi < Roda
     }
   end
 
+  def review_payload(review)
+    {
+      id: review.id.to_s,
+      authorName: review.author_name,
+      rating: review.rating,
+      body: review.body,
+      status: review.approved? ? "approved" : "pending",
+      # A fact about the data, never a settable flag: true only when the
+      # review is attached to a real order.
+      verified: review.verified?,
+      productSlug: review.product&.slug,
+      createdAt: review.created_at&.utc&.iso8601,
+    }
+  end
+
   def media_payload(asset)
     full_path = Paths.storage_file(asset.path)
     {
@@ -190,6 +205,8 @@ class AdminApi < Roda
       sizeBytes: File.exist?(full_path) ? File.size(full_path) : 0,
       publicPath: "/#{asset.path}", uploadedByUserId: nil, createdAt: asset.created_at.utc.iso8601,
       width: asset.width, height: asset.height, variants: asset.variants,
+      altText: asset.alt_text.to_s, title: asset.title.to_s,
+      caption: asset.caption.to_s, tags: asset.tags,
     }
   end
 
@@ -1043,6 +1060,17 @@ class AdminApi < Roda
         r.get("folders") { { folders: [] } }
         r.on(String) do |id|
           asset = MediaAsset[id.to_i] || halt_json(404, "media_not_found", "Media asset not found")
+
+          # The editor has POSTed here since it shipped — alt text, titles,
+          # captions and tags — against a route that did not exist. Every save
+          # 404d and was swallowed, which is why published images all carry
+          # `alt=""`.
+          r.patch do
+            { asset: media_payload(asset.apply_metadata!(r.params)) }
+          rescue Sequel::ValidationFailed => error
+            halt_json(422, "invalid_media", error.message)
+          end
+
           r.delete do
             path = Paths.storage_file(asset.path)
             File.delete(path) if File.file?(path)
@@ -1063,6 +1091,47 @@ class AdminApi < Roda
       # fields, so there is no fixed column set to render. Submissions have been
       # collected since the forms route shipped with no way to read them back,
       # which makes a contact form a black hole.
+      # Reviews. Moderation goes through `ReviewModeration` so the admin and
+      # MCP cannot disagree about what "approved" does — in particular, both
+      # rebuild the pages that list reviews, because those are static files.
+      r.on("reviews") do
+        require_admin!
+
+        r.is do
+          r.get do
+            status = r.params["status"].to_s
+            dataset = Review.newest_first
+            dataset = dataset.approved if status == "approved"
+            dataset = dataset.pending if status == "pending"
+
+            {
+              reviews: dataset.limit(200).map { |review| review_payload(review) },
+              total: Review.count,
+              pending: Review.pending.count,
+            }
+          end
+
+          r.post do
+            review = ReviewModeration.create!(r.params)
+            response.status = 201
+            { review: review_payload(review) }
+          rescue ReviewModeration::Invalid => error
+            halt_json(422, "invalid_review", error.message)
+          end
+        end
+
+        r.on(String) do |id|
+          review = Review[id.to_i] || halt_json(404, "review_not_found", "Review not found")
+
+          r.post("approve") { { review: review_payload(ReviewModeration.approve!(review)) } }
+          r.post("unapprove") { { review: review_payload(ReviewModeration.unapprove!(review)) } }
+          r.delete do
+            ReviewModeration.destroy!(review)
+            no_content!
+          end
+        end
+      end
+
       r.on("forms") do
         require_admin!
 

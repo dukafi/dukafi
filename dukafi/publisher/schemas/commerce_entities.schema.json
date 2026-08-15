@@ -267,6 +267,114 @@
       }
     ]
   },
+  "review": {
+    "id": "review",
+    "label": "Review",
+    "fields": [
+      {
+        "id": "body",
+        "label": "What they said",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "authorName",
+        "label": "Customer",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "rating",
+        "label": "Rating (1–5)",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "ratingStars",
+        "label": "Rating as ★★★★☆",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "verified",
+        "label": "Verified buyer?",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "verifiedLabel",
+        "label": "Verified label",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "productSlug",
+        "label": "Product slug",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "productTitle",
+        "label": "Product",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "date",
+        "label": "Date",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "createdAt",
+        "label": "Created at",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "id",
+        "label": "ID",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "stars",
+        "label": "Stars",
+        "kind": "list",
+        "of": "star"
+      }
+    ]
+  },
+  "star": {
+    "id": "star",
+    "label": "Star",
+    "fields": [
+      {
+        "id": "symbol",
+        "label": "Symbol (★ or ☆)",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "filled",
+        "label": "Filled?",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "state",
+        "label": "State (filled/empty)",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "position",
+        "label": "Position (1–5)",
+        "kind": "scalar",
+        "format": "plain"
+      }
+    ]
+  },
   "cartItem": {
     "id": "cartItem",
     "label": "Cart item",

@@ -14,6 +14,15 @@ describe('entityForLoopSource', () => {
     expect(entityForLoopSource('cart.items', null)).toBe('cartItem')
   })
 
+  it('resolves reviews, and the stars inside one', () => {
+    expect(entityForLoopSource('reviews', null)).toBe('review')
+    // The nesting a rating needs: loop reviews, then loop each one's stars to
+    // get five elements you can style rather than one string of characters.
+    expect(entityForLoopSource('currentEntry.stars', 'review')).toBe('star')
+    // Reviews are a flat list, so there is no slug to name one.
+    expect(entityForLoopSource('reviews/featured', null)).toBeNull()
+  })
+
   it('resolves a relative source against the entity in scope', () => {
     // The whole point: loop a list field, get that field's entity.
     expect(entityForLoopSource('currentEntry.images', 'product')).toBe('image')

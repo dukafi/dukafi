@@ -151,8 +151,18 @@ describe('overlay attributes', () => {
     expect(node.props.direction).toBe('desc')
   })
 
+  // Reviews are the one top-level source with no slug to name — the whole
+  // approved set, in one word. A testimonials wall is the reason it exists.
+  it('turns a loop attribute into a reviews loop', () => {
+    const node = only('<div data-dukafy-loop="reviews" data-dukafy-loop-per-page="3"><article>card</article></div>')
+
+    expect(node.moduleId).toBe('store.relationship-loop')
+    expect(node.props.source).toBe('reviews')
+    expect(node.props.perPage).toBe(3)
+  })
+
   it('accepts the relative sources that make nesting work', () => {
-    for (const source of ['currentEntry.variants', 'cart.items', 'products/canvas-bag.variants']) {
+    for (const source of ['currentEntry.variants', 'currentEntry.stars', 'cart.items', 'products/canvas-bag.variants']) {
       expect(only(`<div data-dukafy-loop="${source}"><p>x</p></div>`).props.source).toBe(source)
     }
   })

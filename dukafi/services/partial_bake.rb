@@ -5,15 +5,21 @@ class PartialBake
   Result = Data.define(:page_count, :paths, :slot)
   SAFE_PATH = %r{\A/(?:[a-zA-Z0-9_-]+/?)*\z}
 
-  def self.call(product: nil, collection: nil, old_slug: nil, state: SiteState.first, output_root: Paths.published_root)
-    raise ArgumentError, "PartialBake needs exactly one of product: or collection:" if product.nil? == collection.nil?
+  def self.call(product: nil, collection: nil, paths: nil, old_slug: nil,
+                state: SiteState.first, output_root: Paths.published_root)
+    given = [product, collection, paths].compact
+    raise ArgumentError, "PartialBake needs exactly one of product:, collection: or paths:" if given.length != 1
 
-    new(product:, collection:, old_slug:, state:, output_root:).call
+    new(product:, collection:, paths:, old_slug:, state:, output_root:).call
   end
 
-  def initialize(product:, collection:, old_slug:, state:, output_root:)
+  def initialize(product:, collection:, paths: nil, old_slug:, state:, output_root:)
     @product = product
     @collection = collection
+    # An explicit list, for things that are not a product or a collection —
+    # approving a review changes every page carrying a reviews loop, and those
+    # pages have no entity to look up.
+    @paths = paths
     @old_slug = old_slug
     @state = state
     @output_root = File.expand_path(output_root)
@@ -92,6 +98,13 @@ class PartialBake
   # slug-before-rename path (equal to `current_path` when nothing renamed) —
   # used to delete the stale file when a product/collection slug changes.
   def affected_paths
+    if @paths
+      safe = @paths.uniq.select { |path| path.match?(SAFE_PATH) }
+      # No rename to chase: these pages keep their own paths, so `old` and
+      # `current` are the same and nothing gets deleted.
+      return [safe, safe.first.to_s, safe.first.to_s]
+    end
+
     if @product
       current_path = "/products/#{@product.slug}"
       old_path = "/products/#{@old_slug || @product.slug}"

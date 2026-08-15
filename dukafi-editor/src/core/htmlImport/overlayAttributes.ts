@@ -209,7 +209,7 @@ export interface ModuleOverride {
 }
 
 /** Loop sources the publisher can resolve. `collections/<slug>.products` too. */
-const LOOP_SOURCE = /^(?:products|collections|cart\.items|(?:currentEntry|parentEntry)\.[a-zA-Z]+|(?:products|collections)\/[a-z0-9-]+\.[a-zA-Z]+)$/
+const LOOP_SOURCE = /^(?:products|collections|reviews|cart\.items|(?:currentEntry|parentEntry)\.[a-zA-Z]+|(?:products|collections)\/[a-z0-9-]+\.[a-zA-Z]+)$/
 
 const LOOP_ORDER = new Set(['manual', 'price', 'title', 'newest'])
 

@@ -39,6 +39,9 @@ module McpCommerceTools
     {
       "slug" => product.slug, "title" => product.title, "status" => product.status,
       "variants" => variants.length,
+      # Whether a card would render a picture or a blank box. Cheap to include
+      # and it is the first thing that matters when building a listing.
+      "hasImage" => !product.media_assets.empty?,
       "priceFrom" => variants.map(&:price_cents).min,
       "currency" => variants.first&.currency,
       "stock" => variants.sum(&:stock),
@@ -47,6 +50,9 @@ module McpCommerceTools
 
   def product_detail(product)
     product_summary(product).merge(
+      "images" => product.media_assets.map do |asset|
+        { "path" => "/#{asset.path}", "altText" => asset.alt_text.to_s }
+      end,
       "descriptionHtml" => product.description_document.to_s,
       "collections" => product.collections.map(&:slug),
       "variantList" => product.variants.map do |variant|

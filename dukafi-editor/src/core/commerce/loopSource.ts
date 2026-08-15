@@ -72,6 +72,10 @@ export function entityForLoopSource(source: string, inScope: EntityId | null): E
         : (parsed.fields.length === 0 ? 'collection' : null)
     case 'cart':
       return parsed.fields.join('.') === 'items' ? 'cartItem' : null
+    // Approved reviews, a flat list with no slug to name — the only top-level
+    // source that is not a slug-keyed catalogue.
+    case 'reviews':
+      return parsed.slug ? null : (parsed.fields.length === 0 ? 'review' : entityAtPath('review', parsed.fields))
     case 'currentEntry':
       return inScope ? entityAtPath(inScope, parsed.fields) : null
     default:

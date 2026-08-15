@@ -14,7 +14,14 @@ class CommercePrefetcher
         "description" => collection.description.to_s, "products" => items,
       }]
     end
-    MediaPrefetcher.call.merge("products" => products, "collections" => collections)
+    # Only APPROVED reviews, newest first. Un-approved text must never reach a
+    # page, and the filter lives here rather than in the loop so no author can
+    # opt out of it by writing a different source.
+    reviews = Review.approved.newest_first.limit(100).map(&:to_entry)
+
+    MediaPrefetcher.call.merge(
+      "products" => products, "collections" => collections, "reviews" => reviews,
+    )
   end
 
   # ONE product, in the identical shape.
@@ -39,7 +46,9 @@ class CommercePrefetcher
     currency = variant&.currency || default_currency
     images = product.media_assets.map do |asset|
       {
-        "url" => "/#{asset.path}", "alt" => "",
+        # Was hardcoded to "" — a product photo announced itself to a screen
+        # reader as nothing at all.
+        "url" => "/#{asset.path}", "alt" => asset.alt_text.to_s,
         "width" => asset.width, "height" => asset.height, "variants" => asset.variants,
       }
     end

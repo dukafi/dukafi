@@ -149,7 +149,10 @@ Goal: money moves.
 - [x] `hx-trigger="revealed"` skeleton pattern for baked-page fragments
 - [~] Stock check is implemented at add-to-cart; transactional checkout-time
       recheck remains
-- [ ] Discount codes: percentage + fixed, validity window, usage limit
+- [x] Discount codes: percentage + fixed, validity window, usage limit
+      (`DiscountLookup` + session-held code + `CreateOrder` burns a use in the
+      same transaction as the stock decrement — but no way to CREATE one
+      outside a Ruby console; see M9)
 - [ ] Checkout flow (`routes/checkout.rb`, server-rendered): address → shipping
       choice (flat/manual rates v1) → Stripe Checkout redirect
 - [ ] Stripe webhook: payment success → create `orders` + `order_items`,
@@ -227,6 +230,144 @@ a product and buying it with a test card. Target: under 5 minutes, zero terminal
       api-contract.md finalized
 - [ ] License/attribution audit (Instatic MIT notice present in repo + About)
 - [ ] Tag v0.1.0; changelog; demo store deployed publicly
+
+---
+
+## M9 — Promotions: coupons, discounts, campaigns
+
+Goal: a merchant can run a sale without a developer, and the storefront tells
+the truth about it at every moment.
+
+Where this starts from: **discount codes already work end to end at runtime.**
+`Discount` + `DiscountLookup` evaluate a code purely (half-up rounding, capped
+at the subtotal), `routes/fragments.rb` holds the applied code in the session,
+and `CreateOrder` increments `usage_count` inside the same transaction as the
+stock decrement. What does not exist is any way to create a code without a Ruby
+console — no admin screen, no admin route, no MCP tool. Track A is therefore
+mostly surface, not mechanism.
+
+**The constraint that shapes everything else:** a code works today because it is
+applied in an HTMX fragment, which is dynamic by construction. A *campaign* —
+"20% off this weekend", a sale badge, a struck-through price — wants to appear
+on a **baked** page, and a baked page does not know what time it is. Three ways
+out, and the choice is not free:
+
+  (a) rebake at the boundary — needs a scheduler, which this repo has none of
+      (no `Thread.new`, no cron, nothing)
+  (b) put it in a fragment — no rebake, but an extra request per page, and the
+      price a crawler sees is then not the price a customer sees
+  (c) bake both branches and switch client-side — leaks an unannounced sale
+      into the page source, and breaks with JS off
+
+Take (a). A sale price that is in the baked HTML is the one Google indexes and
+the one that survives with scripting disabled. Fragments stay for the cart.
+
+### Track A — finish coupons (surface, not mechanism)
+
+- [ ] Discounts admin section: paginated table + create/edit sheet, matching
+      Products (code, kind, value, starts/ends, usage limit)
+- [ ] Admin API routes behind a shared writer service, so admin and MCP cannot
+      drift — the mistake `CommerceWrites` was extracted to prevent
+- [ ] MCP tools: `list_discounts`, `create_discount`, `update_discount`,
+      `delete_discount` (writes, scope-gated like the rest)
+- [ ] **Migration: `orders.discount_code`.** Orders record `discount_cents` but
+      not WHICH code produced it, so "how did WEEKEND20 do" is unanswerable
+      today. Nothing else in M9 or M10 can attribute revenue without this.
+- [ ] Deleting a code that has been redeemed deactivates it instead, so past
+      orders keep pointing at something real
+
+### Track B — rules worth having
+
+- [ ] Extract rule evaluation out of `DiscountLookup` so a code and a campaign
+      compute an amount off through the same path
+- [ ] Minimum spend · per-customer limit · first-order-only
+- [ ] Scope: whole cart · one collection · one product
+- [ ] `free_shipping` as a third kind (dep: shipping rates, M5)
+
+### Track C — campaigns (the baked-page half)
+
+- [ ] `variants.compare_at_cents` — without it "was 8,000, now 6,400" cannot
+      be rendered at all
+- [ ] `campaigns` table: window, rule, and DISPLAY (badge text, banner copy) —
+      a campaign differs from a code precisely in that it shows itself
+- [ ] Applied automatically at cart time, no code entered
+- [ ] Scheduler: an in-process timer that rebakes affected paths at the start
+      and end boundary, and on boot catches up on any boundary crossed while
+      the process was down
+- [ ] Publisher: campaign facts on the product entry (`onSale`, `saleBadge`,
+      `compareAtDisplay`) so an existing card binds and `visibleWhen`s them —
+      the same mechanism reviews' `stars` use, no new module
+- [ ] Editor: declare them in `entitySchema.ts` and preview them on canvas, or
+      the binding picker will not offer what the renderer can fill
+
+**DEMO:** create WEEKEND20 in the dashboard and watch it come off the cart
+total; schedule a campaign to start two minutes from now, touch nothing, and
+watch the storefront rebake itself — badge on, price struck through — then end
+on its own.
+
+---
+
+## M10 — Analytics: what the store is actually doing
+
+Goal: answer "did that work?" without sending a single visitor to a third
+party.
+
+Analytics here splits into two halves that are nothing alike, and conflating
+them is how this goes wrong:
+
+**Exact** — revenue, orders, AOV, units, top products, cart abandonment,
+discount performance. All of it is SQL over tables that already exist. No new
+collection, no privacy question, no beacon, no consent banner. The chart
+primitives are already built and unused (`Sparkline`, `Bars`, `StackedBar`,
+`StatValue` in the editor's UI kit).
+
+**Approximate** — views, referrers, top pages. This needs a beacon, because M6
+puts Caddy in front of `published/current`: Ruby never sees most page requests,
+so there is no log to count. Anything claiming otherwise would be counting the
+few requests that happened to miss the static path.
+
+Ship the exact half first. It is a week of queries and screens, it is the half
+a merchant actually acts on, and it cannot be wrong.
+
+### Track A — the numbers already in the database
+
+- [ ] Overview screen: revenue · orders · AOV · units, with a period selector
+      and a sparkline per figure
+- [ ] Top products and collections by revenue, not by units — they rank
+      differently and the revenue ranking is the one that pays
+- [ ] Cart abandonment: carts holding items with no order, older than N
+- [ ] Discount performance: redemptions, revenue attributed (dep: M9 Track A's
+      `orders.discount_code`)
+- [ ] One service, one endpoint, one screen — resist a per-figure route
+
+### Track B — traffic, without tracking anyone
+
+- [ ] Intake endpoint + a one-line beacon baked into pages, behind a setting;
+      off means the beacon is absent from the HTML entirely, not disabled in it
+- [ ] No cookies. Uniques via a hash of IP + UA + a salt that rotates daily and
+      is discarded — yesterday's visitors cannot be re-identified, by us or by
+      anyone who takes the database
+- [ ] Honour DNT and Global Privacy Control
+- [ ] Bot filtering (UA list + the no-JS check the beacon gives for free)
+- [ ] Nightly rollup into `daily_stats`; raw rows expire after N days, or a
+      SQLite file on a Railway volume grows without bound
+- [ ] `?ref=` / UTM captured as a dimension, never as anything per-person
+
+### Track C — the two halves together
+
+- [ ] Conversion rate: orders ÷ sessions
+- [ ] Campaign attribution: views and revenue inside the window against the
+      equivalent window before it (dep: M9 Track C)
+
+**DEMO:** open the dashboard and read yesterday's revenue and best sellers;
+load the storefront in a private window and watch the view land within a
+minute; run last week's campaign report and see what it earned.
+
+### Deliberately not in M10
+
+Third-party analytics of any kind, user-level tracking or session replay, a
+funnel builder, A/B testing, email marketing. Each is a product; this milestone
+is a scoreboard.
 
 ---
 

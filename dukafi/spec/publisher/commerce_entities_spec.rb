@@ -15,6 +15,7 @@ class CommerceEntitiesSpec < Minitest::Test
   ).freeze
 
   def setup
+    Review.dataset.delete
     CartItem.dataset.delete
     Cart.dataset.delete
     CollectionProduct.dataset.delete
@@ -50,6 +51,13 @@ class CommerceEntitiesSpec < Minitest::Test
     cart = Cart.create(session_key: "k", status: "active", created_at: Time.now, updated_at: Time.now)
     CartItem.create(cart_id: cart.id, variant_id: Variant.first.id, quantity: 2,
                     created_at: Time.now, updated_at: Time.now)
+    # Approved, because only approved reviews are prefetched at all — a
+    # pending one would leave the review sample nil and the walk would pass by
+    # having nothing to check.
+    Review.create(author_name: "Achieng", body: "Arrived the next morning.", rating: 4,
+                  product_id: product.id, approved_at: Time.now,
+                  created_at: Time.now, updated_at: Time.now)
+
     [CommercePrefetcher.call, CartPayload.call(cart)]
   end
 
@@ -163,6 +171,49 @@ class CommerceEntitiesSpec < Minitest::Test
 
     assert_includes html, "BAG-L:2:true"
     assert_includes html, "BAG-S:0:false"
+  end
+
+  def test_every_declared_review_field_exists_including_nested_stars
+    prefetched, = seed!
+    assert_entity!("review", prefetched.fetch("reviews").first, "review")
+  end
+
+  # A rating is out of five however low the score, so the loop must yield five
+  # items — a 4-star review that renders four stars and nothing else would
+  # silently lose the shape the rating is read by.
+  def test_a_review_yields_five_stars_whatever_the_rating
+    prefetched, = seed!
+    stars = prefetched.fetch("reviews").first.fetch("stars")
+
+    assert_equal 5, stars.length
+    assert_equal [true, true, true, true, false], stars.map { |star| star["filled"] }
+    assert_equal %w[filled filled filled filled empty], stars.map { |star| star["state"] }
+    assert_equal [1, 2, 3, 4, 5], stars.map { |star| star["position"] }
+  end
+
+  # The end of the whole point: loop reviews, loop each one's stars, and get
+  # per-star elements out. If nesting broke, `ratingStars` would still work and
+  # nobody would notice until they tried to style one star differently.
+  def test_a_nested_stars_loop_renders_one_element_per_star
+    prefetched, cart = seed!
+    nodes = {
+      "body" => node("body", "base.body", %w[loop]),
+      "loop" => node("loop", "store.relationship-loop", %w[row],
+                     { "source" => "reviews", "perPage" => 10 }),
+      "row" => node("row", "base.container", %w[stars]),
+      "stars" => node("stars", "store.relationship-loop", %w[star],
+                      { "source" => "currentEntry.stars", "perPage" => 10 }),
+      "star" => node("star", "base.text", [],
+                     { "tag" => "span", "text" => "[{currentEntry.symbol}:{currentEntry.state}]" }),
+    }
+
+    html = Dukafi::Publisher::RenderPage.call(
+      document: { "rootNodeId" => "body", "nodes" => nodes },
+      registry: Dukafi::Publisher::REGISTRY, prefetched: prefetched, cart: cart
+    ).html
+
+    assert_equal 4, html.scan("[\u2605:filled]").length
+    assert_equal 1, html.scan("[\u2606:empty]").length
   end
 
   def node(id, module_id, children = [], props = {})

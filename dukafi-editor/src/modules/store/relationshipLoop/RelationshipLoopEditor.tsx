@@ -51,7 +51,9 @@ export function RelationshipLoopEditor({ props, children, mcClassName, nodeWrapp
   const parsedSource = parseLoopSource(source)
   const noun = parsedSource?.kind === 'cart'
     ? 'cart items'
-    : parsedSource?.fields.at(-1) ?? (parsedSource?.kind === 'products' ? 'products' : 'items')
+    : parsedSource?.fields.at(-1)
+      ?? (parsedSource?.kind === 'products' ? 'products'
+        : parsedSource?.kind === 'reviews' ? 'reviews' : 'items')
 
   // EVERY hook must run before this early return. An empty loop used to bail
   // out above the preview hooks, so dropping the first row into it changed the

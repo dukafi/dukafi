@@ -37,6 +37,15 @@ interface ApiProduct {
   images: Array<{ publicPath: string }>
 }
 
+interface ApiReview {
+  id: string
+  authorName: string
+  rating: number
+  body: string
+  productSlug: string | null
+  createdAt: string | null
+}
+
 interface ApiCollection {
   slug: string
   productIds: number[]
@@ -76,6 +85,43 @@ function variantEntry(variant: ApiVariant): LoopItem {
       priceDisplay: money(variant.priceCents, variant.currency),
       stock: variant.stock,
       position: variant.position,
+    },
+  }
+}
+
+/**
+ * The five stars of a rating, built here rather than fetched — `Review#stars`
+ * in Ruby derives them from the score the same way, and duplicating four
+ * fields beats an endpoint that exists only to say "three filled, two empty".
+ */
+function starEntries(rating: number): Array<Record<string, unknown>> {
+  return [1, 2, 3, 4, 5].map((position) => {
+    const filled = position <= rating
+    return { position, filled, state: filled ? 'filled' : 'empty', symbol: filled ? '\u2605' : '\u2606' }
+  })
+}
+
+function reviewEntry(review: ApiReview): LoopItem {
+  const rating = Math.max(0, Math.min(5, Math.round(review.rating)))
+  return {
+    id: `review-${review.id}`,
+    fields: {
+      id: review.id,
+      body: review.body,
+      authorName: review.authorName,
+      rating,
+      ratingStars: '\u2605'.repeat(rating) + '\u2606'.repeat(5 - rating),
+      stars: starEntries(rating),
+      productSlug: review.productSlug ?? '',
+      productTitle: '',
+      createdAt: review.createdAt ?? '',
+      date: review.createdAt ? new Date(review.createdAt).toLocaleDateString() : '',
+      // The canvas cannot know whether the previewed review is attached to an
+      // order, and guessing "verified" would flatter every preview. The list
+      // endpoint carries it, but only approved reviews are previewed here, so
+      // this stays whatever the row said.
+      verified: false,
+      verifiedLabel: 'Customer',
     },
   }
 }
@@ -122,6 +168,21 @@ export function useRelationshipPreviewEntry(
   useEffect(() => {
     const parsed = parseLoopSource(source)
     if (!parsed) { setEntry(null); return }
+
+    // Only APPROVED reviews, matching what the publisher will iterate — a
+    // canvas previewing a pending review would show text that never ships.
+    if (parsed.kind === 'reviews') {
+      const controller = new AbortController()
+      void fetch('/admin/api/cms/reviews?status=approved', { credentials: 'same-origin', signal: controller.signal })
+        .then(async (response) => {
+          if (!response.ok) return null
+          const { reviews } = await response.json() as { reviews: ApiReview[] }
+          return reviews.length > 0 ? reviewEntry(reviews[0]) : null
+        })
+        .then((next) => { if (!controller.signal.aborted) setEntry(next) })
+        .catch(() => undefined)
+      return () => controller.abort()
+    }
 
     if (parsed.kind === 'cart') {
       setEntry(parsed.fields.join('.') === 'items' ? CART_SAMPLE : null)

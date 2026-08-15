@@ -36,4 +36,9 @@ editor: sh -c "cd ../dukafi-editor && bun run dev"
 # The token is fixed in development on purpose: it never leaves loopback, and a
 # value that survives restarts means you are not re-pasting one into a test
 # script every time foreman cycles.
-sidecar: sh -c "cd ../dukafi-editor && DUKAFI_SIDECAR_TOKEN=${DUKAFI_SIDECAR_TOKEN:-dev-sidecar-token} bun run server/sidecar.ts"
+#
+# --watch because the sidecar OWNS the importer: edit what `data-dukafy-*`
+# means and a long-running sidecar keeps applying the old rules, so an MCP
+# write silently produces the pre-change node tree. That looked like a bug in
+# the edit rather than a stale process.
+sidecar: sh -c "cd ../dukafi-editor && DUKAFI_SIDECAR_TOKEN=${DUKAFI_SIDECAR_TOKEN:-dev-sidecar-token} bun --watch server/sidecar.ts"

@@ -21,7 +21,8 @@ module McpTools
   module_function
 
   def all
-    [list_pages, create_page, read_page, apply_edits, publish] + McpCommerceTools.all
+    [list_pages, create_page, read_page, apply_edits, publish] +
+      McpCommerceTools.all + McpMediaTools.all + McpReviewTools.all
   end
 
   # Which tools change the store. Drives the `mcp:read` / `mcp:write` split, so
@@ -31,7 +32,9 @@ module McpTools
   # should have to declare which side it is on, and the default below — treat
   # anything unrecognised as a WRITE — means forgetting to update this list
   # fails closed.
-  READ_TOOLS = (%w[list_pages read_page] + McpCommerceTools::READ_TOOLS).freeze
+  READ_TOOLS = (%w[list_pages read_page] +
+                McpCommerceTools::READ_TOOLS + McpMediaTools::READ_TOOLS +
+                McpReviewTools::READ_TOOLS).freeze
 
   def write_tool?(name) = !READ_TOOLS.include?(name.to_s)
 
@@ -326,6 +329,13 @@ module McpTools
                    "data-dukafy-* attributes (data-dukafy-action=\"cart.addItem\", " \
                    "data-dukafy-bind-text=\"currentEntry.title\", " \
                    "data-dukafy-visible-when=\"currentEntry.inCart:isFalse\"). " \
+                   "Repeating anything is data-dukafy-loop on a wrapper: " \
+                   "\"products\", \"collections/<slug>.products\", \"reviews\" " \
+                   "(approved customer reviews), \"cart.items\", or a list field " \
+                   "of whatever the enclosing loop is on — \"currentEntry.images\", " \
+                   "\"currentEntry.variants\", \"currentEntry.stars\" (a review's " \
+                   "five stars, each with symbol/filled/state/position, for " \
+                   "drawing a rating out of styleable elements). " \
                    "Edits apply to the DRAFT; call publish to make them live.",
       input_schema: {
         "type" => "object",
