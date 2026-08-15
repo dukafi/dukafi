@@ -18,10 +18,18 @@ class Customer < Sequel::Model
   # "+254-712-345-678" and "+254712345678" are one customer, not three.
   # Deliberately NOT rewriting local formats (0712… → +254712…): that needs a
   # country to be correct, and guessing wrong merges two real people.
-  def phone=(value)
+  #
+  # A module method as well as a setter, because an ORDER records a phone too
+  # and must store it in the same shape — otherwise the same number reads two
+  # ways depending on which row it landed on.
+  def self.normalize_phone(value)
     raw = value.to_s.strip
     normalized = raw.start_with?("+") ? "+#{raw[1..].gsub(/\D/, '')}" : raw.gsub(/\D/, "")
-    super(normalized.empty? ? nil : normalized)
+    normalized.empty? ? nil : normalized
+  end
+
+  def phone=(value)
+    super(Customer.normalize_phone(value))
   end
 
   def validate

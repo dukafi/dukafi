@@ -72,8 +72,11 @@ class BakeSpec < Minitest::Test
   end
 
   def test_rejects_traversal_slug
-    unsafe_page = Struct.new(:slug, :title, :document_data, :published_document_data).new(
-      "../escape", "Unsafe", document, nil
+    # `bake_path` is what Bake actually writes to (a gated page bakes under
+    # `private/`), so the double has to carry it — and the traversal guard has
+    # to hold on that value, not on the slug it was derived from.
+    unsafe_page = Struct.new(:slug, :title, :document_data, :published_document_data, :bake_path).new(
+      "../escape", "Unsafe", document, nil, "../escape"
     )
 
     assert_raises(ArgumentError) do

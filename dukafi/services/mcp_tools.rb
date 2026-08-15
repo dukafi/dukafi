@@ -21,8 +21,9 @@ module McpTools
   module_function
 
   def all
-    [list_pages, create_page, read_page, apply_edits, publish] +
-      McpCommerceTools.all + McpMediaTools.all + McpReviewTools.all
+    [list_pages, create_page, read_page, apply_edits, publish, set_page_access] +
+      McpCommerceTools.all + McpMediaTools.all + McpReviewTools.all +
+      McpDiscountTools.all + McpPluginTools.all
   end
 
   # Which tools change the store. Drives the `mcp:read` / `mcp:write` split, so
@@ -34,7 +35,8 @@ module McpTools
   # fails closed.
   READ_TOOLS = (%w[list_pages read_page] +
                 McpCommerceTools::READ_TOOLS + McpMediaTools::READ_TOOLS +
-                McpReviewTools::READ_TOOLS).freeze
+                McpReviewTools::READ_TOOLS + McpDiscountTools::READ_TOOLS +
+                McpPluginTools::READ_TOOLS).freeze
 
   def write_tool?(name) = !READ_TOOLS.include?(name.to_s)
 
@@ -81,6 +83,8 @@ module McpTools
         "title" => page.title,
         "kind" => page.kind,
         "status" => page.status,
+        "access" => page.access,
+        "authRedirect" => page.auth_redirect,
         "updatedAt" => page.updated_at&.utc&.iso8601,
       }
     end
@@ -250,7 +254,10 @@ module McpTools
       description: "Add a new, empty page. The slug becomes its URL, so " \
                    "\"contact\" is served at /contact. Creates a DRAFT with " \
                    "nothing on it — follow with apply_edits to put content in, " \
-                   "then publish. Fails if the slug is taken.",
+                   "then publish. Fails if the slug is taken. Pass " \
+                   "access=\"customer\" for a page only signed-in shoppers may " \
+                   "see (a checkout or an account page); such a page is never " \
+                   "served from the public static files at all.",
       input_schema: {
         "type" => "object",
         "properties" => {
@@ -259,6 +266,19 @@ module McpTools
             "description" => "URL path, lowercase: letters, numbers, - and _. E.g. \"contact\".",
           },
           "title" => { "type" => "string", "description" => "Shown in the browser tab and page lists." },
+          "access" => {
+            "type" => "string", "enum" => Page::ACCESS_LEVELS,
+            "description" => "public (default) or customer. A customer page redirects " \
+                             "signed-out visitors to whichever page is marked as the " \
+                             "sign-in destination.",
+          },
+          "authRedirect" => {
+            "type" => "boolean",
+            "description" => "Make this the page signed-out visitors are sent to — the " \
+                             "store's sign-in page. Only one page can be it, so setting " \
+                             "it here clears it elsewhere. Cannot be combined with " \
+                             "access=customer, which would lock everyone out.",
+          },
         },
         "required" => %w[slug title],
         "additionalProperties" => false,
@@ -295,11 +315,69 @@ module McpTools
                              "props" => {}, "classIds" => [], "breakpointOverrides" => {} } },
     }
 
+    access = args.fetch("access", "public").to_s
+    unless Page::ACCESS_LEVELS.include?(access)
+      raise ArgumentError, "access must be one of: #{Page::ACCESS_LEVELS.join(', ')}"
+    end
+
     page = Page.create(slug: slug, title: title, kind: "page", status: "draft",
-                       document: JSON.generate(document))
+                       access: access, document: JSON.generate(document))
+    Page.mark_auth_redirect!(page) if args["authRedirect"] == true
 
     { "slug" => page.slug, "title" => page.title, "url" => "/#{page.slug}",
+      "access" => page.access, "authRedirect" => page.auth_redirect,
       "note" => "Created as an empty draft. Add content with apply_edits, then publish." }
+  rescue Sequel::ValidationFailed => e
+    raise ArgumentError, e.message
+  end
+
+  def set_page_access
+    {
+      name: "set_page_access",
+      title: "Set who may see a page",
+      description: "Gate a page behind sign-in, or open it again. A customer " \
+                   "page is baked somewhere the storefront refuses to serve by " \
+                   "path, so the ONLY way to it is through the session check — " \
+                   "and a signed-out visitor is redirected to whichever page is " \
+                   "marked as the sign-in destination. Mark that page with " \
+                   "authRedirect; without one, a gated page is simply a 404. " \
+                   "Takes effect on the next publish.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "slug" => { "type" => "string" },
+          "access" => { "type" => "string", "enum" => Page::ACCESS_LEVELS },
+          "authRedirect" => {
+            "type" => "boolean",
+            "description" => "true makes this the sign-in destination and clears it from " \
+                             "any other page. false clears it from this one.",
+          },
+        },
+        "required" => ["slug"], "additionalProperties" => false,
+      },
+      run: lambda do |args|
+        page = Page.first(slug: args["slug"].to_s.strip.downcase, kind: "page") ||
+               raise(ArgumentError, "No page #{args['slug'].inspect}. Call list_pages to see what exists.")
+
+        if (access = args["access"])
+          unless Page::ACCESS_LEVELS.include?(access.to_s)
+            raise ArgumentError, "access must be one of: #{Page::ACCESS_LEVELS.join(', ')}"
+          end
+
+          page.update(access: access.to_s)
+        end
+
+        case args["authRedirect"]
+        when true then Page.mark_auth_redirect!(page)
+        when false then page.update(auth_redirect: false)
+        end
+
+        { "slug" => page.slug, "access" => page.access, "authRedirect" => page.auth_redirect,
+          "note" => page.gated? ? "Signed-out visitors will be redirected. Publish to apply." : "Open to everyone. Publish to apply." }
+      rescue Sequel::ValidationFailed => e
+        raise ArgumentError, e.message
+      end,
+    }
   end
 
   # ── apply_edits ────────────────────────────────────────────────────────────

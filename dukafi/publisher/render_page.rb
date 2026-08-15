@@ -18,11 +18,11 @@ class Dukafi
       # request-time rendering of a form region. NIL at bake time, exactly like
       # `cart`: a baked page belongs to no visitor, so it shows the neutral
       # state (no error, signed out) and the region corrects it.
-      def self.call(document:, registry:, prefetched: {}, breakpoint_id: nil, site: nil, query_params: {}, current_entry: nil, cart: nil, payment: nil, form: nil, cart_loop_id: nil, page_paths: {})
-        new(document, registry, prefetched, breakpoint_id, site, query_params, current_entry, cart, payment, form, cart_loop_id, page_paths).call
+      def self.call(document:, registry:, prefetched: {}, breakpoint_id: nil, site: nil, query_params: {}, current_entry: nil, cart: nil, payment: nil, form: nil, cart_loop_id: nil, page_paths: {}, orders: nil)
+        new(document, registry, prefetched, breakpoint_id, site, query_params, current_entry, cart, payment, form, cart_loop_id, page_paths, orders).call
       end
 
-      def initialize(document, registry, prefetched, breakpoint_id, site, query_params, current_entry, cart = nil, payment = nil, form = nil, cart_loop_id = nil, page_paths = {})
+      def initialize(document, registry, prefetched, breakpoint_id, site, query_params, current_entry, cart = nil, payment = nil, form = nil, cart_loop_id = nil, page_paths = {}, orders = nil)
         @document = document
         @registry = registry
         @prefetched = prefetched
@@ -41,6 +41,11 @@ class Dukafi
         @entry_stack = current_entry ? [with_cart_facts(current_entry, entity_of(current_entry))] : []
         @current_product = current_entry
         @payment = payment
+        # The signed-in customer's orders, or nil while BAKING. Nil is the
+        # whole mechanism: an orders loop with nothing in scope emits a
+        # placeholder that fetches itself, so the static file on disk contains
+        # no one's order history.
+        @orders = orders
         @payment_region_id = nil
         @form = form
         # Set while rendering inside a node marked as the form region — the
@@ -153,6 +158,9 @@ class Dukafi
         source = loop_source(props, definition)
         # No cart in scope (baking) — emit the placeholder that fetches itself.
         return cart_lines_placeholder(node, definition) if source.start_with?("cart.") && @cart.nil?
+        # Same for orders, and for a stronger reason: a cart is merely
+        # per-visitor, an order history is private.
+        return orders_placeholder(node, definition) if source.start_with?("orders") && @orders.nil?
 
         previous_cart_loop = @cart_loop_id
         @cart_loop_id = node.fetch("id").to_s if source.start_with?("cart.")
@@ -199,7 +207,15 @@ class Dukafi
           # so both are dropped here rather than emitted somewhere invalid.
           html = html_items
         else
-          pagination = StoreModules.collection_pagination(parameter, page, page_count)
+          # An orders loop lives inside a fragment, so its pagination cannot
+          # be a link that reloads the page — the placeholder would refetch
+          # page 1 and the click would appear to do nothing. It pages the
+          # fragment in place instead.
+          pagination = if source.start_with?("orders")
+            StoreModules.fragment_pagination(node.fetch("id").to_s, page, page_count, "/fragments/orders/lines")
+          else
+            StoreModules.collection_pagination(parameter, page, page_count)
+          end
           html = %(<div class="dukafy-collection-loop" data-collection="#{CGI.escapeHTML(source_slug)}" data-page="#{page}">#{html_items}#{pagination}</div>)
           classes = class_names(node)
           html = inject_classes(html, classes) if classes.any?
@@ -248,6 +264,10 @@ class Dukafi
       CART_ACTIONS = {
         "cart.removeItem" => { path: "/fragments/cart/items/remove", fields: [] },
         "cart.setQuantity" => { path: "/fragments/cart/items/update", fields: %w[quantity delta] },
+        # Empties the whole cart, so unlike the line verbs it needs no SKU and
+        # can live anywhere — including outside the lines loop, which is where
+        # a "Clear cart" button belongs.
+        "cart.clear" => { path: "/fragments/cart/items/clear", fields: [], form: true },
         # Add-to-cart on ANY node. The product comes from the entry in scope
         # (a product loop, a product template) or an explicit override, and
         # the surrounding form is submitted too — so a merchant's own
@@ -320,7 +340,15 @@ class Dukafi
           end
           redirect = action["redirect"].to_s
           values["redirect"] = redirect unless redirect.empty?
+          # WHICH provider, without a page having to name one.
+          #
+          # An explicit prop wins; otherwise the entry in scope supplies it,
+          # which is what makes a `paymentProviders` loop work — one button
+          # template, one button per installed method. With neither, the
+          # endpoint falls back to the store's only configured provider, so a
+          # single-provider store needs no wiring at all.
           provider = action["provider"].to_s
+          provider = current_entry["providerSlug"].to_s if provider.empty? && current_entry.is_a?(Hash)
           values["provider"] = provider unless provider.empty?
           values["node"] = @payment_region_id if spec[:target] && @payment_region_id
           if spec[:account]
@@ -504,6 +532,25 @@ class Dukafi
       # endpoint looks the subtree up by it and re-renders this same loop with
       # the visitor's cart. Deliberately contains NO cart data: the baked page
       # is served from disk to every visitor alike.
+      # Baked stand-in for an orders loop. Carries no order data at all — the
+      # file on disk is served to every visitor alike, and whose orders these
+      # are is decided by the session when the fragment is fetched.
+      #
+      # No `dukafi:cart-updated` trigger here: an order list does not change
+      # because a cart did. It reloads when the customer signs in or out,
+      # which is what `dukafi:account-updated` announces.
+      def orders_placeholder(node, definition)
+        node_id = node.fetch("id").to_s
+        return "" unless node_id.match?(SAFE_NODE_ID)
+
+        loop_output = definition.render({}, [], prefetched: @prefetched)
+        @css.add(definition.id, loop_output[:css])
+        collect_runtimes([:htmx])
+        html = %(<div class="dukafy-orders dukafy-orders--loading" data-node="#{node_id}" hx-get="/fragments/orders/lines?node=#{node_id}" hx-trigger="revealed, dukafi:account-updated from:body" hx-swap="outerHTML" aria-live="polite"></div>)
+        classes = class_names(node)
+        classes.any? ? inject_classes(html, classes) : html
+      end
+
       def cart_lines_placeholder(node, definition)
         node_id = node.fetch("id").to_s
         return "" unless node_id.match?(SAFE_NODE_ID)
@@ -674,6 +721,11 @@ class Dukafi
         "products" => "product", "variants" => "variant",
         "images" => "image", "items" => "cartItem",
         "reviews" => "review", "stars" => "star",
+        "paymentProviders" => "paymentProvider", "fields" => "paymentField",
+        # `lines`, not `items`: an order line is not a cart item — it carries
+        # no cart facts and its price is a snapshot, so it must not collide
+        # with `cart.items`.
+        "orders" => "order", "lines" => "orderLine",
       }.freeze
 
       def source_entity(source)
@@ -704,6 +756,12 @@ class Dukafi
         # Approved reviews. A flat array rather than a slug-keyed hash, so it
         # resolves straight through `source_items` without a lookup segment.
         when "reviews" then @prefetched.fetch("reviews", [])
+        # Configured payment methods, so a page can offer whatever is
+        # installed rather than naming one provider in a button.
+        when "paymentProviders" then @prefetched.fetch("paymentProviders", [])
+        # The signed-in customer's own orders, supplied per request by the
+        # fragment endpoint. Never present while baking.
+        when "orders" then @orders
         when "currentEntry" then current_entry
         when "parentEntry" then parent_entry
         when "cart" then @cart

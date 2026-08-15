@@ -3,6 +3,12 @@ require "tmpdir"
 ENV["RACK_ENV"] = "test"
 ENV["DUKAFY_DB"] ||= File.join(Dir.tmpdir, "dukafi-test-#{Process.pid}.sqlite3")
 
+# The suite tests the first-party plugins, so it installs them — from the same
+# directory an operator would copy from. Nothing is bundled into the app, so
+# without this line a store (and this suite) has no payment providers at all,
+# which is the point.
+ENV["DUKAFI_PLUGINS_ROOT"] ||= File.expand_path("../../plugins-available", __dir__)
+
 require_relative "../config/database"
 
 # The suite runs against whichever engine is configured: SQLite by default,

@@ -28,10 +28,22 @@ class CartPayload
   def call
     items = @cart ? CartItem.where(cart_id: @cart.id).eager(variant: :product).order(:id).all : []
     entries = items.filter_map { |item| entry(item) }
-    { "items" => entries, "cart" => summary(entries) }
+    { "items" => entries, "cart" => summary(entries, lines(items)) }
   end
 
   private
+
+  # What a scoped discount needs to know about the cart, and nothing more.
+  # Kept out of the entry hash: the entries are the merchant's binding
+  # contract, and eligibility is an internal join, not something a page shows.
+  def lines(items)
+    items.filter_map do |item|
+      variant = item.variant
+      next unless variant
+
+      { "productId" => variant.product_id, "lineCents" => variant.price_cents * item.quantity }
+    end
+  end
 
   def entry(item)
     variant = item.variant
@@ -60,11 +72,11 @@ class CartPayload
     }
   end
 
-  def summary(entries)
+  def summary(entries, lines)
     count = entries.sum { |entry| entry.fetch("quantity") }
     currencies = entries.map { |entry| entry.fetch("currency") }.uniq
     subtotal = entries.sum { |entry| entry.fetch("linePriceCents") }
-    discount = DiscountLookup.call(@discount_code, subtotal)
+    discount = DiscountLookup.call(@discount_code, subtotal, lines: lines)
     discount_cents = discount.ok? ? discount.amount_cents : 0
     # v1 is single-currency (CommerceSettings pins it and every variant is
     # retagged on change), so more than one currency means data drift. Report

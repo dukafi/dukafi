@@ -58,7 +58,8 @@ export interface EntitySchema {
 
 export type EntityId =
   | 'product' | 'variant' | 'image' | 'imageVariant' | 'collection' | 'cartItem'
-  | 'review' | 'star'
+  | 'review' | 'star' | 'order' | 'orderLine' | 'payment'
+  | 'paymentProvider' | 'paymentField'
 
 const scalar = (id: string, label: string, format: EntityFieldFormat = 'plain'): EntityScalarField =>
   ({ id, label, kind: 'scalar', format })
@@ -189,6 +190,119 @@ export const COMMERCE_ENTITIES: Record<EntityId, EntitySchema> = {
       scalar('filled', 'Filled?'),
       scalar('state', 'State (filled/empty)'),
       scalar('position', 'Position (1–5)'),
+    ],
+  },
+
+  order: {
+    id: 'order',
+    label: 'Order',
+    fields: [
+      scalar('number', 'Order number'),
+      scalar('statusLabel', 'Status'),
+      scalar('status', 'Status (raw)'),
+      // Booleans as well as the string, because `visibleWhen` compares
+      // strings: without these a "Pay now" button would have to know every
+      // status that is not "pending".
+      scalar('isPaid', 'Paid?'),
+      scalar('isAwaitingPayment', 'Awaiting payment?'),
+      scalar('date', 'Date'),
+      scalar('placedAt', 'Placed at'),
+      scalar('totalDisplay', 'Total'),
+      scalar('totalCents', 'Total (cents)'),
+      scalar('subtotalDisplay', 'Subtotal'),
+      scalar('discountDisplay', 'Discount'),
+      scalar('discountCode', 'Discount code'),
+      scalar('hasDiscount', 'Discounted?'),
+      scalar('shippingDisplay', 'Shipping'),
+      scalar('itemCount', 'Items'),
+      scalar('currency', 'Currency'),
+      // Also what a payment region takes as its order token, so a "Pay now"
+      // button on a row needs nothing else.
+      scalar('reference', 'Reference'),
+      scalar('id', 'ID'),
+      // What actually paid. Flattened onto the order because "it went through,
+      // here is the receipt" is the one thing a customer looks for, and a page
+      // should not have to loop to say it.
+      scalar('paymentReceipt', 'M-Pesa / payment receipt'),
+      scalar('paymentProvider', 'Paid with'),
+      scalar('paymentReference', 'Payment reference'),
+      scalar('paidOn', 'Paid on'),
+      scalar('paidAt', 'Paid at'),
+      scalar('paymentAmountDisplay', 'Amount paid'),
+      list('lines', 'Lines', 'orderLine'),
+      list('payments', 'Payment attempts', 'payment'),
+    ],
+  },
+
+  /**
+   * A payment method the store has configured. Loop these instead of naming a
+   * provider on a button: the page then works for whatever plugin a merchant
+   * installs, and offers nothing that is not set up.
+   */
+  paymentProvider: {
+    id: 'paymentProvider',
+    label: 'Payment method',
+    fields: [
+      scalar('name', 'Name'),
+      scalar('payLabel', 'Button label'),
+      // `providerSlug`, not `slug` — a provider in scope must not be mistaken
+      // for a product, and `payment.initiate` reads this to know which
+      // provider a button is for.
+      scalar('providerSlug', 'Provider'),
+      scalar('pluginId', 'Plugin'),
+      list('fields', 'Fields to collect', 'paymentField'),
+    ],
+  },
+
+  paymentField: {
+    id: 'paymentField',
+    label: 'Payment field',
+    fields: [
+      scalar('label', 'Label'),
+      scalar('name', 'Field name'),
+      scalar('type', 'Input type'),
+      scalar('placeholder', 'Placeholder'),
+    ],
+  },
+
+  payment: {
+    id: 'payment',
+    label: 'Payment attempt',
+    fields: [
+      scalar('statusLabel', 'Status'),
+      scalar('status', 'Status (raw)'),
+      scalar('succeeded', 'Succeeded?'),
+      scalar('receipt', 'Receipt'),
+      scalar('reference', 'Provider reference'),
+      scalar('provider', 'Provider'),
+      scalar('amountDisplay', 'Amount'),
+      scalar('amountCents', 'Amount (cents)'),
+      scalar('on', 'When'),
+      scalar('at', 'When (ISO)'),
+      // Why a failed attempt failed, in the provider's own words.
+      scalar('error', 'Failure reason'),
+      scalar('id', 'ID'),
+    ],
+  },
+
+  orderLine: {
+    id: 'orderLine',
+    label: 'Order line',
+    fields: [
+      // The TITLE is the snapshot from the order — what was bought, under the
+      // name it had. The link and image come from the catalogue if it still
+      // has them.
+      scalar('title', 'Product title'),
+      scalar('variantTitle', 'Variant'),
+      scalar('sku', 'SKU'),
+      scalar('quantity', 'Quantity'),
+      scalar('unitPriceDisplay', 'Unit price'),
+      scalar('unitPriceCents', 'Unit price (cents)'),
+      scalar('linePriceDisplay', 'Line total'),
+      scalar('linePriceCents', 'Line total (cents)'),
+      scalar('href', 'Link', 'url'),
+      scalar('imageUrl', 'Image', 'media'),
+      scalar('productSlug', 'Product slug'),
     ],
   },
 

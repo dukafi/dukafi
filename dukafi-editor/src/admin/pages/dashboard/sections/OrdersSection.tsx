@@ -205,6 +205,35 @@ export function OrdersSection({ data }: { data: CommerceData }) {
             </dl>
 
             <section className={styles.orderForms}>
+              <h3>Payments</h3>
+              {detail.payments.length === 0 ? (
+                <p className={styles.orderFormsEmpty}>No payment has been attempted.</p>
+              ) : (
+                detail.payments.map((payment) => (
+                  <article key={payment.id} className={styles.orderForm}>
+                    <header>
+                      <strong>
+                        {payment.provider} · {payment.status}
+                        {payment.receipt && ` · ${payment.receipt}`}
+                      </strong>
+                      <span>{payment.updatedAt ? when(payment.updatedAt) : '—'}</span>
+                    </header>
+                    <dl>
+                      <div><dt>Amount</dt><dd>{money(payment.amountCents, payment.currency)}</dd></div>
+                      {payment.reference && (
+                        <div><dt>Provider reference</dt><dd>{payment.reference}</dd></div>
+                      )}
+                      {/* The provider's own words. Shown verbatim because a
+                          paraphrase is what made the last failure take an hour
+                          to diagnose. */}
+                      {payment.error && <div><dt>Refused</dt><dd>{payment.error}</dd></div>}
+                    </dl>
+                  </article>
+                ))
+              )}
+            </section>
+
+            <section className={styles.orderForms}>
               <h3>Submitted forms</h3>
               {detail.submissions.length === 0 ? (
                 <p className={styles.orderFormsEmpty}>Nothing filed against this order.</p>

@@ -197,6 +197,41 @@ class Fragments < Roda
     ).html
   end
 
+  # A loop the merchant pointed at `orders`. Same published-documents boundary
+  # as the cart loop: a node id that is not an orders loop on a published page
+  # renders nothing, so the endpoint cannot be pointed at arbitrary markup.
+  def find_orders_loop(node_id)
+    find_published_node(node_id) do |node|
+      CART_LOOP_MODULES.include?(node["moduleId"]) &&
+        node.dig("props", "source").to_s.start_with?("orders")
+    end
+  end
+
+  # The customer's own order history, rendered into the merchant's own layout.
+  #
+  # WHOSE orders is decided here, from the session, and nowhere else. There is
+  # no customer parameter to tamper with, and a signed-out visitor gets an
+  # empty list rather than an error — the merchant's markup shows whatever
+  # they designed for "no orders yet", and a sign-in prompt is a sibling node
+  # conditioned on `form.signedOut`.
+  def orders_fragment(node_id, page)
+    found = find_orders_loop(node_id)
+    return unless found
+
+    document, node = found
+    state = SiteState.first
+    parameter = "loop_#{node.fetch('id').gsub(/[^a-zA-Z0-9_-]/, '_')}_page"
+    Dukafi::Publisher::RenderPage.call(
+      document: document.merge("rootNodeId" => node.fetch("id")),
+      registry: Dukafi::Publisher::REGISTRY, site: state&.site,
+      prefetched: CommercePrefetcher.call, page_paths: PagePaths.call,
+      # The loop reads its page from the same query parameter a baked loop
+      # does, so paging works identically on both sides.
+      query_params: { parameter => page.to_s },
+      orders: OrderPayload.for_customer(current_customer)
+    ).html
+  end
+
   def cart_lines_fragment(node_id)
     found = find_cart_loop(node_id)
     found && render_cart_subtree(*found)
@@ -262,6 +297,19 @@ class Fragments < Roda
   # Resolve a cart line by variant SKU within the visitor's own cart.
   # Scoped to `cart` on purpose: SKUs are public, so an unscoped lookup would
   # let anyone mutate a line they don't own.
+  # `{ productId, lineCents }` per line — what `DiscountLookup` needs to work
+  # out how much of this cart a scoped code covers.
+  def cart_discount_lines(cart)
+    return [] unless cart
+
+    CartItem.where(cart_id: cart.id).eager(:variant).all.filter_map do |item|
+      variant = item.variant
+      next unless variant
+
+      { "productId" => variant.product_id, "lineCents" => variant.price_cents * item.quantity }
+    end
+  end
+
   def cart_line_for(cart, sku)
     return [nil, nil] unless cart && !sku.empty?
 
@@ -279,6 +327,8 @@ class Fragments < Roda
     "expired" => "That code has expired.",
     "exhausted" => "That code has been fully used.",
     "empty_cart" => "Add something to your cart first.",
+    # The code is real — this cart just holds nothing it covers.
+    "no_eligible_items" => "That code doesn’t apply to anything in your cart.",
   }.freeze
 
   def discount_message(reason)
@@ -397,6 +447,16 @@ class Fragments < Roda
     cart_line_fragment(node_id, sku) || ""
   end
 
+  # The page for one order, when the store has an order template published.
+  # Nil without one, so a store that has not set up order pages keeps the old
+  # behaviour of staying put after checkout.
+  def order_path(order)
+    template = OrderTemplate.find
+    return nil unless template&.status == "published"
+
+    "/orders/#{order.public_token}"
+  end
+
   # Which order this payment is for: an explicit token (an order-status page
   # serving any order) else the one just placed in this session.
   def order_for_payment
@@ -492,9 +552,16 @@ class Fragments < Roda
         order = order_for_payment
         halt_payment_error("No order to pay for.") unless order
 
-        outcome = Payments.start(
-          order: order, provider_slug: r.params["provider"].to_s, params: r.params
-        )
+        # No provider named: use the store's only configured one. A page that
+        # offers a choice names it (or loops `paymentProviders`); a store with
+        # one payment plugin should not have to say so on every button.
+        provider = r.params["provider"].to_s
+        if provider.empty?
+          configured = Dukafi::Plugins.configured_payment_providers
+          provider = configured.first.fetch("slug") if configured.length == 1
+        end
+
+        outcome = Payments.start(order: order, provider_slug: provider, params: r.params)
         halt_payment_error(payment_error_message(outcome.reason)) unless outcome.ok?
 
         session["payment_reference"] = outcome.attempt.reference
@@ -520,6 +587,24 @@ class Fragments < Roda
         response["HX-Trigger"] = "dukafi:payment-#{attempt.status}" if attempt.terminal?
         payment_region_html(r.params["node"].to_s, attempt)
       end
+    end
+
+    # ── Orders ───────────────────────────────────────────────────────────
+    # The one fragment whose answer depends on WHO is asking. Never cached,
+    # never baked, and never parameterised by customer.
+    r.get("orders", "lines") do
+      response["Content-Type"] = "text/html; charset=utf-8"
+      # `private` as well as no-store: a shared proxy holding one customer's
+      # order list and serving it to the next visitor is the failure this
+      # header exists to prevent.
+      response["Cache-Control"] = "no-store, private"
+      page = Integer(r.params["page"].to_s, exception: false) || 1
+      html = orders_fragment(r.params["node"].to_s, [page, 1].max)
+      unless html
+        request.halt([404, { "content-type" => "text/html; charset=utf-8" },
+                      [%(<div class="dukafy-orders dukafy-orders--missing"></div>)]])
+      end
+      html
     end
 
     # ── Customer accounts ────────────────────────────────────────────────
@@ -662,13 +747,30 @@ class Fragments < Roda
         cart_line_response(r.params["node"].to_s, r.params["variant_sku"].to_s)
       end
 
+      # Empty the cart in one go.
+      #
+      # The discount code goes with it: a code applied to a cart that no longer
+      # exists would sit in the session and silently reappear against whatever
+      # the customer adds next. The CART ROW survives — it is the session's
+      # identity, and destroying it would log the visitor out of their own
+      # basket.
+      r.post("items", "clear") do
+        cart = current_cart
+        CartItem.where(cart_id: cart.id).delete if cart
+        session.delete("discount_code")
+        cart_mutation_response(r.params["node"].to_s)
+      end
+
       # Apply a code. Stored on the SESSION, not the cart row: applying is not
       # a purchase, and `usage_count` only moves on real order creation
       # (task 07), so a customer can try codes freely without burning them.
       r.post("discount") do
         code = r.params["code"].to_s.strip[0, 64]
         payload = CartPayload.call(current_cart)
-        result = DiscountLookup.call(code, payload.dig("cart", "subtotalCents").to_i)
+        # Applying re-runs the same evaluation the cart renders with, scope
+        # included — so a code accepted here cannot come out as zero off.
+        result = DiscountLookup.call(code, payload.dig("cart", "subtotalCents").to_i,
+                                     lines: cart_discount_lines(current_cart))
 
         unless result.ok?
           session.delete("discount_code")
@@ -696,7 +798,9 @@ class Fragments < Roda
         result = CreateOrder.call(
           cart: current_cart,
           email: r.params["email"], phone: r.params["phone"], name: r.params["name"],
-          discount_code: session["discount_code"]
+          discount_code: session["discount_code"],
+          # Whoever is signed in owns the order, whatever address they typed.
+          customer: current_customer
         )
 
         unless result.ok?
@@ -721,7 +825,13 @@ class Fragments < Roda
         # thank-you page can identify this order without it being guessable.
         response["Cache-Control"] = "no-store"
         response["HX-Trigger"] = "dukafi:order-created"
+        # Where to go next. The merchant's own `redirect` wins; with none, and
+        # an order template published, the default is THAT order's page — the
+        # page carrying the payment button for it. This is what makes
+        # "checkout creates an order, then you pay for it" the path a store
+        # gets without wiring anything.
         destination = safe_local_path(r.params["redirect"])
+        destination ||= order_path(result.order)
         response["HX-Redirect"] = destination if destination
         response.status = 204
         nil

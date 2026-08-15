@@ -208,6 +208,10 @@
                           "type": "string"
                         },
                         {
+                          "const": "cart.clear",
+                          "type": "string"
+                        },
+                        {
                           "const": "cart.createOrder",
                           "type": "string"
                         },
@@ -401,6 +405,9 @@
       "type": "string"
     },
     "title": {
+      "type": "string"
+    },
+    "kind": {
       "type": "string"
     },
     "ownerUserId": {

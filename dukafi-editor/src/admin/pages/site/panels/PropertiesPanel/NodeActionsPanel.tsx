@@ -159,6 +159,7 @@ const ACTION_OPTIONS: Array<{ value: '' | NodeActionType; label: string }> = [
   { value: 'cart.addItem', label: 'Cart — add to cart' },
   { value: 'cart.setQuantity', label: 'Cart — change quantity' },
   { value: 'cart.removeItem', label: 'Cart — remove this line' },
+  { value: 'cart.clear', label: 'Cart — empty the cart' },
   { value: 'cart.createOrder', label: 'Cart — place order' },
   { value: 'payment.initiate', label: 'Payment — start payment' },
   { value: 'account.login', label: 'Account — sign in' },
@@ -182,6 +183,8 @@ const SCOPE_NOTE: Record<NodeActionType, string> = {
     'Acts on the cart line this node sits inside. Inert outside a cart loop.',
   'cart.removeItem':
     'Acts on the cart line this node sits inside. Inert outside a cart loop.',
+  'cart.clear':
+    'Empties the whole cart, and drops any discount code with it. Needs no line, so it works anywhere on the page.',
   'cart.createOrder':
     'Submits the fields of the form around it, so the field list is yours. Same-site redirects only.',
   'payment.initiate':

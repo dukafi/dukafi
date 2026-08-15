@@ -29,6 +29,25 @@ module Paths
     File.expand_path(lookup("PUBLISHED_ROOT") || File.join(APP_ROOT, "published"))
   end
 
+  # Where INSTALLED plugins live.
+  #
+  # Not the repo's `plugins/` directory: that holds the registry and the
+  # settings store, which are core. A payment provider is not core — the image
+  # shipping one would mean every store on earth has PayHero whether or not
+  # its owner has heard of Kenya, and would make "install a plugin" mean
+  # "rebuild the image".
+  #
+  # Defaults under the storage root, so in a container it lands on the mounted
+  # volume alongside the database and uploads: an operator drops a directory
+  # in and restarts, and it survives the next deploy.
+  # `plugins-installed`, not `plugins`: the repo's `plugins/` directory holds
+  # the registry and the settings store, and an operator dropping a provider
+  # in beside core source would be a confusing place to put someone else's
+  # code. In a container this resolves onto the mounted volume.
+  def plugins_root
+    File.expand_path(lookup("PLUGINS_ROOT") || File.join(storage_root, "plugins-installed"))
+  end
+
   def storage_root
     File.expand_path(lookup("STORAGE_ROOT") || APP_ROOT)
   end

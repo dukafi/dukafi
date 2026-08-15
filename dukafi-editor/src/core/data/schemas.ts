@@ -403,6 +403,11 @@ export const DataRowSchema = Type.Object({
   cells: DataRowCellsSchema,
   /** Denormalized from `cells.slug` for fast unique / route lookup. */
   slug: Type.String(),
+  /**
+   * How the server classifies this row: `page`, `template` or `partial`.
+   * Optional because rows from older bundles and non-page tables carry none.
+   */
+  kind: Type.Optional(Type.String()),
   status: DataRowStatusSchema,
   /**
    * Site-global sync seq stamped by the last transactional save that wrote or

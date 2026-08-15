@@ -36,6 +36,12 @@ export const PageSchema = Type.Object({
   slug: Type.String(),
   /** Display title e.g. "Home", "About Us" */
   title: Type.String(),
+  /**
+   * `page` | `template` | `partial`, as the server classifies it. Optional
+   * because a page constructed in memory (a test, an import) has no server
+   * classification yet; absent reads as an ordinary page.
+   */
+  kind: Type.Optional(Type.String()),
   /** Owning user for admin/editor workflows; server-owned when persisted in CMS. */
   ownerUserId: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   /** User who originally created this page; server-owned when persisted in CMS. */

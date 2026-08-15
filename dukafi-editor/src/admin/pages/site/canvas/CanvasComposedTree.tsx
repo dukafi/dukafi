@@ -24,6 +24,17 @@
  * `NodeRenderer` at the document root, whose `base.body` claims the iframe body
  * as usual. Its own outlet, if any, still previews matched content through
  * `OutletEditor`.
+ *
+ * SITE PARTIALS (the header and footer, `kind: 'partial'`) compose around the
+ * document the same read-only way, mirroring `SitePartials.compose` on the
+ * server: header children before the page's own, footer children after. They
+ * are not templates and have no outlet — the publisher splices them by
+ * position — so they are handled separately from the wrapper chain above.
+ *
+ * They render through `ReadOnlyNodeTree`, so the cart badge and account links
+ * in the header look exactly as they will on the storefront while staying
+ * non-interactive: editing the header happens by opening the header, not by
+ * reaching into someone else's document from a page.
  */
 
 import { use, useEffect, type ReactNode } from 'react'
@@ -39,6 +50,25 @@ import { CanvasDocumentContext, CanvasTemplateContext } from './CanvasContexts'
 import { applyIframeBodyPresentation } from './iframeBodyPresentation'
 
 const NO_WRAPPERS: Page[] = []
+const NO_PARTIALS: Page[] = []
+
+/** Slugs `SitePartials` uses on the server. Order is the composition order. */
+const HEADER_SLUG = 'site-header'
+const FOOTER_SLUG = 'site-footer'
+
+/**
+ * The header and footer to draw around `page`, or none.
+ *
+ * Never around a partial itself (a header does not wrap itself) and never
+ * around a template being edited as a document — the same rule the bake
+ * follows, where partials wrap the pages templates produce, not the template
+ * source.
+ */
+function sitePartials(pages: Page[], page: Page): { header: Page | null; footer: Page | null } {
+  if (page.kind === 'partial') return { header: null, footer: null }
+  const find = (slug: string) => pages.find((entry) => entry.kind === 'partial' && entry.slug === slug) ?? null
+  return { header: find(HEADER_SLUG), footer: find(FOOTER_SLUG) }
+}
 
 interface CanvasComposedTreeProps {
   /** The active document being edited (the editable page / template). */
@@ -47,6 +77,8 @@ interface CanvasComposedTreeProps {
 
 export function CanvasComposedTree({ page }: CanvasComposedTreeProps) {
   const site = useEditorStore((s) => s.site)
+  // Pages live on the site document, not at the store root.
+  const pages = useEditorStore((s) => s.site?.pages) ?? NO_PARTIALS
   const isVcMode = useEditorStore((s) => s.activeDocument?.kind === 'visualComponent')
   const styleRules = useEditorStore((s) => s.site?.styleRules ?? null)
   const templateContext = use(CanvasTemplateContext)
@@ -56,10 +88,19 @@ export function CanvasComposedTree({ page }: CanvasComposedTreeProps) {
   const wrappers = !isVcMode && site ? resolveEditorWrapperTemplates(site, page) : NO_WRAPPERS
   const outerBody = wrappers[0]?.nodes[wrappers[0].rootNodeId]
 
+  const { header, footer } = isVcMode ? { header: null, footer: null } : sitePartials(pages, page)
+  const chrome = (content: ReactNode) => (
+    <>
+      {header && <PartialChrome partial={header} classes={styleRules} templateContext={templateContext} />}
+      {content}
+      {footer && <PartialChrome partial={footer} classes={styleRules} templateContext={templateContext} />}
+    </>
+  )
+
   // No wrapping templates → render the document exactly as before; its own
   // base.body claims the iframe <body>.
   if (wrappers.length === 0) {
-    return <NodeRenderer nodeId={page.rootNodeId} />
+    return chrome(<NodeRenderer nodeId={page.rootNodeId} />)
   }
 
   // Editable content = the active document's body children, rendered editable.
@@ -100,8 +141,33 @@ export function CanvasComposedTree({ page }: CanvasComposedTreeProps) {
         inlineStyles={outerBody?.inlineStyles}
         htmlAttributes={outerBody?.props.htmlAttributes}
       />
-      {composed}
+      {chrome(composed)}
     </>
+  )
+}
+
+/**
+ * One partial, read-only. Its `base.body` is transparent in
+ * `ReadOnlyNodeTree`, so this renders the partial's children directly —
+ * matching the server, which drops the partial's own body when splicing.
+ */
+function PartialChrome({
+  partial,
+  classes,
+  templateContext,
+}: {
+  partial: Page
+  classes: Parameters<typeof ReadOnlyNodeTree>[0]['classes']
+  templateContext: Parameters<typeof ReadOnlyNodeTree>[0]['templateContext']
+}) {
+  return (
+    <ReadOnlyNodeTree
+      nodes={partial.nodes as Record<string, BaseNode>}
+      rootNodeId={partial.rootNodeId}
+      classes={classes}
+      readonly={{ label: partial.title, kind: 'page', targetId: partial.id }}
+      templateContext={templateContext}
+    />
   )
 }
 

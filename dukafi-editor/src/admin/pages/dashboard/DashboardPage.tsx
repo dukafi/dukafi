@@ -21,6 +21,7 @@ import { PlugSolidIcon } from 'pixel-art-icons/icons/plug-solid'
 import { useCommerceData } from './hooks/useCommerceData'
 import { CommandIcon } from 'pixel-art-icons/icons/command'
 import { StarSolidIcon } from 'pixel-art-icons/icons/star-solid'
+import { TargetSolidIcon } from 'pixel-art-icons/icons/target-solid'
 import { CollectionsSection } from './sections/CollectionsSection'
 import { ConnectSection } from './sections/ConnectSection'
 import { ReviewsSection } from './sections/ReviewsSection'
@@ -28,6 +29,7 @@ import { ImportSection } from './sections/ImportSection'
 import { OrdersSection } from './sections/OrdersSection'
 import { FormsSection } from './sections/FormsSection'
 import { PluginsSection } from './sections/PluginsSection'
+import { DiscountsSection } from './sections/DiscountsSection'
 import { ProductsSection } from './sections/ProductsSection'
 import { SettingsSection } from './sections/SettingsSection'
 import type { CommerceSection } from './types'
@@ -37,6 +39,7 @@ const SECTION_LABELS: Record<CommerceSection, string> = {
   products: 'Products',
   collections: 'Collections',
   orders: 'Orders',
+  discounts: 'Discounts',
   forms: 'Forms',
   plugins: 'Plugins',
   import: 'Import',
@@ -49,6 +52,7 @@ const SECTION_ICONS = {
   products: PackageSolidIcon,
   collections: BoxStackSolidIcon,
   orders: ListBoxSolidIcon,
+  discounts: TargetSolidIcon,
   forms: FileTextSolidIcon,
   plugins: PlugSolidIcon,
   import: CloudUploadSolidIcon,
@@ -57,7 +61,7 @@ const SECTION_ICONS = {
   settings: Settings2SolidIcon,
 } satisfies Record<CommerceSection, typeof PackageSolidIcon>
 
-const SECTIONS: CommerceSection[] = ['products', 'collections', 'orders', 'forms', 'plugins', 'import', 'reviews', 'connect', 'settings']
+const SECTIONS: CommerceSection[] = ['products', 'collections', 'orders', 'discounts', 'forms', 'plugins', 'import', 'reviews', 'connect', 'settings']
 
 /** `products` is the landing area; anything unrecognised falls back to it. */
 export function sectionFromParam(value: string | undefined): CommerceSection {
@@ -110,6 +114,7 @@ export function DashboardPage() {
         <div className={styles.workspaceContent} aria-labelledby="dashboard-title">
           {section === 'products' && <ProductsSection data={data} />}
           {section === 'orders' && <OrdersSection data={data} />}
+          {section === 'discounts' && <DiscountsSection data={data} />}
           {section === 'forms' && <FormsSection />}
           {section === 'plugins' && <PluginsSection data={data} />}
           {section === 'collections' && <CollectionsSection data={data} />}

@@ -60,7 +60,7 @@ module PayHero
       unless response.is_a?(Hash) && response["success"]
         return Payments::InitiateResult.new(
           mode: :poll, redirect_url: nil, provider_reference: nil, client_payload: {},
-          error: response.is_a?(Hash) ? response.fetch("error_message", "PayHero rejected the request") : "PayHero unreachable"
+          error: rejection_message(response)
         )
       end
 
@@ -93,6 +93,21 @@ module PayHero
       )
     end
 
+    # What PayHero actually said, when it is not the documented shape.
+    #
+    # The body was previously discarded and every failure came back as "PayHero
+    # rejected the request" — true, unhelpful, and impossible to act on. It
+    # cost an hour of guessing at a doubled `Basic ` prefix. The response is
+    # PayHero's own, so it carries no credential of ours.
+    def rejection_message(response)
+      return "PayHero unreachable" unless response.is_a?(Hash)
+
+      stated = response["error_message"] || response["message"] || response["error"]
+      return stated.to_s if stated.is_a?(String) && !stated.empty?
+
+      "PayHero rejected the request: #{JSON.generate(response)[0, 300]}"
+    end
+
     # "+254 712 345 678" / "254712345678" / "0712345678" are one number.
     # PayHero's examples use the local `07…` form.
     def local_phone(value)
@@ -108,6 +123,15 @@ module PayHero
       "#{base}/payments/payhero/callback/#{attempt.reference}"
     end
 
+    # PayHero's docs show the whole header value, so a merchant copying it
+    # pastes "Basic eyJ…" into the token field — and we would then send
+    # "Basic Basic eyJ…" and be rejected with nothing useful said. Both forms
+    # are accepted rather than making the merchant know which half we wanted.
+    def authorization(config)
+      token = config[:api_token].to_s.strip.sub(/\Abasic\s+/i, "")
+      "Basic #{token}"
+    end
+
     def base_url(config)
       value = config[:base_url].to_s
       value.empty? ? DEFAULT_BASE : value.chomp("/")
@@ -116,7 +140,7 @@ module PayHero
     def post_json(url, body, config)
       uri = URI(url)
       request = Net::HTTP::Post.new(uri)
-      request["Authorization"] = "Basic #{config[:api_token]}"
+      request["Authorization"] = authorization(config)
       request["Content-Type"] = "application/json"
       request.body = JSON.generate(body)
 
@@ -135,8 +159,15 @@ end
 Dukafi::Plugins.register("payhero") do |p|
   p.name "PayHero (M-Pesa)"
   p.version "1.0.0"
-  p.secret :api_token, label: "Basic auth token"
+  # "Basic auth token" invited pasting the whole header value, which is
+  # exactly what happened — and `authorization` now accepts either form.
+  p.secret :api_token, label: "API token (from PayHero, without the word Basic)"
   p.integer :channel_id, label: "Payment channel ID"
   p.setting :callback_base_url, label: "Public site URL (for callbacks)"
-  p.payment_provider "payhero", PayHero::Provider
+  # The label a storefront shows, and the field it must collect. Declared
+  # here so a page can offer this provider without knowing it exists.
+  p.payment_provider "payhero", PayHero::Provider,
+                     label: "M-Pesa",
+                     fields: [{ name: "phone", label: "M-Pesa number", type: "tel",
+                                placeholder: "07XX XXX XXX" }]
 end

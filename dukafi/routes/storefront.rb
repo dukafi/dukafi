@@ -1,4 +1,10 @@
 class Storefront < Roda
+  # Same cookie as the fragments app, so a customer who signed in through
+  # `/fragments/account/login` is recognised here. Without this the storefront
+  # cannot tell a signed-in shopper from anyone else, and page gating would
+  # have nothing to check.
+  plugin :sessions, secret: SessionSecret.fetch
+
   TRACKING_PARAMS = %w[gclid fbclid msclkid].freeze
   SAFE_ASSET = /\Asite-[0-9a-f]{12}\.css\z/
   SAFE_SLUG = /\A[a-zA-Z0-9][a-zA-Z0-9_\/-]*\z/
@@ -16,14 +22,52 @@ class Storefront < Roda
     value = "index" if value.empty?
     return nil unless value.match?(SAFE_SLUG)
     return nil if value.split("/").include?("..")
+    # Gated pages bake under `private/`. Without this line the gate is
+    # decorative: `GET /private/checkout` would find the file on disk and
+    # serve it before any session check ran.
+    return nil if value == Page::PRIVATE_PREFIX || value.start_with?("#{Page::PRIVATE_PREFIX}/")
 
     value
+  end
+
+  def current_customer
+    id = session["customer_id"]
+    id && Customer[id]
   end
 
   def disk_page(slug)
     relative = slug == "index" ? "index.html" : "#{slug}.html"
     path = File.join(published_root, "current", relative)
     File.file?(path) ? File.binread(path) : nil
+  end
+
+  # Where a signed-out visitor goes when they ask for a gated page. Nil when
+  # the merchant has marked no sign-in page — see `gate!`.
+  def sign_in_path
+    page = Page.sign_in_page
+    page && (page.slug == "index" ? "/" : "/#{page.slug}")
+  end
+
+  # The one decision that makes `access` mean anything. Called before ANY
+  # content for a gated page is produced — disk or live — and it either
+  # returns (the visitor is allowed) or halts.
+  #
+  # A missing sign-in page is a 404, not a redirect to `/`: sending someone to
+  # a page that cannot sign them in would loop them back here forever, and
+  # silently serving the gated page instead would defeat the whole feature.
+  def gate!(page)
+    return unless page&.gated?
+    return if current_customer
+
+    destination = sign_in_path
+    request.halt([404, { "content-type" => "text/html; charset=utf-8" },
+                  ["<!doctype html><html><body><h1>Page not found</h1></body></html>"]]) unless destination
+
+    # `next` carries where they were going, so the merchant's sign-in page can
+    # send them onward. A local path only — an absolute URL here would make
+    # the sign-in page an open redirect.
+    target = "#{destination}?next=#{CGI.escape(request.path)}"
+    request.halt([302, { "location" => target, "cache-control" => "no-store" }, []])
   end
 
   def slug_redirect(slug)
@@ -39,7 +83,7 @@ class Storefront < Roda
     state = SiteState.first
     return nil unless state
 
-    document = page.published_document_data || page.document_data
+    document = with_partials(page.published_document_data || page.document_data)
     rendered = Dukafi::Publisher::RenderPage.call(
       document:, registry: Dukafi::Publisher::REGISTRY, site: state.site,
       prefetched: CommercePrefetcher.call, query_params:, page_paths: PagePaths.call
@@ -66,10 +110,88 @@ class Storefront < Roda
     )
   end
 
+  # An order page: the order template rendered with ONE order as
+  # `currentEntry`. Returns nil when there is no template, no such order, or
+  # the order is not this customer's — all three are a 404, because
+  # distinguishing them would confirm which tokens exist.
+  #
+  # Signed out, this redirects to sign-in rather than 404ing, so a customer
+  # following the link in a confirmation email lands somewhere useful.
+  def live_order(token)
+    template = OrderTemplate.find
+    return nil unless template&.status == "published"
+
+    customer = current_customer
+    unless customer
+      destination = sign_in_path
+      return nil unless destination
+
+      request.halt([302, { "location" => "#{destination}?next=#{CGI.escape(request.path)}",
+                           "cache-control" => "no-store" }, []])
+    end
+
+    entry = OrderPayload.for_customer_token(customer, token)
+    return nil unless entry
+
+    # What a `payment.initiate` button on this page pays for. Parked in the
+    # session rather than posted from the page, so the amount and the order
+    # are decided by something the customer cannot edit — and it is only ever
+    # set to an order this session was just proven to own.
+    session["order_token"] = entry.fetch("reference")
+
+    document = with_partials(template.published_document_data)
+    return nil unless document
+
+    state = SiteState.first
+    return nil unless state
+
+    render_live(document, state, current_entry: entry, title: "Order #{entry.fetch('number')}")
+  end
+
+  # Render a document live, with an entry in scope. The third caller of this
+  # shape (page, collection, order), so it is a method rather than a third
+  # copy of the same CSS-bundling sequence.
+  def render_live(document, state, current_entry: nil, title: nil, query_params: {})
+    rendered = Dukafi::Publisher::RenderPage.call(
+      document:, registry: Dukafi::Publisher::REGISTRY, site: state.site,
+      prefetched: CommercePrefetcher.call, current_entry:, query_params:,
+      page_paths: PagePaths.call
+    )
+    tailwind_html = %(<body class="#{rendered.body_classes.join(' ')}">#{rendered.html}</body>)
+    collector = Dukafi::Publisher::CssCollector.new
+    collector.add("page-modules", rendered.css)
+    css = collector.bundle(
+      framework_css: Dukafi::Publisher::FrameworkCss.call(state.site),
+      fonts_css: Dukafi::Publisher::FontsCss.call(state.site),
+      style_rules_css: Dukafi::Publisher::StyleRulesCss.call(state.site),
+      tailwind_css: TailwindCompiler.call(
+        html: tailwind_html, classes: DeclaredClassNames.call([document], state&.site), site: state&.site
+      )
+    ).content
+    Dukafi::Publisher::HtmlDocument.call(
+      title: title || state.site.dig("settings", "metaTitle"),
+      description: state.site.dig("settings", "metaDescription"),
+      language: state.site.dig("settings", "language") || "en",
+      body: rendered.html, body_classes: rendered.body_classes,
+      css: css, runtimes: rendered.runtimes
+    )
+  end
+
+  # The header and footer, around whatever is being rendered live. Same
+  # composition the bake does, so a live-rendered page and a baked one are the
+  # same page.
+  def with_partials(document)
+    SitePartials.compose(
+      document,
+      header_document: SitePartials.document_for(SitePartials.header),
+      footer_document: SitePartials.document_for(SitePartials.footer),
+    )
+  end
+
   def live_collection(slug, query_params)
     template = CollectionTemplate.find
     return unless template&.status == "published"
-    document = template.published_document_data
+    document = with_partials(template.published_document_data)
     return unless document
     prefetched = CommercePrefetcher.call
     collection = prefetched.dig("collections", slug)
@@ -118,6 +240,35 @@ class Storefront < Roda
       if slug && (destination = slug_redirect(slug))
         r.redirect(destination, 301)
       end
+
+      # One order, for the customer who placed it. Never baked and never
+      # cached: the token identifies the order, the SESSION decides whether
+      # this visitor may see it.
+      if slug&.start_with?("orders/")
+        order_html = live_order(slug.delete_prefix("orders/"))
+        if order_html
+          response["Content-Type"] = "text/html; charset=utf-8"
+          response["Cache-Control"] = "no-store, private"
+          response["X-Dukafy-Render"] = "live"
+          next order_html
+        end
+      end
+
+      # Access is a property of the PAGE, so it has to be looked up before the
+      # disk shortcut — a gated page is on disk too, just somewhere this
+      # request cannot name.
+      gated = slug && Page.first(slug: slug, kind: "page", status: "published", access: "customer")
+      if gated
+        gate!(gated)
+        baked = canonical_query_empty?(r.params) ? disk_page(gated.bake_path) : nil
+        response["Content-Type"] = "text/html; charset=utf-8"
+        # Never store a gated page in a shared cache: the next visitor through
+        # that proxy is a different person.
+        response["Cache-Control"] = "no-store, private"
+        response["X-Dukafy-Render"] = baked ? "disk" : "live"
+        next(baked || live_page(gated, r.params))
+      end
+
       if slug && canonical_query_empty?(r.params)
         baked = disk_page(slug)
         if baked

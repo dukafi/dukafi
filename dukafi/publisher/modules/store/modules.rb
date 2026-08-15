@@ -191,6 +191,26 @@ class Dukafi
         %(<nav class="dukafy-collection-loop__pagination" aria-label="Collection pages">#{previous}<span>Page #{page} of #{page_count}</span>#{following}</nav>)
       end
 
+      # Pagination for a loop that lives inside a FRAGMENT rather than a baked
+      # page. An `?page=2` link would reload the static file and the
+      # placeholder would fetch page 1 again, so the click has to page the
+      # fragment in place. Same markup and classes as the baked pagination, so
+      # a merchant styles one thing.
+      def fragment_pagination(node_id, page, page_count, endpoint)
+        return "" if page_count <= 1
+
+        link = lambda do |target, rel, label|
+          # `&amp;` because this is an ATTRIBUTE value: a bare `&` there is
+          # invalid HTML, and while browsers forgive it, the parser is not the
+          # only thing that reads published markup.
+          %(<a rel="#{rel}" href="#" hx-get="#{CGI.escapeHTML(endpoint)}?node=#{CGI.escapeHTML(node_id)}&amp;page=#{target}" ) +
+            %(hx-target="closest .dukafy-collection-loop" hx-swap="outerHTML">#{label}</a>)
+        end
+        previous = page > 1 ? link.call(page - 1, "prev", "Previous") : ""
+        following = page < page_count ? link.call(page + 1, "next", "Next") : ""
+        %(<nav class="dukafy-collection-loop__pagination" aria-label="Order pages">#{previous}<span>Page #{page} of #{page_count}</span>#{following}</nav>)
+      end
+
       def format_price(cents, currency)
         amount = format("%.2f", cents / 100.0)
         currency == "USD" ? "$#{amount}" : "#{CGI.escapeHTML(currency)} #{amount}"

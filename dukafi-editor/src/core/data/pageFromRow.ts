@@ -60,6 +60,10 @@ export function pageFromRow(row: DataRow): Page {
     id: row.id,
     slug: row.slug,
     title,
+    // `page` | `template` | `partial`. Server-owned: the editor reads it to
+    // compose the site header and footer around what is being edited, and
+    // never writes it back.
+    ...(typeof row.kind === 'string' ? { kind: row.kind } : {}),
     nodes,
     rootNodeId,
     ...(template !== null ? { template } : {}),

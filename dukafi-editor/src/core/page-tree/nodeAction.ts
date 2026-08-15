@@ -21,6 +21,7 @@ const NodeActionTypeSchema = Type.Union([
   Type.Literal('cart.addItem'),
   Type.Literal('cart.removeItem'),
   Type.Literal('cart.setQuantity'),
+  Type.Literal('cart.clear'),
   Type.Literal('cart.createOrder'),
   Type.Literal('payment.initiate'),
   Type.Literal('account.register'),
@@ -115,7 +116,7 @@ export const NodeActionsSchema = Type.Object({
 export type NodeActions = Static<typeof NodeActionsSchema>
 
 const VALID_TYPES: NodeActionType[] = [
-  'cart.addItem', 'cart.removeItem', 'cart.setQuantity', 'cart.createOrder', 'payment.initiate',
+  'cart.addItem', 'cart.removeItem', 'cart.setQuantity', 'cart.clear', 'cart.createOrder', 'payment.initiate',
   'account.register', 'account.login', 'account.logout',
   'overlay.open', 'overlay.close',
 ]

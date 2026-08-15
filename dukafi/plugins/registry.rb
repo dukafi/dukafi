@@ -23,6 +23,7 @@ class Dukafi
         @version = "0.0.0"
         @settings_schema = []
         @payment_providers = {}
+        @payment_provider_meta = {}
         @event_handlers = Hash.new { |hash, key| hash[key] = [] }
       end
 
@@ -48,9 +49,26 @@ class Dukafi
       def secret(key, label: nil) = setting(key, type: :string, label: label, secret: true)
       def integer(key, label: nil) = setting(key, type: :integer, label: label)
 
-      def payment_provider(slug, provider)
+      # `label` and `fields` are what lets a PAGE offer this provider without
+      # naming it. A storefront that hardcodes "Pay with M-Pesa" and
+      # `provider: "payhero"` breaks the moment a merchant installs a
+      # different plugin — so a provider describes itself, and the page loops
+      # whatever is configured.
+      #
+      # `fields` are the inputs this provider needs collected before it can
+      # charge (an M-Pesa number, say). Each is
+      # `{ name:, label:, type:, placeholder: }`. Declaring none is fine: a
+      # hosted-checkout provider collects everything on its own page.
+      def payment_provider(slug, provider, label: nil, fields: [])
         @payment_providers[slug.to_s] = provider
+        @payment_provider_meta[slug.to_s] = {
+          "slug" => slug.to_s,
+          "name" => label.to_s.empty? ? name : label.to_s,
+          "fields" => Array(fields).map { |field| field.transform_keys(&:to_s) },
+        }
       end
+
+      def payment_provider_meta(slug) = @payment_provider_meta[slug.to_s]
 
       # Handlers run AFTER the triggering transaction commits, and a raising
       # handler never fails the customer's request — see `emit`.
@@ -76,6 +94,21 @@ class Dukafi
 
       def all = registry.values
       def find(id) = registry[id.to_s]
+
+      # Every provider a page may offer RIGHT NOW: registered, and its plugin
+      # fully configured. An unconfigured one is left out rather than shown and
+      # then refused — a button that cannot work is worse than no button.
+      def configured_payment_providers
+        all.flat_map do |plugin|
+          next [] unless plugin.settings.configured?
+
+          plugin.payment_providers.keys.map do |slug|
+            meta = plugin.payment_provider_meta(slug) ||
+                   { "slug" => slug, "name" => plugin.name, "fields" => [] }
+            meta.merge("pluginId" => plugin.id)
+          end
+        end
+      end
 
       def payment_provider(slug)
         all.each do |plugin|

@@ -22,16 +22,28 @@ class CreateOrder
 
   REASONS = %w[empty_cart missing_identity out_of_stock].freeze
 
-  def self.call(cart:, email: nil, phone: nil, name: nil, discount_code: nil)
-    new(cart, email, phone, name, discount_code).call
+  # `customer` is the SIGNED-IN shopper, when there is one.
+  #
+  # Ownership follows the session, not the email field. Without this, someone
+  # signed in who types a different address at checkout has their order
+  # attached to whichever customer that address matches — so it never appears
+  # in their own order history, and `/orders/<token>` 404s for the person who
+  # just placed it. That is exactly what happened.
+  #
+  # The typed email and phone still land ON THE ORDER: they are the contact
+  # details for this delivery, and a shopper ordering something to be sent to
+  # a relative's phone is not changing who they are.
+  def self.call(cart:, email: nil, phone: nil, name: nil, discount_code: nil, customer: nil)
+    new(cart, email, phone, name, discount_code, customer).call
   end
 
-  def initialize(cart, email, phone, name, discount_code)
+  def initialize(cart, email, phone, name, discount_code, customer = nil)
     @cart = cart
     @email = email
     @phone = phone
     @name = name
     @discount_code = discount_code
+    @customer = customer
   end
 
   def call
@@ -44,7 +56,9 @@ class CreateOrder
       stock = CheckoutStockCheck.reserve!(@cart)
       next failure("out_of_stock", shortages: stock.shortages) unless stock.ok?
 
-      customer = Customer.upsert_by_identity(email: @email, phone: @phone, name: @name)
+      # Signed in: the order is theirs. Guest: matched by identity, which is
+      # what lets a returning guest keep one customer record.
+      customer = @customer || Customer.upsert_by_identity(email: @email, phone: @phone, name: @name)
       order = build_order(customer, payload)
       entries.each { |entry| build_item(order, entry) }
       consume_discount(payload)
@@ -63,10 +77,18 @@ class CreateOrder
     now = Time.now
     Order.create(
       cart_id: @cart.id, customer_id: customer.id,
-      email: customer.email, phone: customer.phone,
+      # Contact for THIS order: what they typed, falling back to the account's.
+      # The phone goes through the same normaliser the customer row uses, or
+      # the identical number would read two ways depending on the row.
+      email: @email.to_s.strip.empty? ? customer.email : @email.to_s.strip,
+      phone: Customer.normalize_phone(@phone) || customer.phone,
       status: "pending", currency: summary.fetch("currency"),
       subtotal_cents: summary.fetch("subtotalCents").to_i,
       discount_cents: summary.fetch("discountCents").to_i,
+      # The code as a string, so the order still says what it was charged
+      # under after the discount itself is gone. Blank becomes nil rather than
+      # "", so "no code" is one value and not two.
+      discount_code: summary["discountCode"].to_s.empty? ? nil : summary["discountCode"].to_s,
       shipping_cents: 0,
       total_cents: summary.fetch("totalCents").to_i,
       public_token: SecureRandom.urlsafe_base64(24),

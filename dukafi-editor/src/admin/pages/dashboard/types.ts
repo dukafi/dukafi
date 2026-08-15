@@ -7,7 +7,8 @@
 import type { ReactNode } from 'react'
 
 export type CommerceSection =
-  | 'products' | 'collections' | 'orders' | 'forms' | 'plugins' | 'import' | 'reviews' | 'connect' | 'settings'
+  | 'products' | 'collections' | 'orders' | 'discounts' | 'forms' | 'plugins' | 'import' | 'reviews'
+  | 'connect' | 'settings'
 
 export interface CommerceSettings {
   currency: string
@@ -105,6 +106,24 @@ export interface OrderSubmission {
   createdAt: string
 }
 
+/**
+ * One attempt to pay. The failures matter as much as the success: a merchant
+ * chasing "the customer says they paid" needs to see what the provider
+ * refused and why, not just whether the order ended up marked paid.
+ */
+export interface OrderPayment {
+  id: number
+  provider: string
+  status: string
+  amountCents: number
+  currency: string
+  receipt: string
+  reference: string
+  error: string
+  createdAt: string | null
+  updatedAt: string | null
+}
+
 export interface Order {
   id: number
   status: string
@@ -121,6 +140,7 @@ export interface Order {
   updatedAt: string
   items: OrderItem[]
   submissions: OrderSubmission[]
+  payments: OrderPayment[]
 }
 
 export const ORDER_STATUSES = ['pending', 'paid', 'fulfilled', 'shipped', 'refunded'] as const

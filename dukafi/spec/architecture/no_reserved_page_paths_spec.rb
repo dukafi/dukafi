@@ -1,5 +1,7 @@
 require_relative "../spec_helper"
 require "rack/test"
+require "fileutils"
+require "tmpdir"
 require_relative "../../app"
 
 # Top-level mounts SHADOW published pages.
@@ -16,6 +18,31 @@ class NoReservedPagePathsSpec < Minitest::Test
 
   def app
     Dukafi.app
+  end
+
+  # Both are needed for the page to render at all, and neither used to be
+  # here: the test passed only because the developer's own baked site
+  # happened to contain a `checkout.html`, so it was reading a real file
+  # rather than the page it created. The moment that page was gated (and its
+  # file moved out of the public tree) the test started 404ing — on a change
+  # that had nothing to do with mounts.
+  def setup
+    @published_root = Dir.mktmpdir("dukafi-reserved-")
+    @previous_published_root = ENV["DUKAFY_PUBLISHED_ROOT"]
+    ENV["DUKAFY_PUBLISHED_ROOT"] = @published_root
+    SiteState.dataset.delete
+    SiteState.create(site: {
+      "name" => "Test", "settings" => { "language" => "en", "framework" => { "colors" => { "tokens" => [] } } },
+    }, publish_version: 0)
+  end
+
+  def teardown
+    if @previous_published_root
+      ENV["DUKAFY_PUBLISHED_ROOT"] = @previous_published_root
+    else
+      ENV.delete("DUKAFY_PUBLISHED_ROOT")
+    end
+    FileUtils.remove_entry(@published_root) if @published_root && File.exist?(@published_root)
   end
 
   # Everything the top-level router claims before Storefront sees it.

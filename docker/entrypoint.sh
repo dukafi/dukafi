@@ -20,7 +20,9 @@ log() { echo "[dukafi] $*"; }
 # Only possible as root; when the platform already runs us as an unprivileged
 # user we skip it and trust the mount to be writable.
 if [ "$(id -u)" = "0" ]; then
-  mkdir -p "$DATA_DIR" "$DUKAFI_PUBLISHED_ROOT" "$DATA_DIR/uploads"
+  # `plugins` alongside the database and uploads: an installed plugin is
+  # state this store chose, not something the image supplies.
+  mkdir -p "$DATA_DIR" "$DUKAFI_PUBLISHED_ROOT" "$DATA_DIR/uploads" "${DUKAFI_PLUGINS_ROOT:-$DATA_DIR/plugins}"
   # -R on every boot is O(files) and a large media library makes that slow, so
   # only recurse when the top level is not already ours.
   if [ "$(stat -c %U "$DATA_DIR")" != "$APP_USER" ]; then
@@ -31,7 +33,7 @@ if [ "$(id -u)" = "0" ]; then
   fi
   RUN_AS="setpriv --reuid=$APP_USER --regid=$APP_USER --clear-groups"
 else
-  mkdir -p "$DUKAFI_PUBLISHED_ROOT" "$DATA_DIR/uploads" 2>/dev/null || true
+  mkdir -p "$DUKAFI_PUBLISHED_ROOT" "$DATA_DIR/uploads" "${DUKAFI_PLUGINS_ROOT:-$DATA_DIR/plugins}" 2>/dev/null || true
   RUN_AS=""
 fi
 

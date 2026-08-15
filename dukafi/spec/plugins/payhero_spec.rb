@@ -86,4 +86,28 @@ class PayHeroSpec < Minitest::Test
       }.merge(overrides),
     }
   end
+  # ── The credential ───────────────────────────────────────────────────────
+
+  # PayHero's docs show the whole header value, so a merchant pastes
+  # "Basic eyJ…" into the token field. Sending "Basic Basic eyJ…" is rejected
+  # with nothing useful said, which cost a real debugging session.
+  def test_a_token_pasted_with_its_prefix_still_authenticates
+    assert_equal "Basic eyJhbGci", PayHero::Provider.authorization(api_token: "Basic eyJhbGci")
+    assert_equal "Basic eyJhbGci", PayHero::Provider.authorization(api_token: "basic  eyJhbGci")
+    assert_equal "Basic eyJhbGci", PayHero::Provider.authorization(api_token: "eyJhbGci")
+    assert_equal "Basic eyJhbGci", PayHero::Provider.authorization(api_token: "  eyJhbGci  ")
+  end
+
+  # ── What a rejection says ────────────────────────────────────────────────
+
+  # The response used to be discarded, so every failure read "PayHero rejected
+  # the request" whatever had actually gone wrong.
+  def test_a_rejection_carries_what_payhero_said
+    assert_equal "Invalid channel", PayHero::Provider.rejection_message("error_message" => "Invalid channel")
+    assert_equal "Unauthorized", PayHero::Provider.rejection_message("message" => "Unauthorized")
+    # An undocumented shape still surfaces the body rather than swallowing it.
+    assert_includes PayHero::Provider.rejection_message("status" => 401), "\"status\":401"
+    assert_equal "PayHero unreachable", PayHero::Provider.rejection_message(nil)
+  end
+
 end

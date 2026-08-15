@@ -1,0 +1,5 @@
+# Installed plugins are a property of THIS store, not of the source tree —
+# whoever runs it chose them. The first-party ones live in
+# `plugins-available/` and are copied in by an operator.
+*
+!.gitignore

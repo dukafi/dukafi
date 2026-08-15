@@ -19,8 +19,32 @@ class CommercePrefetcher
     # opt out of it by writing a different source.
     reviews = Review.approved.newest_first.limit(100).map(&:to_entry)
 
+    # The payment methods a page may offer. Prefetched like any catalogue
+    # data because it is the same for every visitor — which is what lets a
+    # storefront LOOP them instead of hardcoding one provider's name and slug
+    # into a button. `entry` renames `slug` to `providerSlug` so a provider in
+    # scope cannot be mistaken for a product.
+    providers = Dukafi::Plugins.configured_payment_providers.map do |meta|
+      {
+        "providerSlug" => meta.fetch("slug"),
+        "name" => meta.fetch("name"),
+        # Composed here rather than on the page, so a template does not have to
+        # know how to phrase a button for a provider it has never heard of.
+        "payLabel" => "Pay with #{meta.fetch('name')}",
+        "pluginId" => meta["pluginId"].to_s,
+        "fields" => Array(meta["fields"]).map do |field|
+          {
+            "name" => field["name"].to_s, "label" => field["label"].to_s,
+            "type" => field["type"].to_s.empty? ? "text" : field["type"].to_s,
+            "placeholder" => field["placeholder"].to_s,
+          }
+        end,
+      }
+    end
+
     MediaPrefetcher.call.merge(
       "products" => products, "collections" => collections, "reviews" => reviews,
+      "paymentProviders" => providers,
     )
   end
 

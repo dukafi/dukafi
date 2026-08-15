@@ -1,10 +1,21 @@
 class Order < Sequel::Model
   one_to_many :order_items
   one_to_many :addresses
+  # Every attempt to pay, not just the one that worked: a customer who tried
+  # three times wants to see it went through once, and a merchant chasing a
+  # missing payment needs the failures more than the success.
+  one_to_many :payment_attempts
   many_to_one :cart
   many_to_one :customer
 
   STATUSES = %w[pending paid fulfilled shipped refunded].freeze
+
+  # The attempt that actually paid, if any. Latest first, because a retry
+  # after a success (a double tap on the button) must not shadow the receipt
+  # that settled the order.
+  def settled_payment
+    payment_attempts_dataset.where(status: "succeeded").order(Sequel.desc(:updated_at), Sequel.desc(:id)).first
+  end
 
   def validate
     super

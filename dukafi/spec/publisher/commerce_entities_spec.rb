@@ -15,6 +15,9 @@ class CommerceEntitiesSpec < Minitest::Test
   ).freeze
 
   def setup
+    OrderItem.dataset.delete
+    Order.dataset.delete
+    Customer.dataset.delete
     Review.dataset.delete
     CartItem.dataset.delete
     Cart.dataset.delete
@@ -171,6 +174,27 @@ class CommerceEntitiesSpec < Minitest::Test
 
     assert_includes html, "BAG-L:2:true"
     assert_includes html, "BAG-S:0:false"
+  end
+
+  # An order entry is built per request rather than prefetched, so the walk
+  # takes a real `OrderPayload` entry instead of a slice of the payload.
+  def test_every_declared_order_field_exists_including_nested_lines
+    seed!
+    customer = Customer.create(email: "buyer@example.com", name: "Buyer",
+                               created_at: Time.now, updated_at: Time.now)
+    now = Time.now
+    order = Order.create(customer_id: customer.id, email: customer.email, status: "paid",
+                         currency: "USD", subtotal_cents: 13_950, discount_cents: 0,
+                         shipping_cents: 0, total_cents: 13_950,
+                         public_token: SecureRandom.urlsafe_base64(16),
+                         created_at: now, updated_at: now)
+    OrderItem.create(order_id: order.id, variant_id: Variant.first.id,
+                     product_title: "Canvas Bag", variant_title: "Large", sku: "BAG-L",
+                     unit_price_cents: 13_950, quantity: 1, created_at: now)
+
+    entry = OrderPayload.for_customer(customer).first
+    assert_entity!("order", entry, "order")
+    assert_entity!("orderLine", entry.fetch("lines").first, "order.lines[0]")
   end
 
   def test_every_declared_review_field_exists_including_nested_stars

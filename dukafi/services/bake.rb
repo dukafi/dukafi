@@ -101,7 +101,10 @@ class Bake
     @pages.map do |page|
       document = render_document(page)
       Entry.new(
-        path: page.slug, title: page.title,
+        # A gated page bakes under `private/`, which the storefront will not
+        # serve by path — so the file exists (fast to serve, one render) but
+        # the only route to it runs the session check first.
+        path: page.bake_path, title: page.title,
         rendered: render_document_data(document, prefetched:),
         product_ids: DependencyTracker.product_ids(document:, prefetched:)
       )
@@ -148,7 +151,22 @@ class Bake
   end
 
   def render_document(page)
-    @use_draft ? page.document_data : (page.published_document_data || page.document_data)
+    document = @use_draft ? page.document_data : (page.published_document_data || page.document_data)
+    # Templates and pages alike get the site header and footer. A partial is
+    # never baked as a page of its own — every `kind: "page"` query skips it —
+    # so this is the only place its markup reaches disk.
+    SitePartials.compose(document, header_document: partial_documents[:header],
+                                   footer_document: partial_documents[:footer])
+  end
+
+  # Loaded once per bake rather than per page: the same two documents wrap
+  # every entry, and a hundred-product catalogue would otherwise re-read and
+  # re-parse them a hundred times.
+  def partial_documents
+    @partial_documents ||= {
+      header: SitePartials.document_for(SitePartials.header, use_draft: @use_draft),
+      footer: SitePartials.document_for(SitePartials.footer, use_draft: @use_draft),
+    }
   end
 
   def render_document_data(document, prefetched:, current_entry: nil)

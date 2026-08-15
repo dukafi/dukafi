@@ -111,7 +111,7 @@ COPY docker/entrypoint.sh /usr/local/bin/entrypoint
 RUN chmod +x /usr/local/bin/entrypoint \
  && command -v setpriv > /dev/null \
  && useradd --system --create-home --shell /usr/sbin/nologin --uid 1000 dukafi \
- && mkdir -p /data \
+ && mkdir -p /data /data/plugins \
  && chown -R dukafi:dukafi /app /data
 
 # Everything the merchant owns lives on the volume, never in the image.
@@ -124,6 +124,11 @@ ENV TAILWINDCSS_BIN=/usr/local/bin/tailwindcss
 ENV DUKAFI_DB=/data/dukafi.sqlite3
 ENV DUKAFI_PUBLISHED_ROOT=/data/published
 ENV DUKAFI_STORAGE_ROOT=/data
+# Installed plugins live on the VOLUME, so an operator drops one in, restarts,
+# and it survives the next deploy. The image itself ships none: a store has
+# the payment providers its owner installed and no others. First-party
+# plugins are distributed in `plugins-available/` in the repo.
+ENV DUKAFI_PLUGINS_ROOT=/data/plugins
 # Where Ruby reaches the edit sidecar. Loopback only — it applies arbitrary
 # edits, so it must never be published. The entrypoint mints its shared token
 # per boot, so there is nothing here for a deployer to configure.

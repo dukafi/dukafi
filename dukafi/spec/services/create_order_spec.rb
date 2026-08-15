@@ -165,4 +165,35 @@ class CreateOrderSpec < Minitest::Test
     refute_equal a.public_token, b.public_token
     assert_operator a.public_token.length, :>=, 24
   end
+  # ── Who the order belongs to ─────────────────────────────────────────────
+
+  # The bug this exists to prevent: a signed-in shopper typed a different
+  # address at checkout, the order attached itself to whichever customer that
+  # address matched, and `/orders/<token>` then 404'd for the person who had
+  # just placed it — their own order, invisible to them.
+  def test_a_signed_in_shopper_owns_the_order_whatever_email_they_type
+    buyer = Customer.create(email: "buyer@example.com", created_at: Time.now, updated_at: Time.now)
+    Customer.create(email: "someone.else@example.com", created_at: Time.now, updated_at: Time.now)
+    cart = cart_with
+
+    result = CreateOrder.call(cart: cart, email: "someone.else@example.com", customer: buyer)
+
+    assert result.ok?, result.reason
+    assert_equal buyer.id, result.order.customer_id
+    # The typed address is still the contact for THIS order — ordering
+    # something for a relative is not changing who you are.
+    assert_equal "someone.else@example.com", result.order.email
+  end
+
+  # Guest checkout is unchanged: with nobody signed in, identity matching is
+  # what keeps a returning guest as one customer record.
+  def test_a_guest_order_still_matches_by_identity
+    existing = Customer.create(email: "guest@example.com", created_at: Time.now, updated_at: Time.now)
+    cart = cart_with
+
+    result = CreateOrder.call(cart: cart, email: "guest@example.com")
+
+    assert_equal existing.id, result.order.customer_id
+  end
+
 end

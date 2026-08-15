@@ -375,6 +375,384 @@
       }
     ]
   },
+  "order": {
+    "id": "order",
+    "label": "Order",
+    "fields": [
+      {
+        "id": "number",
+        "label": "Order number",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "statusLabel",
+        "label": "Status",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "status",
+        "label": "Status (raw)",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "isPaid",
+        "label": "Paid?",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "isAwaitingPayment",
+        "label": "Awaiting payment?",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "date",
+        "label": "Date",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "placedAt",
+        "label": "Placed at",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "totalDisplay",
+        "label": "Total",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "totalCents",
+        "label": "Total (cents)",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "subtotalDisplay",
+        "label": "Subtotal",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "discountDisplay",
+        "label": "Discount",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "discountCode",
+        "label": "Discount code",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "hasDiscount",
+        "label": "Discounted?",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "shippingDisplay",
+        "label": "Shipping",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "itemCount",
+        "label": "Items",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "currency",
+        "label": "Currency",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "reference",
+        "label": "Reference",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "id",
+        "label": "ID",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "paymentReceipt",
+        "label": "M-Pesa / payment receipt",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "paymentProvider",
+        "label": "Paid with",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "paymentReference",
+        "label": "Payment reference",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "paidOn",
+        "label": "Paid on",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "paidAt",
+        "label": "Paid at",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "paymentAmountDisplay",
+        "label": "Amount paid",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "lines",
+        "label": "Lines",
+        "kind": "list",
+        "of": "orderLine"
+      },
+      {
+        "id": "payments",
+        "label": "Payment attempts",
+        "kind": "list",
+        "of": "payment"
+      }
+    ]
+  },
+  "paymentProvider": {
+    "id": "paymentProvider",
+    "label": "Payment method",
+    "fields": [
+      {
+        "id": "name",
+        "label": "Name",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "payLabel",
+        "label": "Button label",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "providerSlug",
+        "label": "Provider",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "pluginId",
+        "label": "Plugin",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "fields",
+        "label": "Fields to collect",
+        "kind": "list",
+        "of": "paymentField"
+      }
+    ]
+  },
+  "paymentField": {
+    "id": "paymentField",
+    "label": "Payment field",
+    "fields": [
+      {
+        "id": "label",
+        "label": "Label",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "name",
+        "label": "Field name",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "type",
+        "label": "Input type",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "placeholder",
+        "label": "Placeholder",
+        "kind": "scalar",
+        "format": "plain"
+      }
+    ]
+  },
+  "payment": {
+    "id": "payment",
+    "label": "Payment attempt",
+    "fields": [
+      {
+        "id": "statusLabel",
+        "label": "Status",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "status",
+        "label": "Status (raw)",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "succeeded",
+        "label": "Succeeded?",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "receipt",
+        "label": "Receipt",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "reference",
+        "label": "Provider reference",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "provider",
+        "label": "Provider",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "amountDisplay",
+        "label": "Amount",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "amountCents",
+        "label": "Amount (cents)",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "on",
+        "label": "When",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "at",
+        "label": "When (ISO)",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "error",
+        "label": "Failure reason",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "id",
+        "label": "ID",
+        "kind": "scalar",
+        "format": "plain"
+      }
+    ]
+  },
+  "orderLine": {
+    "id": "orderLine",
+    "label": "Order line",
+    "fields": [
+      {
+        "id": "title",
+        "label": "Product title",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "variantTitle",
+        "label": "Variant",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "sku",
+        "label": "SKU",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "quantity",
+        "label": "Quantity",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "unitPriceDisplay",
+        "label": "Unit price",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "unitPriceCents",
+        "label": "Unit price (cents)",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "linePriceDisplay",
+        "label": "Line total",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "linePriceCents",
+        "label": "Line total (cents)",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "href",
+        "label": "Link",
+        "kind": "scalar",
+        "format": "url"
+      },
+      {
+        "id": "imageUrl",
+        "label": "Image",
+        "kind": "scalar",
+        "format": "media"
+      },
+      {
+        "id": "productSlug",
+        "label": "Product slug",
+        "kind": "scalar",
+        "format": "plain"
+      }
+    ]
+  },
   "cartItem": {
     "id": "cartItem",
     "label": "Cart item",

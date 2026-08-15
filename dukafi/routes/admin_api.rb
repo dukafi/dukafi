@@ -171,16 +171,44 @@ class AdminApi < Roda
     now = page.updated_at.utc.iso8601
     {
       id: page.id.to_s, tableId: "pages",
+      # `page`, `template` or `partial`. The editor needs it to tell the site
+      # header and footer apart from ordinary pages — it composes them around
+      # whatever is being edited, the way the bake does.
+      kind: page.kind,
       cells: {
         title: page.title, slug: page.slug,
         body: { nodes: document.fetch("nodes"), rootNodeId: document.fetch("rootNodeId") },
       },
       slug: page.slug, status: page.status == "published" ? "published" : "draft", seq: page.seq.to_i,
+      # Publication properties, like `status` — they live on the row, not in
+      # the document, because they describe how the page is SERVED rather
+      # than what is on it.
+      access: page.access, authRedirect: page.auth_redirect,
       authorUserId: nil, createdByUserId: nil, updatedByUserId: nil, publishedByUserId: nil,
       author: nil, createdBy: nil, updatedBy: nil, publishedBy: nil,
       createdAt: page.created_at.utc.iso8601, updatedAt: now, publishedAt: nil,
       scheduledPublishAt: nil, deletedAt: nil,
     }
+  end
+
+  # One discount row, as both the table and the edit form need it.
+  #
+  # `status` and the performance figures come from the same places the MCP
+  # tools read them — `McpDiscountTools.status_of` and `DiscountWrites` — so a
+  # merchant looking at this screen and an agent calling `list_discounts` can
+  # never be told different things about the same code.
+  def discount_payload(discount)
+    {
+      id: discount.id.to_s,
+      code: discount.code,
+      kind: discount.kind,
+      value: discount.value,
+      status: McpDiscountTools.status_of(discount),
+      startsAt: discount.starts_at&.utc&.iso8601,
+      endsAt: discount.ends_at&.utc&.iso8601,
+      usageLimit: discount.usage_limit,
+      scope: DiscountWrites.scope_of(discount),
+    }.merge(DiscountWrites.performance(discount).transform_keys(&:to_sym))
   end
 
   def review_payload(review)
@@ -243,6 +271,20 @@ class AdminApi < Roda
           variantTitle: item.variant_title, quantity: item.quantity,
           unitPriceCents: item.unit_price_cents,
           lineTotalCents: item.unit_price_cents * item.quantity,
+        }
+      end,
+      # Every attempt to pay, newest first. The FAILURES are the point: a
+      # merchant chasing "the customer says they paid" needs to see the three
+      # refusals and what the provider said about them, not just whether the
+      # order is marked paid.
+      payments: PaymentAttempt.where(order_id: order.id).reverse(:updated_at, :id).map do |attempt|
+        {
+          id: attempt.id, provider: attempt.provider, status: attempt.status,
+          amountCents: attempt.amount_cents, currency: attempt.currency,
+          receipt: attempt.receipt.to_s, reference: attempt.provider_reference.to_s,
+          error: attempt.error.to_s,
+          createdAt: attempt.created_at&.utc&.iso8601,
+          updatedAt: attempt.updated_at&.utc&.iso8601,
         }
       end,
       # Merchant-defined forms filed against this order (delivery address,
@@ -1011,6 +1053,37 @@ class AdminApi < Roda
         end
         r.on(String) do |id|
           page = Page[id.to_i] || halt_json(404, "page_not_found", "Page not found")
+
+          # Just the serving properties, so the settings dialog can show what
+          # is currently set without pulling every page's whole document to
+          # find two fields.
+          r.get("access") do
+            { access: page.access, authRedirect: page.auth_redirect,
+              signInPageSlug: Page.sign_in_page&.slug }
+          end
+
+          # Separate from the document PATCH: access is not content, and a
+          # save of the page tree must not be able to change who can see it.
+          r.patch("access") do
+            if (access = r.params["access"])
+              unless Page::ACCESS_LEVELS.include?(access.to_s)
+                halt_json(422, "invalid_access", "access must be one of: #{Page::ACCESS_LEVELS.join(', ')}")
+              end
+
+              page.update(access: access.to_s)
+            end
+
+            case r.params["authRedirect"]
+            when true then Page.mark_auth_redirect!(page)
+            when false then page.update(auth_redirect: false)
+            end
+
+            { access: page.access, authRedirect: page.auth_redirect,
+              signInPageSlug: Page.sign_in_page&.slug }
+          rescue Sequel::ValidationFailed => error
+            halt_json(422, "invalid_access", error.message)
+          end
+
           r.patch do
             attrs = r.params.slice("slug", "title").transform_keys(&:to_sym)
             document = page.document_data.merge(
@@ -1094,6 +1167,53 @@ class AdminApi < Roda
       # Reviews. Moderation goes through `ReviewModeration` so the admin and
       # MCP cannot disagree about what "approved" does — in particular, both
       # rebuild the pages that list reviews, because those are static files.
+      r.on("discounts") do
+        require_admin!
+
+        r.is do
+          r.get do
+            discounts = Discount.order(Sequel.desc(:created_at)).all
+            {
+              discounts: discounts.map { |discount| discount_payload(discount) },
+              total: discounts.length,
+              # The form needs it to label a fixed amount, and the table to
+              # render one. Sent once rather than repeated on every row.
+              currency: CommerceSettings.current.currency,
+            }
+          end
+
+          r.post do
+            discount = DiscountWrites.create!(r.params)
+            response.status = 201
+            { discount: discount_payload(discount) }
+          rescue DiscountWrites::Invalid => error
+            halt_json(422, "invalid_discount", error.message)
+          end
+        end
+
+        r.on(String) do |id|
+          discount = Discount[id.to_i] || halt_json(404, "discount_not_found", "Discount not found")
+
+          r.patch do
+            { discount: discount_payload(DiscountWrites.update!(discount, r.params)) }
+          rescue DiscountWrites::Invalid => error
+            halt_json(422, "invalid_discount", error.message)
+          end
+
+          # A redeemed code is ended rather than destroyed, so this answers
+          # with the row when one survives — the caller cannot assume it is
+          # gone. Same rule as `delete_discount` over MCP.
+          r.delete do
+            outcome = DiscountWrites.destroy!(discount)
+            next no_content! if outcome == :deleted
+
+            { discount: discount_payload(discount), deleted: false }
+          rescue DiscountWrites::Invalid => error
+            halt_json(422, "invalid_discount", error.message)
+          end
+        end
+      end
+
       r.on("reviews") do
         require_admin!
 

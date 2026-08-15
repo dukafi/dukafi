@@ -76,6 +76,15 @@ export function entityForLoopSource(source: string, inScope: EntityId | null): E
     // source that is not a slug-keyed catalogue.
     case 'reviews':
       return parsed.slug ? null : (parsed.fields.length === 0 ? 'review' : entityAtPath('review', parsed.fields))
+    // The signed-in customer's own orders. Like `cart.items` it never bakes —
+    // the loop becomes a placeholder that fetches itself — but the editor
+    // still needs to know which fields resolve inside it.
+    // The store's configured payment methods — the same for every visitor, so
+    // unlike orders this one bakes.
+    case 'paymentProviders':
+      return parsed.slug ? null : (parsed.fields.length === 0 ? 'paymentProvider' : entityAtPath('paymentProvider', parsed.fields))
+    case 'orders':
+      return parsed.slug ? null : (parsed.fields.length === 0 ? 'order' : entityAtPath('order', parsed.fields))
     case 'currentEntry':
       return inScope ? entityAtPath(inScope, parsed.fields) : null
     default:

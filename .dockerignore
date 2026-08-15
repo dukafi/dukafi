@@ -3,6 +3,11 @@
 # uploaded media and published storefront into a public image.
 
 # Local state — never in an image
+#
+# `plugins-installed/` is this machine's chosen plugins. Baking them in would
+# put a Kenyan M-Pesa gateway in every store built from this image, which is
+# exactly what shipping providers in the app caused before.
+dukafi/plugins-installed/*
 dukafi/db/*.sqlite3
 dukafi/db/*.sqlite3-*
 dukafi/published/*

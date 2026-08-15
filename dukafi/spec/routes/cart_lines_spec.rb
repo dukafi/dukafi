@@ -151,6 +151,59 @@ class CartLinesSpec < Minitest::Test
     post "/fragments/cart/items", product_slug: "canvas-bag", variant_sku: "BAG-L", quantity: quantity.to_s
   end
 
+  # ── Emptying the cart ────────────────────────────────────────────────────
+
+  # One button, whatever is in the cart. The line verbs need a SKU and only
+  # ever touch one row, so "start over" was previously N clicks.
+  def test_clearing_empties_every_line
+    add_to_cart
+    post "/fragments/cart/items", product_slug: "canvas-bag", variant_sku: "BAG-L", quantity: "1"
+    assert_operator CartItem.count, :>, 0
+
+    post "/fragments/cart/items/clear", node: "loop"
+
+    # 200 and the re-rendered region, like every other cart mutation — the
+    # button is expected to sit inside a cart region and swap it.
+    assert_equal 200, last_response.status
+    assert_equal 0, CartItem.count
+  end
+
+  # The CART ROW survives. It is the session's identity — destroying it would
+  # log the visitor out of their own basket, so the next add would silently
+  # start a different cart.
+  def test_clearing_keeps_the_cart_itself
+    add_to_cart
+    cart_id = Cart.first.id
+
+    post "/fragments/cart/items/clear", node: "loop"
+
+    assert_equal cart_id, Cart.first&.id
+  end
+
+  # A code applied to a cart that no longer exists would sit in the session and
+  # reappear against whatever the customer adds next.
+  def test_clearing_drops_the_discount_code
+    Discount.create(code: "SAVE10", kind: "percentage", value: 10, starts_at: Time.now - 60,
+                    usage_count: 0, created_at: Time.now, updated_at: Time.now)
+    add_to_cart
+    post "/fragments/cart/discount", code: "SAVE10", node: "loop"
+    assert_equal 200, last_response.status, last_response.body
+
+    post "/fragments/cart/items/clear", node: "loop"
+    add_to_cart
+
+    get "/fragments/cart/lines", node: "loop"
+    refute_includes last_response.body, "SAVE10"
+  end
+
+  # Clearing when there is nothing to clear is not an error — a merchant may
+  # leave the button on the page permanently.
+  def test_clearing_an_empty_cart_is_harmless
+    post "/fragments/cart/items/clear", node: "loop"
+
+    assert_equal 200, last_response.status
+  end
+
   # A quantity change re-renders ONE row, not the whole list, and announces
   # itself as a LINE update — `dukafi:cart-updated` would make the lines loop
   # re-fetch itself wholesale and undo the targeted swap.

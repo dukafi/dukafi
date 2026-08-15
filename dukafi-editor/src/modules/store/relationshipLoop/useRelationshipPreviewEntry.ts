@@ -127,6 +127,48 @@ function reviewEntry(review: ApiReview): LoopItem {
 }
 
 /**
+ * An order history belongs to a signed-in customer, and the canvas has no
+ * customer — the merchant editing the page is not the shopper. So this is
+ * synthetic for the same reason the cart sample is, with plausible values
+ * rather than empty strings so the row can actually be laid out. Shape
+ * matches `OrderPayload`.
+ */
+const ORDER_SAMPLE: LoopItem = {
+  id: 'order-sample',
+  fields: {
+    id: 1042,
+    number: '#1042',
+    reference: 'sample-order-token',
+    status: 'paid',
+    statusLabel: 'Paid',
+    isPaid: true,
+    isAwaitingPayment: false,
+    date: '3 August 2026',
+    placedAt: '2026-08-03T09:15:00Z',
+    currency: 'USD',
+    itemCount: 2,
+    subtotalCents: 4000,
+    subtotalDisplay: '$40.00',
+    discountCents: 400,
+    discountDisplay: '$4.00',
+    discountCode: 'WEEKEND20',
+    hasDiscount: true,
+    shippingCents: 0,
+    shippingDisplay: '$0.00',
+    totalCents: 3600,
+    totalDisplay: '$36.00',
+    lines: [
+      {
+        title: 'Sample product', variantTitle: 'Large', sku: 'SAMPLE-1', quantity: 2,
+        unitPriceCents: 2000, unitPriceDisplay: '$20.00',
+        linePriceCents: 4000, linePriceDisplay: '$40.00',
+        productSlug: 'sample-product', href: '/products/sample-product', imageUrl: '',
+      },
+    ],
+  },
+}
+
+/**
  * A cart has no catalogue to read from in the editor, so this one is
  * synthetic — clearly plausible values rather than empty strings, so the row
  * can be laid out. The shape matches `CartPayload`'s entries.
@@ -182,6 +224,11 @@ export function useRelationshipPreviewEntry(
         .then((next) => { if (!controller.signal.aborted) setEntry(next) })
         .catch(() => undefined)
       return () => controller.abort()
+    }
+
+    if (parsed.kind === 'orders') {
+      setEntry(parsed.fields.length === 0 ? ORDER_SAMPLE : null)
+      return
     }
 
     if (parsed.kind === 'cart') {
