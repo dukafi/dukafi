@@ -163,6 +163,92 @@ func (b *S3Blobs) Put(id, sha string, body []byte) error {
 	return err
 }
 
+func (b *S3Blobs) mediaKey(id, name string) (string, error) {
+	if !idPattern.MatchString(id) {
+		return "", ErrBadBlobKey
+	}
+	safe, err := mediaName(name)
+	if err != nil {
+		return "", err
+	}
+	return "plugins/" + id + "/media/" + safe, nil
+}
+
+func (b *S3Blobs) HasMedia(id, name string) bool {
+	key, err := b.mediaKey(id, name)
+	if err != nil {
+		return false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), s3OpTimeout)
+	defer cancel()
+	_, err = b.client.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(b.bucket),
+		Key:    aws.String(key),
+	})
+	if err == nil {
+		return true
+	}
+	if !s3Missing(err) {
+		log.Printf("registry: s3 head %s: %v", key, err)
+	}
+	return false
+}
+
+func (b *S3Blobs) GetMedia(id, name string) ([]byte, string, error) {
+	key, err := b.mediaKey(id, name)
+	if err != nil {
+		return nil, "", err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), s3OpTimeout)
+	defer cancel()
+	out, err := b.client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(b.bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		if s3Missing(err) {
+			return nil, "", ErrNoBlob
+		}
+		return nil, "", err
+	}
+	defer out.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(out.Body, int64(maxImageLen)+1))
+	if err != nil {
+		return nil, "", err
+	}
+	if len(body) > maxImageLen {
+		return nil, "", ErrImageHuge
+	}
+	contentType := "application/octet-stream"
+	if out.ContentType != nil && *out.ContentType != "" {
+		contentType = *out.ContentType
+	}
+	return body, contentType, nil
+}
+
+func (b *S3Blobs) PutMedia(id, name string, body []byte, contentType string) error {
+	if len(body) > maxImageLen {
+		return ErrImageHuge
+	}
+	if _, err := sniffImage(body); err != nil {
+		return err
+	}
+	key, err := b.mediaKey(id, name)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), s3OpTimeout)
+	defer cancel()
+	_, err = b.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:        aws.String(b.bucket),
+		Key:           aws.String(key),
+		Body:          bytes.NewReader(body),
+		ContentType:   aws.String(contentType),
+		ContentLength: aws.Int64(int64(len(body))),
+	})
+	return err
+}
+
 func s3Missing(err error) bool {
 	var notFound *types.NotFound
 	var noSuchKey *types.NoSuchKey

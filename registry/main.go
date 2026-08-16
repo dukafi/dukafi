@@ -1,9 +1,10 @@
 // Command registry is the Dukafi plugin registry.
 //
-// Authors submit a manifest URL. The registry fetches it, copies public
-// archives into Railway Storage (an S3-compatible bucket; local disk when
-// no bucket is configured), and — once approved — lists them so stores can
-// browse and download. Licensed plugins stay with their vendor.
+// Authors describe a plugin and upload the gzip from their account, or still
+// submit a manifest URL. The registry stores public archives in Railway
+// Storage (an S3-compatible bucket; local disk when no bucket is configured)
+// and — once approved — lists them so stores can browse and download.
+// Licensed plugins stay with their vendor.
 package main
 
 import (
@@ -118,10 +119,11 @@ func main() {
 	server := &http.Server{
 		Addr:    *addr,
 		Handler: api.Handler(),
-		// A registry answers small JSON quickly. Anything slower than this is
-		// a client holding a connection open, not a request being served.
+		// Headers stay tight. The body timeout is long enough for a 5 MB
+		// archive upload; anything slower than that is a client holding the
+		// connection open.
 		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       15 * time.Second,
+		ReadTimeout:       60 * time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}

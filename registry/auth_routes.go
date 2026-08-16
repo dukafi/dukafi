@@ -230,10 +230,23 @@ func (a *API) downloadLimited(w http.ResponseWriter, r *http.Request) bool {
 	return false
 }
 
-// publish is the authenticated version of submitting a manifest URL.
+// publish is the authenticated version of submitting a plugin.
+//
+// Two bodies: multipart from the dashboard (we host the archive) or JSON
+// with a manifest URL (the author still hosts the JSON; we copy the gzip).
 func (a *API) publish(w http.ResponseWriter, r *http.Request) {
 	account, ok := a.requireAccount(w, r)
 	if !ok {
+		return
+	}
+	// Keyed on the account, not the IP: an author on a shared address should
+	// not be throttled by a stranger's publishing.
+	if a.rateLimited(w, r, "publish:"+account.ID) {
+		return
+	}
+
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+		a.publishUpload(w, r, account)
 		return
 	}
 
@@ -254,27 +267,13 @@ func (a *API) publish(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_body", "note is too long")
 		return
 	}
-	// Keyed on the account, not the IP: an author on a shared address should
-	// not be throttled by a stranger's publishing.
-	if a.rateLimited(w, r, "publish:"+account.ID) {
-		return
-	}
 
 	manifest, ok := a.fetchManifest(w, r, manifestURL)
 	if !ok {
 		return
 	}
 	if err := a.ingestArchive(r.Context(), manifest); err != nil {
-		var validation ValidationError
-		if errors.As(err, &validation) {
-			writeJSON(w, http.StatusUnprocessableEntity, map[string]any{
-				"error": map[string]any{
-					"code": "invalid_manifest", "message": validation.Message, "field": validation.Field,
-				},
-			})
-			return
-		}
-		writeError(w, http.StatusUnprocessableEntity, "invalid_manifest", "could not copy that archive")
+		a.writeIngestError(w, err)
 		return
 	}
 
@@ -329,6 +328,11 @@ func (a *API) ownedPlugin(w http.ResponseWriter, r *http.Request) (Plugin, Accou
 func (a *API) myRefresh(w http.ResponseWriter, r *http.Request) {
 	plugin, account, ok := a.ownedPlugin(w, r)
 	if !ok {
+		return
+	}
+	if isHostedManifest(plugin.ManifestURL) {
+		writeError(w, http.StatusConflict, "hosted",
+			"this listing is hosted here — upload a new archive from your dashboard")
 		return
 	}
 	if a.rateLimited(w, r, "refresh:"+account.ID) {

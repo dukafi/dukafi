@@ -25,6 +25,7 @@ type Manifest struct {
 	Category    string   `json:"category"`
 	License     string   `json:"license"`
 	Images      []string `json:"images"`
+	Logo        string   `json:"logo"`
 
 	// The lowest Dukafi version this plugin works on. Advisory: the registry
 	// records it so a store can hide what it cannot run.
@@ -88,7 +89,18 @@ const (
 
 	PricingFree = "free"
 	PricingPaid = "paid"
+
+	// hostedManifestPrefix marks a listing whose archive was uploaded to this
+	// registry rather than fetched from a URL the author hosts. Refresh must
+	// not try to GET this — it is not a network address.
+	hostedManifestPrefix = "hosted:"
 )
+
+func hostedManifestURL(id string) string { return hostedManifestPrefix + id }
+
+func isHostedManifest(manifestURL string) bool {
+	return strings.HasPrefix(manifestURL, hostedManifestPrefix)
+}
 
 // Categories the registry browses by. A fixed list rather than free text: a
 // browsable catalogue where everyone invents their own category is not
@@ -161,6 +173,11 @@ func (m *Manifest) Validate(allowInsecure bool) error {
 	}
 	if m.Homepage != "" {
 		if err := checkURL("homepage", m.Homepage, allowInsecure); err != nil {
+			return err
+		}
+	}
+	if m.Logo != "" {
+		if err := checkURL("logo", m.Logo, allowInsecure); err != nil {
 			return err
 		}
 	}
@@ -241,6 +258,7 @@ func (m *Manifest) normalise() {
 	m.Author = strings.TrimSpace(m.Author)
 	m.Category = strings.ToLower(strings.TrimSpace(m.Category))
 	m.License = strings.TrimSpace(m.License)
+	m.Logo = strings.TrimSpace(m.Logo)
 	m.Distribution.Type = strings.ToLower(strings.TrimSpace(m.Distribution.Type))
 	m.Distribution.SHA256 = strings.ToLower(strings.TrimSpace(m.Distribution.SHA256))
 	m.Pricing.Model = strings.ToLower(strings.TrimSpace(m.Pricing.Model))

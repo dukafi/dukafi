@@ -2,12 +2,13 @@
 
 A catalogue that also hosts public plugin archives.
 
-An author signs up, serves a **manifest** at a URL they control, and submits
-that URL. The registry fetches it, copies the public gzip into **Railway
-Storage** (an S3-compatible bucket on the same project; a local directory when
-no bucket is configured), and — once approved — lists it so stores can browse
-and download from **us**. Licensed plugins stay with their vendor: we never
-see those files, and never take money.
+An author signs up, describes the plugin, and attaches a **gzip**. The
+registry stores the public archive in **Railway Storage** (an S3-compatible
+bucket on the same project; a local directory when no bucket is configured)
+and — once approved — lists it so stores can browse and download from **us**.
+A JSON manifest URL still works if someone already hosts one. Licensed
+plugins stay with their vendor: we never see those files, and never take
+money.
 
 See [SECURITY.md](SECURITY.md) for the threat model, ingest checks, and rate
 limits.
@@ -180,10 +181,11 @@ could create the database on a fresh volume), and the image's own healthcheck
 probe passes. Add `--platform linux/amd64,linux/arm64` for a multi-arch
 manifest — the binary is pure Go, so arm64 costs only build time.
 
-## The manifest
+## The listing
 
-What an author serves. Everything the catalogue shows comes from here, so
-changing it is how a listing is updated.
+The dashboard form is the source of truth for a hosted plugin. The JSON
+below is what a **URL publish** still accepts if someone already hosts a
+manifest — same fields the form collects.
 
 ```json
 {
@@ -214,8 +216,9 @@ refused rather than silently swapping what every store has installed.
 `content`, `media`, `integrations`, `other`. A fixed list, because a browsable
 catalogue where everyone invents their own category is not browsable.
 
-`sha256` is **required** for a public download. The registry fetches that
-archive, checks the hash, and keeps a copy. Stores install from
+`sha256` is computed on upload for a dashboard publish. For a URL publish it
+is **required** on the manifest: the registry fetches that archive, checks
+the hash, and keeps a copy. Stores install from
 `GET /v1/plugins/{id}/download` on this host, and hash the bytes again.
 
 Omitting `pricing` means free. Omitting `distribution.type` with a
@@ -272,6 +275,7 @@ selling — is the same mechanism with `pricing.model: "free"` and no
 | `GET /v1/plugins` | approved listings. `?category=`, `?q=`, `?licensed=true\|false`, `?limit=`, `?offset=` |
 | `GET /v1/plugins/{id}` | one listing |
 | `GET /v1/plugins/{id}/download` | the stored public archive (approved only). `X-Checksum-Sha256` on the response |
+| `GET /v1/plugins/{id}/media/{name}` | `logo` or `shot-0`…`shot-7`. Optional listing images |
 | `GET /v1/plugins/{id}/versions` | every version the registry has seen |
 | `GET /v1/categories` | categories with counts |
 | `GET /healthz` | |
@@ -305,16 +309,17 @@ is the way back in for the admin account.
 
 | | |
 |---|---|
-| `POST /v1/me/plugins` | `{ "manifestUrl": "…", "note": "…" }` → 202 with the listing |
+| `POST /v1/me/plugins` | multipart: listing fields + `archive` file → 202. Or JSON `{ "manifestUrl": "…", "note": "…" }` for a URL you still host |
 | `GET /v1/me/plugins` | your own listings, with status, reject reason and refresh errors |
-| `POST /v1/me/plugins/{id}/refresh` | re-read your manifest now |
+| `POST /v1/me/plugins/{id}/refresh` | re-read a URL-hosted manifest now. Dashboard uploads are `409 hosted` — submit the same id again instead |
 | `DELETE /v1/me/plugins/{id}` | withdraw — only while it has never been approved |
 
 Everything you publish belongs to your account. Another account's plugin is a
 **404** on these routes, not a 403: whether an id exists is not something to
 confirm to someone who does not own it.
 
-Publishing the **same** URL again re-reads it in place. Publishing a
+Publishing the **same** id again updates the listing in place. A dashboard
+upload of a new archive is how a hosted plugin ships a release. Publishing a
 **different** URL for a plugin you own moves it and sends it back to `pending`
 — approval said "this plugin, served from here", and a new host is a claim
 nobody has checked. A different **account** claiming a listed id is a 409.

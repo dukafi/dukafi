@@ -41,6 +41,7 @@ type Plugin struct {
 	Category    string   `json:"category"`
 	License     string   `json:"license,omitempty"`
 	Images      []string `json:"images"`
+	Logo        string   `json:"logo,omitempty"`
 	MinDukafi   string   `json:"minDukafiVersion,omitempty"`
 
 	Pricing      Pricing      `json:"pricing"`
@@ -96,6 +97,9 @@ func (p Plugin) PublicView() map[string]any {
 	if p.Homepage != "" {
 		view["homepage"] = p.Homepage
 	}
+	if p.Logo != "" {
+		view["logo"] = p.Logo
+	}
 	if p.License != "" {
 		view["license"] = p.License
 	}
@@ -107,15 +111,19 @@ func (p Plugin) PublicView() map[string]any {
 
 // OwnerView is what the publishing account sees about its own listing.
 //
-// Everything PublicView hides EXCEPT the submit token: the manifest URL is
-// theirs, the status is the answer they are waiting for, and the reject and
-// refresh errors are the two things that tell them what to fix. The token
-// stays unexported because nothing needs it any more — the account is the
-// proof of ownership now.
+// Everything PublicView hides EXCEPT the submit token: the status is the
+// answer they are waiting for, and the reject and refresh errors are the two
+// things that tell them what to fix. A URL-hosted listing still shows
+// `manifestUrl`; a dashboard upload shows `hosted` instead. The token stays
+// unexported because nothing needs it any more — the account is the proof of
+// ownership now.
 func (p Plugin) OwnerView() map[string]any {
 	view := p.PublicView()
 	view["status"] = p.Status
-	view["manifestUrl"] = p.ManifestURL
+	view["hosted"] = isHostedManifest(p.ManifestURL)
+	if !isHostedManifest(p.ManifestURL) {
+		view["manifestUrl"] = p.ManifestURL
+	}
 	view["submittedAt"] = p.SubmittedAt.UTC().Format(time.RFC3339)
 	if p.ApprovedAt != nil {
 		view["approvedAt"] = p.ApprovedAt.UTC().Format(time.RFC3339)
@@ -219,6 +227,9 @@ func (s *Store) migrate() error {
 	if err := s.addColumnIfMissing("plugins", "account_id", "TEXT NOT NULL DEFAULT ''"); err != nil {
 		return err
 	}
+	if err := s.addColumnIfMissing("plugins", "logo", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
 	_, err = s.db.Exec(`CREATE INDEX IF NOT EXISTS plugins_account ON plugins(account_id)`)
 	return err
 }
@@ -268,9 +279,19 @@ func (s *Store) Submit(m *Manifest, manifestURL, note, accountID string) (Plugin
 		updated, applyErr := s.applyManifest(existing, m)
 		return updated, applyErr
 	case err == nil:
-		// Same account, same url: refresh it in place rather than creating a
-		// second row the admin has to reconcile.
-		return s.applyManifest(existing, m)
+		// Same account, same source: update in place rather than creating a
+		// second row the admin has to reconcile. A rejected listing that the
+		// owner submits again goes back in the queue — that is how a fix is
+		// reviewed. An approved listing stays approved: a new version is not
+		// a new plugin.
+		updated, applyErr := s.applyManifest(existing, m)
+		if applyErr != nil {
+			return Plugin{}, applyErr
+		}
+		if existing.Status == StatusRejected {
+			return s.SetStatus(existing.ID, StatusPending, "")
+		}
+		return updated, nil
 	case !errors.Is(err, ErrNotFound):
 		return Plugin{}, err
 	}
@@ -282,12 +303,12 @@ func (s *Store) Submit(m *Manifest, manifestURL, note, accountID string) (Plugin
 	distribution, _ := json.Marshal(m.Distribution)
 
 	_, err = s.db.Exec(`
-		INSERT INTO plugins (id, name, description, version, author, homepage, category, license,
+		INSERT INTO plugins (id, name, description, version, author, homepage, category, license, logo,
 		                     images, min_dukafi, pricing, distribution, status, manifest_url,
 		                     account_id, submit_token, submitter_note, submitted_at, updated_at,
 		                     refreshed_at)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		m.ID, m.Name, m.Description, m.Version, m.Author, m.Homepage, m.Category, m.License,
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		m.ID, m.Name, m.Description, m.Version, m.Author, m.Homepage, m.Category, m.License, m.Logo,
 		string(images), m.MinDukafiVersion, string(pricing), string(distribution),
 		StatusPending, manifestURL, accountID, token, note, iso(now), iso(now), iso(now))
 	if err != nil {
@@ -341,10 +362,10 @@ func (s *Store) applyManifest(existing Plugin, m *Manifest) (Plugin, error) {
 
 	_, err := s.db.Exec(`
 		UPDATE plugins SET name=?, description=?, version=?, author=?, homepage=?, category=?,
-		                   license=?, images=?, min_dukafi=?, pricing=?, distribution=?,
+		                   license=?, logo=?, images=?, min_dukafi=?, pricing=?, distribution=?,
 		                   updated_at=?, refreshed_at=?, refresh_error=''
 		WHERE id=?`,
-		m.Name, m.Description, m.Version, m.Author, m.Homepage, m.Category, m.License,
+		m.Name, m.Description, m.Version, m.Author, m.Homepage, m.Category, m.License, m.Logo,
 		string(images), m.MinDukafiVersion, string(pricing), string(distribution),
 		iso(now), iso(now), existing.ID)
 	if err != nil {
@@ -435,7 +456,7 @@ func (s *Store) List(opts ListOptions) ([]Plugin, int, error) {
 		limit = 50
 	}
 	rows, err := s.db.Query(`
-		SELECT id, name, description, version, author, homepage, category, license, images,
+		SELECT id, name, description, version, author, homepage, category, license, logo, images,
 		       min_dukafi, pricing, distribution, status, manifest_url, account_id, submit_token,
 		       reject_reason, submitted_at, approved_at, updated_at, refreshed_at, refresh_error
 		FROM plugins WHERE `+clause+`
@@ -465,7 +486,7 @@ func (s *Store) List(opts ListOptions) ([]Plugin, int, error) {
 
 func (s *Store) Get(id string) (Plugin, error) {
 	row := s.db.QueryRow(`
-		SELECT id, name, description, version, author, homepage, category, license, images,
+		SELECT id, name, description, version, author, homepage, category, license, logo, images,
 		       min_dukafi, pricing, distribution, status, manifest_url, account_id, submit_token,
 		       reject_reason, submitted_at, approved_at, updated_at, refreshed_at, refresh_error
 		FROM plugins WHERE id = ?`, id)
@@ -474,7 +495,7 @@ func (s *Store) Get(id string) (Plugin, error) {
 
 func (s *Store) GetByToken(token string) (Plugin, error) {
 	row := s.db.QueryRow(`
-		SELECT id, name, description, version, author, homepage, category, license, images,
+		SELECT id, name, description, version, author, homepage, category, license, logo, images,
 		       min_dukafi, pricing, distribution, status, manifest_url, account_id, submit_token,
 		       reject_reason, submitted_at, approved_at, updated_at, refreshed_at, refresh_error
 		FROM plugins WHERE submit_token = ?`, token)
@@ -556,7 +577,7 @@ func scanPlugin(row scanner) (Plugin, error) {
 		approvedAt, refreshedAt       sql.NullString
 	)
 	err := row.Scan(&p.ID, &p.Name, &p.Description, &p.Version, &p.Author, &p.Homepage,
-		&p.Category, &p.License, &images, &p.MinDukafi, &pricing, &distribution,
+		&p.Category, &p.License, &p.Logo, &images, &p.MinDukafi, &pricing, &distribution,
 		&p.Status, &p.ManifestURL, &p.AccountID, &p.submitToken, &p.RejectReason,
 		&submittedAt, &approvedAt, &updatedAt, &refreshedAt, &p.RefreshError)
 	if errors.Is(err, sql.ErrNoRows) {

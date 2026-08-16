@@ -9,8 +9,10 @@ rate limits that keep ingest and download from becoming the outage.
 
 ## What we store
 
-On publish and on refresh, a **public** listing's `downloadUrl` is fetched
-with the same SSRF rules as the manifest. The bytes are checked:
+On a dashboard upload, the gzip is in the request. The same checks apply, and
+nothing is fetched. On a URL publish (and on refresh of a URL-hosted listing),
+a **public** listing's `downloadUrl` is fetched with the same SSRF rules as
+the manifest. The bytes are checked:
 
 - gzip magic (`1f 8b`) — not HTML, not a zip, not an empty 200;
 - SHA-256 matches `distribution.sha256` — the listing and the file agree;
@@ -36,8 +38,10 @@ on the store that chose to install it.
 
 ## What we fetch
 
-Publish still starts with a URL the author chose. That remains the
-dangerous thing this process does. `fetch.go` is the guard:
+Publish from the dashboard uploads the gzip directly. That path does not
+fetch a URL. A JSON body with `manifestUrl` still does, and that remains
+the dangerous thing this process can be asked to do. `fetch.go` is the
+guard:
 
 - `https` only (`-insecure` is development-only and turns the guard off);
 - every address a hostname resolves to is checked, not just the first;

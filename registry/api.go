@@ -92,6 +92,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/categories", a.categories)
 	mux.HandleFunc("GET /v1/plugins", a.listPlugins)
 	mux.HandleFunc("GET /v1/plugins/{id}/download", a.downloadPlugin)
+	mux.HandleFunc("GET /v1/plugins/{id}/media/{name}", a.pluginMedia)
 	mux.HandleFunc("GET /v1/plugins/{id}", a.getPlugin)
 	mux.HandleFunc("GET /v1/plugins/{id}/versions", a.pluginVersions)
 
@@ -456,6 +457,11 @@ func (a *API) adminRefresh(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "no such plugin")
 		return
 	}
+	if isHostedManifest(plugin.ManifestURL) {
+		writeError(w, http.StatusConflict, "hosted",
+			"this listing is hosted here — there is no remote manifest to re-read")
+		return
+	}
 	updated, err := a.RefreshOne(r.Context(), plugin)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "refresh_failed", err.Error())
@@ -474,6 +480,9 @@ func (a *API) adminRefresh(w http.ResponseWriter, r *http.Request) {
 // serves in the meantime. The archive is ingested BEFORE the listing is
 // updated, so a store never sees a checksum for bytes we do not have.
 func (a *API) RefreshOne(ctx context.Context, plugin Plugin) (Plugin, error) {
+	if isHostedManifest(plugin.ManifestURL) {
+		return Plugin{}, errors.New("this listing is hosted here — upload a new archive from the dashboard")
+	}
 	manifest, err := a.Fetcher.Fetch(ctx, plugin.ManifestURL)
 	if err != nil {
 		_ = a.Store.RecordRefreshError(plugin.ID, err.Error())
@@ -506,6 +515,9 @@ func (a *API) RefreshAll(ctx context.Context) (int, int) {
 			if ctx.Err() != nil {
 				return refreshed, failed
 			}
+			if isHostedManifest(plugin.ManifestURL) {
+				continue
+			}
 			if _, err := a.RefreshOne(ctx, plugin); err != nil {
 				failed++
 				continue
@@ -517,11 +529,11 @@ func (a *API) RefreshAll(ctx context.Context) (int, int) {
 }
 
 func (a *API) publicView(plugin Plugin) map[string]any {
-	return a.rewriteDownload(plugin, plugin.PublicView())
+	return a.rewriteMedia(plugin, a.rewriteDownload(plugin, plugin.PublicView()))
 }
 
 func (a *API) ownerView(plugin Plugin) map[string]any {
-	return a.rewriteDownload(plugin, plugin.OwnerView())
+	return a.rewriteMedia(plugin, a.rewriteDownload(plugin, plugin.OwnerView()))
 }
 
 // rewriteDownload points stores at OUR copy when we have one. The author's
@@ -548,6 +560,52 @@ func (a *API) hostedDownloadURL(id string) string {
 		return path
 	}
 	return base + path
+}
+
+func (a *API) hostedMediaURL(id, name string) string {
+	path := "/v1/plugins/" + url.PathEscape(id) + "/media/" + url.PathEscape(name)
+	base := strings.TrimRight(a.PublicURL, "/")
+	if base == "" {
+		return path
+	}
+	return base + path
+}
+
+func (a *API) rewriteMedia(plugin Plugin, view map[string]any) map[string]any {
+	if a.Blobs == nil {
+		return view
+	}
+	if a.Blobs.HasMedia(plugin.ID, "logo") {
+		view["logo"] = a.hostedMediaURL(plugin.ID, "logo")
+	}
+	shots := []string{}
+	for i := 0; i < maxImages; i++ {
+		name := screenshotName(i)
+		if !a.Blobs.HasMedia(plugin.ID, name) {
+			break
+		}
+		shots = append(shots, a.hostedMediaURL(plugin.ID, name))
+	}
+	if len(shots) > 0 {
+		view["images"] = shots
+	}
+	return view
+}
+
+func (a *API) pluginMedia(w http.ResponseWriter, r *http.Request) {
+	if a.Blobs == nil {
+		writeError(w, http.StatusNotFound, "not_found", "no such file")
+		return
+	}
+	body, contentType, err := a.Blobs.GetMedia(r.PathValue("id"), r.PathValue("name"))
+	if err != nil {
+		writeError(w, http.StatusNotFound, "not_found", "no such file")
+		return
+	}
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(body)
 }
 
 // ingestArchive copies a public plugin's gzip onto this registry. Licensed
@@ -630,6 +688,23 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 
 func writeError(w http.ResponseWriter, status int, code, message string) {
 	writeJSON(w, status, map[string]any{"error": map[string]any{"code": code, "message": message}})
+}
+
+func (a *API) writeIngestError(w http.ResponseWriter, err error) {
+	var validation ValidationError
+	if errors.As(err, &validation) {
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{
+			"error": map[string]any{
+				"code": "invalid_manifest", "message": validation.Message, "field": validation.Field,
+			},
+		})
+		return
+	}
+	if errors.Is(err, ErrArchiveTooLarge) || errors.Is(err, ErrImageHuge) {
+		writeError(w, http.StatusRequestEntityTooLarge, "too_large", err.Error())
+		return
+	}
+	writeError(w, http.StatusUnprocessableEntity, "invalid_manifest", err.Error())
 }
 
 func logRequests(next http.Handler) http.Handler {

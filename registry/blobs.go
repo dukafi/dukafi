@@ -16,6 +16,9 @@ type BlobStore interface {
 	Has(id, sha string) bool
 	Get(id, sha string) ([]byte, error)
 	Put(id, sha string, body []byte) error
+	HasMedia(id, name string) bool
+	GetMedia(id, name string) (body []byte, contentType string, err error)
+	PutMedia(id, name string, body []byte, contentType string) error
 }
 
 // PluginBlobs is the on-disk copy of public plugin archives, used when no
