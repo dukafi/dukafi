@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -21,8 +22,11 @@ import (
 //	admin   — exactly one account, the one whose email matches
 //	          REGISTRY_ADMIN_EMAIL. Nothing in the database grants this.
 type API struct {
-	Store   *Store
-	Fetcher Fetcher
+	Store     *Store
+	Fetcher   Fetcher
+	Archives  ArchiveFetcher
+	Blobs     BlobStore
+	PublicURL string
 
 	// The single address that may approve, reject and unlist. Set from the
 	// environment, so who reviews is a deploy-time decision rather than a row
@@ -52,6 +56,11 @@ type API struct {
 	// service fetch a URL of the author's choosing, so it is not free to serve
 	// and not something to leave unbounded.
 	SubmissionsPerHour int
+
+	// How many archive downloads one address may make per hour. Serving a
+	// stored plugin is cheap compared to ingesting one, but 5 MB times an
+	// unbounded GET is still a way to empty a disk budget.
+	DownloadsPerHour int
 }
 
 const (
@@ -67,6 +76,10 @@ const (
 	defaultRequestsPerMinute = 120
 	defaultBurst             = 40
 
+	// Public archive downloads per source address per hour. A store installing
+	// a handful of plugins is well under this; scraping the catalogue is not.
+	defaultDownloadsPerHour = 60
+
 	// Roughly 50k tracked addresses, a few MB. Past this the limiter refuses
 	// new keys rather than growing without bound.
 	defaultRateLimitKeys = 50_000
@@ -78,6 +91,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /healthz", a.health)
 	mux.HandleFunc("GET /v1/categories", a.categories)
 	mux.HandleFunc("GET /v1/plugins", a.listPlugins)
+	mux.HandleFunc("GET /v1/plugins/{id}/download", a.downloadPlugin)
 	mux.HandleFunc("GET /v1/plugins/{id}", a.getPlugin)
 	mux.HandleFunc("GET /v1/plugins/{id}/versions", a.pluginVersions)
 
@@ -198,7 +212,7 @@ func (a *API) listPlugins(w http.ResponseWriter, r *http.Request) {
 	}
 	views := make([]map[string]any, 0, len(plugins))
 	for _, plugin := range plugins {
-		views = append(views, plugin.PublicView())
+		views = append(views, a.publicView(plugin))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"plugins": views, "total": total, "limit": opts.Limit, "offset": opts.Offset,
@@ -213,7 +227,42 @@ func (a *API) getPlugin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "no such plugin")
 		return
 	}
-	writeJSON(w, http.StatusOK, plugin.PublicView())
+	writeJSON(w, http.StatusOK, a.publicView(plugin))
+}
+
+// downloadPlugin serves the copy of a public archive this registry stored.
+//
+// Approved and public only. A pending listing is a 404 — we may already have
+// the bytes (ingest happens at publish), but unreviewed code is not something
+// to hand out. A licensed listing is the same 404: those files never pass
+// through here.
+func (a *API) downloadPlugin(w http.ResponseWriter, r *http.Request) {
+	if a.downloadLimited(w, r) {
+		return
+	}
+	plugin, err := a.Store.Get(r.PathValue("id"))
+	if err != nil || plugin.Status != StatusApproved || plugin.Distribution.Type != DistributionPublic {
+		writeError(w, http.StatusNotFound, "not_found", "no such plugin")
+		return
+	}
+	if a.Blobs == nil {
+		writeError(w, http.StatusNotFound, "not_found", "no such plugin")
+		return
+	}
+	body, err := a.Blobs.Get(plugin.ID, plugin.Distribution.SHA256)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "not_found", "no such plugin")
+		return
+	}
+
+	filename := plugin.ID + "-" + plugin.Version + ".tar.gz"
+	w.Header().Set("Content-Type", "application/gzip")
+	w.Header().Set("Content-Disposition", `attachment; filename="`+filename+`"`)
+	w.Header().Set("X-Checksum-Sha256", plugin.Distribution.SHA256)
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	w.Header().Set("ETag", `"`+plugin.Distribution.SHA256+`"`)
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(body)
 }
 
 func (a *API) pluginVersions(w http.ResponseWriter, r *http.Request) {
@@ -340,7 +389,7 @@ func (a *API) adminList(w http.ResponseWriter, r *http.Request) {
 	emails := map[string]string{}
 	views := make([]map[string]any, 0, len(plugins))
 	for _, plugin := range plugins {
-		view := plugin.OwnerView()
+		view := a.ownerView(plugin)
 		if plugin.AccountID != "" {
 			email, seen := emails[plugin.AccountID]
 			if !seen {
@@ -407,7 +456,7 @@ func (a *API) adminRefresh(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "no such plugin")
 		return
 	}
-	updated, err := RefreshOne(r.Context(), a.Store, a.Fetcher, plugin)
+	updated, err := a.RefreshOne(r.Context(), plugin)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "refresh_failed", err.Error())
 		return
@@ -417,33 +466,39 @@ func (a *API) adminRefresh(w http.ResponseWriter, r *http.Request) {
 
 // ── Refresh ──────────────────────────────────────────────────────────────────
 
-// RefreshOne re-fetches a listing's manifest and writes what changed.
+// RefreshOne re-fetches a listing's manifest, copies a new public archive if
+// the checksum changed, and writes what changed.
 //
 // A failure is RECORDED, not fatal: a vendor's host being down for an hour
 // must not delist their plugin, and the stored copy is what the catalogue
-// serves in the meantime.
-func RefreshOne(ctx context.Context, store *Store, fetcher Fetcher, plugin Plugin) (Plugin, error) {
-	manifest, err := fetcher.Fetch(ctx, plugin.ManifestURL)
+// serves in the meantime. The archive is ingested BEFORE the listing is
+// updated, so a store never sees a checksum for bytes we do not have.
+func (a *API) RefreshOne(ctx context.Context, plugin Plugin) (Plugin, error) {
+	manifest, err := a.Fetcher.Fetch(ctx, plugin.ManifestURL)
 	if err != nil {
-		_ = store.RecordRefreshError(plugin.ID, err.Error())
+		_ = a.Store.RecordRefreshError(plugin.ID, err.Error())
 		return Plugin{}, err
 	}
 	// The id is the identity of the listing. A manifest that changes it is
 	// pointing at a different plugin, which is a resubmission, not an update.
 	if manifest.ID != plugin.ID {
 		message := "manifest id changed from " + plugin.ID + " to " + manifest.ID
-		_ = store.RecordRefreshError(plugin.ID, message)
+		_ = a.Store.RecordRefreshError(plugin.ID, message)
 		return Plugin{}, errors.New(message)
 	}
-	return store.applyManifest(plugin, manifest)
+	if err := a.ingestArchive(ctx, manifest); err != nil {
+		_ = a.Store.RecordRefreshError(plugin.ID, err.Error())
+		return Plugin{}, err
+	}
+	return a.Store.applyManifest(plugin, manifest)
 }
 
 // RefreshAll sweeps every listing that is still live. Rejected ones are left
 // alone — the registry stops fetching a URL it has already declined.
-func RefreshAll(ctx context.Context, store *Store, fetcher Fetcher) (int, int) {
+func (a *API) RefreshAll(ctx context.Context) (int, int) {
 	refreshed, failed := 0, 0
 	for _, status := range []string{StatusApproved, StatusPending} {
-		plugins, _, err := store.List(ListOptions{Status: status, Limit: 100})
+		plugins, _, err := a.Store.List(ListOptions{Status: status, Limit: 100})
 		if err != nil {
 			continue
 		}
@@ -451,7 +506,7 @@ func RefreshAll(ctx context.Context, store *Store, fetcher Fetcher) (int, int) {
 			if ctx.Err() != nil {
 				return refreshed, failed
 			}
-			if _, err := RefreshOne(ctx, store, fetcher, plugin); err != nil {
+			if _, err := a.RefreshOne(ctx, plugin); err != nil {
 				failed++
 				continue
 			}
@@ -459,6 +514,74 @@ func RefreshAll(ctx context.Context, store *Store, fetcher Fetcher) (int, int) {
 		}
 	}
 	return refreshed, failed
+}
+
+func (a *API) publicView(plugin Plugin) map[string]any {
+	return a.rewriteDownload(plugin, plugin.PublicView())
+}
+
+func (a *API) ownerView(plugin Plugin) map[string]any {
+	return a.rewriteDownload(plugin, plugin.OwnerView())
+}
+
+// rewriteDownload points stores at OUR copy when we have one. The author's
+// original URL stays in the database so a refresh can still fetch it.
+func (a *API) rewriteDownload(plugin Plugin, view map[string]any) map[string]any {
+	if plugin.Distribution.Type != DistributionPublic {
+		return view
+	}
+	if a.Blobs == nil || !a.Blobs.Has(plugin.ID, plugin.Distribution.SHA256) {
+		return view
+	}
+	distribution, _ := view["distribution"].(map[string]any)
+	if distribution == nil {
+		return view
+	}
+	distribution["downloadUrl"] = a.hostedDownloadURL(plugin.ID)
+	return view
+}
+
+func (a *API) hostedDownloadURL(id string) string {
+	path := "/v1/plugins/" + url.PathEscape(id) + "/download"
+	base := strings.TrimRight(a.PublicURL, "/")
+	if base == "" {
+		return path
+	}
+	return base + path
+}
+
+// ingestArchive copies a public plugin's gzip onto this registry. Licensed
+// listings skip this: those files are the vendor's. Tests that do not set
+// Archives or Blobs skip it too, so existing catalogue tests stay about
+// listing rather than hosting.
+func (a *API) ingestArchive(ctx context.Context, manifest *Manifest) error {
+	if manifest == nil || manifest.Distribution.Type != DistributionPublic {
+		return nil
+	}
+	if a.Archives == nil || a.Blobs == nil {
+		return nil
+	}
+	if a.Blobs.Has(manifest.ID, manifest.Distribution.SHA256) {
+		return nil
+	}
+
+	body, err := a.Archives.FetchArchive(ctx, manifest.Distribution.DownloadURL)
+	if err != nil {
+		return err
+	}
+	if err := a.Blobs.Put(manifest.ID, manifest.Distribution.SHA256, body); err != nil {
+		if errors.Is(err, ErrNotGzip) {
+			return invalid("distribution.downloadUrl", ErrNotGzip.Error())
+		}
+		if errors.Is(err, ErrChecksumMismatch) {
+			return invalid("distribution.sha256", ErrChecksumMismatch.Error())
+		}
+		if errors.Is(err, ErrBadBlobKey) {
+			return invalid("id", err.Error())
+		}
+		return err
+	}
+	return nil
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

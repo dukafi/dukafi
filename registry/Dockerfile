@@ -52,8 +52,8 @@ COPY --from=build /registry /registry
 # Regenerate with ./scripts/third-party-notices.sh after touching go.mod.
 COPY THIRD_PARTY_NOTICES LICENSE /
 
-# The database lives on a volume: it is the catalogue, and it is the only
-# state this service has.
+# The database lives on a volume. Public archives live in a Railway Storage
+# Bucket when one is configured; otherwise they sit under /data/plugins.
 #
 # /data is COPYed in rather than conjured by the VOLUME line. Docker creates a
 # volume mountpoint that does not exist in the image as root-owned, and this

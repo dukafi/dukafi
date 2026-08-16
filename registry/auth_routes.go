@@ -187,6 +187,10 @@ func (a *API) overLimit(w http.ResponseWriter, r *http.Request, key string) bool
 	if limit <= 0 {
 		limit = defaultSubmissionsPerHour
 	}
+	return a.overLimitN(w, r, key, limit)
+}
+
+func (a *API) overLimitN(w http.ResponseWriter, r *http.Request, key string, limit int) bool {
 	recent, err := a.Store.RecentSubmissions(key, time.Hour)
 	if err == nil && recent >= limit {
 		w.Header().Set("Retry-After", "3600")
@@ -209,6 +213,19 @@ func (a *API) rateLimited(w http.ResponseWriter, r *http.Request, key string) bo
 		return true
 	}
 	// Counted BEFORE the work, so a failure still counts.
+	a.recordAttempt(key)
+	return false
+}
+
+func (a *API) downloadLimited(w http.ResponseWriter, r *http.Request) bool {
+	limit := a.DownloadsPerHour
+	if limit <= 0 {
+		limit = defaultDownloadsPerHour
+	}
+	key := "download:" + clientIP(r, a.TrustProxy)
+	if a.overLimitN(w, r, key, limit) {
+		return true
+	}
 	a.recordAttempt(key)
 	return false
 }
@@ -247,6 +264,19 @@ func (a *API) publish(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if err := a.ingestArchive(r.Context(), manifest); err != nil {
+		var validation ValidationError
+		if errors.As(err, &validation) {
+			writeJSON(w, http.StatusUnprocessableEntity, map[string]any{
+				"error": map[string]any{
+					"code": "invalid_manifest", "message": validation.Message, "field": validation.Field,
+				},
+			})
+			return
+		}
+		writeError(w, http.StatusUnprocessableEntity, "invalid_manifest", "could not copy that archive")
+		return
+	}
 
 	plugin, err := a.Store.Submit(manifest, manifestURL, request.Note, account.ID)
 	if errors.Is(err, ErrDuplicate) {
@@ -258,7 +288,7 @@ func (a *API) publish(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal", "could not record that plugin")
 		return
 	}
-	writeJSON(w, http.StatusAccepted, map[string]any{"plugin": plugin.OwnerView()})
+	writeJSON(w, http.StatusAccepted, map[string]any{"plugin": a.ownerView(plugin)})
 }
 
 func (a *API) myPlugins(w http.ResponseWriter, r *http.Request) {
@@ -273,7 +303,7 @@ func (a *API) myPlugins(w http.ResponseWriter, r *http.Request) {
 	}
 	views := make([]map[string]any, 0, len(plugins))
 	for _, plugin := range plugins {
-		views = append(views, plugin.OwnerView())
+		views = append(views, a.ownerView(plugin))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"plugins": views, "total": total})
 }
@@ -304,13 +334,13 @@ func (a *API) myRefresh(w http.ResponseWriter, r *http.Request) {
 	if a.rateLimited(w, r, "refresh:"+account.ID) {
 		return
 	}
-	updated, err := RefreshOne(r.Context(), a.Store, a.Fetcher, plugin)
+	updated, err := a.RefreshOne(r.Context(), plugin)
 	if err != nil {
 		// 502, because the failure is the vendor's host, not this request.
 		writeError(w, http.StatusBadGateway, "refresh_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"plugin": updated.OwnerView()})
+	writeJSON(w, http.StatusOK, map[string]any{"plugin": a.ownerView(updated)})
 }
 
 func (a *API) myWithdraw(w http.ResponseWriter, r *http.Request) {

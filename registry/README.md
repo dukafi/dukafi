@@ -1,16 +1,16 @@
 # Dukafi plugin registry
 
-A catalogue, not a host.
+A catalogue that also hosts public plugin archives.
 
 An author signs up, serves a **manifest** at a URL they control, and submits
-that URL. The registry fetches it, validates it, and — once approved — lists it
-so stores can browse. Files never pass through this service, and neither does
-any money: a paid plugin is bought from its vendor and downloaded against a
-licence key the vendor issues.
+that URL. The registry fetches it, copies the public gzip into **Railway
+Storage** (an S3-compatible bucket on the same project; a local directory when
+no bucket is configured), and — once approved — lists it so stores can browse
+and download from **us**. Licensed plugins stay with their vendor: we never
+see those files, and never take money.
 
-That is deliberate. It keeps the registry cheap to run, keeps us out of the
-middle of somebody else's customer relationship, and means shipping a new
-version is something an author does on their own server without telling us.
+See [SECURITY.md](SECURITY.md) for the threat model, ingest checks, and rate
+limits.
 
     go build ./...
     ./registry -addr :8080 -db registry.sqlite3 -admin-email you@yourdomain.com
@@ -21,15 +21,43 @@ version is something an author does on their own server without telling us.
 | `-db` | `REGISTRY_DB` | `registry.sqlite3` |
 | `-admin-email` | `REGISTRY_ADMIN_EMAIL` | *(unset — nobody can approve)* |
 | `-admin-token` | `REGISTRY_ADMIN_TOKEN` | *(unset)* |
+| `-public-url` | `REGISTRY_PUBLIC_URL` | `https://registry.dukafi.dev` |
 | `-allowed-origins` | `REGISTRY_ALLOWED_ORIGINS` | `https://dukafi.dev` |
 | `-refresh-every` | `REGISTRY_REFRESH_EVERY` | `6h` |
 | `-submissions-per-hour` | `REGISTRY_SUBMISSIONS_PER_HOUR` | `10` |
+| `-downloads-per-hour` | `REGISTRY_DOWNLOADS_PER_HOUR` | `60` |
 | `-requests-per-minute` | `REGISTRY_REQUESTS_PER_MINUTE` | `120` |
 | `-burst` | `REGISTRY_BURST` | `40` |
 | `-rate-limit-keys` | `REGISTRY_RATE_LIMIT_KEYS` | `50000` |
 | `-trust-proxy` | `REGISTRY_TRUST_PROXY=1` | off |
 | `-insecure` | `REGISTRY_INSECURE=1` | off |
 | `-health-check` | — | off |
+
+## Where the archives live
+
+Production uses a [Railway Storage Bucket](https://docs.railway.com/storage-buckets)
+on the registry's project canvas. Add a Bucket, then **Add variable reference**
+and take Railway's names as they come — that is what this process reads:
+
+| Variable | What it is |
+|---|---|
+| `BUCKET` | S3 bucket name |
+| `ACCESS_KEY_ID` | Access key |
+| `SECRET_ACCESS_KEY` | Secret |
+| `ENDPOINT` | `https://storage.railway.app` |
+| `REGION` | usually `auto` |
+
+`RAILWAY_BUCKET_*` / `RAILWAY_PROJECT_*` / `RAILWAY_ENVIRONMENT_*` are
+metadata from the same inject; they are unused. The AWS SDK names
+(`AWS_ACCESS_KEY_ID`, …) still work if you used that preset instead.
+
+Objects are `plugins/{id}/{sha256}.tar.gz`. The bucket is private — stores
+still hit `GET /v1/plugins/{id}/download` on this service, which is what
+keeps pending and licensed listings from leaking. SQLite stays on the
+volume; only the gzip goes in the bucket.
+
+If none of those bucket variables are set, archives are written next to the
+database (`{db}/../plugins`). That is for `go run` on a laptop.
 
 `-insecure` allows `http://` and private addresses. It is for pointing the
 registry at a manifest on your own machine, and it turns off the SSRF guard —
@@ -79,8 +107,12 @@ and a store's plugin browser opens with a handful at once. This is here to stop
 a flood, not to meter ordinary use.
 
 **In SQLite, per hour, for the expensive and the sensitive.** Publishing,
-refreshing, signing up, and *failed* logins. These have to survive a restart or
-a restart is the bypass — and a crash is something an attacker can cause.
+refreshing, signing up, *failed* logins, and **archive downloads**. These have
+to survive a restart or a restart is the bypass — and a crash is something an
+attacker can cause. Downloads are capped separately because serving 5 MB is
+not the same cost as answering a JSON list; the default is 60/hour per
+address, which is plenty for a store installing plugins and not enough to
+empty a bandwidth budget. The full table is in [SECURITY.md](SECURITY.md).
 
 A **successful** login costs nothing. Counting it would lock an office behind
 one NAT address out of their own accounts by lunchtime, while doing nothing
@@ -126,7 +158,9 @@ The image is `FROM scratch`: a static Go binary, a CA bundle, and nothing
 else. No shell, no package manager, no libc — a service that fetches URLs
 strangers choose should contain as little as possible. It runs as uid 65532.
 
-`/data` holds the catalogue database and is the only state the service has.
+`/data` holds the catalogue database. Public archives live in the Railway
+bucket when one is configured; otherwise they sit in `/data/plugins` next to
+the database.
 The image ships an empty `/data` owned by 65532 so a **named or anonymous
 volume inherits that ownership** and the first boot can create the file. A
 **bind mount** takes the host directory's ownership instead, so that one needs
@@ -180,9 +214,9 @@ refused rather than silently swapping what every store has installed.
 `content`, `media`, `integrations`, `other`. A fixed list, because a browsable
 catalogue where everyone invents their own category is not browsable.
 
-`sha256` is **required** for a public download. Without it a store installing
-the archive trusts the host completely and cannot tell the vendor's file from
-one substituted after the fact.
+`sha256` is **required** for a public download. The registry fetches that
+archive, checks the hash, and keeps a copy. Stores install from
+`GET /v1/plugins/{id}/download` on this host, and hash the bytes again.
 
 Omitting `pricing` means free. Omitting `distribution.type` with a
 `downloadUrl` present means public. Most manifests are that simple.
@@ -220,9 +254,10 @@ manifest, because a licensed archive may be minted per customer.
 attempting an update, so an expired licence is reported as an expired licence
 rather than a failed download.
 
-The registry holds no keys, proxies no files, and cannot see who bought what.
-Entitlement, refunds, seat limits and expiry are entirely the vendor's — which
-is the only arrangement that scales past plugins we wrote ourselves.
+The registry holds no keys, proxies no **licensed** files, and cannot see who
+bought what. Public archives are the exception: those we copy and serve, so a
+store does not depend on the author's CDN. Entitlement, refunds, seat limits
+and expiry stay entirely the vendor's.
 
 A **private** plugin — one a vendor restricts to their own users rather than
 selling — is the same mechanism with `pricing.model: "free"` and no
@@ -236,6 +271,7 @@ selling — is the same mechanism with `pricing.model: "free"` and no
 |---|---|
 | `GET /v1/plugins` | approved listings. `?category=`, `?q=`, `?licensed=true\|false`, `?limit=`, `?offset=` |
 | `GET /v1/plugins/{id}` | one listing |
+| `GET /v1/plugins/{id}/download` | the stored public archive (approved only). `X-Checksum-Sha256` on the response |
 | `GET /v1/plugins/{id}/versions` | every version the registry has seen |
 | `GET /v1/categories` | categories with counts |
 | `GET /healthz` | |
@@ -312,7 +348,8 @@ authenticated, and re-authenticating will not help.
 Every live manifest is re-read on a schedule (`-refresh-every`). An author
 ships 1.3.0 to their own host and the catalogue catches up on its own — **no
 re-approval**, because re-approving every point release would make the registry
-useless to both sides.
+useless to both sides. A new checksum is a new copy on disk; the listing is
+not updated until that copy is stored.
 
 Approval is a judgement about a plugin and its author, not about one archive.
 Two things are refused on refresh: a manifest that changes its `id`, and — by
@@ -339,15 +376,19 @@ inside whatever network it runs in. That is the dangerous thing it does, and
 - loopback, private, link-local, multicast, carrier-grade NAT and the TEST-NET
   ranges are all refused, including `169.254.169.254`, the cloud metadata
   service that hands out credentials to anything that can reach it;
-- bodies are capped at 256 KB and every stage is deadlined;
+- bodies are capped (256 KB for a manifest, 5 MB for an archive) and every
+  stage is deadlined;
 - an upstream error never comes back in the response body, because that is how
   an SSRF probe reads its answer.
 
-URLs *inside* a manifest — images, downloads, purchase pages — are checked for
-scheme and literal private addresses but **not resolved**. The registry does
-not fetch them, so resolving would mean a dozen DNS lookups per submission,
-would fail good manifests whenever a resolver was slow, and would prove nothing
-about what DNS says next week when a store actually downloads.
+Public `distribution.downloadUrl` **is** fetched, with those same rules, so
+the registry can keep a copy. Images, purchase pages, and licensed
+`licenseUrl` are checked for scheme and literal private addresses but **not
+resolved** and not fetched. Resolving them would mean extra DNS lookups per
+submission, would fail good manifests whenever a vendor's resolver was slow,
+and would prove nothing about what DNS says next week.
+
+The full threat model is [SECURITY.md](SECURITY.md).
 
 ## Tests
 

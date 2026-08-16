@@ -37,11 +37,15 @@ const (
 	fetchTimeout   = 12 * time.Second
 	maxRedirects   = 3
 	maxManifestLen = 256 * 1024
+	// Same cap a store will accept. A publish that stored more would produce
+	// a listing no merchant could install.
+	maxArchiveLen = 5 * 1024 * 1024
 )
 
 var (
-	ErrBlockedAddress = errors.New("that address is not reachable from the registry")
-	ErrTooLarge       = fmt.Errorf("manifest is larger than %d bytes", maxManifestLen)
+	ErrBlockedAddress  = errors.New("that address is not reachable from the registry")
+	ErrTooLarge        = fmt.Errorf("manifest is larger than %d bytes", maxManifestLen)
+	ErrArchiveTooLarge = fmt.Errorf("archive is larger than %d bytes", maxArchiveLen)
 )
 
 // Fetcher retrieves manifests. An interface so tests can hand the API a
@@ -49,6 +53,12 @@ var (
 // rewrite.
 type Fetcher interface {
 	Fetch(ctx context.Context, manifestURL string) (*Manifest, error)
+}
+
+// ArchiveFetcher retrieves the gzip a public listing points at. The same SSRF
+// rules as Fetch apply: this is still a URL a stranger chose.
+type ArchiveFetcher interface {
+	FetchArchive(ctx context.Context, downloadURL string) ([]byte, error)
 }
 
 type HTTPFetcher struct {
@@ -97,49 +107,9 @@ func NewHTTPFetcher(allowInsecure bool) *HTTPFetcher {
 }
 
 func (f *HTTPFetcher) Fetch(ctx context.Context, manifestURL string) (*Manifest, error) {
-	parsed, err := url.Parse(strings.TrimSpace(manifestURL))
+	body, err := f.get(ctx, manifestURL, maxManifestLen, "application/json", "manifestUrl")
 	if err != nil {
-		return nil, invalid("manifestUrl", "is not a URL")
-	}
-	if err := f.checkRequestURL(parsed); err != nil {
-		return nil, invalid("manifestUrl", err.Error())
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, parsed.String(), nil)
-	if err != nil {
-		return nil, invalid("manifestUrl", "could not be requested")
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "dukafi-registry/1.0 (+https://github.com/dukafi/registry)")
-
-	res, err := f.client.Do(req)
-	if err != nil {
-		// The submitter's own URL failed, so they are told what happened —
-		// but never anything the response body contained, which is how an
-		// SSRF probe reads its answer.
-		if errors.Is(err, ErrBlockedAddress) {
-			return nil, invalid("manifestUrl", ErrBlockedAddress.Error())
-		}
-		return nil, invalid("manifestUrl", "could not be reached")
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, invalid("manifestUrl", fmt.Sprintf("answered %d", res.StatusCode))
-	}
-	if contentType := res.Header.Get("Content-Type"); contentType != "" &&
-		!strings.Contains(strings.ToLower(contentType), "json") {
-		return nil, invalid("manifestUrl", "did not return JSON")
-	}
-
-	// LimitReader + one extra byte, so "exactly at the cap" and "over the cap"
-	// are distinguishable.
-	body, err := io.ReadAll(io.LimitReader(res.Body, maxManifestLen+1))
-	if err != nil {
-		return nil, invalid("manifestUrl", "could not be read")
-	}
-	if len(body) > maxManifestLen {
-		return nil, invalid("manifestUrl", ErrTooLarge.Error())
+		return nil, err
 	}
 
 	var manifest Manifest
@@ -151,6 +121,63 @@ func (f *HTTPFetcher) Fetch(ctx context.Context, manifestURL string) (*Manifest,
 		return nil, err
 	}
 	return &manifest, nil
+}
+
+func (f *HTTPFetcher) FetchArchive(ctx context.Context, downloadURL string) ([]byte, error) {
+	return f.get(ctx, downloadURL, maxArchiveLen, "application/gzip, application/x-gzip, application/octet-stream, */*", "distribution.downloadUrl")
+}
+
+func (f *HTTPFetcher) get(ctx context.Context, rawURL string, maxLen int, accept, field string) ([]byte, error) {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return nil, invalid(field, "is not a URL")
+	}
+	if err := f.checkRequestURL(parsed); err != nil {
+		return nil, invalid(field, err.Error())
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, parsed.String(), nil)
+	if err != nil {
+		return nil, invalid(field, "could not be requested")
+	}
+	req.Header.Set("Accept", accept)
+	req.Header.Set("User-Agent", "dukafi-registry/1.0 (+https://github.com/dukafi/registry)")
+
+	res, err := f.client.Do(req)
+	if err != nil {
+		// The submitter's own URL failed, so they are told what happened —
+		// but never anything the response body contained, which is how an
+		// SSRF probe reads its answer.
+		if errors.Is(err, ErrBlockedAddress) {
+			return nil, invalid(field, ErrBlockedAddress.Error())
+		}
+		return nil, invalid(field, "could not be reached")
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return nil, invalid(field, fmt.Sprintf("answered %d", res.StatusCode))
+	}
+	if field == "manifestUrl" {
+		if contentType := res.Header.Get("Content-Type"); contentType != "" &&
+			!strings.Contains(strings.ToLower(contentType), "json") {
+			return nil, invalid(field, "did not return JSON")
+		}
+	}
+
+	// LimitReader + one extra byte, so "exactly at the cap" and "over the cap"
+	// are distinguishable.
+	body, err := io.ReadAll(io.LimitReader(res.Body, int64(maxLen)+1))
+	if err != nil {
+		return nil, invalid(field, "could not be read")
+	}
+	if len(body) > maxLen {
+		if field == "manifestUrl" {
+			return nil, invalid(field, ErrTooLarge.Error())
+		}
+		return nil, invalid(field, ErrArchiveTooLarge.Error())
+	}
+	return body, nil
 }
 
 func (f *HTTPFetcher) checkRequestURL(parsed *url.URL) error {

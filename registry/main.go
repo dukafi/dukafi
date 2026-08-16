@@ -1,12 +1,9 @@
 // Command registry is the Dukafi plugin registry.
 //
-// It is a CATALOGUE, not a host. A plugin author serves their own manifest at
-// a URL they control and submits that URL here; the registry fetches it,
-// validates it, and — once approved — lists it so stores can browse. The files
-// never pass through this service, and neither does any money: a paid plugin
-// is bought from its vendor and downloaded against a licence key the vendor
-// issues. That keeps the registry cheap to run, and keeps us out of the middle
-// of somebody else's customer relationship.
+// Authors submit a manifest URL. The registry fetches it, copies public
+// archives into Railway Storage (an S3-compatible bucket; local disk when
+// no bucket is configured), and — once approved — lists them so stores can
+// browse and download. Licensed plugins stay with their vendor.
 package main
 
 import (
@@ -26,14 +23,17 @@ import (
 
 func main() {
 	var (
-		addr           = flag.String("addr", envOr("REGISTRY_ADDR", ":8080"), "address to listen on")
-		dbPath         = flag.String("db", envOr("REGISTRY_DB", "registry.sqlite3"), "path to the SQLite database")
+		addr      = flag.String("addr", envOr("REGISTRY_ADDR", ":8080"), "address to listen on")
+		dbPath    = flag.String("db", envOr("REGISTRY_DB", "registry.sqlite3"), "path to the SQLite database")
+		publicURL = flag.String("public-url", envOr("REGISTRY_PUBLIC_URL", "https://registry.dukafi.dev"),
+			"absolute URL stores use to download hosted archives")
 		adminEmail     = flag.String("admin-email", os.Getenv("REGISTRY_ADMIN_EMAIL"), "the one account allowed to approve plugins; sign up with this address")
 		adminToken     = flag.String("admin-token", os.Getenv("REGISTRY_ADMIN_TOKEN"), "bearer token reaching the same admin endpoints without a browser")
 		allowedOrigins = flag.String("allowed-origins", envOr("REGISTRY_ALLOWED_ORIGINS", "https://dukafi.dev"),
 			"comma-separated browser origins allowed to sign in against this registry")
 		refreshEvery   = flag.Duration("refresh-every", envDuration("REGISTRY_REFRESH_EVERY", 6*time.Hour), "how often to re-read manifests")
 		perHour        = flag.Int("submissions-per-hour", envInt("REGISTRY_SUBMISSIONS_PER_HOUR", defaultSubmissionsPerHour), "publishes, signups and logins allowed per source per hour (durable)")
+		downloadsHour  = flag.Int("downloads-per-hour", envInt("REGISTRY_DOWNLOADS_PER_HOUR", defaultDownloadsPerHour), "archive downloads allowed per source address per hour (durable)")
 		perMinute      = flag.Int("requests-per-minute", envInt("REGISTRY_REQUESTS_PER_MINUTE", defaultRequestsPerMinute), "requests allowed per source address per minute; 0 disables the in-memory limiter")
 		burst          = flag.Int("burst", envInt("REGISTRY_BURST", defaultBurst), "requests one source may make back to back before the per-minute rate applies")
 		maxLimiterKeys = flag.Int("rate-limit-keys", envInt("REGISTRY_RATE_LIMIT_KEYS", defaultRateLimitKeys), "how many source addresses the in-memory limiter will track at once")
@@ -92,9 +92,19 @@ func main() {
 		log.Print("registry: rate limits keyed on the peer address (pass -trust-proxy if behind a proxy)")
 	}
 
+	blobs, blobWhere, err := openBlobStore(*dbPath)
+	if err != nil {
+		log.Fatalf("registry: archives: %v", err)
+	}
+	log.Printf("registry: plugin archives on %s", blobWhere)
+
+	fetcher := NewHTTPFetcher(*allowInsecure)
 	api := &API{
 		Store:              store,
-		Fetcher:            NewHTTPFetcher(*allowInsecure),
+		Fetcher:            fetcher,
+		Archives:           fetcher,
+		Blobs:              blobs,
+		PublicURL:          strings.TrimRight(*publicURL, "/"),
 		AdminEmail:         *adminEmail,
 		AdminToken:         *adminToken,
 		AllowedOrigins:     strings.Split(*allowedOrigins, ","),
@@ -102,6 +112,7 @@ func main() {
 		Limiter:            limiter,
 		TrustProxy:         *trustProxy,
 		SubmissionsPerHour: *perHour,
+		DownloadsPerHour:   *downloadsHour,
 	}
 
 	server := &http.Server{
@@ -118,7 +129,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	go refreshLoop(ctx, store, api.Fetcher, *refreshEvery)
+	go refreshLoop(ctx, api, *refreshEvery)
 
 	go func() {
 		log.Printf("registry: listening on %s (db %s)", *addr, *dbPath)
@@ -136,8 +147,9 @@ func main() {
 
 // refreshLoop re-reads every live manifest on a schedule. This is what makes
 // "updates" work without an author telling us anything: they ship 1.4.0 to
-// their own host and the catalogue catches up on its own.
-func refreshLoop(ctx context.Context, store *Store, fetcher Fetcher, every time.Duration) {
+// their own host and the catalogue catches up on its own — including a new
+// copy of the archive, when the checksum changed.
+func refreshLoop(ctx context.Context, api *API, every time.Duration) {
 	if every <= 0 {
 		log.Print("registry: manifest refresh disabled")
 		return
@@ -152,13 +164,13 @@ func refreshLoop(ctx context.Context, store *Store, fetcher Fetcher, every time.
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			refreshed, failed := RefreshAll(ctx, store, fetcher)
+			refreshed, failed := api.RefreshAll(ctx)
 			// Kept for a week: long enough to see a burst, short enough that
 			// the table does not grow without bound.
-			_ = store.PruneSubmissionAttempts(7 * 24 * time.Hour)
+			_ = api.Store.PruneSubmissionAttempts(7 * 24 * time.Hour)
 			// Expired sessions are rejected on read regardless; this is only
 			// so the table does not grow forever.
-			_ = store.PruneSessions()
+			_ = api.Store.PruneSessions()
 			log.Printf("registry: refreshed %d manifests, %d failed", refreshed, failed)
 		}
 	}

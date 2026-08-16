@@ -17,10 +17,10 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 Dukafi plugin registry — third-party notices
 ============================================
 
-This binary statically links the Go modules below. Their licences (BSD-3
-and MIT) require the copyright and permission notices to be reproduced in
-binary distributions, so the full texts are included here verbatim, and
-this file ships inside the published container image.
+This binary statically links the Go modules below. Their licences require
+the copyright and permission notices to be reproduced in binary
+distributions, so the full texts are included here verbatim, and this file
+ships inside the published container image.
 
 Dukafi's own source is proprietary — see LICENSE. Nothing below changes
 that; these are the terms of the dependencies, not of Dukafi.
