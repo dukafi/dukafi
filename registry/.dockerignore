@@ -1,0 +1,27 @@
+# The build context is this directory, and the image only needs go.mod,
+# go.sum and the sources. Everything below would otherwise be uploaded to the
+# daemon on every build for nothing.
+
+# Locally-built binary — 16 MB, and the image compiles its own anyway. Named
+# exactly `registry` because that is what `go build` in this directory emits;
+# the pattern is anchored so it cannot match the directory itself elsewhere.
+/registry
+
+# The catalogue. This is real data, and a public image must never carry it.
+*.sqlite3
+*.sqlite3-*
+*.db
+
+# Deploy credentials for ./deploy-registry
+.ghcr-token
+
+# Tests are run by CI and by hand, not inside the image build.
+*_test.go
+testdata/
+
+# Not needed to build. LICENSE and THIRD_PARTY_NOTICES are deliberately NOT
+# excluded — the image is required to carry them, and a dropped notice is a
+# licence violation rather than a missing nicety.
+*.md
+.git
+.DS_Store

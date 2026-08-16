@@ -1,0 +1,419 @@
+#!/usr/bin/env bash
+# Build, smoke-test and push the Dukafi plugin registry image to GHCR.
+#
+#   sudo ./deploy-registry --tag 1.0.0      # pushes :1.0.0 and moves :latest
+#   sudo ./deploy-registry --tag @latest    # pushes :latest only
+#   sudo ./deploy-registry --tag 1.1.0-rc1  # prerelease: does NOT move :latest
+#   sudo ./deploy-registry --dry-run        # build + smoke test, push nothing
+#
+# Options
+#   --tag <value>   version to publish. "@latest" means latest only.
+#                   Omitted: derived from `git describe`.
+#   --no-latest     never move :latest, whatever the tag looks like
+#   --platform <p>  target platform(s), default linux/amd64. Comma-separate
+#                   for a multi-arch manifest, e.g. linux/amd64,linux/arm64 —
+#                   that needs a buildx container builder (see below).
+#   --skip-tests    skip `go test ./...` before building (not advised)
+#   --skip-smoke    push without booting the image first (not advised)
+#   --dry-run       do everything except log in and push
+#   -h, --help      this text
+#
+# Token: GHCR needs a CLASSIC personal access token with write:packages
+# (fine-grained tokens cannot write packages). The script looks for it in,
+# in order: $GHCR_TOKEN, $CR_PAT, the file named by $GHCR_TOKEN_FILE,
+# ./.ghcr-token, ../.ghcr-token, or ~/.config/dukafi/ghcr-token belonging to
+# the invoking user. Create one at https://github.com/settings/tokens
+
+set -euo pipefail
+
+# Named for what it is. The directory, the subdomain (registry.dukafi.dev) and
+# the docs all say "registry" already; anything cleverer would need explaining.
+IMAGE="ghcr.io/dukafi/registry"
+REGISTRY="ghcr.io"
+# amd64 by default, matching ../deploy-image and the default buildx builder,
+# which cannot produce a manifest list. The registry is pure Go with no cgo
+# and no runtime downloads, so arm64 is genuinely free here — pass
+# `--platform linux/amd64,linux/arm64` once you have a container builder.
+PLATFORM="linux/amd64"
+SMOKE_CONTAINER="dukafi-registry-smoke-$$"
+
+TAG=""
+MOVE_LATEST="auto"
+DRY_RUN=0
+SKIP_SMOKE=0
+SKIP_TESTS=0
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+RED=$'\033[31m'; GREEN=$'\033[32m'; DIM=$'\033[2m'; OFF=$'\033[0m'
+[ -t 1 ] || { RED=""; GREEN=""; DIM=""; OFF=""; }
+
+say()  { echo "${GREEN}==>${OFF} $*"; }
+note() { echo "${DIM}    $*${OFF}"; }
+die()  { echo "${RED}error:${OFF} $*" >&2; exit 1; }
+
+cleanup() {
+  docker rm -f "$SMOKE_CONTAINER" > /dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+# ── Arguments ────────────────────────────────────────────────────────────────
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    # The `-` guard stops `--tag --dry-run` from silently publishing an image
+    # tagged "--dry-run" instead of doing what was meant.
+    --tag)         [ $# -ge 2 ] && [ "${2#-}" = "$2" ] || die "--tag needs a value"
+                   TAG="$2"; shift 2 ;;
+    --tag=*)       TAG="${1#*=}"; shift ;;
+    --no-latest)   MOVE_LATEST="never"; shift ;;
+    --platform)    [ $# -ge 2 ] && [ "${2#-}" = "$2" ] || die "--platform needs a value"
+                   PLATFORM="$2"; shift 2 ;;
+    --platform=*)  PLATFORM="${1#*=}"; shift ;;
+    --skip-tests)  SKIP_TESTS=1; shift ;;
+    --skip-smoke)  SKIP_SMOKE=1; shift ;;
+    --dry-run)     DRY_RUN=1; shift ;;
+    -h|--help)     sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -*)            die "unknown argument: $1 (try --help)" ;;
+    # A bare version, so `./deploy-registry 1.0.0` works as well as --tag 1.0.0.
+    *)             [ -z "$TAG" ] || die "two versions given: '${TAG}' and '$1'"
+                   TAG="$1"; shift ;;
+  esac
+done
+
+REGISTRY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$REGISTRY_DIR"
+
+# Git, seeing exactly what the invoking user sees.
+#
+# Two things go wrong under sudo, and both make this script disagree with the
+# `git status` you just ran:
+#
+#   · ownership — git refuses to read a repo owned by another user unless the
+#     path is trusted, so safe.directory is set for this command only rather
+#     than mutating anyone's global config.
+#
+#   · HOME — sudo resets it to /root, and git's global ignore file lives at
+#     ~/.config/git/ignore. Losing it makes files YOU have globally ignored
+#     show up as untracked, which read as a dirty tree.
+if [ -n "${SUDO_USER:-}" ]; then
+  USER_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+else
+  USER_HOME="${HOME:-}"
+fi
+
+git_() {
+  if [ -n "$USER_HOME" ]; then
+    HOME="$USER_HOME" git -c safe.directory="*" "$@"
+  else
+    git -c safe.directory="*" "$@"
+  fi
+}
+
+# ── Work out the tags ────────────────────────────────────────────────────────
+#
+# Deliberately ahead of the docker checks: a mistyped tag should say so
+# immediately rather than hiding behind "cannot reach the docker daemon",
+# which is what you hit when testing the invocation without sudo.
+
+LATEST_ONLY=0
+if [ "$TAG" = "@latest" ] || [ "$TAG" = "latest" ]; then
+  LATEST_ONLY=1
+  VERSION="latest"
+elif [ -n "$TAG" ]; then
+  # Accept 1.0.0 and v1.0.0 alike, publish the bare form.
+  VERSION="${TAG#v}"
+else
+  VERSION="$(git_ describe --tags --always --dirty 2>/dev/null || echo dev)"
+  VERSION="${VERSION#v}"
+  note "no --tag given, using ${VERSION} from git"
+fi
+
+[ -n "$VERSION" ] || die "empty tag"
+case "$VERSION" in
+  *[!A-Za-z0-9._-]*) die "tag '${VERSION}' has characters a docker tag cannot hold" ;;
+esac
+
+TAG_ARGS=(--tag "${IMAGE}:${VERSION}")
+PUSHED=("${IMAGE}:${VERSION}")
+
+# :latest should mean "the current stable release", so it moves for a plain
+# version and NOT for a prerelease like 1.1.0-rc1 or a git-describe string.
+if [ "$LATEST_ONLY" -eq 0 ] && [ "$MOVE_LATEST" != "never" ]; then
+  if [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+    TAG_ARGS+=(--tag "${IMAGE}:latest")
+    PUSHED+=("${IMAGE}:latest")
+  else
+    note "'${VERSION}' is not a plain version, so :latest will not be moved"
+  fi
+fi
+
+# ── Refuse to label a dirty tree with a release version ───────────────────────
+#
+# Scoped to registry/ on purpose. This lives in a monorepo alongside the CMS,
+# and a half-finished edit in dukafi-editor/ says nothing about whether THIS
+# component is releasable — checking the whole tree would mean you could
+# effectively never cut a registry release.
+
+DIRTY="$(git_ status --porcelain -- "$REGISTRY_DIR" 2>/dev/null || true)"
+if [ -n "$DIRTY" ] && [ "$DRY_RUN" -eq 0 ]; then
+  if [ "$LATEST_ONLY" -eq 1 ] || [[ "$VERSION" =~ ^[0-9] ]]; then
+    die "registry/ is dirty — a version tag must name a committed tree.
+  Commit or stash first, or use --dry-run to build anyway.
+${DIRTY}"
+  fi
+fi
+
+REVISION="$(git_ rev-parse HEAD 2>/dev/null || echo unknown)"
+BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+# ── Tests ────────────────────────────────────────────────────────────────────
+#
+# Before the build, not after: the SSRF guard in fetch.go is the whole reason
+# this service is safe to point at URLs strangers submit, and it is covered by
+# tests. Publishing an image whose guard regressed is the one failure that
+# cannot be walked back once someone has pulled it.
+
+if [ "$SKIP_TESTS" -eq 1 ]; then
+  note "skipping go test (--skip-tests)"
+elif command -v go > /dev/null 2>&1; then
+  say "go test ./..."
+  # `go` needs a writable cache, and sudo's HOME=/root may not be it.
+  if [ -n "$USER_HOME" ]; then
+    HOME="$USER_HOME" go test ./... || die "tests failed — refusing to build"
+  else
+    go test ./... || die "tests failed — refusing to build"
+  fi
+else
+  note "go is not installed here, skipping tests (the image builds its own)"
+fi
+
+# ── Preflight ────────────────────────────────────────────────────────────────
+
+command -v docker > /dev/null || die "docker is not installed"
+
+if ! docker info > /dev/null 2>&1; then
+  die "cannot reach the docker daemon.
+  Either run this with sudo, or add yourself to the docker group:
+      sudo usermod -aG docker \$USER && newgrp docker"
+fi
+
+docker buildx version > /dev/null 2>&1 || die "docker buildx is required"
+
+# The default buildx builder uses the `docker` driver, which stores one image
+# per tag rather than a manifest list — so it cannot build more than one
+# platform, and says so with a message that does not mention the fix.
+case "$PLATFORM" in
+  *,*)
+    if ! docker buildx inspect 2>/dev/null | grep -qiE '^Driver:[[:space:]]*docker-container'; then
+      die "the current buildx builder cannot build multiple platforms.
+  Create one that can, once:
+      docker buildx create --name dukafi --driver docker-container --use
+      docker run --privileged --rm tonistiigi/binfmt --install arm64
+  Or build a single architecture:
+      ${0##*/} --platform linux/amd64 --tag ${VERSION}"
+    fi
+    ;;
+esac
+
+# ── Token ────────────────────────────────────────────────────────────────────
+
+find_token() {
+  [ -n "${GHCR_TOKEN:-}" ] && { printf '%s' "$GHCR_TOKEN"; return; }
+  [ -n "${CR_PAT:-}" ]     && { printf '%s' "$CR_PAT"; return; }
+
+  local candidates=()
+  [ -n "${GHCR_TOKEN_FILE:-}" ] && candidates+=("$GHCR_TOKEN_FILE")
+  candidates+=("${REGISTRY_DIR}/.ghcr-token")
+  # The monorepo root, so one token file serves both deploy scripts.
+  candidates+=("$(dirname "$REGISTRY_DIR")/.ghcr-token")
+  # sudo resets $HOME, so look up the invoking user's home explicitly.
+  if [ -n "${SUDO_USER:-}" ]; then
+    local home
+    home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+    [ -n "$home" ] && candidates+=("${home}/.config/dukafi/ghcr-token")
+  fi
+  candidates+=("${HOME:-/root}/.config/dukafi/ghcr-token")
+
+  for file in "${candidates[@]}"; do
+    if [ -r "$file" ]; then
+      tr -d '\r\n' < "$file"
+      return
+    fi
+  done
+}
+
+if [ "$DRY_RUN" -eq 0 ]; then
+  TOKEN="$(find_token)"
+  if [ -z "$TOKEN" ]; then
+    # The overwhelmingly common cause: `sudo` dropped the variable.
+    die "no GHCR token found.
+  sudo does not pass environment variables through, so an exported
+  GHCR_TOKEN is invisible here. Either:
+      echo 'ghp_xxx' > ${REGISTRY_DIR}/.ghcr-token && chmod 600 ${REGISTRY_DIR}/.ghcr-token
+  or:
+      sudo -E ./deploy-registry --tag ${VERSION}"
+  fi
+fi
+
+# ── Build ────────────────────────────────────────────────────────────────────
+#
+# The smoke test needs an image in the local daemon, and a multi-platform
+# build cannot `--load` (the daemon holds one image per tag, not a manifest
+# list) — nor could this machine run a foreign architecture anyway. So the
+# smoke build is always the host's own architecture, and the release build
+# below is whatever --platform asked for.
+
+HOST_ARCH="$(docker version --format '{{.Server.Arch}}' 2>/dev/null || echo amd64)"
+SMOKE_TAG="${IMAGE}:smoke-$$"
+
+if [ "$SKIP_SMOKE" -eq 1 ]; then
+  note "skipping smoke test (--skip-smoke)"
+else
+  say "building linux/${HOST_ARCH} for the smoke test"
+  # Host network: `go mod download` talks to proxy.golang.org, and Docker's
+  # bridge NAT is a common source of `connection reset by peer` on that path.
+  docker buildx build \
+    --network host \
+    --platform "linux/${HOST_ARCH}" \
+    --file Dockerfile \
+    --tag "$SMOKE_TAG" \
+    --load \
+    .
+
+  # ── Smoke test ─────────────────────────────────────────────────────────────
+  #
+  # A registry tag is public and effectively permanent, so the image gets
+  # booted before anyone can pull it. Three things are checked, and each has
+  # already broken once:
+  #
+  #   · /healthz answers            — the process started at all
+  #   · /v1/plugins returns JSON    — the SQLite schema applied, which means
+  #                                   uid 65532 could actually create the
+  #                                   database file on a fresh volume
+  #   · the HEALTHCHECK passes      — `scratch` has no shell, so the probe is
+  #                                   the binary probing itself; a typo there
+  #                                   is invisible until an orchestrator
+  #                                   quietly marks every container unhealthy
+  #
+  # An anonymous volume, not a bind mount, precisely so the ownership path
+  # under test is the one a real `docker run` takes.
+
+  SMOKE_PORT="$(shuf -i 20000-29999 -n 1)"
+  say "smoke test: booting on 127.0.0.1:${SMOKE_PORT}"
+
+  docker run -d --name "$SMOKE_CONTAINER" \
+    -e REGISTRY_ADMIN_TOKEN="smoke-test-only-$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')" \
+    -v "/data" \
+    -p "127.0.0.1:${SMOKE_PORT}:8080" \
+    "$SMOKE_TAG" > /dev/null
+
+  base="http://127.0.0.1:${SMOKE_PORT}"
+  healthy=0
+  for _ in $(seq 1 30); do
+    if curl -fsS "${base}/healthz" > /dev/null 2>&1; then
+      healthy=1
+      break
+    fi
+    # A container that has already exited will never become healthy.
+    if [ "$(docker inspect -f '{{.State.Running}}' "$SMOKE_CONTAINER" 2>/dev/null)" != "true" ]; then
+      break
+    fi
+    sleep 1
+  done
+
+  if [ "$healthy" -ne 1 ]; then
+    echo "${RED}--- container log ---${OFF}" >&2
+    docker logs "$SMOKE_CONTAINER" 2>&1 | tail -40 >&2
+    die "image did not become healthy — refusing to push"
+  fi
+  note "/healthz responded"
+
+  CATALOGUE="$(curl -fsS "${base}/v1/plugins" 2>/dev/null || true)"
+  case "$CATALOGUE" in
+    *'"plugins"'*) note "/v1/plugins served the catalogue — schema applied, volume writable" ;;
+    *) echo "${RED}--- container log ---${OFF}" >&2
+       docker logs "$SMOKE_CONTAINER" 2>&1 | tail -40 >&2
+       die "GET /v1/plugins did not return a catalogue (got: ${CATALOGUE:-no response})
+  Usually the database could not be created — check /data ownership." ;;
+  esac
+
+  # The rate limiter must not answer 429 to the healthcheck: an orchestrator
+  # probing on a schedule would kill a container that is working perfectly.
+  # The poll loop above already made dozens of requests, so if the exemption
+  # were broken this would be failing by now — assert it rather than assume it.
+  limited=0
+  for _ in $(seq 1 60); do
+    if [ "$(curl -s -o /dev/null -w '%{http_code}' "${base}/healthz")" = "429" ]; then
+      limited=1
+      break
+    fi
+  done
+  if [ "$limited" -eq 1 ]; then
+    die "the healthcheck endpoint is rate limited — an orchestrator would kill this container"
+  fi
+  note "healthz survived 60 rapid probes without a 429"
+
+  # Docker only runs the HEALTHCHECK on its own schedule, so rather than wait
+  # 30s for the first interval, invoke the same command directly.
+  if docker exec "$SMOKE_CONTAINER" /registry -health-check > /dev/null 2>&1; then
+    note "container HEALTHCHECK probe passed"
+  else
+    die "the image's own HEALTHCHECK probe failed — refusing to push"
+  fi
+
+  docker rm -f "$SMOKE_CONTAINER" > /dev/null 2>&1 || true
+  docker image rm "$SMOKE_TAG" > /dev/null 2>&1 || true
+fi
+
+# ── Publish ──────────────────────────────────────────────────────────────────
+#
+# One buildx invocation that both builds and pushes, so the login has to
+# happen before the release build rather than after it. That is forced by
+# multi-arch — a manifest list has no local form to push separately — and
+# keeping the single-arch path identical means the two do not drift.
+
+if [ "$DRY_RUN" -eq 1 ]; then
+  say "building ${IMAGE}:${VERSION}  (${PLATFORM})"
+  note "revision ${REVISION}"
+  docker buildx build --network host --platform "$PLATFORM" --file Dockerfile "${TAG_ARGS[@]}" .
+  say "dry run complete — nothing pushed"
+  printf '    would push: %s\n' "${PUSHED[@]}"
+  exit 0
+fi
+
+say "logging in to ${REGISTRY}"
+printf '%s' "$TOKEN" | docker login "$REGISTRY" \
+  --username "${GHCR_USER:-dukafi}" --password-stdin > /dev/null
+
+say "building and pushing ${IMAGE}:${VERSION}  (${PLATFORM})"
+note "revision ${REVISION}"
+
+# The IMAGE is public; the source is not. `LicenseRef-` is SPDX's own form
+# for a licence that has no registered identifier, which is the honest answer
+# here — "MIT" was simply wrong and would have told anyone pulling this that
+# they may redistribute the source.
+docker buildx build \
+  --network host \
+  --platform "$PLATFORM" \
+  --file Dockerfile \
+  "${TAG_ARGS[@]}" \
+  --label "org.opencontainers.image.source=https://github.com/dukafi/core" \
+  --label "org.opencontainers.image.revision=${REVISION}" \
+  --label "org.opencontainers.image.version=${VERSION}" \
+  --label "org.opencontainers.image.created=${BUILD_DATE}" \
+  --label "org.opencontainers.image.licenses=LicenseRef-Dukafi-Proprietary" \
+  --label "org.opencontainers.image.title=Dukafi Plugin Registry" \
+  --label "org.opencontainers.image.description=Plugin registry for Dukafi — a catalogue of author-hosted manifests" \
+  --push \
+  .
+
+echo
+say "published"
+printf '    %s\n' "${PUSHED[@]}"
+echo
+note "GHCR packages start PRIVATE. Make it pullable at:"
+note "https://github.com/orgs/dukafi/packages"
+echo
+note "docker run -d -p 8080:8080 -v registry-data:/data \\"
+note "  -e REGISTRY_ADMIN_TOKEN=... ${IMAGE}:${VERSION}"
