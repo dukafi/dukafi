@@ -193,15 +193,14 @@ class AiApiSpec < Minitest::Test
     assert_equal 200, last_response.status
 
     get "/admin/api/cms/plugins"
-
     refute_includes last_response.body, "sk-super-secret"
-    plugin = body.fetch("plugins").find { |item| item.fetch("id") == "ai" }
-    key = plugin.fetch("settings").find { |item| item.fetch("key") == "api_key" }
-    assert_equal true, key.fetch("isSet")
-    assert_nil key.fetch("value")
-    # Non-secret settings still read back, so the form can show them.
-    model = plugin.fetch("settings").find { |item| item.fetch("key") == "model" }
-    assert_equal "gpt-4o-mini", model.fetch("value")
+    refute JSON.parse(last_response.body).fetch("plugins").any? { |item| item.fetch("id") == "ai" }
+
+    get "/admin/api/cms/ai/config"
+    config = JSON.parse(last_response.body)
+    refute_includes last_response.body, "sk-super-secret"
+    assert_equal true, config.fetch("hasKey")
+    assert_equal "gpt-4o-mini", config.fetch("model")
   end
 
   # Submitting the form again with a blank key must not wipe the stored one —

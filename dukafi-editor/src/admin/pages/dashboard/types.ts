@@ -161,6 +161,37 @@ export interface PluginSettingField {
   value: string | null
 }
 
+export interface CataloguePlugin {
+  id: string
+  name: string
+  description: string
+  version: string
+  author: string
+  category: string
+  licensed: boolean
+  installed: boolean
+  purchaseUrl: string
+  homepage: string
+  license: string
+  logo: string
+  images: string[]
+}
+
+export interface CataloguePage {
+  plugins: CataloguePlugin[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface CatalogueQuery {
+  q?: string
+  category?: string
+  licensed?: boolean
+  limit?: number
+  offset?: number
+}
+
 export interface Plugin {
   id: string
   name: string

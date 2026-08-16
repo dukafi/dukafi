@@ -119,6 +119,28 @@
     flex: 1;
 }
 
+.catalogueBrowse {
+    display: grid;
+    gap: var(--space-xl);
+}
+
+.catalogueToolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-l);
+}
+
+.catalogueSearch {
+    flex: 1 1 200px;
+    min-width: 0;
+}
+
+.catalogueFilter {
+    width: 168px;
+    flex: 0 0 168px;
+}
+
 .error {
     margin: 0;
     padding: var(--space-s) var(--space-l);
@@ -131,6 +153,73 @@
 .identity {
     display: grid;
     gap: var(--space-4xs);
+}
+
+.identityRow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    min-width: 0;
+}
+
+.pluginLogo,
+.pluginLogoFallback {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius);
+    flex-shrink: 0;
+    object-fit: cover;
+}
+
+.pluginLogoFallback,
+.pluginLogoFallbackLarge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-2, var(--bg-subtle, #f4f4f5));
+    color: var(--text-subtle);
+    font-weight: 700;
+}
+
+.pluginLogoLarge,
+.pluginLogoFallbackLarge {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius);
+    flex-shrink: 0;
+    object-fit: cover;
+}
+
+.pluginName {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--text-bright);
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+
+.pluginName:hover {
+    text-decoration: underline;
+}
+
+.pluginDetail {
+    display: grid;
+    gap: var(--space-l);
+}
+
+.pluginShots {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-s);
+}
+
+.pluginShots img {
+    width: 100%;
+    border-radius: var(--radius);
+    object-fit: cover;
 }
 
 .identity strong {
@@ -331,6 +420,16 @@
         max-width: none;
     }
 
+    .catalogueToolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .catalogueFilter {
+        width: 100%;
+        flex: 1 1 auto;
+    }
+
     .pagination {
         flex-wrap: wrap;
         justify-content: flex-start;
@@ -475,6 +574,22 @@
     color: var(--text-subtle);
     font-size: var(--text-s);
     line-height: 1.55;
+}
+
+.checksum {
+    display: grid;
+    gap: var(--space-s);
+}
+
+.checksum code {
+    display: block;
+    padding: var(--space-s) var(--space-m);
+    overflow-wrap: anywhere;
+    color: var(--text-bright);
+    font-size: var(--text-s);
+    font-variant-numeric: tabular-nums;
+    background: var(--overlay-10);
+    border-radius: var(--radius);
 }
 
 /* Commands and tokens are for copying, so they wrap rather than scroll —

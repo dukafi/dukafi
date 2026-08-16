@@ -210,7 +210,11 @@ docker buildx build \
   --label "org.opencontainers.image.revision=${REVISION}" \
   --label "org.opencontainers.image.version=${VERSION}" \
   --label "org.opencontainers.image.created=${BUILD_DATE}" \
-  --label "org.opencontainers.image.licenses=MIT" \
+  # The IMAGE is public; the source is not. `LicenseRef-` is SPDX's own form
+  # for a licence that has no registered identifier, which is the honest answer
+  # here — "MIT" was simply wrong and would have told anyone pulling this that
+  # they may redistribute the source.
+  --label "org.opencontainers.image.licenses=LicenseRef-Dukafi-Proprietary" \
   --label "org.opencontainers.image.title=Dukafi" \
   --label "org.opencontainers.image.description=Self-hosted commerce CMS — SQLite or Postgres" \
   --load \

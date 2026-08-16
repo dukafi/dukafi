@@ -2,7 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      Brand assets live in dukafi-editor/public/, which Vite copies into the
+      build output — so they land under /admin/ alongside the bundle and are
+      served by Roda's `r.public`. Deliberately NOT at the server root: the
+      storefront root belongs to the merchant, and `/favicon.ico` there must
+      keep 404ing so a shopper never sees our mark on someone else's shop
+      (storefront_spec.rb asserts exactly that).
+    -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#9c3d1e" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dukafi</title>
 

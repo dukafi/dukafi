@@ -100,7 +100,7 @@ and does not prevent Puma from starting.
 If the database has no administrator, the editor shows the setup flow. Supply a
 store name, owner email, and password of at least 12 characters.
 
-Alternatively, create/update the owner from the terminal:
+Alternatively, create the owner from the terminal:
 
 ```bash
 cd dukafi
@@ -108,6 +108,39 @@ ADMIN_EMAIL=owner@example.com \
 ADMIN_PASSWORD='replace-with-a-long-password' \
 bundle exec ruby scripts/seed_admin.rb
 ```
+
+Note that `seed_admin.rb` takes the password as an environment variable, which
+lands in your shell history. It is fine for seeding a throwaway development
+box; it is the wrong tool for a real store.
+
+### Forgotten password
+
+There is no self-service reset — no email flow, no "forgot password" link. A
+locked-out owner is recovered from a terminal on the machine (or a shell in the
+container), which is the only place that can be trusted without an email
+channel to verify against.
+
+```bash
+cd dukafi
+bundle exec ruby scripts/passwd.rb --list          # which accounts exist
+bundle exec ruby scripts/passwd.rb owner@example.com
+bundle exec ruby scripts/passwd.rb owner@example.com --generate
+bundle exec ruby scripts/passwd.rb shopper@example.com --customer
+```
+
+The password is prompted for without echo — never passed as an argument, where
+it would sit in shell history and be visible in `ps` to everyone on the box.
+Pipe it on stdin with `--stdin --force` for scripting.
+
+In a container:
+
+```bash
+docker exec -it dukafi bundle exec ruby scripts/passwd.rb --list
+```
+
+Changing a password does **not** end existing sessions — they are signed
+cookies, not server-side records. After a suspected compromise, rotate
+`SESSION_SECRET` and restart, and revoke any personal access tokens.
 
 Seed the idempotent demo catalog (12 products, variants, and three collections):
 

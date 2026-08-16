@@ -2,7 +2,7 @@ import { useId, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Button } from '@ui/components/Button'
 import { Input } from '@ui/components/Input'
-import { DatabaseSolidIcon } from 'pixel-art-icons/icons/database-solid'
+import { DukafiMark } from '@ui/components/DukafiMark'
 import { LoaderIcon } from 'pixel-art-icons/icons/loader'
 import {
   getCurrentCmsUser,
@@ -149,7 +149,7 @@ export function AdminPreAuthForm({
             />
           ) : (
             <div className={styles.brandIcon} aria-hidden="true">
-              <DatabaseSolidIcon size={16} />
+              <DukafiMark size={18} />
             </div>
           )}
           <span>{brandLabel}</span>

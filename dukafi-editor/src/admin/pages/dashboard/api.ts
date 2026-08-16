@@ -7,7 +7,8 @@
  * just get the updated row back.
  */
 import type {
-  Collection, CommerceSettings, FormSubmission, FormSummary, Order, Plugin, Product, Variant,
+  Collection, CommerceSettings, FormSubmission, FormSummary, Order,
+  CataloguePage, CatalogueQuery, Plugin, Product, Variant,
 } from './types'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -68,6 +69,21 @@ export const commerceApi = {
   // the first ones (payment providers) are configured. Path differs from the
   // rest of this client, hence the explicit leading `../`-style absolute call.
   listPlugins: () => requestAbsolute<{ plugins: Plugin[] }>('/admin/api/cms/plugins'),
+  listCatalogue: (query: CatalogueQuery = {}) => {
+    const params = new URLSearchParams()
+    const q = query.q?.trim()
+    if (q) params.set('q', q)
+    if (query.category) params.set('category', query.category)
+    if (query.licensed === true || query.licensed === false) params.set('licensed', String(query.licensed))
+    params.set('limit', String(query.limit ?? 25))
+    params.set('offset', String(query.offset ?? 0))
+    return requestAbsolute<CataloguePage>(`/admin/api/cms/plugins/catalogue?${params}`)
+  },
+  installPlugin: (id: string) =>
+    requestAbsolute<{ plugin: Plugin }>(`/admin/api/cms/plugins/install`, {
+      method: 'POST',
+      body: JSON.stringify({ id }),
+    }),
 
   // Form submissions. The payload is schemaless — the merchant named the
   // fields — so `fields` comes back as whatever arrived rather than a shape
@@ -89,6 +105,29 @@ export const commerceApi = {
       method: 'PUT',
       body: JSON.stringify({ settings }),
     }),
+  deletePlugin: (id: string) =>
+    requestAbsolute<void>(`/admin/api/cms/plugins/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  exportPlugin: async (id: string, input: { name: string; version: string }) => {
+    const response = await fetch(`/admin/api/cms/plugins/${encodeURIComponent(id)}/export`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    })
+    if (!response.ok) {
+      const body = await response.json().catch(() => null) as { error?: { message?: string } } | null
+      throw new Error(body?.error?.message || `Request failed (${response.status})`)
+    }
+    const blob = await response.blob()
+    const sha256 = response.headers.get('X-Checksum-Sha256') || ''
+    const disposition = response.headers.get('Content-Disposition')
+    const match = disposition?.match(/filename="([^"]+)"/)
+    return {
+      blob,
+      sha256,
+      filename: match?.[1] || `${id}-${input.version}.tar.gz`,
+    }
+  },
 
   listOrders: () => request<{ orders: Order[] }>('/orders'),
   updateOrderStatus: (id: number, status: string) =>

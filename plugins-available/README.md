@@ -25,7 +25,7 @@ next deploy. Configure it from **Dashboard → Plugins**, or over MCP with
 |---|---|
 | `payhero` | PayHero (Kenya) — M-Pesa STK push. |
 | `fake_payments` | A provider that succeeds or fails on command. For testing a checkout without moving money. |
-| `ai` | Model settings for the editor's AI features. |
+| `ai` | Internal. Model settings for the editor AI panel — not listed under Dashboard → Plugins. |
 
 ## Writing your own
 

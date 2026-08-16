@@ -99,6 +99,15 @@ WORKDIR /app
 COPY dukafi/ ./
 COPY --from=editor /dukafi/public/admin ./public/admin
 COPY --from=editor /sidecar/sidecar.js ./sidecar/sidecar.js
+
+# The editor bundle above is derived from Instatic, which is MIT. MIT requires
+# the copyright and permission notice to travel with "all copies or substantial
+# portions of the Software", and a compiled bundle of it is a substantial
+# portion — so the notice ships in the image, not only in the source tree.
+# Dukafi's own terms are proprietary; that combination is exactly what MIT
+# permits, provided this file is here.
+COPY THIRD_PARTY_NOTICES LICENSE ./
+
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint
 
 # The container starts as root only long enough for the entrypoint to take

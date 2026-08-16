@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="26 34 186 186" role="img" aria-label="Dukafi">
+  <!--
+    The Dukafi mark: a shopping bag whose silhouette is also a lowercase "u"
+    (the letter the mark stands in for in the "dukafi" lockup).
+
+    Hand-authored from the vector source rather than the generated
+    favicon.svg, which was a 900 KB base64 PNG in an <image> tag — no sharper
+    than the .png siblings and forty times the bytes. Three stroked paths at
+    ~700 bytes render crisply at every size a browser asks for.
+
+    The viewBox crops the 240x240 design canvas to the mark's own bounds plus
+    even padding, so at 16px the glyph fills the tab favicon instead of
+    floating in whitespace.
+
+    Terracotta #9c3d1e is the brand accent, but it only carries ~2:1 against a
+    dark tab strip. Browsers honour prefers-color-scheme inside an SVG icon,
+    so the dark variant lightens to ~4:1 rather than smudging.
+  -->
+  <style>
+    .mark { stroke: #9c3d1e; }
+    @media (prefers-color-scheme: dark) {
+      .mark { stroke: #e0794f; }
+    }
+  </style>
+  <g class="mark" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M46 72 L96 72 L100 92 Q103 104 112 104 L128 104 Q137 104 140 92 L144 72 L194 72" stroke-width="15"/>
+    <path d="M98 112 A22 22 0 0 0 142 112" stroke-width="9"/>
+    <path d="M58 84 L76 166 Q82 182 100 182 L140 182 Q158 182 164 166 L182 84" stroke-width="19"/>
+  </g>
+</svg>

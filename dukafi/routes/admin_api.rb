@@ -118,6 +118,14 @@ class AdminApi < Roda
     request.halt([status, { "content-type" => "application/json" }, [JSON.generate(error_payload(code, message))]])
   end
 
+  def catalogue_status(error)
+    case error.code
+    when "plugin_not_found" then 404
+    when "unreachable", "too_many_redirects" then 502
+    else 422
+    end
+  end
+
   def current_admin
     admin_id = session["admin_id"]
     admin_id && Admin[admin_id]
@@ -789,30 +797,67 @@ class AdminApi < Roda
       r.on("plugins") do
         require_admin!
         r.is do
-          r.get do
-            {
-              plugins: Dukafi::Plugins.all.map do |plugin|
-                values = plugin.settings
-                {
-                  id: plugin.id, name: plugin.name, version: plugin.version,
-                  configured: values.configured?,
-                  paymentProviders: plugin.payment_providers.keys,
-                  settings: plugin.settings_schema.map do |setting|
-                    stored = values[setting.key].to_s
-                    {
-                      key: setting.key, label: setting.label, type: setting.type.to_s,
-                      secret: setting.secret,
-                      isSet: !stored.empty?,
-                      value: setting.secret ? nil : stored,
-                    }
-                  end,
-                }
-              end,
-            }
+          r.get { { plugins: Dukafi::Plugins.visible.map(&:to_admin_payload) } }
+        end
+
+        r.get("catalogue") do
+          begin
+            PluginCatalogue.list(
+              q: r.params["q"],
+              category: r.params["category"],
+              licensed: r.params["licensed"],
+              limit: r.params["limit"],
+              offset: r.params["offset"],
+            )
+          rescue PluginCatalogue::Error => error
+            halt_json(catalogue_status(error), error.code, error.message)
+          end
+        end
+
+        r.post("install") do
+          id = r.params["id"].to_s
+          halt_json(422, "id_required", "Which plugin?") if id.strip.empty?
+
+          begin
+            payload = PluginInstaller.call(id)
+            response.status = 201
+            { plugin: payload }
+          rescue PluginCatalogue::Error, PluginInstaller::Error => error
+            halt_json(catalogue_status(error), error.code, error.message)
           end
         end
 
         r.on(String) do |plugin_id|
+          r.post("export") do
+            plugin = Dukafi::Plugins.find_visible(plugin_id) ||
+                     halt_json(404, "plugin_not_found", "Plugin not found")
+            begin
+              archive = PluginPackager.call(
+                plugin,
+                name: r.params["name"] || plugin.name,
+                version: r.params["version"] || plugin.version,
+              )
+            rescue PluginPackager::Error => error
+              halt_json(422, error.code, error.message)
+            end
+
+            # Bypass the json plugin: this is a gzip, not an object. The
+            # checksum is a header rather than a file inside the archive —
+            # including it in the tarball would change the digest.
+            request.halt([
+              200,
+              {
+                "content-type" => "application/gzip",
+                "content-disposition" => %(attachment; filename="#{archive.filename}"),
+                "x-checksum-sha256" => archive.sha256,
+                "x-plugin-id" => archive.id,
+                "x-plugin-name" => archive.name,
+                "x-plugin-version" => archive.version,
+              },
+              [archive.bytes],
+            ])
+          end
+
           plugin = Dukafi::Plugins.find(plugin_id) || halt_json(404, "plugin_not_found", "Plugin not found")
           r.put("settings") do
             submitted = r.params["settings"]
@@ -830,6 +875,17 @@ class AdminApi < Roda
               values[setting.key] = incoming
             end
             { ok: true, configured: values.configured? }
+          end
+
+          r.delete do
+            visible = Dukafi::Plugins.find_visible(plugin_id) ||
+                      halt_json(404, "plugin_not_found", "Plugin not found")
+            begin
+              PluginUninstaller.call(visible)
+            rescue PluginUninstaller::Error => error
+              halt_json(422, error.code, error.message)
+            end
+            no_content!
           end
         end
       end

@@ -41,6 +41,14 @@ class McpPluginsSpec < Minitest::Test
     refute McpTools.write_tool?("list_plugins")
     assert McpTools.write_tool?("configure_plugin"),
            "configure_plugin must count as a write — a read-only agent must not be able to redirect payments"
+    assert McpTools.write_tool?("delete_plugin")
+  end
+
+  def test_the_ai_assistant_is_not_listed
+    ids = call("list_plugins").fetch("plugins").map { |plugin| plugin.fetch("id") }
+
+    refute_includes ids, "ai"
+    assert_includes refusal("list_plugins", { "id" => "ai" }), "list_plugins"
   end
 
   # ── Reading ──────────────────────────────────────────────────────────────

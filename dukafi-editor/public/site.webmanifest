@@ -1,0 +1,24 @@
+{
+  "name": "Dukafi",
+  "short_name": "Dukafi",
+  "description": "Self-hosted commerce CMS — design, catalog, orders and checkout in one server.",
+  "icons": [
+    {
+      "src": "/admin/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/admin/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "theme_color": "#9c3d1e",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/admin/site",
+  "scope": "/admin/"
+}

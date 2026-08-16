@@ -214,6 +214,6 @@ filesystem, or network access from leaking into `dukafi/publisher/`.
 ## Attribution
 
 The visual editing experience is derived from
-[Instatic](https://github.com/corebunch/dukafi), © David Babinec, under the
+[Instatic](https://github.com/CoreBunch/Instatic), © David Babinec, under the
 MIT License. Dukafi reimplements the server contract in Ruby and keeps the
 upstream server copy as read-only reference material.

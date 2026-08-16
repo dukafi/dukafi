@@ -48,6 +48,12 @@ module Paths
     File.expand_path(lookup("PLUGINS_ROOT") || File.join(storage_root, "plugins-installed"))
   end
 
+  # Where this store browses for plugins to install. Public archives are
+  # hosted on the registry; licensed ones still point at the vendor.
+  def registry_url
+    (lookup("REGISTRY_URL") || "https://registry.dukafi.dev").to_s.sub(%r{/\z}, "")
+  end
+
   def storage_root
     File.expand_path(lookup("STORAGE_ROOT") || APP_ROOT)
   end

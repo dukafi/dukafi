@@ -1,11 +1,8 @@
 # The model behind the editor's AI chat.
 #
-# A plugin rather than a new settings table, because the one thing this feature
-# stores that nothing else does is an API KEY, and the plugin settings system
-# already solves exactly that: `secret` values are write-only over HTTP (see
-# `Plugins::Plugin#setting`), the admin form is generated, and the routes and
-# their leak tests already exist. Adding a column to CommerceSettings would have
-# meant a migration, a new route, and a new secret-handling story.
+# Reuses plugin settings for the API key (write-only over HTTP) rather than a
+# new table. It is not a merchant plugin: `hidden` keeps it off Dashboard →
+# Plugins and off MCP `list_plugins`. Configure it from the AI panel.
 #
 # ── One provider shape, deliberately ─────────────────────────────────────────
 # `base_url` + `model` + `api_key` against the OpenAI `/chat/completions` wire
@@ -21,6 +18,7 @@
 Dukafi::Plugins.register("ai") do |p|
   p.name "AI assistant"
   p.version "1.0.0"
+  p.hidden true
   p.setting :base_url, label: "API base URL (e.g. https://api.openai.com/v1)"
   p.setting :model, label: "Model (e.g. gpt-4o-mini, or qwen2.5-coder for Ollama)"
   p.secret :api_key, label: "API key (leave blank for a local model)"

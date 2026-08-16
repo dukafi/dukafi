@@ -22,47 +22,25 @@ require "json"
 # Blank values are ignored rather than treated as "clear it": every caller of
 # a settings form omits what it does not know, and a model echoing back a
 # partial object must not wipe a working token.
+#
+# Hidden plugins (the editor AI assistant) are omitted: they are not merchant
+# plugins and have their own settings UI.
 module McpPluginTools
   module_function
 
   def all
-    [list_plugins, configure_plugin]
+    [list_plugins, configure_plugin, delete_plugin]
   end
 
   READ_TOOLS = %w[list_plugins].freeze
 
   def find!(id)
-    Dukafi::Plugins.find(id.to_s) ||
+    Dukafi::Plugins.find_visible(id.to_s) ||
       raise(McpTools::ArgumentError,
             "No plugin #{id.inspect}. Call list_plugins to see what is installed.")
   end
 
-  def payload(plugin)
-    values = plugin.settings
-    {
-      "id" => plugin.id,
-      "name" => plugin.name,
-      "version" => plugin.version,
-      # True only when EVERY declared setting has a value — what a provider
-      # checks before trying to talk to a third party with half its
-      # credentials.
-      "configured" => values.configured?,
-      "paymentProviders" => plugin.payment_providers.keys,
-      "settings" => plugin.settings_schema.map do |setting|
-        stored = values[setting.key].to_s
-        {
-          "key" => setting.key,
-          "label" => setting.label,
-          "type" => setting.type.to_s,
-          "secret" => setting.secret,
-          "isSet" => !stored.empty?,
-          # Secrets report only that they exist. There is no read path for
-          # their value here, by design.
-          "value" => setting.secret ? nil : stored,
-        }
-      end,
-    }
-  end
+  def payload(plugin) = plugin.to_admin_payload
 
   def list_plugins
     {
@@ -81,7 +59,7 @@ module McpPluginTools
         "additionalProperties" => false,
       },
       run: lambda do |args|
-        plugins = (id = args["id"].to_s).empty? ? Dukafi::Plugins.all : [find!(id)]
+        plugins = (id = args["id"].to_s).empty? ? Dukafi::Plugins.visible : [find!(id)]
         { "plugins" => plugins.map { |plugin| payload(plugin) }, "total" => plugins.length }
       end,
     }
@@ -151,6 +129,35 @@ module McpPluginTools
                       "Updated #{changed.join(', ')}. #{plugin.name} is still missing values."
                     end,
         )
+      end,
+    }
+  end
+
+  def delete_plugin
+    {
+      name: "delete_plugin",
+      title: "Delete a plugin",
+      description: "Uninstall a plugin: remove its files, its settings, and " \
+                   "its registration. Payment providers it registered stop " \
+                   "being offered immediately. This cannot be undone from " \
+                   "the admin — the directory has to be copied back in. " \
+                   "Call list_plugins first.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "id" => { "type" => "string", "description" => "The plugin, e.g. \"payhero\"." },
+        },
+        "required" => %w[id], "additionalProperties" => false,
+      },
+      run: lambda do |args|
+        plugin = find!(args["id"])
+        begin
+          PluginUninstaller.call(plugin)
+        rescue PluginUninstaller::Error => error
+          raise McpTools::ArgumentError, error.message
+        end
+        { "ok" => true, "id" => plugin.id,
+          "note" => "#{plugin.name} was removed. Copy it back into the plugins directory to reinstall." }
       end,
     }
   end

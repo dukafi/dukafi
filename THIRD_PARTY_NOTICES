@@ -1,0 +1,46 @@
+Dukafi — third-party notices
+============================
+
+Dukafi's visual editor (`dukafi-editor/`) is a fork of Instatic. Instatic is
+MIT licensed, which permits this fork and permits Dukafi to be distributed
+under its own terms — on the one condition below, which is why this file
+exists and why it ships inside the container image as well as in the source
+tree.
+
+MIT requires that the copyright notice and the permission notice appear in
+"all copies or substantial portions of the Software". The compiled editor
+bundle in the published image is a substantial portion, so the notice travels
+with it.
+
+
+--------------------------------------------------------------------------
+Instatic
+https://github.com/CoreBunch/Instatic
+
+MIT License
+
+Copyright (c) 2026 David Babinec
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------
+
+Runtime dependencies (Ruby gems, npm packages, HTMX, Tailwind CSS and the
+Tailwind standalone binary) carry their own licences, which travel with those
+packages. This file covers the code Dukafi itself is derived from.

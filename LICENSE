@@ -1,0 +1,26 @@
+Dukafi
+Copyright (c) 2026. All rights reserved.
+
+This source code is proprietary and is NOT open source. No permission is
+granted to copy, modify, merge, publish, distribute, sublicense, or sell any
+part of this repository, or to create derivative works from it.
+
+The published container image (ghcr.io/dukafi/dukafi) is made available for
+public use. That grant covers RUNNING the image. It does not grant any right
+to the source, and it does not grant any right to redistribute, repackage or
+resell the image itself.
+
+Portions of this work are derived from Instatic, © David Babinec, which is MIT
+licensed. That licence permits this derivative and permits it to be
+distributed under the terms above; its notice is retained in
+THIRD_PARTY_NOTICES, which also ships inside the container image.
+
+Contributions, if accepted, are on the understanding that copyright is
+assigned to the project.
+
+---
+
+NOTE: this file states intent plainly, but it is not drafted by a lawyer. If
+Dukafi is sold, licensed to customers, or takes outside investment, have a
+lawyer review these terms — particularly the scope of the image grant — before
+relying on them.

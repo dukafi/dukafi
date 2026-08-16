@@ -1,4 +1,5 @@
 require_relative "../spec_helper"
+require "digest"
 require "rack/test"
 require "tempfile"
 require_relative "../../app"
@@ -228,6 +229,8 @@ class AdminApiSpec < Minitest::Test
     payhero = json.fetch("plugins").find { |p| p.fetch("id") == "payhero" }
     assert_equal false, payhero.fetch("configured")
     assert_includes payhero.fetch("paymentProviders"), "payhero"
+    refute json.fetch("plugins").any? { |p| p.fetch("id") == "ai" },
+           "the AI assistant is not a merchant plugin"
 
     put "/admin/api/cms/plugins/payhero/settings", JSON.generate({
       settings: { "api_token" => "super-secret", "channel_id" => "133",
@@ -273,6 +276,95 @@ class AdminApiSpec < Minitest::Test
     put "/admin/api/cms/plugins/nope/settings", JSON.generate({ settings: {} }),
         "CONTENT_TYPE" => "application/json"
     assert_equal 404, last_response.status
+  end
+
+  def test_plugin_export_returns_the_archive_and_its_checksum
+    setup_and_login
+    post "/admin/api/cms/plugins/payhero/export",
+         JSON.generate({ name: "PayHero (M-Pesa)", version: "1.0.1" }),
+         "CONTENT_TYPE" => "application/json"
+
+    assert_equal 200, last_response.status, last_response.body
+    assert_includes last_response.content_type, "gzip"
+    checksum = last_response.headers.fetch("x-checksum-sha256")
+    assert_match(/\A[a-f0-9]{64}\z/, checksum)
+    assert_equal checksum, Digest::SHA256.hexdigest(last_response.body)
+    assert_equal "\x1f\x8b".b, last_response.body.b[0, 2]
+    assert_includes last_response.headers.fetch("content-disposition"), "payhero-1.0.1.tar.gz"
+  end
+
+  def test_hidden_plugins_cannot_be_exported_or_deleted
+    setup_and_login
+    post "/admin/api/cms/plugins/ai/export",
+         JSON.generate({ name: "AI", version: "1.0.0" }),
+         "CONTENT_TYPE" => "application/json"
+    assert_equal 404, last_response.status
+
+    delete "/admin/api/cms/plugins/ai"
+    assert_equal 404, last_response.status
+    assert Dukafi::Plugins.find("ai")
+  end
+
+  def test_a_plugin_can_be_deleted
+    setup_and_login
+    id = "tmp-del-#{Process.pid}"
+    dir = File.join(Paths.plugins_root, id)
+    FileUtils.mkdir_p(dir)
+    File.write(File.join(dir, "plugin.rb"), "Dukafi::Plugins.register(#{id.dump}) { |p| p.name \"Temp\" }\n")
+    Dukafi::Plugins.register(id) { |p| p.name "Temp"; p.version "0.0.1" }
+    PluginSetting.create(plugin_id: id, key: "x", value: "y", updated_at: Time.now)
+
+    begin
+      delete "/admin/api/cms/plugins/#{id}"
+      assert_equal 204, last_response.status, last_response.body
+      assert_nil Dukafi::Plugins.find(id)
+      refute File.exist?(dir)
+      assert_equal 0, PluginSetting.where(plugin_id: id).count
+    ensure
+      Dukafi::Plugins.unregister(id)
+      FileUtils.rm_rf(dir)
+    end
+  end
+
+  def test_the_catalogue_is_proxied_from_the_registry
+    setup_and_login
+    PluginCatalogue.http = lambda do |_url|
+      JSON.generate("plugins" => [
+        { "id" => "payhero", "name" => "PayHero", "version" => "1.0.0", "licensed" => false },
+        { "id" => "acme", "name" => "Acme", "version" => "9.0.0", "licensed" => true },
+      ], "total" => 2, "limit" => 25, "offset" => 0)
+    end
+
+    get "/admin/api/cms/plugins/catalogue"
+    assert_equal 200, last_response.status, last_response.body
+    rows = json.fetch("plugins")
+    payhero = rows.find { |row| row.fetch("id") == "payhero" }
+    acme = rows.find { |row| row.fetch("id") == "acme" }
+    assert_equal true, payhero.fetch("installed")
+    assert_equal false, acme.fetch("installed")
+    assert_equal true, acme.fetch("licensed")
+    assert_equal 2, json.fetch("total")
+  ensure
+    PluginCatalogue.http = nil
+  end
+
+  def test_the_catalogue_forwards_search_filters_and_page
+    setup_and_login
+    seen = nil
+    PluginCatalogue.http = lambda do |url|
+      seen = url
+      JSON.generate("plugins" => [], "total" => 0, "limit" => 25, "offset" => 25)
+    end
+
+    get "/admin/api/cms/plugins/catalogue?q=hero&category=payments&licensed=false&limit=25&offset=25"
+    assert_equal 200, last_response.status, last_response.body
+    assert_includes seen, "q=hero"
+    assert_includes seen, "category=payments"
+    assert_includes seen, "licensed=false"
+    assert_includes seen, "limit=25"
+    assert_includes seen, "offset=25"
+  ensure
+    PluginCatalogue.http = nil
   end
 
   # Pages created in the editor (New page, or an import) carry a NANOID, not a

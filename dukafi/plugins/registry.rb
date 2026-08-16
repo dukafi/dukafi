@@ -21,6 +21,7 @@ class Dukafi
         @id = id.to_s
         @name = @id
         @version = "0.0.0"
+        @hidden = false
         @settings_schema = []
         @payment_providers = {}
         @payment_provider_meta = {}
@@ -33,6 +34,17 @@ class Dukafi
 
       def version(value = nil)
         value ? @version = value.to_s : @version
+      end
+
+      # Built-in settings storage that is not a merchant plugin — the editor
+      # AI assistant. Hidden plugins stay registered (their settings still
+      # work) but never appear in Dashboard → Plugins or MCP `list_plugins`.
+      def hidden(value = nil)
+        value.nil? ? @hidden : (@hidden = !!value)
+      end
+
+      def hidden?
+        @hidden
       end
 
       # Declares the fields the admin settings form renders. `secret: true`
@@ -79,6 +91,26 @@ class Dukafi
       def settings
         Settings.for(@id)
       end
+
+      # What Dashboard → Plugins and MCP `list_plugins` return. Secrets are
+      # reported as set/not-set, never as their value.
+      def to_admin_payload
+        values = settings
+        {
+          "id" => id, "name" => name, "version" => version,
+          "configured" => values.configured?,
+          "paymentProviders" => payment_providers.keys,
+          "settings" => settings_schema.map do |setting|
+            stored = values[setting.key].to_s
+            {
+              "key" => setting.key, "label" => setting.label, "type" => setting.type.to_s,
+              "secret" => setting.secret,
+              "isSet" => !stored.empty?,
+              "value" => setting.secret ? nil : stored,
+            }
+          end,
+        }
+      end
     end
 
     class << self
@@ -93,13 +125,32 @@ class Dukafi
       end
 
       def all = registry.values
+      def visible = all.reject(&:hidden?)
       def find(id) = registry[id.to_s]
+      def find_visible(id)
+        plugin = find(id)
+        plugin unless plugin&.hidden?
+      end
+
+      def unregister(id)
+        registry.delete(id.to_s)
+      end
+
+      # On-disk directory for an installed plugin. Nil when the id would
+      # climb out of the plugins root — that is a path, not a plugin name.
+      def directory_for(plugin)
+        root = File.expand_path(Paths.plugins_root)
+        dir = File.expand_path(File.join(root, plugin.id.to_s))
+        return nil unless dir.start_with?("#{root}#{File::SEPARATOR}")
+
+        dir
+      end
 
       # Every provider a page may offer RIGHT NOW: registered, and its plugin
       # fully configured. An unconfigured one is left out rather than shown and
       # then refused — a button that cannot work is worse than no button.
       def configured_payment_providers
-        all.flat_map do |plugin|
+        visible.flat_map do |plugin|
           next [] unless plugin.settings.configured?
 
           plugin.payment_providers.keys.map do |slug|

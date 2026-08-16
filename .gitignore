@@ -29,3 +29,12 @@ dukafi-editor/.tmp-lint/
 
 # Sidecar bundle build output
 dukafi-editor/.tmp-sidecar/
+
+# Plugin registry (Go): local build output and its catalogue database.
+# The binary is 16 MB and rebuilt by `go build`; the .sqlite3 is real data.
+/registry/registry
+/registry/*.sqlite3
+/registry/*.sqlite3-*
+
+# GHCR token for ./registry/deploy-registry — never commit this
+registry/.ghcr-token
