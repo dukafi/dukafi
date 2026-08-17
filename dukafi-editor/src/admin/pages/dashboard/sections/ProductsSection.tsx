@@ -33,11 +33,13 @@ import { commerceApi } from '../api'
 import { Pagination } from '../components/Pagination'
 import { RowActionMenu } from '../components/RowActionMenu'
 import type { CommerceData } from '../hooks/useCommerceData'
-import type { Collection, Product, Variant, VariantFormState } from '../types'
+import type { Collection, Plugin, Product, Variant, VariantFormState, CatalogueFieldDef } from '../types'
 import { emptyVariantForm, variantFormFrom } from '../types'
 import styles from '../DashboardPage.module.css'
 
-const STATUS_OPTIONS = [
+function declaredFields(plugins: Plugin[], owner: 'product' | 'variant'): CatalogueFieldDef[] {
+  return plugins.flatMap((plugin) => (owner === 'product' ? plugin.productFields : plugin.variantFields) || [])
+}
   { value: 'draft', label: 'Draft', textValue: 'Draft' },
   { value: 'active', label: 'Active', textValue: 'Active' },
 ]
@@ -64,7 +66,7 @@ function stockSummary(product: Product): number {
 }
 
 export function ProductsSection({ data }: { data: CommerceData }) {
-  const { products, collections, error, setError, refresh } = data
+  const { products, collections, plugins, error, setError, refresh } = data
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
@@ -103,11 +105,16 @@ export function ProductsSection({ data }: { data: CommerceData }) {
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
+    const fields: Record<string, string> = {}
+    for (const def of declaredFields(plugins, 'product')) {
+      fields[def.key] = String(form.get(`fields.${def.key}`) || '')
+    }
     const input = {
       title: String(form.get('title') || ''),
       slug: String(form.get('slug') || ''),
       status: String(form.get('status') || 'draft'),
       descriptionHtml: String(form.get('descriptionHtml') || ''),
+      fields,
     }
     const collectionIds = form.getAll('collectionIds').map((value) => Number(value))
     setBusy(true)
@@ -216,6 +223,7 @@ export function ProductsSection({ data }: { data: CommerceData }) {
           mode={dialogMode}
           product={editingProduct}
           collections={collections}
+          extraFields={declaredFields(plugins, 'product')}
           busy={busy}
           onSave={handleSave}
           onClose={closeDialog}
@@ -225,6 +233,7 @@ export function ProductsSection({ data }: { data: CommerceData }) {
       {variantsProduct && (
         <VariantsDialog
           product={products.find((product) => product.id === variantsProduct.id) ?? variantsProduct}
+          extraFields={declaredFields(plugins, 'variant')}
           refresh={refresh}
           onClose={() => setVariantsProduct(null)}
         />
@@ -270,6 +279,7 @@ function ProductDialog({
   mode,
   product,
   collections,
+  extraFields,
   busy,
   onSave,
   onClose,
@@ -277,6 +287,7 @@ function ProductDialog({
   mode: 'create' | 'edit'
   product: Product | null
   collections: Collection[]
+  extraFields: CatalogueFieldDef[]
   busy: boolean
   onSave: (event: FormEvent<HTMLFormElement>) => void
   onClose: () => void
@@ -338,6 +349,16 @@ function ProductDialog({
         <FormField label="Description" htmlFor="product-description" description="Sanitized semantic HTML, rendered on the product page.">
           <textarea id="product-description" name="descriptionHtml" className={styles.descriptionInput} rows={4} defaultValue={product?.descriptionHtml} />
         </FormField>
+        {extraFields.map((def) => (
+          <FormField key={def.key} label={def.label} htmlFor={`product-field-${def.key}`} description={`From the ${def.pluginId} plugin.`}>
+            <Input
+              id={`product-field-${def.key}`}
+              name={`fields.${def.key}`}
+              type={def.type === 'integer' ? 'number' : 'text'}
+              defaultValue={product?.fields?.[def.key] != null ? String(product.fields[def.key]) : ''}
+            />
+          </FormField>
+        ))}
         <FormField label="Collections" description="Which collection pages this product shows up on.">
           {collections.length === 0 ? (
             <p className={styles.emptyInline}>No collections yet — create one under the Collections tab.</p>
@@ -365,7 +386,12 @@ function ProductDialog({
   )
 }
 
-function VariantsDialog({ product, refresh, onClose }: { product: Product; refresh: () => Promise<void>; onClose: () => void }) {
+function VariantsDialog({ product, extraFields, refresh, onClose }: {
+  product: Product
+  extraFields: CatalogueFieldDef[]
+  refresh: () => Promise<void>
+  onClose: () => void
+}) {
   const [error, setError] = useState<string | null>(null)
   // `null` = listing, `'new'` = creating, a Variant = editing that one.
   // Create and edit share one form, the way ProductDialog does.
@@ -401,6 +427,7 @@ function VariantsDialog({ product, refresh, onClose }: { product: Product; refre
         <VariantForm
           productId={product.id}
           variant={editing === 'new' ? null : editing}
+          extraFields={extraFields}
           nextPosition={product.variants.length}
           onError={setError}
           onDone={() => setEditing(null)}
@@ -497,6 +524,7 @@ function VariantsDialog({ product, refresh, onClose }: { product: Product; refre
 function VariantForm({
   productId,
   variant,
+  extraFields,
   nextPosition,
   onError,
   onDone,
@@ -504,6 +532,7 @@ function VariantForm({
 }: {
   productId: number
   variant: Variant | null
+  extraFields: CatalogueFieldDef[]
   nextPosition: number
   onError: (message: string | null) => void
   onDone: () => void
@@ -529,6 +558,7 @@ function VariantForm({
         priceCents: Number(form.priceCents),
         stock: Number(form.stock),
         position: Number(form.position),
+        fields: form.fields,
       }
       if (variant) {
         await commerceApi.updateVariant(productId, variant.id, input)
@@ -580,6 +610,19 @@ function VariantForm({
           onChange={(event) => update('position', event.currentTarget.value)}
         />
       </FormField>
+      {extraFields.map((def) => (
+        <FormField key={def.key} label={def.label} htmlFor={`variant-field-${def.key}`} description={`From the ${def.pluginId} plugin.`}>
+          <Input
+            id={`variant-field-${def.key}`}
+            type={def.type === 'integer' ? 'number' : 'text'}
+            value={form.fields[def.key] ?? ''}
+            onChange={(event) => setForm((current) => ({
+              ...current,
+              fields: { ...current.fields, [def.key]: event.currentTarget.value },
+            }))}
+          />
+        </FormField>
+      ))}
 
       <div className={styles.dialogFormActions}>
         <Button type="button" variant="secondary" size="sm" onClick={onDone} disabled={busy}>

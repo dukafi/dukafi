@@ -88,6 +88,12 @@
         "label": "Variants",
         "kind": "list",
         "of": "variant"
+      },
+      {
+        "id": "fields",
+        "label": "Extra fields",
+        "kind": "list",
+        "of": "catalogueField"
       }
     ]
   },
@@ -156,6 +162,12 @@
         "kind": "scalar",
         "format": "plain",
         "derived": true
+      },
+      {
+        "id": "fields",
+        "label": "Extra fields",
+        "kind": "list",
+        "of": "catalogueField"
       }
     ]
   },
@@ -832,6 +844,42 @@
       {
         "id": "stock",
         "label": "Stock",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "fields",
+        "label": "Extra fields",
+        "kind": "list",
+        "of": "catalogueField"
+      }
+    ]
+  },
+  "catalogueField": {
+    "id": "catalogueField",
+    "label": "Extra field",
+    "fields": [
+      {
+        "id": "key",
+        "label": "Key",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "label",
+        "label": "Label",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "value",
+        "label": "Value",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "pluginId",
+        "label": "Plugin",
         "kind": "scalar",
         "format": "plain"
       }

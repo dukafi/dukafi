@@ -67,6 +67,8 @@ class CreateOrder
       @cart.update(status: "converted", updated_at: Time.now)
 
       Result.new(order: order, reason: nil, shortages: [])
+    end.tap do |result|
+      Dukafi::Plugins.emit(:"order.created", result.order) if result.ok?
     end
   end
 

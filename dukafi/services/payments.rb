@@ -27,7 +27,7 @@ class Payments
   end
 
   class << self
-    def start(order:, provider_slug:, params: {})
+    def start(order:, provider_slug:, params: {}, amount_cents: nil)
       found = Dukafi::Plugins.payment_provider(provider_slug)
       return failure(nil, "unknown_provider") unless found
 
@@ -39,12 +39,13 @@ class Payments
       # What will ACTUALLY be charged. Some rails can't take arbitrary
       # precision — M-Pesa moves whole shillings — so the provider gets to
       # normalise, and the attempt records the charged figure rather than the
-      # order total. Without this the amount check below would reject every
-      # rounded payment as a mismatch.
+      # order total. A salon deposit or a quote passes amount_cents in; a
+      # cart checkout leaves it nil and we take the order total.
+      raw = amount_cents.nil? ? order.total_cents : Integer(amount_cents)
       charged = if provider.respond_to?(:normalize_amount)
-        provider.normalize_amount(amount_cents: order.total_cents, currency: order.currency, config: config.to_h)
+        provider.normalize_amount(amount_cents: raw, currency: order.currency, config: config.to_h)
       else
-        order.total_cents
+        raw
       end
 
       attempt = PaymentAttempt.create(
@@ -108,6 +109,7 @@ class Payments
           attempt.order.update(status: "paid", updated_at: Time.now)
         end
         Dukafi::Plugins.emit(:payment_succeeded, attempt)
+        Dukafi::Plugins.emit(:"order.paid", attempt.order)
       when :failed
         attempt.update(status: "failed", updated_at: Time.now)
         Dukafi::Plugins.emit(:payment_failed, attempt)

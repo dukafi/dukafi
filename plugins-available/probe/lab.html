@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Plugin lab</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: ui-sans-serif, system-ui, sans-serif;
+      background: #faf8f5; color: #1a1714; line-height: 1.45;
+    }
+    header { padding: 2rem 1.5rem 1rem; border-bottom: 1px solid #e6e0d8; }
+    header p { margin: 0.4rem 0 0; color: #6b635a; max-width: 42rem; }
+    h1 { font-size: 1.6rem; margin: 0; letter-spacing: -0.03em; }
+    main { display: grid; gap: 1rem; padding: 1.25rem; max-width: 72rem; }
+    @media (min-width: 960px) { main { grid-template-columns: 1fr 1fr; } }
+    section {
+      background: #fff; border: 1px solid #e6e0d8; border-radius: 10px; padding: 1rem 1.1rem;
+    }
+    section h2 { font-size: 0.95rem; margin: 0 0 0.35rem; }
+    section .hint { font-size: 0.8rem; color: #6b635a; margin: 0 0 0.8rem; }
+    label { display: block; font-size: 0.75rem; font-weight: 600; margin: 0.5rem 0 0.2rem; }
+    input, textarea, select, button {
+      font: inherit; width: 100%; padding: 0.45rem 0.55rem; border-radius: 6px;
+      border: 1px solid #d4cdc4; background: #fff;
+    }
+    textarea { min-height: 4rem; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    button {
+      margin-top: 0.75rem; background: #1a1714; color: #fff; border: 0; cursor: pointer;
+      font-weight: 600; width: auto;
+    }
+    button.secondary { background: #fff; color: #1a1714; border: 1px solid #d4cdc4; margin-left: 0.4rem; }
+    .out {
+      margin-top: 0.7rem; font-family: ui-monospace, monospace; font-size: 0.75rem;
+      white-space: pre-wrap; background: #f4f0ea; padding: 0.6rem; border-radius: 6px;
+      min-height: 2.4rem;
+    }
+    .logs { grid-column: 1 / -1; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    th, td { text-align: left; padding: 0.4rem 0.35rem; border-bottom: 1px solid #eee; vertical-align: top; }
+    th { color: #6b635a; font-weight: 600; }
+    .kind { font-family: ui-monospace, monospace; font-size: 0.72rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Plugin lab</h1>
+    <p>
+      Every action below hits a store plugin seam. Mail and payment rails are
+      not called — they write to the <code>logs</code> table at the bottom.
+    </p>
+  </header>
+  <main>
+    <section>
+      <h2>1. Form → filter + event</h2>
+      <p class="hint">Submit is stored, then <code>form.submitted</code> logs a would-be email. Use halt@ or the checkbox to test a filter halt.</p>
+      <label>Email</label>
+      <input id="form-email" type="email" value="ada@example.test" />
+      <label>Message</label>
+      <textarea id="form-message">Book a chair at 3pm</textarea>
+      <label><input id="form-halt" type="checkbox" style="width:auto" /> Halt this submit</label>
+      <button type="button" id="form-go">Submit form</button>
+      <div class="out" id="form-out"></div>
+    </section>
+
+    <section>
+      <h2>2. Quote (car finance)</h2>
+      <p class="hint">Server re-runs the quote. The deposit is what would be charged — not the monthly preview.</p>
+      <div class="row">
+        <div><label>Price (cents)</label><input id="q-price" type="number" value="2500000" /></div>
+        <div><label>Deposit (cents)</label><input id="q-deposit" type="number" value="500000" /></div>
+      </div>
+      <div class="row">
+        <div><label>Term (months)</label><input id="q-term" type="number" value="36" /></div>
+        <div><label>Currency</label><input id="q-currency" value="KES" /></div>
+      </div>
+      <button type="button" id="q-go">Quote</button>
+      <div class="out" id="q-out"></div>
+    </section>
+
+    <section>
+      <h2>3. Charge (no rail)</h2>
+      <p class="hint">Resolves amount from preset, form field, or quote, opens an order, logs instead of PayHero. Optionally marks paid to fire <code>order.paid</code>.</p>
+      <label>Subject</label>
+      <select id="c-subject">
+        <option value="preset">preset (fixed cents)</option>
+        <option value="form">form (amount_cents field)</option>
+        <option value="quote">quote (car_finance deposit)</option>
+      </select>
+      <div class="row">
+        <div><label>Preset / form amount (cents)</label><input id="c-amount" type="number" value="200000" /></div>
+        <div><label>Email</label><input id="c-email" type="email" value="buyer@example.test" /></div>
+      </div>
+      <label><input id="c-paid" type="checkbox" style="width:auto" /> Also mark paid (log, no transaction)</label>
+      <button type="button" id="c-go">Charge</button>
+      <div class="out" id="c-out"></div>
+    </section>
+
+    <section>
+      <h2>4. Webhook + job</h2>
+      <p class="hint">Inbound <code>/plugins/probe/webhooks/probe</code>, and the heartbeat job (install/import stand-in).</p>
+      <label>Webhook JSON</label>
+      <textarea id="w-body">{"event":"calendar.slot","id":"slot-1"}</textarea>
+      <button type="button" id="w-go">POST webhook</button>
+      <button type="button" class="secondary" id="j-go">Run heartbeat job</button>
+      <div class="out" id="wj-out"></div>
+    </section>
+
+    <section class="logs">
+      <h2>5. Import WooCommerce (different schema)</h2>
+      <p class="hint">
+        Woo speaks <code>publish</code> + <code>"29.50"</code> + categories.
+        Dukafi speaks <code>active</code> + cents + collections. The plugin maps;
+        the host writes through <code>CommerceWrites</code>. The Woo GET is logged, not fetched.
+      </p>
+      <label>Woo REST products JSON</label>
+      <textarea id="woo-json" style="min-height:10rem"></textarea>
+      <button type="button" id="woo-go">Import</button>
+      <button type="button" class="secondary" id="woo-sample">Load sample</button>
+      <button type="button" class="secondary" id="woo-job">Run import job</button>
+      <div class="out" id="woo-out"></div>
+    </section>
+
+    <section class="logs">
+      <h2>6. Extra product / variant fields</h2>
+      <p class="hint">
+        Core stays title, price, stock. A plugin registers extras — make, origin, mileage —
+        stored on the row, bindable as <code>currentEntry.fields</code> or <code>{currentEntry.origin}</code>.
+      </p>
+      <div class="row">
+        <div><label>Product slug</label><input id="f-slug" value="2018-toyota-axio" /></div>
+        <div><label>Variant SKU (blank = product)</label><input id="f-sku" value="AXIO-001" /></div>
+      </div>
+      <div class="row">
+        <div><label>Origin</label><input id="f-origin" value="Japan" /></div>
+        <div><label>Mileage</label><input id="f-mileage" type="number" value="42000" /></div>
+      </div>
+      <div class="row">
+        <div><label>Make (product)</label><input id="f-make" value="Toyota" /></div>
+        <div><label>Model year (product)</label><input id="f-year" type="number" value="2018" /></div>
+      </div>
+      <button type="button" id="f-variant">Save variant fields</button>
+      <button type="button" class="secondary" id="f-product">Save product fields</button>
+      <div class="out" id="f-out"></div>
+    </section>
+
+    <section class="logs">
+      <h2>Logs table</h2>
+      <p class="hint">Host table <code>plugin_logs</code>. This is the stand-in for SMTP and payment APIs.</p>
+      <button type="button" id="l-go">Refresh</button>
+      <button type="button" class="secondary" id="l-clear">Clear</button>
+      <div style="overflow:auto; margin-top:0.7rem;">
+        <table>
+          <thead><tr><th>When</th><th>Kind</th><th>Message</th></tr></thead>
+          <tbody id="l-body"><tr><td colspan="3">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script>
+    const out = (id, data) => { document.getElementById(id).textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2) }
+    async function post(path, body) {
+      const res = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+      const data = await res.json().catch(() => ({ error: res.statusText }))
+      if (!res.ok) throw Object.assign(new Error(data.error || res.statusText), { data })
+      return data
+    }
+    document.getElementById('form-go').onclick = async () => {
+      try {
+        out('form-out', await post('/plugins/probe/forms', {
+          email: document.getElementById('form-email').value,
+          message: document.getElementById('form-message').value,
+          halt: document.getElementById('form-halt').checked ? '1' : '0',
+        }))
+        loadLogs()
+      } catch (e) { out('form-out', e.data || e.message) }
+    }
+    document.getElementById('q-go').onclick = async () => {
+      try {
+        out('q-out', await post('/plugins/probe/quote', {
+          price_cents: document.getElementById('q-price').value,
+          deposit_cents: document.getElementById('q-deposit').value,
+          term_months: document.getElementById('q-term').value,
+          currency: document.getElementById('q-currency').value,
+        }))
+      } catch (e) { out('q-out', e.data || e.message) }
+    }
+    document.getElementById('c-go').onclick = async () => {
+      const subject = document.getElementById('c-subject').value
+      const amount = document.getElementById('c-amount').value
+      const payload = {
+        subject,
+        email: document.getElementById('c-email').value,
+        mark_paid: document.getElementById('c-paid').checked ? '1' : '0',
+        currency: document.getElementById('q-currency').value,
+        amount_cents: amount,
+        preset_cents: amount,
+        price_cents: document.getElementById('q-price').value,
+        deposit_cents: document.getElementById('q-deposit').value,
+        term_months: document.getElementById('q-term').value,
+      }
+      try { out('c-out', await post('/plugins/probe/charge', payload)); loadLogs() }
+      catch (e) { out('c-out', e.data || e.message) }
+    }
+    document.getElementById('w-go').onclick = async () => {
+      try {
+        out('wj-out', await post('/plugins/probe/webhooks/probe', JSON.parse(document.getElementById('w-body').value || '{}')))
+        loadLogs()
+      } catch (e) { out('wj-out', e.data || e.message) }
+    }
+    document.getElementById('j-go').onclick = async () => {
+      try { out('wj-out', await post('/plugins/probe/jobs/heartbeat', {})); loadLogs() }
+      catch (e) { out('wj-out', e.data || e.message) }
+    }
+    async function loadWooSample() {
+      const res = await fetch('/plugins/probe/import/woo/sample')
+      const data = await res.json()
+      document.getElementById('woo-json').value = JSON.stringify(data.products, null, 2)
+    }
+    document.getElementById('woo-sample').onclick = () => loadWooSample()
+    document.getElementById('woo-go').onclick = async () => {
+      try {
+        const products = JSON.parse(document.getElementById('woo-json').value || '[]')
+        out('woo-out', await post('/plugins/probe/import/woo', { products }))
+        loadLogs()
+      } catch (e) { out('woo-out', e.data || e.message) }
+    }
+    document.getElementById('woo-job').onclick = async () => {
+      try { out('woo-out', await post('/plugins/probe/jobs/woo_import', {})); loadLogs() }
+      catch (e) { out('woo-out', e.data || e.message) }
+    }
+    document.getElementById('f-variant').onclick = async () => {
+      try {
+        out('f-out', await post('/plugins/probe/fields', {
+          slug: document.getElementById('f-slug').value,
+          variantSku: document.getElementById('f-sku').value,
+          fields: {
+            origin: document.getElementById('f-origin').value,
+            mileage: document.getElementById('f-mileage').value,
+          },
+        }))
+        loadLogs()
+      } catch (e) { out('f-out', e.data || e.message) }
+    }
+    document.getElementById('f-product').onclick = async () => {
+      try {
+        out('f-out', await post('/plugins/probe/fields', {
+          slug: document.getElementById('f-slug').value,
+          fields: {
+            make: document.getElementById('f-make').value,
+            model_year: document.getElementById('f-year').value,
+          },
+        }))
+        loadLogs()
+      } catch (e) { out('f-out', e.data || e.message) }
+    }
+    loadWooSample()
+    async function loadLogs() {
+      const res = await fetch('/plugins/probe/logs')
+      const data = await res.json()
+      const body = document.getElementById('l-body')
+      if (!data.logs.length) { body.innerHTML = '<tr><td colspan="3">No rows yet.</td></tr>'; return }
+      body.innerHTML = data.logs.map((row) =>
+        `<tr><td>${row.createdAt || ''}</td><td class="kind">${row.kind}</td><td>${row.message}<br><span class="kind">${JSON.stringify(row.payload)}</span></td></tr>`
+      ).join('')
+    }
+    document.getElementById('l-go').onclick = () => loadLogs()
+    document.getElementById('l-clear').onclick = async () => {
+      await post('/plugins/probe/logs/clear', {})
+      loadLogs()
+    }
+    loadLogs()
+  </script>
+</body>
+</html>

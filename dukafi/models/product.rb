@@ -1,3 +1,5 @@
+require "json"
+
 class Product < Sequel::Model
   extend Sluggable
   def self.slug_fallback = "product"
@@ -6,6 +8,14 @@ class Product < Sequel::Model
   many_to_many :collections, join_table: :collection_products, order: Sequel[:collection_products][:position]
   one_to_many :product_images, order: :position
   many_to_many :media_assets, join_table: :product_images, order: Sequel[:product_images][:position]
+
+  def fields=(value)
+    super(value.is_a?(String) ? value : JSON.generate(value || {}))
+  end
+
+  def fields_data
+    CatalogueFields.parse(fields)
+  end
 
   def validate
     super

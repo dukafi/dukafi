@@ -255,11 +255,15 @@ class AdminApi < Roda
           id: variant.id, sku: variant.sku, title: variant.title,
           priceCents: variant.price_cents, currency: variant.currency,
           stock: variant.stock, position: variant.position,
+          fields: CatalogueFields.hash_for(variant.fields, owner: :variant),
+          fieldList: CatalogueFields.list_for(variant.fields, owner: :variant),
         }
       end,
       images: product.media_assets.map do |asset|
         { id: asset.id, publicPath: "/#{asset.path}", width: asset.width, height: asset.height }
       end,
+      fields: CatalogueFields.hash_for(product.fields, owner: :product),
+      fieldList: CatalogueFields.list_for(product.fields, owner: :product),
     }
   end
 
@@ -321,7 +325,7 @@ class AdminApi < Roda
   # the title, but on EDIT a blank one KEEPS the existing slug rather than
   # regenerating it. Otherwise renaming a product would silently move its live
   # page, and every inbound link would depend on the redirect table catching it.
-  def commerce_product_attributes(params, existing_id: nil, current_slug: nil)
+  def commerce_product_attributes(params, existing_id: nil, current_slug: nil, existing_fields: "{}")
     title = params.fetch("title", "").strip
     submitted = params.fetch("slug", "").strip.downcase
     slug = if !submitted.empty?
@@ -338,10 +342,10 @@ class AdminApi < Roda
       slug: slug,
       status: params.fetch("status", "draft"),
       description_document: RichTextSanitizer.call(params.fetch("descriptionHtml", "")),
-    }
+    }.merge(commerce_fields_attribute(params, existing_fields, :product))
   end
 
-  def commerce_variant_attributes(params)
+  def commerce_variant_attributes(params, existing_fields: "{}")
     {
       sku: params.fetch("sku", "").strip, title: params.fetch("title", "").strip,
       price_cents: Integer(params.fetch("priceCents", 0)),
@@ -350,7 +354,14 @@ class AdminApi < Roda
       # regardless of what a caller posts, so every variant stays consistent.
       currency: CommerceSettings.current.currency,
       stock: Integer(params.fetch("stock", 0)), position: Integer(params.fetch("position", 0)),
-    }
+    }.merge(commerce_fields_attribute(params, existing_fields, :variant))
+  end
+
+  def commerce_fields_attribute(params, existing, owner)
+    incoming = params["fields"]
+    return {} if incoming.nil?
+
+    { fields: CatalogueFields.merge(existing, incoming, owner: owner) }
   end
 
   # Same slug rules as products, and for the same reason: a collection slug
@@ -895,6 +906,7 @@ class AdminApi < Roda
 
       r.on("commerce") do
         require_admin!
+        r.get("fields") { CatalogueFields.schema_payload }
         r.post("import") do
           upload = r.params["file"]
           tempfile = upload.is_a?(Hash) && (upload[:tempfile] || upload["tempfile"])
@@ -913,7 +925,7 @@ class AdminApi < Roda
               product = Product.create(commerce_product_attributes(r.params))
               response.status = 201
               { product: commerce_product_payload(product), rebakedPages: rebake_product(product) }
-            rescue Sequel::ValidationFailed, Sequel::UniqueConstraintViolation => error
+            rescue Sequel::ValidationFailed, Sequel::UniqueConstraintViolation, CatalogueFields::Invalid => error
               halt_json(422, "invalid_product", error.message)
             end
           end
@@ -933,16 +945,16 @@ class AdminApi < Roda
               rebake_product(product)
               response.status = 201
               { variant: commerce_product_payload(product)[:variants].find { |item| item[:id] == variant.id } }
-            rescue Sequel::ValidationFailed, ArgumentError => error
+            rescue Sequel::ValidationFailed, ArgumentError, CatalogueFields::Invalid => error
               halt_json(422, "invalid_variant", error.message)
             end
             r.on("variants", String) do |variant_id|
               variant = product.variants_dataset.first(id: variant_id.to_i) || halt_json(404, "variant_not_found", "Variant not found")
               r.patch do
-                variant.update(commerce_variant_attributes(r.params))
+                variant.update(commerce_variant_attributes(r.params, existing_fields: variant.fields))
                 rebake_product(product)
                 { variant: commerce_product_payload(product)[:variants].find { |item| item[:id] == variant.id } }
-              rescue Sequel::ValidationFailed, ArgumentError => error
+              rescue Sequel::ValidationFailed, ArgumentError, CatalogueFields::Invalid => error
                 halt_json(422, "invalid_variant", error.message)
               end
               r.delete { variant.destroy; rebake_product(product); no_content! }
@@ -951,12 +963,13 @@ class AdminApi < Roda
               old_slug = product.slug
               DB.transaction do
                 product.update(commerce_product_attributes(
-                  r.params, existing_id: product.id, current_slug: product.slug
+                  r.params, existing_id: product.id, current_slug: product.slug,
+                  existing_fields: product.fields
                 ))
                 SlugRedirect.record(resource_type: "product", old_slug:, destination_slug: product.slug)
               end
               { product: commerce_product_payload(product), rebakedPages: rebake_product(product, old_slug:) }
-            rescue Sequel::ValidationFailed, Sequel::UniqueConstraintViolation => error
+            rescue Sequel::ValidationFailed, Sequel::UniqueConstraintViolation, CatalogueFields::Invalid => error
               halt_json(422, "invalid_product", error.message)
             end
             r.put("images") do

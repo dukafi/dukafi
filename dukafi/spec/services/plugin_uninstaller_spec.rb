@@ -22,11 +22,13 @@ class PluginUninstallerSpec < Minitest::Test
 
   def test_removes_files_settings_and_registration
     plugin = install_temp!
+    plugin.storage.collection("woo_products").put("123", { "productId" => 1 })
     PluginUninstaller.call(plugin)
 
     assert_nil Dukafi::Plugins.find(@id)
     refute File.exist?(@dir)
     assert_equal 0, PluginSetting.where(plugin_id: @id).count
+    assert_equal 0, PluginRecord.where(plugin_id: @id).count
   end
 
   def test_the_ai_assistant_cannot_be_uninstalled

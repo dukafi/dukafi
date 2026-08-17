@@ -164,6 +164,29 @@ class PaymentsSpec < Minitest::Test
     refute stored.key?("card_cvv")
   end
 
+  def test_an_explicit_amount_is_what_the_attempt_records_not_the_order_total
+    target = order(total: 27_900)
+    outcome = Payments.start(order: target, provider_slug: "fake", amount_cents: 2_000)
+
+    assert outcome.ok?, outcome.reason
+    assert_equal 2_000, outcome.attempt.amount_cents
+    assert_equal 27_900, target.total_cents
+  end
+
+  def test_a_successful_settle_emits_order_paid
+    seen = []
+    plugin = Dukafi::Plugins.find("fake_payments")
+    handler = ->(order) { seen << order.id }
+    plugin.event_handlers[:"order.paid"] << handler
+
+    attempt = start.attempt
+    callback(attempt)
+
+    assert_equal [attempt.order_id], seen
+  ensure
+    plugin.event_handlers[:"order.paid"].delete(handler)
+  end
+
   def test_plugin_events_fire_without_letting_a_broken_handler_break_checkout
     plugin = Dukafi::Plugins.find("fake_payments")
     seen = []

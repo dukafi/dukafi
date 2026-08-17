@@ -46,7 +46,7 @@ class NoReservedPagePathsSpec < Minitest::Test
   end
 
   # Everything the top-level router claims before Storefront sees it.
-  RESERVED = %w[admin uploads fragments forms payments].freeze
+  RESERVED = %w[admin uploads fragments forms payments plugins].freeze
 
   # Mounted INSIDE the admin block, so they reserve nothing at the site root —
   # but they still show up in a flat scan of app.rb.

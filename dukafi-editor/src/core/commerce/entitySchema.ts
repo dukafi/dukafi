@@ -59,7 +59,7 @@ export interface EntitySchema {
 export type EntityId =
   | 'product' | 'variant' | 'image' | 'imageVariant' | 'collection' | 'cartItem'
   | 'review' | 'star' | 'order' | 'orderLine' | 'payment'
-  | 'paymentProvider' | 'paymentField'
+  | 'paymentProvider' | 'paymentField' | 'catalogueField'
 
 const scalar = (id: string, label: string, format: EntityFieldFormat = 'plain'): EntityScalarField =>
   ({ id, label, kind: 'scalar', format })
@@ -101,6 +101,7 @@ export const COMMERCE_ENTITIES: Record<EntityId, EntitySchema> = {
       ...CART_FACTS,
       list('images', 'Images', 'image'),
       list('variants', 'Variants', 'variant'),
+      list('fields', 'Extra fields', 'catalogueField'),
     ],
   },
 
@@ -117,6 +118,7 @@ export const COMMERCE_ENTITIES: Record<EntityId, EntitySchema> = {
       scalar('position', 'Position'),
       scalar('id', 'ID'),
       ...CART_FACTS,
+      list('fields', 'Extra fields', 'catalogueField'),
     ],
   },
 
@@ -323,6 +325,18 @@ export const COMMERCE_ENTITIES: Record<EntityId, EntitySchema> = {
       scalar('linePriceCents', 'Line total (cents)'),
       scalar('currency', 'Currency'),
       scalar('stock', 'Stock'),
+      list('fields', 'Extra fields', 'catalogueField'),
+    ],
+  },
+
+  catalogueField: {
+    id: 'catalogueField',
+    label: 'Extra field',
+    fields: [
+      scalar('key', 'Key'),
+      scalar('label', 'Label'),
+      scalar('value', 'Value'),
+      scalar('pluginId', 'Plugin'),
     ],
   },
 }

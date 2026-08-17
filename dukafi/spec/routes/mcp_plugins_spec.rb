@@ -39,8 +39,11 @@ class McpPluginsSpec < Minitest::Test
 
   def test_listing_reads_and_configuring_writes
     refute McpTools.write_tool?("list_plugins")
+    refute McpTools.write_tool?("list_catalogue")
     assert McpTools.write_tool?("configure_plugin"),
            "configure_plugin must count as a write — a read-only agent must not be able to redirect payments"
+    assert McpTools.write_tool?("install_plugin")
+    assert McpTools.write_tool?("create_plugin")
     assert McpTools.write_tool?("delete_plugin")
   end
 
@@ -154,5 +157,81 @@ class McpPluginsSpec < Minitest::Test
   def test_an_unknown_plugin_says_how_to_find_one
     assert_includes refusal("configure_plugin", { "id" => "stripe", "settings" => { "x" => "y" } }),
                     "list_plugins"
+  end
+
+  # ── Catalogue, install, create, delete ───────────────────────────────────
+
+  def with_plugin_root
+    previous = ENV["DUKAFI_PLUGINS_ROOT"]
+    root = Dir.mktmpdir("dukafi-mcp-plug-")
+    ENV["DUKAFI_PLUGINS_ROOT"] = root
+    yield root
+  ensure
+    ENV["DUKAFI_PLUGINS_ROOT"] = previous
+    FileUtils.rm_rf(root)
+  end
+
+  def test_list_catalogue_returns_registry_rows
+    PluginCatalogue.http = lambda do |_url|
+      JSON.generate("plugins" => [
+        { "id" => "payhero", "name" => "PayHero", "version" => "1.0.0", "licensed" => false },
+      ], "total" => 1, "limit" => 25, "offset" => 0)
+    end
+
+    rows = call("list_catalogue").fetch("plugins")
+    assert_equal "payhero", rows.first.fetch("id")
+    assert_equal true, rows.first.fetch("installed")
+  ensure
+    PluginCatalogue.http = nil
+  end
+
+  def test_install_plugin_refuses_a_licensed_listing
+    PluginCatalogue.http = lambda do |url|
+      raise "unexpected #{url}" unless url.include?("/v1/plugins/acme")
+
+      JSON.generate("id" => "acme", "licensed" => true,
+                    "distribution" => { "type" => "licensed" })
+    end
+
+    assert_includes refusal("install_plugin", { "id" => "acme" }), "licence"
+  ensure
+    PluginCatalogue.http = nil
+  end
+
+  def test_create_plugin_then_delete_plugin
+    id = "mcp-created-#{Process.pid}"
+    with_plugin_root do
+      created = call("create_plugin", {
+                       "id" => id, "name" => "MCP Created",
+                       "settings" => [{ "key" => "token", "kind" => "secret", "label" => "Token" }],
+                     })
+      assert_equal id, created.fetch("id")
+      assert Dukafi::Plugins.find(id)
+
+      listed = call("list_plugins", { "id" => id }).fetch("plugins").first
+      assert_equal "token", listed.fetch("settings").first.fetch("key")
+
+      removed = call("delete_plugin", { "id" => id })
+      assert_equal true, removed.fetch("ok")
+      assert_equal true, removed.fetch("existed")
+      assert_nil Dukafi::Plugins.find(id)
+    end
+  end
+
+  def test_delete_plugin_succeeds_when_it_is_not_installed
+    result = call("delete_plugin", { "id" => "definitely-missing-#{Process.pid}" })
+
+    assert_equal true, result.fetch("ok")
+    assert_equal false, result.fetch("existed")
+  end
+
+  def test_delete_plugin_will_not_remove_the_ai_assistant
+    assert_includes refusal("delete_plugin", { "id" => "ai" }), "not an installed plugin"
+    assert Dukafi::Plugins.find("ai")
+  end
+
+  def test_create_plugin_refuses_an_id_that_is_already_installed
+    assert_includes refusal("create_plugin", { "id" => "payhero", "name" => "Nope" }),
+                    "already installed"
   end
 end

@@ -29,9 +29,13 @@ class PluginUninstaller
   def call
     raise Error.new("hidden_plugin", "That is not an installed plugin.") if @plugin.hidden?
 
+    @plugin.run_uninstall(purge: false)
+    Dukafi::Plugins.emit(:"plugin.uninstalled", @plugin.id)
+
     dir = Dukafi::Plugins.directory_for(@plugin)
     FileUtils.rm_rf(dir) if dir && File.directory?(dir)
     PluginSetting.where(plugin_id: @plugin.id).delete
+    PluginRecord.where(plugin_id: @plugin.id).delete
     Dukafi::Plugins.unregister(@plugin.id)
     { ok: true, id: @plugin.id }
   end

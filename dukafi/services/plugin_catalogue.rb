@@ -58,6 +58,14 @@ class PluginCatalogue
     row
   end
 
+  # The catalogue row an agent or the admin shows: listing fields plus
+  # whether THIS store already has it. `listing` is the raw registry JSON
+  # the installer needs (download URL, sha256); this is the one to display.
+  def self.detail(id)
+    installed = Dukafi::Plugins.visible.to_h { |plugin| [plugin.id, true] }
+    summarise(listing(id), installed)
+  end
+
   def self.fetch_bytes(url, max_bytes: MAX_ARCHIVE)
     url = url.to_s.strip
     url = "#{Paths.registry_url}#{url}" if url.start_with?("/")

@@ -84,6 +84,9 @@ class PluginInstaller
     plugin = Dukafi::Plugins.find_visible(@id)
     raise Error.new("load_failed", "The plugin loaded but did not register.") unless plugin
 
+    Dukafi::Plugins.ensure_installed!(plugin)
+    plugin.run_activate
+
     plugin.to_admin_payload.merge("note" => "#{plugin.name} is installed. Configure it if it needs settings.")
   end
 

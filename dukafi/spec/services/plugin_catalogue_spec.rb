@@ -62,4 +62,18 @@ class PluginCatalogueSpec < Minitest::Test
     refute_includes seen, "category="
     refute_includes seen, "licensed="
   end
+
+  def test_detail_marks_whether_this_store_already_has_it
+    PluginCatalogue.http = lambda do |url|
+      raise "unexpected #{url}" unless url.end_with?("/v1/plugins/payhero")
+
+      JSON.generate("id" => "payhero", "name" => "PayHero", "version" => "1.0.0",
+                    "licensed" => false, "category" => "payments")
+    end
+
+    row = PluginCatalogue.detail("payhero")
+    assert_equal true, row.fetch("installed")
+    assert_equal "PayHero", row.fetch("name")
+    assert_equal false, row.fetch("licensed")
+  end
 end

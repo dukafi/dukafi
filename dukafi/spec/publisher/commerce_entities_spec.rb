@@ -37,9 +37,11 @@ class CommerceEntitiesSpec < Minitest::Test
       description_document: "<p>Strong</p>", created_at: Time.now, updated_at: Time.now
     )
     Variant.create(product_id: product.id, sku: "BAG-L", title: "Large", price_cents: 13_950,
-                   currency: "USD", stock: 3, position: 0)
+                   currency: "USD", stock: 3, position: 0,
+                   fields: { "probe.origin" => "Kenya" })
     Variant.create(product_id: product.id, sku: "BAG-S", title: "Small", price_cents: 9_900,
                    currency: "USD", stock: 5, position: 1)
+    product.update(fields: { "probe.make" => "Acme" })
     asset = MediaAsset.create(
       path: "uploads/bag.jpg", mime: "image/jpeg", width: 1200, height: 1600,
       # `variants` is a derived reader over the `variants_json` column.

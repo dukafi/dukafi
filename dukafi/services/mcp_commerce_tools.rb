@@ -60,8 +60,10 @@ module McpCommerceTools
           "id" => variant.id, "sku" => variant.sku, "title" => variant.title,
           "priceCents" => variant.price_cents, "currency" => variant.currency,
           "stock" => variant.stock, "position" => variant.position,
+          "fields" => CatalogueFields.hash_for(variant.fields, owner: :variant),
         }
       end,
+      "fields" => CatalogueFields.hash_for(product.fields, owner: :product),
     )
   end
 
@@ -194,6 +196,10 @@ module McpCommerceTools
           "slug" => { "type" => "string", "description" => "Optional; derived from the title if omitted." },
           "status" => { "type" => "string", "enum" => %w[draft active] },
           "descriptionHtml" => { "type" => "string" },
+          "fields" => {
+            "type" => "object",
+            "description" => "Extra attributes a plugin declared (make, origin, mileage, …).",
+          },
         },
         "required" => ["title"], "additionalProperties" => false,
       },
@@ -222,6 +228,10 @@ module McpCommerceTools
           "newSlug" => { "type" => "string", "description" => "Only to move its URL." },
           "status" => { "type" => "string", "enum" => %w[draft active] },
           "descriptionHtml" => { "type" => "string" },
+          "fields" => {
+            "type" => "object",
+            "description" => "Extra product attributes. Merged with what is already stored.",
+          },
         },
         "required" => ["slug"], "additionalProperties" => false,
       },
@@ -235,6 +245,7 @@ module McpCommerceTools
           "status" => args.fetch("status", product.status),
           "descriptionHtml" => args.fetch("descriptionHtml", product.description_document.to_s),
         }
+        params["fields"] = args["fields"] if args.key?("fields")
         product_detail(writing { CommerceWrites.update_product!(product, params) })
       end,
     }
@@ -282,6 +293,10 @@ module McpCommerceTools
           "priceCents" => { "type" => "integer", "minimum" => 0, "description" => "In cents. 1500 = 15.00." },
           "stock" => { "type" => "integer", "minimum" => 0 },
           "position" => { "type" => "integer", "minimum" => 0 },
+          "fields" => {
+            "type" => "object",
+            "description" => "Extra variant attributes a plugin declared (origin, mileage, …).",
+          },
         },
         "required" => %w[productSlug], "additionalProperties" => false,
       },
@@ -299,6 +314,7 @@ module McpCommerceTools
             "stock" => args.fetch("stock", variant.stock),
             "position" => args.fetch("position", variant.position),
           }
+          params["fields"] = args["fields"] if args.key?("fields")
           writing { CommerceWrites.update_variant!(variant, params) }
         else
           writing { CommerceWrites.create_variant!(product, args) }

@@ -62,6 +62,7 @@ class Dukafi < Roda
     r.on("fragments") { r.run Fragments }
     r.on("forms") { r.run Forms }
     r.on("payments") { r.run Payments::Routes }
+    r.on("plugins") { r.run PluginRuntime }
     r.run Storefront
   end
 end

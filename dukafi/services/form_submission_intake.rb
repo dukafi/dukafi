@@ -45,18 +45,25 @@ class FormSubmissionIntake
 
     # A filled honeypot means a bot. Report success anyway: telling it what
     # tripped the trap is how it learns to avoid the trap.
-    return discarded(props) if honeypot_tripped?(props)
-    return discarded(props) unless timing_ok?(props)
+    return discarded(props, "honeypot") if honeypot_tripped?(props)
+    return discarded(props, "too_fast") unless timing_ok?(props)
+
+    fields = clean_payload(props)
+    ctx = PluginFilterContext.new(form_id: @form_id, fields: fields, customer: @customer)
+    Dukafi::Plugins.apply_filters(:"form.submitting", ctx)
+    if ctx.halted?
+      return Result.new(submission: nil, behavior: "message", message: ctx.halt_message,
+                        redirect_url: "", reason: "halted")
+    end
 
     order = resolve_order(props)
     submission = FormSubmission.create(
-      form_id: @form_id, payload: JSON.generate(clean_payload(props)),
+      form_id: @form_id, payload: JSON.generate(fields),
       order_id: order&.id,
-      # An order knows who placed it, so filing against an order files against
-      # that person too — without it the CRM would have orphaned submissions.
       customer_id: order&.customer_id || @customer&.id,
       created_at: Time.now
     )
+    Dukafi::Plugins.emit(:"form.submitted", submission)
     success(props, submission)
   end
 
@@ -127,7 +134,8 @@ class FormSubmissionIntake
   end
 
   # Spam gets the same reply a real submission does — it just isn't stored.
-  def discarded(props)
+  def discarded(props, why)
+    Dukafi::Plugins.emit(:"form.discarded", { "formId" => @form_id, "reason" => why })
     Result.new(
       submission: nil, behavior: behavior(props), message: props["successMessage"].to_s,
       redirect_url: props["redirectUrl"].to_s, reason: nil

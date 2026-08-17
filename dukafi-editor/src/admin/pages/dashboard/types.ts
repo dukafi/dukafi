@@ -22,6 +22,20 @@ export interface RowActionMenuItem {
   onSelect: () => void
 }
 
+export interface CatalogueFieldDef {
+  key: string
+  label: string
+  type: string
+  pluginId: string
+}
+
+export interface CatalogueField {
+  key: string
+  label: string
+  value: string
+  pluginId: string
+}
+
 export interface Variant {
   id: number
   sku: string
@@ -30,6 +44,8 @@ export interface Variant {
   currency: string
   stock: number
   position: number
+  fields: Record<string, string | number | boolean>
+  fieldList: CatalogueField[]
 }
 
 export interface ProductImage {
@@ -47,6 +63,8 @@ export interface Product {
   descriptionHtml: string
   variants: Variant[]
   images: ProductImage[]
+  fields: Record<string, string | number | boolean>
+  fieldList: CatalogueField[]
 }
 
 export interface Collection {
@@ -64,6 +82,7 @@ export interface VariantFormState {
   priceCents: string
   stock: string
   position: string
+  fields: Record<string, string>
 }
 
 export const emptyVariantForm: VariantFormState = {
@@ -72,15 +91,19 @@ export const emptyVariantForm: VariantFormState = {
   priceCents: '0',
   stock: '0',
   position: '0',
+  fields: {},
 }
 
 export function variantFormFrom(variant: Variant): VariantFormState {
+  const fields: Record<string, string> = {}
+  for (const [key, value] of Object.entries(variant.fields || {})) fields[key] = String(value)
   return {
     sku: variant.sku,
     title: variant.title,
     priceCents: String(variant.priceCents),
     stock: String(variant.stock),
     position: String(variant.position),
+    fields,
   }
 }
 
@@ -198,6 +221,8 @@ export interface Plugin {
   version: string
   configured: boolean
   paymentProviders: string[]
+  productFields: CatalogueFieldDef[]
+  variantFields: CatalogueFieldDef[]
   settings: PluginSettingField[]
 }
 

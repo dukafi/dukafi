@@ -55,7 +55,9 @@ class Customer < Sequel::Model
 
     customer = (clean_email && first(email: clean_email)) || (clean_phone && first(phone: clean_phone))
     unless customer
-      return create(email: clean_email, phone: clean_phone, name: name.to_s.strip.empty? ? nil : name.to_s.strip)
+      created = create(email: clean_email, phone: clean_phone, name: name.to_s.strip.empty? ? nil : name.to_s.strip)
+      Dukafi::Plugins.emit(:"customer.created", created)
+      return created
     end
 
     updates = {}

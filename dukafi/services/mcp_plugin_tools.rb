@@ -1,11 +1,15 @@
+require "fileutils"
 require "json"
 
-# Plugin configuration, for an external agent.
+# Plugins, for an external agent: browse the registry, install, scaffold,
+# configure, uninstall.
 #
 # These are the highest-value settings in the store. A payment plugin's token
 # decides WHOSE account customer money lands in, so `configure_plugin` is not
 # an ordinary write — pointing it at someone else's credentials redirects real
-# takings, and nothing downstream would look wrong.
+# takings, and nothing downstream would look wrong. `install_plugin` and
+# `create_plugin` load Ruby on this server; they are the same class of
+# operation as dropping a directory into plugins-installed.
 #
 # Three rules follow from that, and they are the whole design here:
 #
@@ -29,10 +33,10 @@ module McpPluginTools
   module_function
 
   def all
-    [list_plugins, configure_plugin, delete_plugin]
+    [list_plugins, list_catalogue, install_plugin, create_plugin, configure_plugin, delete_plugin]
   end
 
-  READ_TOOLS = %w[list_plugins].freeze
+  READ_TOOLS = %w[list_plugins list_catalogue].freeze
 
   def find!(id)
     Dukafi::Plugins.find_visible(id.to_s) ||
@@ -61,6 +65,136 @@ module McpPluginTools
       run: lambda do |args|
         plugins = (id = args["id"].to_s).empty? ? Dukafi::Plugins.visible : [find!(id)]
         { "plugins" => plugins.map { |plugin| payload(plugin) }, "total" => plugins.length }
+      end,
+    }
+  end
+
+  def list_catalogue
+    {
+      name: "list_catalogue",
+      title: "Browse the plugin registry",
+      description: "Plugins approved on the Dukafi registry that this store " \
+                   "can install. `installed` true means this store already " \
+                   "has that id. Licensed listings cannot be downloaded here " \
+                   "— they have a purchaseUrl. Pass id to read one listing. " \
+                   "Then install_plugin with that id.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "id" => { "type" => "string", "description" => "Just one listing, e.g. \"payhero\"." },
+          "q" => { "type" => "string", "description" => "Search name, id or description." },
+          "category" => {
+            "type" => "string",
+            "enum" => PluginCatalogue::CATEGORIES,
+            "description" => "Filter by category.",
+          },
+          "licensed" => {
+            "type" => "boolean",
+            "description" => "true = licensed only, false = free public downloads only.",
+          },
+          "limit" => {
+            "type" => "integer", "minimum" => 1, "maximum" => PluginCatalogue::MAX_LIMIT,
+            "description" => "How many to return (default #{PluginCatalogue::DEFAULT_LIMIT}).",
+          },
+          "offset" => { "type" => "integer", "minimum" => 0 },
+        },
+        "additionalProperties" => false,
+      },
+      run: lambda do |args|
+        if !(id = args["id"].to_s.strip).empty?
+          row = PluginCatalogue.detail(id)
+          { "plugins" => [row], "total" => 1 }
+        else
+          PluginCatalogue.list(
+            q: args["q"],
+            category: args["category"],
+            licensed: args.key?("licensed") ? args["licensed"] : nil,
+            limit: args["limit"],
+            offset: args["offset"],
+          )
+        end
+      rescue PluginCatalogue::Error => error
+        raise McpTools::ArgumentError, error.message
+      end,
+    }
+  end
+
+  def install_plugin
+    {
+      name: "install_plugin",
+      title: "Install a plugin from the registry",
+      description: "Download a public plugin from the Dukafi registry onto " \
+                   "this store, verify its sha256, and load it. Replaces the " \
+                   "files if that id is already installed (a new version). " \
+                   "Licensed plugins cannot be installed this way — they need " \
+                   "a key from the vendor. Call list_catalogue first. Takes " \
+                   "effect immediately: payment providers it registers appear " \
+                   "on checkout as soon as they are configured.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "id" => { "type" => "string", "description" => "The registry id, e.g. \"payhero\"." },
+        },
+        "required" => %w[id], "additionalProperties" => false,
+      },
+      run: lambda do |args|
+        id = args["id"].to_s.strip
+        raise McpTools::ArgumentError, "Which plugin? Pass id from list_catalogue." if id.empty?
+
+        PluginInstaller.call(id)
+      rescue PluginCatalogue::Error, PluginInstaller::Error => error
+        raise McpTools::ArgumentError, error.message
+      end,
+    }
+  end
+
+  def create_plugin
+    {
+      name: "create_plugin",
+      title: "Create a plugin on this store",
+      description: "Scaffold a new plugin directory and register it. Use this " \
+                   "when the merchant wants a plugin that is not in the " \
+                   "registry — a private integration. Declares name, version " \
+                   "and settings only; it does not run caller-supplied Ruby. " \
+                   "Fails if the id is taken. Call configure_plugin to set " \
+                   "values, or edit plugin.rb on disk to add payment providers.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "id" => {
+            "type" => "string",
+            "description" => "Permanent id. Lowercase letters, numbers, hyphen or underscore.",
+          },
+          "name" => { "type" => "string", "description" => "Shown in the admin plugin list." },
+          "version" => { "type" => "string", "description" => "Defaults to 1.0.0." },
+          "settings" => {
+            "type" => "array",
+            "description" => "Settings the admin form (and configure_plugin) will ask for.",
+            "items" => {
+              "type" => "object",
+              "properties" => {
+                "key" => { "type" => "string", "description" => "e.g. \"api_token\"." },
+                "kind" => {
+                  "type" => "string", "enum" => %w[string integer secret],
+                  "description" => "secret is write-only over the API. Defaults to string.",
+                },
+                "label" => { "type" => "string" },
+              },
+              "required" => %w[key],
+            },
+          },
+        },
+        "required" => %w[id name], "additionalProperties" => false,
+      },
+      run: lambda do |args|
+        PluginScaffolder.call(
+          id: args["id"],
+          name: args["name"],
+          version: args["version"],
+          settings: args["settings"],
+        )
+      rescue PluginScaffolder::Error => error
+        raise McpTools::ArgumentError, error.message
       end,
     }
   end
@@ -139,9 +273,10 @@ module McpPluginTools
       title: "Delete a plugin",
       description: "Uninstall a plugin: remove its files, its settings, and " \
                    "its registration. Payment providers it registered stop " \
-                   "being offered immediately. This cannot be undone from " \
-                   "the admin — the directory has to be copied back in. " \
-                   "Call list_plugins first.",
+                   "being offered immediately. If that id is not installed, " \
+                   "this still succeeds — it is safe to call when you are " \
+                   "not sure the plugin is there. Hidden built-ins cannot " \
+                   "be removed. Reinstall from the registry with install_plugin.",
       input_schema: {
         "type" => "object",
         "properties" => {
@@ -150,14 +285,28 @@ module McpPluginTools
         "required" => %w[id], "additionalProperties" => false,
       },
       run: lambda do |args|
-        plugin = find!(args["id"])
+        id = args["id"].to_s.strip
+        raise McpTools::ArgumentError, "Which plugin?" if id.empty?
+        if Dukafi::Plugins.find(id)&.hidden?
+          raise McpTools::ArgumentError, "That is not an installed plugin."
+        end
+
+        plugin = Dukafi::Plugins.find_visible(id)
+        if plugin.nil?
+          dest = Dukafi::Plugins.directory_for(Dukafi::Plugins::Plugin.new(id))
+          FileUtils.rm_rf(dest) if dest && File.exist?(dest)
+          PluginSetting.where(plugin_id: id).delete
+          return { "ok" => true, "id" => id, "existed" => false,
+                   "note" => "#{id} was not installed." }
+        end
+
         begin
           PluginUninstaller.call(plugin)
         rescue PluginUninstaller::Error => error
           raise McpTools::ArgumentError, error.message
         end
-        { "ok" => true, "id" => plugin.id,
-          "note" => "#{plugin.name} was removed. Copy it back into the plugins directory to reinstall." }
+        { "ok" => true, "id" => plugin.id, "existed" => true,
+          "note" => "#{plugin.name} was removed. Reinstall it with install_plugin." }
       end,
     }
   end

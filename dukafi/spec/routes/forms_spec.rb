@@ -252,6 +252,33 @@ class FormsSpec < Minitest::Test
     assert_nil FormSubmission.first.order_id
   end
 
+  def test_a_plugin_filter_can_halt_a_submit_before_it_is_stored
+    publish!(form_document(form_id: "probe-lab", slug: "lab"))
+
+    post "/forms/probe-lab", { email: "ada@example.test", halt: "1" }, { "HTTP_HX_REQUEST" => "true" }
+
+    assert_equal 422, last_response.status
+    assert_equal "dukafi:form-error", last_response.headers.fetch("hx-trigger")
+    assert_includes last_response.body, "halted"
+    assert_equal 0, FormSubmission.count
+  end
+
+  def test_a_honeypot_discard_emits_form_discarded
+    seen = []
+    plugin = Dukafi::Plugins.find("probe")
+    handler = ->(payload) { seen << payload }
+    plugin.event_handlers[:"form.discarded"] << handler
+    publish!(form_document)
+
+    post "/forms/contact", name: "Ada", company: "spam-bot-was-here"
+
+    assert_equal 1, seen.length
+    assert_equal "contact", seen.first["formId"]
+    assert_equal "honeypot", seen.first["reason"]
+  ensure
+    plugin.event_handlers[:"form.discarded"].delete(handler)
+  end
+
   def test_oversized_submissions_are_capped_rather_than_stored_whole
     publish!(form_document)
 

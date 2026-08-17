@@ -19,6 +19,14 @@ class Forms < Roda
         session_order_token: session["order_token"]
       )
 
+      if result.reason == "halted"
+        response.status = 422
+        response["Content-Type"] = "text/html; charset=utf-8"
+        response["Cache-Control"] = "no-store"
+        response["HX-Trigger"] = "dukafi:form-error"
+        next %(<div class="dukafy-form-message" role="alert">#{CGI.escapeHTML(result.message)}</div>)
+      end
+
       unless result.ok?
         response.status = 404
         response["Content-Type"] = "text/html; charset=utf-8"

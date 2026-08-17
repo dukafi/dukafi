@@ -51,7 +51,7 @@ class CartPayload
 
     product = variant.product
     line_cents = variant.price_cents * item.quantity
-    {
+    entry = {
       # Identity — what the line is
       "productSlug" => product&.slug.to_s,
       "sku" => variant.sku,
@@ -69,7 +69,11 @@ class CartPayload
       "linePriceDisplay" => money(line_cents, variant.currency),
       # Stock is what a "only 2 left" or sold-out treatment binds against
       "stock" => variant.stock,
+      "fields" => CatalogueFields.list_for(product&.fields, owner: :product) +
+                  CatalogueFields.list_for(variant.fields, owner: :variant),
     }
+    CatalogueFields.flatten(entry, product&.fields, owner: :product)
+    CatalogueFields.flatten(entry, variant.fields, owner: :variant)
   end
 
   def summary(entries, lines)

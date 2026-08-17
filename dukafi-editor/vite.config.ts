@@ -318,6 +318,10 @@ export default defineConfig({
         target: CMS_DEV_SERVER_ORIGIN,
         changeOrigin: true,
       },
+      '/plugins': {
+        target: CMS_DEV_SERVER_ORIGIN,
+        changeOrigin: true,
+      },
     },
   },
 })

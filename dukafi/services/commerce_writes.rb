@@ -46,23 +46,28 @@ module CommerceWrites
   end
 
   def create_product!(params)
-    product = Product.create(product_attributes(params))
+    product = Product.create(product_attributes(params).merge(fields_attribute(params, "{}", :product)))
     rebake_product(product)
     product
   rescue Sequel::ValidationFailed => e
+    raise Invalid, e.message
+  rescue CatalogueFields::Invalid => e
     raise Invalid, e.message
   end
 
   def update_product!(product, params)
     old_slug = product.slug
     DB.transaction do
-      product.update(product_attributes(params, existing_id: product.id, current_slug: product.slug))
+      product.update(product_attributes(params, existing_id: product.id, current_slug: product.slug)
+                       .merge(fields_attribute(params, product.fields, :product)))
     end
     # `old_slug` so the bake removes the page at the PREVIOUS path; without it
     # a renamed product leaves its old URL serving stale content forever.
     rebake_product(product, old_slug: old_slug)
     product
   rescue Sequel::ValidationFailed => e
+    raise Invalid, e.message
+  rescue CatalogueFields::Invalid => e
     raise Invalid, e.message
   end
 
@@ -92,18 +97,25 @@ module CommerceWrites
   end
 
   def create_variant!(product, params)
-    variant = Variant.create(variant_attributes(params).merge(product_id: product.id))
+    variant = Variant.create(
+      variant_attributes(params).merge(product_id: product.id)
+                                .merge(fields_attribute(params, "{}", :variant))
+    )
     rebake_product(product)
     variant
   rescue Sequel::ValidationFailed => e
     raise Invalid, e.message
+  rescue CatalogueFields::Invalid => e
+    raise Invalid, e.message
   end
 
   def update_variant!(variant, params)
-    variant.update(variant_attributes(params))
+    variant.update(variant_attributes(params).merge(fields_attribute(params, variant.fields, :variant)))
     rebake_product(variant.product)
     variant
   rescue Sequel::ValidationFailed => e
+    raise Invalid, e.message
+  rescue CatalogueFields::Invalid => e
     raise Invalid, e.message
   end
 
@@ -199,6 +211,11 @@ module CommerceWrites
     known
   end
 
+  def add_product_to_collection!(collection, product)
+    ids = CollectionProduct.where(collection_id: collection.id).select_map(:product_id)
+    set_collection_products!(collection, ids + [product.id])
+  end
+
   # ── Shared ─────────────────────────────────────────────────────────────────
 
   # Published pages are static files, so a catalogue edit that did not re-bake
@@ -219,5 +236,14 @@ module CommerceWrites
   # refusing; a genuinely unparseable value still fails validation below.
   def integer(params, key)
     Integer(params.fetch(key, 0), exception: false) || 0
+  end
+
+  # Omitted `fields` keeps what is already stored. Present `fields` is merged
+  # (namespaced) so a caller can set mileage without resending origin.
+  def fields_attribute(params, existing, owner)
+    incoming = params["fields"] || params[:fields]
+    return {} if incoming.nil?
+
+    { fields: CatalogueFields.merge(existing, incoming, owner: owner) }
   end
 end

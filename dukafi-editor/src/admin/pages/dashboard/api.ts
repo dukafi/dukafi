@@ -42,6 +42,7 @@ export interface ProductInput {
   slug: string
   status: string
   descriptionHtml: string
+  fields?: Record<string, string>
 }
 
 export interface VariantInput {
@@ -50,6 +51,7 @@ export interface VariantInput {
   priceCents: number
   stock: number
   position: number
+  fields?: Record<string, string>
 }
 
 export interface CommerceSettingsInput {

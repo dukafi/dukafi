@@ -1,5 +1,15 @@
+require "json"
+
 class Variant < Sequel::Model
   many_to_one :product
+
+  def fields=(value)
+    super(value.is_a?(String) ? value : JSON.generate(value || {}))
+  end
+
+  def fields_data
+    CatalogueFields.parse(fields)
+  end
 
   def validate
     super

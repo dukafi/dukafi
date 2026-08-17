@@ -18,6 +18,13 @@ import { useEffect, useState } from 'react'
 import type { LoopItem } from '@core/loops/types'
 import { parseLoopSource } from '@core/commerce/loopSource'
 
+interface ApiField {
+  key: string
+  label: string
+  value: string
+  pluginId: string
+}
+
 interface ApiVariant {
   id: number
   sku: string
@@ -26,6 +33,7 @@ interface ApiVariant {
   currency: string
   stock: number
   position: number
+  fieldList?: ApiField[]
 }
 
 interface ApiProduct {
@@ -35,6 +43,7 @@ interface ApiProduct {
   status: string
   variants: ApiVariant[]
   images: Array<{ publicPath: string }>
+  fieldList?: ApiField[]
 }
 
 interface ApiReview {
@@ -56,6 +65,13 @@ function money(cents: number | undefined, currency: string | undefined): string 
   return (currency ?? 'USD') === 'USD' ? `$${amount}` : `${currency} ${amount}`
 }
 
+function extras(list: ApiField[] | undefined): Record<string, unknown> {
+  const rows = list ?? []
+  const flat: Record<string, unknown> = { fields: rows }
+  for (const row of rows) flat[row.key] = row.value
+  return flat
+}
+
 function productEntry(product: ApiProduct): LoopItem {
   const variant = [...product.variants].sort((a, b) => a.position - b.position)[0]
   return {
@@ -69,6 +85,7 @@ function productEntry(product: ApiProduct): LoopItem {
       priceCents: variant?.priceCents ?? 0,
       currency: variant?.currency ?? 'USD',
       priceDisplay: money(variant?.priceCents, variant?.currency),
+      ...extras(product.fieldList),
     },
   }
 }
@@ -85,6 +102,7 @@ function variantEntry(variant: ApiVariant): LoopItem {
       priceDisplay: money(variant.priceCents, variant.currency),
       stock: variant.stock,
       position: variant.position,
+      ...extras(variant.fieldList),
     },
   }
 }
@@ -189,6 +207,7 @@ const CART_SAMPLE: LoopItem = {
     linePriceCents: 2000,
     linePriceDisplay: '$20.00',
     stock: 5,
+    fields: [],
   },
 }
 

@@ -42,6 +42,7 @@ class PluginLoadingSpec < Minitest::Test
 
     assert_includes available, "payhero"
     assert_includes available, "fake_payments"
+    assert_includes available, "probe"
   end
 
   # A broken plugin must not stop a merchant reaching their own admin.

@@ -18,6 +18,7 @@ Dir[File.expand_path("../services/*.rb", __dir__)].sort.each { |f| require f }
 # The plugin SYSTEM is core; the plugins are not.
 require_relative "../plugins/registry"
 require_relative "../plugins/settings"
+require_relative "../plugins/storage"
 
 # Installed plugins, from wherever this deployment keeps them — a mounted
 # volume in a container, a local directory in development. Nothing is bundled:
@@ -31,3 +32,5 @@ Dir[File.join(Paths.plugins_root, "*", "plugin.rb")].sort.each do |file|
 rescue StandardError, LoadError => e
   warn "[plugins] skipped #{file}: #{e.class}: #{e.message}"
 end
+
+Dukafi::Plugins.boot!
