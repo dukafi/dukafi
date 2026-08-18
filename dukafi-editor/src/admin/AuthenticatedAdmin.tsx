@@ -58,6 +58,7 @@ import { canAccessWorkspace, firstAccessibleWorkspace, workspacePath } from './a
 import { Navigate, useInRouterContext } from './lib/routing'
 import { SpotlightRoot } from './spotlight'
 import { prewarmedLazy } from './lib/prewarmedLazy'
+import { DefaultThemePrompt } from './shared/dialogs/DefaultThemePrompt'
 import styles from './AdminEntry.module.css'
 
 // The 10 workspace pages — pre-warmed AND synchronously-renderable once
@@ -241,6 +242,7 @@ export default function AuthenticatedAdmin({ section, currentUser }: Authenticat
           workspace. */}
       <StepUpProvider>
         <SpotlightRoot>
+          <DefaultThemePrompt />
           {/* Suspense catches:
                 - First-visit cold-path of a prewarmedLazy page (it throws
                   the pending import promise the first time). On subsequent

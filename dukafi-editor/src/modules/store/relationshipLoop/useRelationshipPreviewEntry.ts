@@ -62,7 +62,7 @@ interface ApiCollection {
 
 function money(cents: number | undefined, currency: string | undefined): string {
   const amount = ((cents ?? 0) / 100).toFixed(2)
-  return (currency ?? 'USD') === 'USD' ? `$${amount}` : `${currency} ${amount}`
+  return (currency ?? 'KES') === 'USD' ? `$${amount}` : `${currency} ${amount}`
 }
 
 function extras(list: ApiField[] | undefined): Record<string, unknown> {
@@ -83,7 +83,7 @@ function productEntry(product: ApiProduct): LoopItem {
       href: `/products/${product.slug}`,
       imageUrl: product.images[0]?.publicPath ?? '',
       priceCents: variant?.priceCents ?? 0,
-      currency: variant?.currency ?? 'USD',
+      currency: variant?.currency ?? 'KES',
       priceDisplay: money(variant?.priceCents, variant?.currency),
       ...extras(product.fieldList),
     },
@@ -163,23 +163,23 @@ const ORDER_SAMPLE: LoopItem = {
     isAwaitingPayment: false,
     date: '3 August 2026',
     placedAt: '2026-08-03T09:15:00Z',
-    currency: 'USD',
+    currency: 'KES',
     itemCount: 2,
     subtotalCents: 4000,
-    subtotalDisplay: '$40.00',
+    subtotalDisplay: 'KES 40.00',
     discountCents: 400,
-    discountDisplay: '$4.00',
+    discountDisplay: 'KES 4.00',
     discountCode: 'WEEKEND20',
     hasDiscount: true,
     shippingCents: 0,
-    shippingDisplay: '$0.00',
+    shippingDisplay: 'KES 0.00',
     totalCents: 3600,
-    totalDisplay: '$36.00',
+    totalDisplay: 'KES 36.00',
     lines: [
       {
         title: 'Sample product', variantTitle: 'Large', sku: 'SAMPLE-1', quantity: 2,
-        unitPriceCents: 2000, unitPriceDisplay: '$20.00',
-        linePriceCents: 4000, linePriceDisplay: '$40.00',
+        unitPriceCents: 2000, unitPriceDisplay: 'KES 20.00',
+        linePriceCents: 4000, linePriceDisplay: 'KES 40.00',
         productSlug: 'sample-product', href: '/products/sample-product', imageUrl: '',
       },
     ],
@@ -201,11 +201,11 @@ const CART_SAMPLE: LoopItem = {
     href: '/products/sample-product',
     imageUrl: '',
     quantity: 2,
-    currency: 'USD',
+    currency: 'KES',
     unitPriceCents: 1000,
-    unitPriceDisplay: '$10.00',
+    unitPriceDisplay: 'KES 10.00',
     linePriceCents: 2000,
-    linePriceDisplay: '$20.00',
+    linePriceDisplay: 'KES 20.00',
     stock: 5,
     fields: [],
   },

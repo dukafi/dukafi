@@ -131,7 +131,7 @@ function toLocalInput(iso: string | null): string {
 
 export function DiscountsSection({ data }: { data: CommerceData }) {
   const [discounts, setDiscounts] = useState<Discount[]>([])
-  const [currency, setCurrency] = useState('USD')
+  const [currency, setCurrency] = useState('KES')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
   const [dialogMode, setDialogMode] = useState<'create' | 'edit' | null>(null)

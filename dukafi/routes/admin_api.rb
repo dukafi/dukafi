@@ -2,6 +2,7 @@ require "bcrypt"
 require "digest"
 require "fileutils"
 require "json"
+require "base64"
 require "securerandom"
 
 class AdminApi < Roda
@@ -126,7 +127,56 @@ class AdminApi < Roda
 
   def catalogue_status(error)
     case error.code
-    when "plugin_not_found" then 404
+    when "plugin_not_found", "theme_not_found" then 404
+    when "unreachable", "too_many_redirects" then 502
+    else 422
+    end
+  end
+
+  def public_origin
+    configured = ENV["DUKAFI_PUBLIC_ORIGIN"].to_s.strip
+    return configured.sub(%r{/\z}, "") unless configured.empty?
+
+    host = request.env["HTTP_HOST"].to_s
+    scheme = request.env["HTTP_X_FORWARDED_PROTO"].to_s.split(",").first.to_s.strip
+    scheme = request.env["rack.url_scheme"].to_s if scheme.empty?
+    scheme = "http" if scheme.empty?
+    "#{scheme}://#{host}"
+  end
+
+  def theme_upload_bytes
+    upload = request.params["file"]
+    tempfile = upload.is_a?(Hash) && (upload[:tempfile] || upload["tempfile"])
+    return tempfile.read if tempfile
+
+    raw = request.params["archive"].to_s.strip
+    return Base64.strict_decode64(raw.gsub(/\s+/, "")) unless raw.empty?
+
+    nil
+  rescue ArgumentError
+    halt_json(422, "not_a_theme", "The archive is not valid base64.")
+  end
+
+  def theme_inspect_payload(payload)
+    theme = payload["theme"]
+    media = Array(payload["media"])
+    {
+      theme: theme,
+      media: media,
+      contents: theme.is_a?(Hash) ? theme["contents"] : nil,
+    }
+  end
+
+  def theme_include_from_params
+    ThemeExporter::SECTIONS.to_h do |name|
+      value = request.params[name]
+      [name, value.nil? ? true : (value.to_s != "0" && value.to_s.downcase != "false")]
+    end
+  end
+
+  def theme_error_status(error)
+    case error.code
+    when "theme_not_found" then 404
     when "unreachable", "too_many_redirects" then 502
     else 422
     end
@@ -412,7 +462,7 @@ class AdminApi < Roda
 
   def commerce_settings_attributes(params)
     {
-      currency: params.fetch("currency", "USD").to_s.strip.upcase,
+      currency: params.fetch("currency", CommerceSettings::DEFAULT_CURRENCY).to_s.strip.upcase,
       low_stock_threshold: Integer(params.fetch("lowStockThreshold", 5)),
     }
   end
@@ -822,6 +872,80 @@ class AdminApi < Roda
           r.delete do
             token.revoke!
             no_content!
+          end
+        end
+      end
+
+      r.on("themes") do
+        require_admin!
+
+        r.get("export") do
+          payload = ThemeExporter.call(origin: public_origin, include: theme_include_from_params)
+          bytes = ThemeArchive.pack(payload)
+          id = payload.dig("theme", "id").to_s
+          id = "theme" if id.empty?
+          request.halt([
+            200,
+            {
+              "content-type" => "application/gzip",
+              "content-disposition" => %(attachment; filename="#{id}.theme.tar.gz"),
+            },
+            [bytes],
+          ])
+        end
+
+        r.get("default") do
+          begin
+            { theme: ThemeCatalogue.default }
+          rescue ThemeCatalogue::Error => error
+            halt_json(theme_error_status(error), error.code, error.message)
+          end
+        end
+
+        r.post("inspect") do
+          bytes = theme_upload_bytes || halt_json(422, "file_required", "Choose a theme archive")
+          begin
+            theme_inspect_payload(ThemeArchive.unpack(bytes))
+          rescue ThemeArchive::Error => error
+            halt_json(422, error.code, error.message)
+          end
+        end
+
+        r.post("install") do
+          id = request.params["id"].to_s.strip
+          halt_json(422, "id_required", "Which theme?") if id.empty?
+
+          begin
+            bytes = ThemeCatalogue.download(id)
+            payload = ThemeArchive.unpack(bytes)
+            theme_inspect_payload(payload).merge("archive" => Base64.strict_encode64(bytes))
+          rescue ThemeCatalogue::Error => error
+            halt_json(theme_error_status(error), error.code, error.message)
+          rescue ThemeArchive::Error => error
+            halt_json(422, error.code, error.message)
+          end
+        end
+
+        r.post("apply") do
+          bytes = theme_upload_bytes || halt_json(422, "file_required", "Choose a theme archive")
+          remap = request.params["remap"]
+          remap = JSON.parse(remap) if remap.is_a?(String) && !remap.empty?
+          remap = {} unless remap.is_a?(Hash)
+          options = request.params["options"]
+          options = JSON.parse(options) if options.is_a?(String) && !options.empty?
+          options = {} unless options.is_a?(Hash)
+
+          begin
+            payload = ThemeArchive.unpack(bytes)
+            result = ThemeImporter.call(payload, options: options, remap: remap)
+            {
+              applied: result.applied,
+              skipped: result.skipped,
+              mediaCopied: result.mediaCopied,
+              note: "Pages are drafts until you publish. Catalogue rows are live.",
+            }
+          rescue ThemeArchive::Error, ThemeImporter::Error => error
+            halt_json(422, error.code, error.message)
           end
         end
       end

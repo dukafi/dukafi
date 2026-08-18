@@ -31,7 +31,7 @@ class Dukafi
           schema: { "imageUrl" => { type: :image }, "href" => { type: :url } },
           defaults: {
             "productSlug" => "", "imageUrl" => "", "title" => "Product title",
-            "priceCents" => 0, "currency" => "USD", "href" => "",
+            "priceCents" => 0, "currency" => "KES", "href" => "",
           },
         ) do |props, _children, context|
           product = bound_product(props, context)
@@ -48,7 +48,7 @@ class Dukafi
         end
         registry.register(
           "store.price",
-          defaults: { "productSlug" => "", "variantSku" => "", "priceCents" => 0, "currency" => "USD" },
+          defaults: { "productSlug" => "", "variantSku" => "", "priceCents" => 0, "currency" => "KES" },
         ) do |props, _children, context|
           product = bound_product(props, context)
           product_slug = bound_product_slug(props, product)
@@ -171,11 +171,11 @@ class Dukafi
         sku = variant.fetch("sku", "").to_s
         stock = Integer(variant.fetch("stock", 0))
         title = variant.fetch("title", sku).to_s
-        price = format_price(Integer(variant.fetch("priceCents", 0)), variant.fetch("currency", "USD").to_s.upcase)
+        price = format_price(Integer(variant.fetch("priceCents", 0)), variant.fetch("currency", "KES").to_s.upcase)
         suffix = stock.positive? ? " — #{price}" : " — Sold out"
         selected = sku == selected_sku ? " selected" : ""
         disabled = stock.positive? ? "" : " disabled"
-        %(<option value="#{CGI.escapeHTML(sku)}" data-price-cents="#{Integer(variant.fetch('priceCents', 0))}" data-currency="#{CGI.escapeHTML(variant.fetch('currency', 'USD').to_s.upcase)}"#{selected}#{disabled}>#{CGI.escapeHTML(title)}#{suffix}</option>)
+        %(<option value="#{CGI.escapeHTML(sku)}" data-price-cents="#{Integer(variant.fetch('priceCents', 0))}" data-currency="#{CGI.escapeHTML(variant.fetch('currency', 'KES').to_s.upcase)}"#{selected}#{disabled}>#{CGI.escapeHTML(title)}#{suffix}</option>)
       end
 
       def safe_field_name(value)

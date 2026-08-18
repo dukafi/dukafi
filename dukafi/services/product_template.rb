@@ -23,7 +23,7 @@ class ProductTemplate
       "product-image" => node("product-image", "base.image").merge(
         "dynamicBindings" => { "src" => { "source" => "currentEntry", "field" => "imageUrl", "format" => "media", "fallback" => "empty" } }
       ),
-      "product-price" => node("product-price", "base.text", [], { "tag" => "span", "text" => "$0.00" }).merge(
+      "product-price" => node("product-price", "base.text", [], { "tag" => "span", "text" => "KES 0.00" }).merge(
         "dynamicBindings" => { "text" => { "source" => "currentEntry", "field" => "priceDisplay", "format" => "plain", "fallback" => "static" } }
       ),
       "product-variants" => node("product-variants", "store.variant-picker"),

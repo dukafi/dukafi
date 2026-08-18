@@ -121,7 +121,7 @@ class CommerceApiSpec < Minitest::Test
 
   def test_commerce_settings_default_and_update
     get "/admin/api/cms/commerce/settings"
-    assert_equal({ "currency" => "USD", "lowStockThreshold" => 5 }, json.fetch("settings"))
+    assert_equal({ "currency" => "KES", "lowStockThreshold" => 5 }, json.fetch("settings"))
 
     patch_json "/admin/api/cms/commerce/settings", currency: "kes", lowStockThreshold: 10
     assert_equal 200, last_response.status, last_response.body
@@ -133,14 +133,14 @@ class CommerceApiSpec < Minitest::Test
 
   def test_changing_currency_retags_every_existing_variant
     first = Product.create(title: "First", slug: "first", status: "active")
-    Variant.create(product_id: first.id, sku: "F-1", title: "Default", price_cents: 1_000, currency: "USD", stock: 2, position: 0)
+    Variant.create(product_id: first.id, sku: "F-1", title: "Default", price_cents: 1_000, currency: "KES", stock: 2, position: 0)
     second = Product.create(title: "Second", slug: "second", status: "active")
-    Variant.create(product_id: second.id, sku: "S-1", title: "Default", price_cents: 2_000, currency: "USD", stock: 2, position: 0)
+    Variant.create(product_id: second.id, sku: "S-1", title: "Default", price_cents: 2_000, currency: "KES", stock: 2, position: 0)
 
-    patch_json "/admin/api/cms/commerce/settings", currency: "kes", lowStockThreshold: 5
+    patch_json "/admin/api/cms/commerce/settings", currency: "eur", lowStockThreshold: 5
     assert_equal 200, last_response.status, last_response.body
 
-    assert_equal ["KES", "KES"], Variant.order(:id).map(&:currency)
+    assert_equal ["EUR", "EUR"], Variant.order(:id).map(&:currency)
   end
 
   def test_commerce_settings_rejects_an_invalid_currency_code

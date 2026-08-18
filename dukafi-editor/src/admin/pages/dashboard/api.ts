@@ -241,3 +241,65 @@ export const commerceApi = {
     return { products: result?.products ?? 0, variants: result?.variants ?? 0 }
   },
 }
+
+async function themeError(response: Response): Promise<never> {
+  const body = await response.json().catch(() => null) as { error?: { message?: string } } | null
+  throw new Error(body?.error?.message || `Request failed (${response.status})`)
+}
+
+export const themeApi = {
+  exportTheme: async (include: Record<string, boolean>) => {
+    const params = new URLSearchParams()
+    for (const [key, value] of Object.entries(include)) params.set(key, value ? '1' : '0')
+    const response = await fetch(`/admin/api/cms/themes/export?${params}`, { credentials: 'same-origin' })
+    if (!response.ok) await themeError(response)
+    const blob = await response.blob()
+    const match = response.headers.get('content-disposition')?.match(/filename="([^"]+)"/)
+    return { blob, filename: match?.[1] || 'theme.tar.gz' }
+  },
+
+  inspectFile: async (file: File) => {
+    const body = new FormData()
+    body.append('file', file)
+    const response = await fetch('/admin/api/cms/themes/inspect', { method: 'POST', credentials: 'same-origin', body })
+    if (!response.ok) await themeError(response)
+    return response.json() as Promise<import('./types').ThemeInspect>
+  },
+
+  defaultTheme: () =>
+    requestAbsolute<{ theme: import('./types').ThemeSummary | null }>('/admin/api/cms/themes/default'),
+
+  installTheme: (id: string) =>
+    requestAbsolute<import('./types').ThemeInspect>('/admin/api/cms/themes/install', {
+      method: 'POST',
+      body: JSON.stringify({ id }),
+    }),
+
+  applyTheme: async (input: {
+    file?: File
+    archive?: string
+    remap: { byId: Record<string, number>; byPath: Record<string, string> }
+    options: import('./types').ThemeApplyOptions
+  }) => {
+    const response = input.file
+      ? await fetch('/admin/api/cms/themes/apply', {
+          method: 'POST',
+          credentials: 'same-origin',
+          body: (() => {
+            const body = new FormData()
+            body.append('file', input.file)
+            body.append('remap', JSON.stringify(input.remap))
+            body.append('options', JSON.stringify(input.options))
+            return body
+          })(),
+        })
+      : await fetch('/admin/api/cms/themes/apply', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ archive: input.archive, remap: input.remap, options: input.options }),
+        })
+    if (!response.ok) await themeError(response)
+    return response.json() as Promise<import('./types').ThemeApplyResult>
+  },
+}

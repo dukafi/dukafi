@@ -324,3 +324,60 @@ export interface FormSubmission {
   orderId: number | null
   customerId: number | null
 }
+
+export interface ThemeContents {
+  pages: number
+  templates: number
+  partials: number
+  tables: number
+  forms: number
+  products: number
+  collections: number
+  reviews: number
+  media: number
+}
+
+export interface ThemeSummary {
+  id: string
+  name: string
+  description?: string
+  version: string
+  sourceOrigin: string
+  contents: ThemeContents
+}
+
+export interface ThemeMediaRef {
+  id: number
+  path: string
+  url: string
+  filename: string
+  mimeType: string
+  altText: string
+  title: string
+  caption: string
+  tags: string[]
+}
+
+export interface ThemeInspect {
+  theme: ThemeSummary
+  media: ThemeMediaRef[]
+  archive?: string
+}
+
+export interface ThemeApplyOptions {
+  overridePages: boolean
+  tables: boolean
+  forms: boolean
+  products: boolean
+  reviews: boolean
+  design: boolean
+  pages: boolean
+  templates: boolean
+}
+
+export interface ThemeApplyResult {
+  applied: Record<string, number>
+  skipped: Record<string, number>
+  mediaCopied: number
+  note: string
+}

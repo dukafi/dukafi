@@ -2,6 +2,27 @@ require_relative "config/environment"
 require "roda"
 require "rack/files"
 
+# Public product images must be readable from another origin's admin tab
+# so a theme import can copy them in the browser (localhost → production).
+class PublicUploads
+  CORS = {
+    "access-control-allow-origin" => "*",
+    "access-control-allow-methods" => "GET, HEAD, OPTIONS",
+    "access-control-max-age" => "86400",
+  }.freeze
+
+  def initialize(root)
+    @files = Rack::Files.new(root)
+  end
+
+  def call(env)
+    return [204, CORS.merge("content-length" => "0"), []] if env["REQUEST_METHOD"] == "OPTIONS"
+
+    status, headers, body = @files.call(env)
+    [status, headers.merge(CORS), body]
+  end
+end
+
 Dir[File.expand_path("routes/*.rb", __dir__)].sort.each { |f| require f }
 
 class Dukafi < Roda
@@ -15,7 +36,7 @@ class Dukafi < Roda
     r.public
 
     r.on("uploads") do
-      r.run Rack::Files.new(Paths.uploads_root)
+      r.run PublicUploads.new(Paths.uploads_root)
     end
 
     # OAuth discovery. These paths are fixed by RFC 9728 and RFC 8414 — a

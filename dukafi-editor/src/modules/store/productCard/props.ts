@@ -5,7 +5,7 @@ export const ProductCardPropsSchema = Type.Object({
   imageUrl: Type.String({ default: '' }),
   title: Type.String({ default: 'Product title' }),
   priceCents: Type.Number({ default: 0 }),
-  currency: Type.String({ default: 'USD' }),
+  currency: Type.String({ default: 'KES' }),
   href: Type.String({ default: '' }),
 })
 

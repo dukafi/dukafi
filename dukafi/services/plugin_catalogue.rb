@@ -66,6 +66,8 @@ class PluginCatalogue
     summarise(listing(id), installed)
   end
 
+  def self.fetch_json(path) = get_json(path)
+
   def self.fetch_bytes(url, max_bytes: MAX_ARCHIVE)
     url = url.to_s.strip
     url = "#{Paths.registry_url}#{url}" if url.start_with?("/")

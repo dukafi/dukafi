@@ -365,6 +365,13 @@
 
 /* Import section */
 
+.sectionHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-l);
+}
+
 .sectionHeader h2 {
     margin: 0;
     color: var(--text-bright);
@@ -409,7 +416,19 @@
     margin: var(--space-xs) 0 0;
     color: var(--text-subtle);
     font-size: var(--text-m);
-    line-height: 1.5;
+    line-height: 1.45;
+}
+
+.themeActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-s);
+}
+
+.themeMediaNote {
+    margin: 0;
+    color: var(--text-subtle);
+    font-size: var(--text-s);
 }
 
 .connectionResultSuccess,

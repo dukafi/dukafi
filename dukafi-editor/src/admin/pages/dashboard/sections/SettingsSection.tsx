@@ -83,7 +83,7 @@ export function SettingsSection() {
     setNotice(null)
     try {
       const result = await commerceApi.updateSettings({
-        currency: String(form.get('currency') || 'USD'),
+        currency: String(form.get('currency') || 'KES'),
         lowStockThreshold: Number(form.get('lowStockThreshold') || 5),
       })
       setSettings(result.settings)
@@ -142,7 +142,7 @@ export function SettingsSection() {
         <FormField
           label="Currency"
           htmlFor="commerce-currency"
-          description="Three-letter code (e.g. USD, EUR, KES). Dukafi is single-currency in v1 — every variant is always saved with this currency, regardless of what a form or CSV import suggests."
+          description="Three-letter code (e.g. KES, USD, EUR). Dukafi is single-currency in v1 — every variant is always saved with this currency, regardless of what a form or CSV import suggests."
         >
           <Input
             id="commerce-currency"

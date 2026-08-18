@@ -7,8 +7,8 @@ Required columns:
 
 ```csv
 product_title,product_slug,vendor,status,description_html,sku,variant_title,price_cents,currency,stock,position
-Canvas Bag,canvas-bag,Dukafi,active,"<p>A durable bag.</p>",BAG-BLACK,Black,12900,USD,8,0
-Canvas Bag,canvas-bag,Dukafi,active,"<p>A durable bag.</p>",BAG-NATURAL,Natural,12900,USD,5,1
+Canvas Bag,canvas-bag,Dukafi,active,"<p>A durable bag.</p>",BAG-BLACK,Black,12900,KES,8,0
+Canvas Bag,canvas-bag,Dukafi,active,"<p>A durable bag.</p>",BAG-NATURAL,Natural,12900,KES,5,1
 ```
 
 `price_cents`, `stock`, and `position` are integers. Status is `draft` or
@@ -21,7 +21,7 @@ a variant.
 
 Product slugs must be lowercase words separated by single hyphens. Status is
 `draft` or `active`; only active products are published to storefront routes.
-Prices are integer minor units (`12900` means USD 129.00), never decimal
+Prices are integer minor units (`12900` means 129.00 in the store currency), never decimal
 currency strings. Stock and position must be non-negative integers.
 
 The importer sanitizes `description_html`. After an import, review collection

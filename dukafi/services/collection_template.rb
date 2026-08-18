@@ -37,7 +37,7 @@ class CollectionTemplate
         "row-title" => node("row-title", "base.text", [], { "tag" => "h3", "text" => "Product title" }).merge(
           "dynamicBindings" => { "text" => { "source" => "currentEntry", "field" => "title", "format" => "plain", "fallback" => "static" } }
         ),
-        "row-price" => node("row-price", "base.text", [], { "tag" => "span", "text" => "$0.00" }).merge(
+        "row-price" => node("row-price", "base.text", [], { "tag" => "span", "text" => "KES 0.00" }).merge(
           "dynamicBindings" => { "text" => { "source" => "currentEntry", "field" => "priceDisplay", "format" => "plain", "fallback" => "static" } }
         ),
       },

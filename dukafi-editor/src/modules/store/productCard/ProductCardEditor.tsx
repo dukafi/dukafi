@@ -6,7 +6,7 @@ import './productCard.css'
 type ProductPreview = Pick<ProductCardProps, 'title' | 'imageUrl' | 'priceCents' | 'currency' | 'href'>
 
 function price(cents: number, currency: string): string {
-  return new Intl.NumberFormat('en', { style: 'currency', currency: currency || 'USD' }).format(cents / 100)
+  return new Intl.NumberFormat('en', { style: 'currency', currency: currency || 'KES' }).format(cents / 100)
 }
 
 export const ProductCardEditor: React.FC<ModuleComponentProps<ProductCardProps>> = ({ props, mcClassName, nodeWrapperProps }) => {
