@@ -423,6 +423,7 @@ function resolveEnclosingLoopContext(
       enclosingLoopSource,
       enclosingLoopTableId: extractLoopTableId(enclosingLoopNode, enclosingLoopSourceId),
       commerceEntityKind: null,
+      dataTableSlug: null,
     }
   }
 

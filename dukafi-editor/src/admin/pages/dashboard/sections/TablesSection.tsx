@@ -149,7 +149,10 @@ export function TablesSection() {
                   ))}
                   <DataTableCell>{row.slug}</DataTableCell>
                   <DataTableCell>
-                    <RowActionMenu items={[
+                    <RowActionMenu
+                      triggerLabel={`Actions for ${row.slug}`}
+                      menuLabel={`Row actions for ${row.slug}`}
+                      items={[
                       { label: 'Edit', icon: <EditSolidIcon size={12} aria-hidden="true" />, onSelect: () => { setEditingRow(row); setRowDialog('edit') } },
                       { label: 'Delete', icon: <TrashSolidIcon size={12} aria-hidden="true" />, danger: true, onSelect: () => setRemoveRow(row) },
                     ]}
@@ -258,7 +261,10 @@ export function TablesSection() {
                 <DataTableCell>{table.columns.map((column) => column.label).join(', ') || '—'}</DataTableCell>
                 <DataTableCell>{table.rowCount}</DataTableCell>
                 <DataTableCell>
-                  <RowActionMenu items={[
+                  <RowActionMenu
+                    triggerLabel={`Actions for ${table.name}`}
+                    menuLabel={`Table actions for ${table.name}`}
+                    items={[
                     { label: 'Open rows', icon: <EditSolidIcon size={12} aria-hidden="true" />, onSelect: () => void openRows(table) },
                     { label: 'Edit columns', icon: <EditSolidIcon size={12} aria-hidden="true" />, onSelect: () => { setEditingTable(table); setTableDialog('edit') } },
                     { label: 'Delete', icon: <TrashSolidIcon size={12} aria-hidden="true" />, danger: true, onSelect: () => setRemoveTable(table) },
