@@ -232,6 +232,33 @@ export function useRelationshipPreviewEntry(
 
     // Only APPROVED reviews, matching what the publisher will iterate — a
     // canvas previewing a pending review would show text that never ships.
+    if (parsed.kind === 'data') {
+      if (!parsed.slug) { setEntry(null); return }
+      const controller = new AbortController()
+      void fetch(`/admin/api/cms/commerce/tables/${encodeURIComponent(parsed.slug)}`, {
+        credentials: 'same-origin', signal: controller.signal,
+      })
+        .then(async (response) => {
+          if (!response.ok) return null
+          const { table } = await response.json() as {
+            table: { slug: string; name: string; columns: Array<{ id: string; type: string }>; rows?: Array<{ id: number; slug: string; position: number; cells: Record<string, unknown>; entry?: Record<string, unknown> }> }
+          }
+          const row = table.rows?.[0]
+          if (!row) return null
+          return {
+            id: `data-${row.id}`,
+            fields: row.entry ?? {
+              id: row.id, slug: row.slug, position: row.position,
+              tableSlug: table.slug, tableName: table.name, createdAt: 0,
+              ...row.cells,
+            },
+          }
+        })
+        .then((next) => { if (!controller.signal.aborted) setEntry(next) })
+        .catch(() => undefined)
+      return () => controller.abort()
+    }
+
     if (parsed.kind === 'reviews') {
       const controller = new AbortController()
       void fetch('/admin/api/cms/reviews?status=approved', { credentials: 'same-origin', signal: controller.signal })

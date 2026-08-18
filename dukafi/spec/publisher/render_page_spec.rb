@@ -242,6 +242,28 @@ class RenderPageSpec < Minitest::Test
     ).html
   end
 
+  def test_a_data_table_source_iterates_baked_rows
+    prefetched = {
+      "products" => {},
+      "dataTables" => {
+        "team" => {
+          "slug" => "team", "name" => "Team",
+          "rows" => [
+            { "slug" => "jane", "name" => "Jane", "title" => "Founder", "image" => "/uploads/jane.jpg" },
+            { "slug" => "ada", "name" => "Ada", "title" => "Designer", "image" => "/uploads/ada.jpg" },
+          ],
+        },
+      },
+    }
+    html = Dukafi::Publisher::RenderPage.call(
+      document: loop_document("data/team", "name"),
+      registry: Dukafi::Publisher::REGISTRY, prefetched: prefetched,
+    ).html
+
+    assert_includes html, "Jane"
+    assert_includes html, "Ada"
+  end
+
   def test_a_bare_products_source_iterates_the_whole_catalogue
     html = render_loop("products", "title")
 

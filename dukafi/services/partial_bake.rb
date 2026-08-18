@@ -50,28 +50,27 @@ class PartialBake
     FileUtils.cp_r(File.join(source_path, "."), slot_path, preserve: true)
     begin
       prefetched = CommercePrefetcher.call
-      dependencies = {}
+      recorded = {}
       affected.each do |path|
         entry = render_path(path, prefetched)
         if entry
           write_entry(path, entry, slot_path, source_path, fallback_path: old_path)
-          dependencies[path] = entry.fetch(:product_ids)
+          recorded[path] = { product_ids: entry.fetch(:product_ids), sources: entry.fetch(:sources) }
           rendered_paths << path
         else
           delete_html(path, slot_path)
-          dependencies[path] = []
+          recorded[path] = { product_ids: [], sources: [] }
         end
       end
       if old_path != current_path
         delete_html(old_path, slot_path)
-        dependencies[old_path] = []
+        recorded[old_path] = { product_ids: [], sources: [] }
       end
 
       flip_current(slot_name)
       DB.transaction do
-        dependencies.each do |path, product_ids|
-          PageDependency.where(page_path: path).delete
-          product_ids.each { |product_id| PageDependency.dataset.insert(page_path: path, product_id:) }
+        recorded.each do |path, data|
+          RebuildIndex.record_path!(path, product_ids: data[:product_ids], sources: data[:sources])
         end
         @state.update(publish_version: version)
       end
@@ -108,12 +107,11 @@ class PartialBake
     if @product
       current_path = "/products/#{@product.slug}"
       old_path = "/products/#{@old_slug || @product.slug}"
-      affected = PageDependency.where(product_id: @product.id).select_map(:page_path)
-      affected << current_path if @product.status == "active"
+      affected = RebuildIndex.targets_for_product(@product)
     else
       current_path = "/collections/#{@collection.slug}"
       old_path = "/collections/#{@old_slug || @collection.slug}"
-      affected = [current_path]
+      affected = RebuildIndex.targets_for_collection(@collection)
     end
     [affected.uniq.select { |path| path.match?(SAFE_PATH) }, old_path, current_path]
   end
@@ -144,7 +142,9 @@ class PartialBake
       document:, registry: Dukafi::Publisher::REGISTRY, site: @state.published_site || @state.site,
       prefetched:, current_entry:, page_paths: PagePaths.call
     )
-    { rendered:, title:, product_ids: DependencyTracker.product_ids(document:, prefetched:, current_entry:) }
+    { rendered:, title:,
+      product_ids: DependencyTracker.product_ids(document:, prefetched:, current_entry:),
+      sources: RebuildIndex.sources(document, current_entry: current_entry) }
   end
 
   def write_entry(path, entry, slot_path, source_path, fallback_path:)

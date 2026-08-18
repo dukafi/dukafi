@@ -12,6 +12,8 @@ describe('entityForLoopSource', () => {
     expect(entityForLoopSource('collections/featured.products', null)).toBe('product')
     expect(entityForLoopSource('products/canvas-bag.variants', null)).toBe('variant')
     expect(entityForLoopSource('cart.items', null)).toBe('cartItem')
+    expect(entityForLoopSource('data/team', null)).toBe('dataRow')
+    expect(entityForLoopSource('data', null)).toBeNull()
   })
 
   it('resolves reviews, and the stars inside one', () => {
@@ -54,6 +56,7 @@ describe('legacy props', () => {
     expect(legacyLoopSource('variants', '')).toBe('currentEntry.variants')
     expect(legacyLoopSource('variants', 'canvas-bag')).toBe('products/canvas-bag.variants')
     expect(legacyLoopSource('cartItems', '')).toBe('cart.items')
+    expect(legacyLoopSource('dataRows', 'team')).toBe('data/team')
   })
 
   it('prefers an explicit source but falls back for older documents', () => {

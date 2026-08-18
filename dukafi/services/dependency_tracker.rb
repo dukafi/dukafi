@@ -17,34 +17,63 @@ class DependencyTracker
         product = prefetched.dig("products", props["productSlug"].to_s)
         ids << product["id"] if product
       when *RELATIONSHIP_LOOP_MODULES
-        relationship = node["moduleId"] == "store.collection-loop" ? "products" : props.fetch("relationship", "products").to_s
-        if relationship == "variants"
-          slug = props["sourceSlug"].to_s
-          product = slug.empty? ? current_entry : prefetched.dig("products", slug)
-          ids << product["id"] if product.is_a?(Hash) && product["id"]
-        else
-          slug = props["sourceSlug"].to_s
-          slug = props["collectionSlug"].to_s if slug.empty?
-          slug = current_entry["slug"].to_s if slug.empty? && current_entry.is_a?(Hash)
-          if slug.empty?
-            # Matches render_page.rb's `relationship_items` fallback: no
-            # collection picked means every active product is a dependency,
-            # so any product edit correctly re-bakes this page.
-            ids.concat(prefetched.fetch("products", {}).values.filter_map { |product| product["id"] })
-          else
-            collection = prefetched.dig("collections", slug)
-            ids.concat(collection.fetch("products", []).filter_map { |product| product["id"] }) if collection
-          end
-        end
+        source = Dukafi::Publisher::LoopSource.call(props, module_id: node["moduleId"])
+        ids.concat(ids_for_loop_source(source, prefetched, current_entry))
       end
     end
     ids.compact.map { |id| Integer(id) }.uniq.sort
   end
 
   def self.replace!(dependencies)
-    PageDependency.dataset.delete
-    dependencies.each do |page_path, product_ids|
-      product_ids.each { |product_id| PageDependency.dataset.insert(page_path:, product_id:) }
+    entries = dependencies.to_h do |page_path, value|
+      if value.is_a?(Hash)
+        [page_path, { product_ids: value[:product_ids] || value["product_ids"] || [],
+                      sources: value[:sources] || value["sources"] || [] }]
+      else
+        [page_path, { product_ids: value, sources: [] }]
+      end
+    end
+    RebuildIndex.replace_all!(entries)
+  end
+
+  def self.ids_for_loop_source(source, prefetched, current_entry)
+    kind, rest = source.split("/", 2)
+    fields = []
+    if rest&.include?(".")
+      slug, *fields = rest.split(".")
+    elsif source.include?(".")
+      kind, *fields = source.split(".")
+      slug = nil
+    else
+      slug = rest
+    end
+
+    case kind
+    when "products"
+      if slug.nil? && fields.empty?
+        if current_entry.is_a?(Hash) && current_entry.key?("products")
+          current_entry.fetch("products", []).filter_map { |product| product["id"] }
+        else
+          prefetched.fetch("products", {}).values.filter_map { |product| product["id"] }
+        end
+      elsif fields == ["variants"]
+        product = slug ? prefetched.dig("products", slug) : current_entry
+        product.is_a?(Hash) ? [product["id"]] : []
+      else
+        []
+      end
+    when "collections"
+      return [] unless fields == ["products"] && slug
+
+      collection = prefetched.dig("collections", slug)
+      collection ? collection.fetch("products", []).filter_map { |product| product["id"] } : []
+    when "currentEntry"
+      return [] unless fields == ["variants"]
+
+      current_entry.is_a?(Hash) ? [current_entry["id"]] : []
+    else
+      []
     end
   end
+  private_class_method :ids_for_loop_source
 end

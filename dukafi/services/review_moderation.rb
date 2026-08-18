@@ -12,7 +12,6 @@ module ReviewModeration
 
   # Loops naming this source are what make a page depend on reviews.
   SOURCE = "reviews".freeze
-  LOOP_MODULES = %w[store.relationship-loop store.collection-loop base.loop].freeze
 
   module_function
 
@@ -64,26 +63,11 @@ module ReviewModeration
     review
   end
 
-  # Every PUBLISHED page whose document contains a loop reading `reviews`.
-  #
-  # Derived from the documents rather than tracked in a table: reviews have no
-  # per-row dependency the way products do — a page either lists reviews or it
-  # does not — and scanning a handful of page documents is cheaper than
-  # maintaining another index.
+  # Every published page whose loop source is `reviews`. Indexed at bake
+  # (`page_sources`); backfilled from documents if this store has not
+  # published since the index existed.
   def dependent_paths
-    Page.where(status: "published").all.filter_map do |page|
-      document = page.published_document_data || page.document_data
-      next unless document.is_a?(Hash)
-      next unless lists_reviews?(document)
-
-      page.slug == "index" ? "/" : "/#{page.slug}"
-    end
-  end
-
-  def lists_reviews?(document)
-    document.fetch("nodes", {}).each_value.any? do |node|
-      LOOP_MODULES.include?(node["moduleId"]) && node.fetch("props", {})["source"].to_s == SOURCE
-    end
+    RebuildIndex.targets_for_reviews
   end
 
   def rebake!

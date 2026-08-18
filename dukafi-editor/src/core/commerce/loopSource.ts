@@ -37,6 +37,7 @@ export function parseLoopSource(source: string): ParsedLoopSource | null {
 export function legacyLoopSource(relationship: string, sourceSlug: string): string {
   const slug = sourceSlug.trim()
   if (relationship === 'cartItems') return 'cart.items'
+  if (relationship === 'dataRows') return slug ? `data/${slug}` : 'data'
   if (relationship === 'variants') return slug ? `products/${slug}.variants` : 'currentEntry.variants'
   return slug ? `collections/${slug}.products` : 'products'
 }
@@ -85,6 +86,8 @@ export function entityForLoopSource(source: string, inScope: EntityId | null): E
       return parsed.slug ? null : (parsed.fields.length === 0 ? 'paymentProvider' : entityAtPath('paymentProvider', parsed.fields))
     case 'orders':
       return parsed.slug ? null : (parsed.fields.length === 0 ? 'order' : entityAtPath('order', parsed.fields))
+    case 'data':
+      return parsed.slug && parsed.fields.length === 0 ? 'dataRow' : null
     case 'currentEntry':
       return inScope ? entityAtPath(inScope, parsed.fields) : null
     default:

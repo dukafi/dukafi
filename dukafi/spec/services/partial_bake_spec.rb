@@ -3,10 +3,13 @@ require_relative "../spec_helper"
 class PartialBakeSpec < Minitest::Test
   def setup
     PageDependency.dataset.delete
+    PageSource.dataset.delete
     CartItem.dataset.delete
     Cart.dataset.delete
     CollectionProduct.dataset.delete
     Collection.dataset.delete
+    CustomRow.dataset.delete
+    CustomTable.dataset.delete
     Variant.dataset.delete
     Product.dataset.delete
     Page.dataset.delete
@@ -114,7 +117,85 @@ class PartialBakeSpec < Minitest::Test
     assert File.file?(File.join(@output_root, "current", "products", "water.html"))
   end
 
+  def test_adding_a_product_rebakes_catalogue_listings_not_unrelated_collections
+    Page.first(slug: "index").update(document: listing_document("products"))
+    bag = create_product(title: "Canvas Bag", slug: "canvas-bag")
+    collection = Collection.create(title: "Featured", slug: "featured", description: "", sort_order: 0)
+    CollectionProduct.dataset.insert(collection_id: collection.id, product_id: bag.id, position: 0)
+    Bake.call(state: @state, output_root: @output_root)
+    featured_path = File.join(@output_root, "current", "collections", "featured.html")
+    featured_mtime = File.mtime(featured_path)
+    featured_content = File.read(featured_path)
+
+    hat = create_product(title: "New Hat", slug: "new-hat")
+    result = PartialBake.call(product: hat, state: @state, output_root: @output_root)
+
+    assert_equal ["/", "/products/new-hat"], result.paths
+    assert_includes File.read(File.join(@output_root, "current", "index.html")), "New Hat"
+    assert_equal featured_content, File.read(featured_path)
+    assert_equal featured_mtime, File.mtime(featured_path)
+  end
+
+  def test_adding_a_data_row_rebakes_pages_that_loop_that_table
+    Page.first(slug: "index").update(document: listing_document("data/team", field: "name"))
+    table = CustomTable.create(name: "Team", slug: "team", created_at: Time.now, updated_at: Time.now)
+    table.update(columns_json: JSON.generate([{ "id" => "name", "label" => "Name", "type" => "text" }]))
+    jane = CustomRow.new(custom_table_id: table.id, slug: "jane", position: 0,
+                         created_at: Time.now, updated_at: Time.now)
+    jane.cells_data = { "name" => "Jane" }
+    jane.save
+    Bake.call(state: @state, output_root: @output_root)
+
+    kamau = CustomRow.new(custom_table_id: table.id, slug: "kamau", position: 1,
+                          created_at: Time.now, updated_at: Time.now)
+    kamau.cells_data = { "name" => "Kamau Mwangi" }
+    kamau.save
+    result = PartialBake.call(paths: RebuildIndex.targets_for_data("team"),
+                              state: @state, output_root: @output_root)
+
+    assert_equal ["/"], result.paths
+    assert_equal ["/"], CustomTableWrites.dependent_paths("team")
+    html = File.read(File.join(@output_root, "current", "index.html"))
+    assert_includes html, "Jane"
+    assert_includes html, "Kamau Mwangi"
+  end
+
   private
+
+  def create_product(title:, slug:)
+    product = Product.create(
+      title:, slug:, status: "active", description_document: "",
+      created_at: Time.now, updated_at: Time.now
+    )
+    Variant.create(
+      product_id: product.id, sku: "#{slug}-1", title: "Default",
+      price_cents: 1_000, currency: "USD", stock: 10, position: 0
+    )
+    product
+  end
+
+  def listing_document(source, field: "title")
+    {
+      "id" => "home", "slug" => "index", "title" => "Home", "rootNodeId" => "body",
+      "nodes" => {
+        "body" => node("body", "base.body", children: ["loop"]),
+        "loop" => node("loop", "store.relationship-loop", children: ["row"],
+                       props: { "source" => source, "perPage" => 20 }),
+        "row" => node("row", "base.text", props: { "tag" => "h3", "text" => "Item" }).merge(
+          "dynamicBindings" => {
+            "text" => { "source" => "currentEntry", "field" => field, "format" => "plain", "fallback" => "static" },
+          }
+        ),
+      },
+    }
+  end
+
+  def node(id, module_id, children: [], props: {})
+    {
+      "id" => id, "moduleId" => module_id, "props" => props,
+      "breakpointOverrides" => {}, "children" => children, "classIds" => [],
+    }
+  end
 
   def page_document
     {

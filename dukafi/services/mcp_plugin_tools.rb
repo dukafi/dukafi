@@ -33,10 +33,11 @@ module McpPluginTools
   module_function
 
   def all
-    [list_plugins, list_catalogue, install_plugin, create_plugin, configure_plugin, delete_plugin]
+    [list_plugins, list_catalogue, install_plugin, create_plugin, configure_plugin,
+     read_plugin_page, run_plugin_page_action, delete_plugin]
   end
 
-  READ_TOOLS = %w[list_plugins list_catalogue].freeze
+  READ_TOOLS = %w[list_plugins list_catalogue read_plugin_page].freeze
 
   def find!(id)
     Dukafi::Plugins.find_visible(id.to_s) ||
@@ -54,7 +55,8 @@ module McpPluginTools
                    "whether it is. `configured` true means every setting has " \
                    "a value. Secret settings report `isSet` but never their " \
                    "value — API keys cannot be read back out of this store, " \
-                   "only replaced.",
+                   "only replaced. Plugins that own a Dashboard page list it " \
+                   "under `pages` (layout only — use read_plugin_page for data).",
       input_schema: {
         "type" => "object",
         "properties" => {
@@ -263,6 +265,74 @@ module McpPluginTools
                       "Updated #{changed.join(', ')}. #{plugin.name} is still missing values."
                     end,
         )
+      end,
+    }
+  end
+
+  def read_plugin_page
+    {
+      name: "read_plugin_page",
+      title: "Read a plugin Dashboard page",
+      description: "Layout plus live data for a plugin's host-rendered " \
+                   "Dashboard page (stat cards, info, one paginated table). " \
+                   "Pass tableId to page that table. The plugin never returns " \
+                   "HTML — only JSON the Dashboard already knows how to draw. " \
+                   "API keys stay in settings; they are not in this payload.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "pluginId" => { "type" => "string", "description" => "From list_plugins, e.g. \"railway-usage\"." },
+          "pageId" => { "type" => "string", "description" => "The page id from that plugin's `pages` list." },
+          "tableId" => { "type" => "string", "description" => "Optional. Load this table's current page of rows." },
+          "limit" => { "type" => "integer", "minimum" => 1, "maximum" => 100 },
+          "offset" => { "type" => "integer", "minimum" => 0 },
+          "q" => { "type" => "string", "description" => "Optional table search string the plugin may honour." },
+        },
+        "required" => %w[pluginId pageId], "additionalProperties" => false,
+      },
+      run: lambda do |args|
+        plugin = find!(args["pluginId"])
+        payload = { "page" => PluginPages.page(plugin, args["pageId"]),
+                    "data" => PluginPages.data(plugin, args["pageId"]) }
+        if !(table_id = args["tableId"].to_s).empty?
+          payload["table"] = PluginPages.table(
+            plugin, args["pageId"], table_id,
+            limit: args["limit"], offset: args["offset"], query: args["q"]
+          )
+        end
+        payload
+      rescue PluginPages::Error => error
+        raise McpTools::ArgumentError, error.message
+      end,
+    }
+  end
+
+  def run_plugin_page_action
+    {
+      name: "run_plugin_page_action",
+      title: "Run an action on a plugin Dashboard page",
+      description: "Execute a declared action — Refresh usage, Import now. " \
+                   "This is a write: it may call a third-party API or enqueue " \
+                   "a job. Pass params only if the action said it needs them. " \
+                   "reload true means the cards and tables should be fetched again.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "pluginId" => { "type" => "string" },
+          "pageId" => { "type" => "string" },
+          "actionId" => { "type" => "string" },
+          "params" => {
+            "type" => "object",
+            "additionalProperties" => { "type" => %w[string integer boolean number] },
+          },
+        },
+        "required" => %w[pluginId pageId actionId], "additionalProperties" => false,
+      },
+      run: lambda do |args|
+        plugin = find!(args["pluginId"])
+        PluginPages.action(plugin, args["pageId"], args["actionId"], params: args["params"] || {})
+      rescue PluginPages::Error => error
+        raise McpTools::ArgumentError, error.message
       end,
     }
   end

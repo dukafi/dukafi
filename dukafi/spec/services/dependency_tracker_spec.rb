@@ -66,4 +66,30 @@ class DependencyTrackerSpec < Minitest::Test
 
     assert_equal [3, 5], DependencyTracker.product_ids(document:, prefetched:)
   end
+
+  def test_a_data_table_loop_does_not_collect_product_ids
+    document = {
+      "nodes" => {
+        "loop" => {
+          "moduleId" => "store.relationship-loop",
+          "props" => { "source" => "data/team" },
+        },
+      },
+    }
+    prefetched = { "products" => { "bag" => { "id" => 3 } } }
+
+    assert_equal [], DependencyTracker.product_ids(document:, prefetched:)
+  end
+
+  def test_a_collection_template_loop_tracks_only_that_collections_products
+    document = {
+      "nodes" => {
+        "loop" => { "moduleId" => "store.relationship-loop", "props" => { "relationship" => "products" } },
+      },
+    }
+    prefetched = { "products" => { "bag" => { "id" => 3 }, "hat" => { "id" => 5 } } }
+    collection = { "id" => 1, "slug" => "featured", "products" => [{ "id" => 3 }] }
+
+    assert_equal [3], DependencyTracker.product_ids(document:, prefetched:, current_entry: collection)
+  end
 end

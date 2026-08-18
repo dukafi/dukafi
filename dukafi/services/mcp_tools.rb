@@ -21,9 +21,9 @@ module McpTools
   module_function
 
   def all
-    [list_pages, create_page, read_page, apply_edits, publish, set_page_access] +
+    [list_pages, create_page, read_page, apply_edits, list_rebuild_targets, publish, set_page_access] +
       McpCommerceTools.all + McpMediaTools.all + McpReviewTools.all +
-      McpDiscountTools.all + McpPluginTools.all
+      McpDiscountTools.all + McpPluginTools.all + McpDataTableTools.all
   end
 
   # Which tools change the store. Drives the `mcp:read` / `mcp:write` split, so
@@ -33,10 +33,10 @@ module McpTools
   # should have to declare which side it is on, and the default below — treat
   # anything unrecognised as a WRITE — means forgetting to update this list
   # fails closed.
-  READ_TOOLS = (%w[list_pages read_page] +
+  READ_TOOLS = (%w[list_pages read_page list_rebuild_targets] +
                 McpCommerceTools::READ_TOOLS + McpMediaTools::READ_TOOLS +
                 McpReviewTools::READ_TOOLS + McpDiscountTools::READ_TOOLS +
-                McpPluginTools::READ_TOOLS).freeze
+                McpPluginTools::READ_TOOLS + McpDataTableTools::READ_TOOLS).freeze
 
   def write_tool?(name) = !READ_TOOLS.include?(name.to_s)
 
@@ -499,6 +499,60 @@ module McpTools
 
   def sidecar_message(reason)
     SIDECAR_ERRORS.fetch(reason, "The edit could not be applied (#{reason}).")
+  end
+
+  # ── list_rebuild_targets ───────────────────────────────────────────────────
+
+  def list_rebuild_targets
+    {
+      name: "list_rebuild_targets",
+      title: "Pages a catalogue change would rebuild",
+      description: "The published pages that re-bake when a product, collection, " \
+                   "or data table changes. Call with no arguments to export the " \
+                   "whole rebuild map. Pass productSlug, collectionSlug, tableSlug, " \
+                   "or source (products, data/team, reviews) to see one blast radius. " \
+                   "Writes already rebuild these; this is how you inspect the index.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "productSlug" => { "type" => "string" },
+          "collectionSlug" => { "type" => "string" },
+          "tableSlug" => { "type" => "string", "description" => "A custom data table, e.g. team." },
+          "source" => { "type" => "string", "description" => "A loop source path, e.g. products or data/team." },
+        },
+        "additionalProperties" => false,
+      },
+      run: ->(args) { run_list_rebuild_targets(args) },
+    }
+  end
+
+  def run_list_rebuild_targets(args)
+    args = args.is_a?(Hash) ? args : {}
+    present = %w[productSlug collectionSlug tableSlug source].select { |key| args[key].to_s.strip != "" }
+    if present.length > 1
+      raise ArgumentError, "Pass only one of productSlug, collectionSlug, tableSlug, or source."
+    end
+
+    case present.first
+    when "productSlug"
+      product = Product.first(slug: args["productSlug"].to_s.strip.downcase) ||
+        raise(ArgumentError, "No product with slug #{args['productSlug'].inspect}.")
+      { "paths" => RebuildIndex.targets_for_product(product), "productSlug" => product.slug }
+    when "collectionSlug"
+      collection = Collection.first(slug: args["collectionSlug"].to_s.strip.downcase) ||
+        raise(ArgumentError, "No collection with slug #{args['collectionSlug'].inspect}.")
+      { "paths" => RebuildIndex.targets_for_collection(collection), "collectionSlug" => collection.slug }
+    when "tableSlug"
+      slug = args["tableSlug"].to_s.strip.downcase
+      CustomTable.first(slug: slug) ||
+        raise(ArgumentError, "No data table with slug #{slug.inspect}.")
+      { "paths" => RebuildIndex.targets_for_data(slug), "tableSlug" => slug, "source" => "data/#{slug}" }
+    when "source"
+      source = args["source"].to_s.strip
+      { "paths" => RebuildIndex.targets_for_source(source), "source" => source }
+    else
+      { "pages" => RebuildIndex.export }
+    end
   end
 
   # ── publish ────────────────────────────────────────────────────────────────

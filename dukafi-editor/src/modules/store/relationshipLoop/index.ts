@@ -8,7 +8,7 @@ import { RelationshipLoopPropsSchema, type RelationshipLoopProps } from './props
 export const RelationshipLoopModule: ModuleDefinition<RelationshipLoopProps> = {
   id: 'store.relationship-loop',
   name: 'Relationship loop',
-  description: 'Repeats a row template for a relationship — a collection’s products, a product’s variants, or the visitor’s cart items.',
+  description: 'Repeats a row template for a relationship — products, variants, cart items, or a custom data table.',
   category: 'Commerce',
   version: '1.0.0',
   icon: BoxStackSolidIcon,
@@ -27,12 +27,13 @@ export const RelationshipLoopModule: ModuleDefinition<RelationshipLoopProps> = {
         { label: 'Collection products', value: 'products' },
         { label: 'Product variants', value: 'variants' },
         { label: 'Cart items', value: 'cartItems' },
+        { label: 'Data table', value: 'dataRows' },
       ],
     },
     sourceSlug: {
       type: 'text',
       label: 'Slug (optional)',
-      placeholder: 'Blank = every product, any collection',
+      placeholder: 'Blank = every product, or a data table slug',
     },
     wrapper: { type: 'select', label: 'Wrapper', options: [
       { label: 'Div (styleable)', value: 'div' },

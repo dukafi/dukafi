@@ -3,6 +3,7 @@ require_relative "../spec_helper"
 class BakeSpec < Minitest::Test
   def setup
     PageDependency.dataset.delete
+    PageSource.dataset.delete
     CartItem.dataset.delete
     Cart.dataset.delete
     CollectionProduct.dataset.delete
@@ -153,6 +154,11 @@ class BakeSpec < Minitest::Test
       Variant.create(product_id: product.id, sku: "BAG-#{index + 1}", title: "Default", price_cents: 1_000, currency: "USD", stock: 2, position: 0)
       CollectionProduct.dataset.insert(collection_id: collection.id, product_id: product.id, position: index)
     end
+    outsider = Product.create(
+      title: "Hat", slug: "hat", status: "active",
+      description_document: "", created_at: Time.now, updated_at: Time.now
+    )
+    Variant.create(product_id: outsider.id, sku: "HAT-1", title: "Default", price_cents: 1_000, currency: "USD", stock: 2, position: 0)
 
     result = Bake.call(
       state: @state, collection_template: template, output_root: @output_root, use_draft: true
@@ -171,5 +177,8 @@ class BakeSpec < Minitest::Test
       ["/collections/featured", Product.first(slug: "bag-2").id],
       ["/collections/featured", Product.first(slug: "bag-3").id],
     ], PageDependency.order(:product_id).select_map(%i[page_path product_id])
+    refute_includes PageDependency.select_map(:product_id), outsider.id
+    assert_equal [["/collections/featured", "collections/featured.products"]],
+                 PageSource.order(:page_path, :source).select_map(%i[page_path source])
   end
 end

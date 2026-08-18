@@ -40,6 +40,8 @@ class McpPluginsSpec < Minitest::Test
   def test_listing_reads_and_configuring_writes
     refute McpTools.write_tool?("list_plugins")
     refute McpTools.write_tool?("list_catalogue")
+    refute McpTools.write_tool?("read_plugin_page")
+    assert McpTools.write_tool?("run_plugin_page_action")
     assert McpTools.write_tool?("configure_plugin"),
            "configure_plugin must count as a write — a read-only agent must not be able to redirect payments"
     assert McpTools.write_tool?("install_plugin")

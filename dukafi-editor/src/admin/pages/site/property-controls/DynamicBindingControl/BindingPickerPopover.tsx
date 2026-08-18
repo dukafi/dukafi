@@ -155,10 +155,9 @@ export function BindingPickerPopover({
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (_cachedMeta) return // already in state via lazy initializer
-    // A commerce scope never needs the generic DataMeta tables (Dukafi has
-    // no `data_tables`/`data_rows` system at all — see `commerceEntry.ts`'s
-    // header comment). Skipping the fetch avoids a guaranteed 404 and the
-    // loading flash on every commerce-scoped picker open.
+    // A commerce scope (products, collections, Dashboard Tables) never needs
+    // the Instatic `data/_meta` catalogue. Skipping the fetch avoids a
+    // guaranteed 404 and the loading flash on every commerce-scoped picker.
     if (commerceEntityKind) return
     let cancelled = false
     setMetaLoading(true)

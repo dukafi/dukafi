@@ -24,6 +24,8 @@ class CommerceEntitiesSpec < Minitest::Test
     CollectionProduct.dataset.delete
     Collection.dataset.delete
     ProductImage.dataset.delete
+    CustomRow.dataset.delete
+    CustomTable.dataset.delete
     MediaAsset.dataset.delete
     Variant.dataset.delete
     Product.dataset.delete
@@ -62,6 +64,15 @@ class CommerceEntitiesSpec < Minitest::Test
     Review.create(author_name: "Achieng", body: "Arrived the next morning.", rating: 4,
                   product_id: product.id, approved_at: Time.now,
                   created_at: Time.now, updated_at: Time.now)
+
+    table = CustomTableWrites.create_table!(
+      "name" => "Team", "slug" => "team",
+      "columns" => [
+        { "id" => "name", "label" => "Name", "type" => "text" },
+        { "id" => "image", "label" => "Image", "type" => "media" },
+      ],
+    )
+    CustomTableWrites.create_row!(table, "slug" => "achieng", "cells" => { "name" => "Achieng", "image" => asset.id })
 
     [CommercePrefetcher.call, CartPayload.call(cart)]
   end
@@ -106,6 +117,15 @@ class CommerceEntitiesSpec < Minitest::Test
   def test_every_declared_cart_item_field_exists_on_a_real_payload
     _prefetched, cart = seed!
     assert_entity!("cartItem", cart.fetch("items").first, "cartItem")
+  end
+
+  def test_every_declared_data_row_field_exists_on_a_real_payload
+    prefetched, = seed!
+    row = prefetched.fetch("dataTables").fetch("team").fetch("rows").first
+
+    assert_entity!("dataRow", row, "dataRow")
+    assert_equal "Achieng", row.fetch("name")
+    assert_equal "/uploads/bag.jpg", row.fetch("image")
   end
 
   def test_nested_image_renditions_are_reachable_and_complete

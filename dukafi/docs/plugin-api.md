@@ -60,6 +60,7 @@ owns:
 6. **Routes** — inbound HTTP (provider callbacks, Zapier, WhatsApp).
 7. **Jobs** — install, activate, scheduled sync. Not on the storefront POST.
 8. **Modules / packs** — what the merchant drops onto a page.
+9. **Dashboard pages** — host-rendered stats, info, tables, and actions.
 
 If a feature needs a new table in core (orders, customers, products), it
 does not belong in a plugin. If it needs a table the core has never heard
@@ -282,8 +283,9 @@ four plus `p.job`. A WooCommerce importer is:
 
 - `on_install` → ensure tables
 - `on_activate` → enqueue first sync
-- `job :woo_import` → pull products into `api.cms.content` or store
-  `Product` rows through a host write API, never by inserting SQL
+- `job :woo_import` → pull products into store `Product` rows through
+  `CommerceWrites`, never by inserting SQL
+- Dashboard page (`p.page`) → stats, a paginated log, **Import now**
 
 A plugin does not get raw `DB[]`. It gets `p.storage.collection("rows")`
 or the commerce write services. That is what keeps an importer from
@@ -399,12 +401,13 @@ page opted into the module. The rest of the site stays static.
 
 ### 6. WooCommerce import
 
-- Settings: store URL, API key.
-- `on_install`: ensure a mapping table.
-- `job :woo_import`: pull products, write through `CommerceWrites`
-  (or CMS content tables if they are posts).
-- Never on the customer request. Progress on an admin page
-  (`adminPages` in the editor SDK).
+- Settings: store URL, API key (`p.secret`).
+- `on_install`: ensure a mapping table in `p.storage`.
+- `job :woo_import`: pull products, write through `CommerceWrites`.
+- `p.page`: stats (last sync, imported count), paginated log, **Import now**.
+
+A plugin does not invent a second products table. It writes through the
+host, and the Dashboard draws the progress page from JSON.
 
 ### 7. Blog / messaging
 
@@ -412,6 +415,77 @@ Blog is CMS content (posts table), not a store plugin. A “newsletter”
 plugin listens to `content.entry.published` (editor hook bus) and
 sends. Messaging (WhatsApp, SMS) is a rail like PayHero: settings +
 `p.on :order.paid` + outbound HTTP. It does not sit in the publisher.
+
+---
+
+## Dashboard pages (host chrome, plugin data)
+
+Certain plugins need a page in Dashboard — not a settings form, and not
+a React app. Railway usage, a WooCommerce import, a sync log. The UI is
+predefined:
+
+| Widget | For |
+|---|---|
+| **Stat cards** | A number with an optional hint and tone (`default`, `good`, `warn`, `bad`) |
+| **Info rows** | A label and a value (project name, last sync, store URL) |
+| **Tables** | Paginated rows. The host clamps `limit` (max 100). |
+| **Actions** | Buttons the merchant clicks: Refresh, Import now. Optional confirm. |
+
+The plugin declares the layout and later fills it. It never returns HTML.
+API keys are `p.secret` settings, not process env, and never appear in
+page JSON.
+
+```ruby
+Dukafi::Plugins.register("railway-usage") do |p|
+  p.name "Railway usage"
+  p.secret :api_token, label: "Railway API token"
+  p.setting :project_id, label: "Project ID"
+
+  p.page :usage, title: "Railway usage", description: "This project's billable usage." do |page|
+    page.stat :used, label: "Used this month"
+    page.stat :remaining, label: "Remaining"
+    page.info :project, label: "Project"
+    page.table :services, label: "Services", columns: [
+      { key: "name", label: "Service" },
+      { key: "cpu", label: "CPU" },
+    ]
+    page.action :refresh, label: "Refresh"
+
+    page.load do |ctx|
+      usage = Railway.fetch(ctx.settings)
+      {
+        "stats" => {
+          "used" => { "value" => usage.used, "hint" => "of #{usage.included}", "tone" => "default" },
+          "remaining" => { "value" => usage.remaining },
+        },
+        "info" => { "project" => usage.project_name },
+      }
+    end
+    page.rows :services do |ctx|
+      rows = Railway.services(ctx.settings)
+      { "rows" => rows.drop(ctx.offset).first(ctx.limit), "total" => rows.length }
+    end
+    page.run :refresh do |_ctx|
+      { "ok" => true, "message" => "Updated just now", "reload" => true }
+    end
+  end
+end
+```
+
+Admin HTTP (authenticated):
+
+- `GET /admin/api/cms/plugins/:id/pages`
+- `GET /admin/api/cms/plugins/:id/pages/:pageId`
+- `GET /admin/api/cms/plugins/:id/pages/:pageId/data`
+- `GET /admin/api/cms/plugins/:id/pages/:pageId/tables/:tableId?limit=&offset=&q=`
+- `POST /admin/api/cms/plugins/:id/pages/:pageId/actions/:actionId` body `{ "params": {} }`
+
+MCP: `read_plugin_page`, `run_plugin_page_action`. Layout is also listed
+on `list_plugins` under `pages`.
+
+Handlers are time-boxed. A raising handler becomes a generic error so a
+token never leaks in the message. `reload: true` on an action means the
+client should fetch cards and tables again.
 
 ---
 
@@ -479,6 +553,7 @@ Exists today:
 - Form intake (store `FormSubmissionIntake`, CMS-native forms)
 - Editor: modules, packs, hooks, public routes, install lifecycle, jobs
 - Registry install of a `.tar.gz`
+- **Dashboard pages** — `p.page` layout + JSON data/actions (HTTP + MCP)
 
 Missing, in the order that unblocks the scenarios:
 
@@ -497,6 +572,8 @@ Non-goals:
 - Letting a payment plugin pick the amount.
 - Running QuickJS on checkout.
 - A generic “plugin can alter any SQL”.
+- A plugin shipping its own Dashboard React tree. Stats, tables, actions
+  are host widgets filled with JSON.
 - Shipping blog, chat, or SMTP in the image. Those are plugins.
 
 ---

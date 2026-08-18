@@ -44,7 +44,7 @@ class CommercePrefetcher
 
     MediaPrefetcher.call.merge(
       "products" => products, "collections" => collections, "reviews" => reviews,
-      "paymentProviders" => providers,
+      "paymentProviders" => providers, "dataTables" => data_tables,
     )
   end
 
@@ -64,6 +64,32 @@ class CommercePrefetcher
     products = product ? { product.slug => product_hash(product, CommerceSettings.current.currency) } : {}
     MediaPrefetcher.call.merge("products" => products, "collections" => {})
   end
+
+  def self.data_tables
+    media_ids = []
+    tables = CustomTable.eager(:custom_rows).order(:name).all
+    tables.each do |table|
+      table.column_list.each do |column|
+        next unless column["type"] == "media"
+
+        table.custom_rows.each do |row|
+          id = Integer(row.cells_data[column["id"]], exception: false)
+          media_ids << id if id
+        end
+      end
+    end
+    media_by_id = MediaAsset.where(id: media_ids.uniq).all.to_h { |asset| [asset.id, asset] }
+    tables.to_h do |table|
+      rows = table.custom_rows.sort_by(&:position).map do |row|
+        CustomTableWrites.baked_row(table, row, media_by_id)
+      end
+      [table.slug, {
+        "id" => table.id, "slug" => table.slug, "name" => table.name,
+        "columns" => table.column_list, "rows" => rows,
+      }]
+    end
+  end
+  private_class_method :data_tables
 
   def self.product_hash(product, default_currency)
     variant = product.variants.min_by(&:position)

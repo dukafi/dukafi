@@ -884,5 +884,47 @@
         "format": "plain"
       }
     ]
+  },
+  "dataRow": {
+    "id": "dataRow",
+    "label": "Data row",
+    "fields": [
+      {
+        "id": "id",
+        "label": "ID",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "slug",
+        "label": "Slug",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "position",
+        "label": "Position",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "createdAt",
+        "label": "Created at",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "tableSlug",
+        "label": "Table slug",
+        "kind": "scalar",
+        "format": "plain"
+      },
+      {
+        "id": "tableName",
+        "label": "Table name",
+        "kind": "scalar",
+        "format": "plain"
+      }
+    ]
   }
 }

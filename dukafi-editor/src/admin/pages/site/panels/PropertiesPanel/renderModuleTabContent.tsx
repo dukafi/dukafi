@@ -54,6 +54,7 @@ interface ModuleTabContentArgs {
   enclosingLoopSource: { label: string; fields: LoopSourceField[] } | undefined
   enclosingLoopTableId: string | null
   commerceEntityKind: CommerceEntityKind | null
+  dataTableLoopOptions?: Array<{ label: string; value: string }>
   handleChange: (propKey: string, value: unknown) => void
   handlePatch: (patch: Record<string, unknown>) => void
   onSetDynamicBinding: (propKey: string, binding: DynamicPropBinding) => void
@@ -73,6 +74,7 @@ export function renderModuleTabContent(args: ModuleTabContentArgs): React.ReactN
     enclosingLoopSource,
     enclosingLoopTableId,
     commerceEntityKind,
+    dataTableLoopOptions = [],
     handleChange: updateModuleProp,
     handlePatch: patchModuleProps,
     onSetDynamicBinding,
@@ -111,7 +113,7 @@ export function renderModuleTabContent(args: ModuleTabContentArgs): React.ReactN
         />
       )}
 
-      {Object.entries(loopSourceAwareSchema(definition, commerceEntityKind))
+      {Object.entries(loopSourceAwareSchema(definition, commerceEntityKind, dataTableLoopOptions))
         .map(([key, control]: [string, PropertyControl]) => {
         // Hidden controls carry a type for the engine (escaping dispatch) but
         // render no editor surface — e.g. base.outlet.html, a publisher-filled
@@ -178,12 +180,15 @@ function isPromotedFormProperty(selectedNode: PageNode, key: string): boolean {
 function loopSourceAwareSchema(
   definition: AnyModuleDefinition,
   entityInScope: CommerceEntityKind | null,
+  dataTableLoopOptions: Array<{ label: string; value: string }>,
 ): AnyModuleDefinition['schema'] {
   if (definition.id !== 'store.relationship-loop') return definition.schema
 
   const options = [
     { label: 'All products', value: 'products' },
     { label: 'Cart items', value: 'cart.items' },
+    { label: 'Reviews', value: 'reviews' },
+    ...dataTableLoopOptions,
   ]
   if (entityInScope) {
     for (const field of listFields(entityInScope as EntityId)) {

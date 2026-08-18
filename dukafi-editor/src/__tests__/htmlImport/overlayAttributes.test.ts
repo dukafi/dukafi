@@ -167,6 +167,12 @@ describe('overlay attributes', () => {
     }
   })
 
+  it('accepts a custom data table source', () => {
+    const node = only('<div data-dukafy-loop="data/team"><article>card</article></div>')
+    expect(node.moduleId).toBe('store.relationship-loop')
+    expect(node.props.source).toBe('data/team')
+  })
+
   // An unrecognised source would render an empty loop with no hint why.
   it('leaves the element alone for a source the publisher cannot resolve', () => {
     const node = only('<div data-dukafy-loop="whatever"><p>x</p></div>')

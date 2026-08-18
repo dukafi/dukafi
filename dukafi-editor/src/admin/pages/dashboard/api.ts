@@ -8,7 +8,10 @@
  */
 import type {
   Collection, CommerceSettings, FormSubmission, FormSummary, Order,
-  CataloguePage, CatalogueQuery, Plugin, Product, Variant,
+  CataloguePage, CatalogueQuery, Plugin, PluginDashboardActionResult,
+  PluginDashboardData, PluginDashboardPage, PluginDashboardTablePage,
+  Product, Variant,
+  DataColumn, DataRow, DataTable,
 } from './types'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -107,6 +110,33 @@ export const commerceApi = {
       method: 'PUT',
       body: JSON.stringify({ settings }),
     }),
+  listPluginPages: (pluginId: string) =>
+    requestAbsolute<{ pages: PluginDashboardPage[] }>(
+      `/admin/api/cms/plugins/${encodeURIComponent(pluginId)}/pages`,
+    ),
+  getPluginPage: (pluginId: string, pageId: string) =>
+    requestAbsolute<{ page: PluginDashboardPage }>(
+      `/admin/api/cms/plugins/${encodeURIComponent(pluginId)}/pages/${encodeURIComponent(pageId)}`,
+    ),
+  getPluginPageData: (pluginId: string, pageId: string) =>
+    requestAbsolute<PluginDashboardData>(
+      `/admin/api/cms/plugins/${encodeURIComponent(pluginId)}/pages/${encodeURIComponent(pageId)}/data`,
+    ),
+  getPluginPageTable: (pluginId: string, pageId: string, tableId: string, query: { limit?: number; offset?: number; q?: string } = {}) => {
+    const params = new URLSearchParams()
+    if (query.limit != null) params.set('limit', String(query.limit))
+    if (query.offset != null) params.set('offset', String(query.offset))
+    if (query.q) params.set('q', query.q)
+    const suffix = params.toString() ? `?${params}` : ''
+    return requestAbsolute<PluginDashboardTablePage>(
+      `/admin/api/cms/plugins/${encodeURIComponent(pluginId)}/pages/${encodeURIComponent(pageId)}/tables/${encodeURIComponent(tableId)}${suffix}`,
+    )
+  },
+  runPluginPageAction: (pluginId: string, pageId: string, actionId: string, params: Record<string, string | number | boolean> = {}) =>
+    requestAbsolute<PluginDashboardActionResult>(
+      `/admin/api/cms/plugins/${encodeURIComponent(pluginId)}/pages/${encodeURIComponent(pageId)}/actions/${encodeURIComponent(actionId)}`,
+      { method: 'POST', body: JSON.stringify({ params }) },
+    ),
   deletePlugin: (id: string) =>
     requestAbsolute<void>(`/admin/api/cms/plugins/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   exportPlugin: async (id: string, input: { name: string; version: string }) => {
@@ -176,6 +206,21 @@ export const commerceApi = {
       method: 'PUT',
       body: JSON.stringify({ productIds }),
     }),
+
+  listDataTables: () => request<{ tables: DataTable[] }>('/tables'),
+  getDataTable: (idOrSlug: number | string) =>
+    request<{ table: DataTable }>(`/tables/${encodeURIComponent(String(idOrSlug))}`),
+  createDataTable: (input: { name: string; slug: string; columns: DataColumn[] }) =>
+    request<{ table: DataTable }>('/tables', { method: 'POST', body: JSON.stringify(input) }),
+  updateDataTable: (id: number, input: { name: string; slug: string; columns: DataColumn[] }) =>
+    request<{ table: DataTable }>(`/tables/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  deleteDataTable: (id: number) => request<void>(`/tables/${id}`, { method: 'DELETE' }),
+  createDataRow: (tableId: number, input: { slug?: string; position?: number; cells: Record<string, unknown> }) =>
+    request<{ row: DataRow }>(`/tables/${tableId}/rows`, { method: 'POST', body: JSON.stringify(input) }),
+  updateDataRow: (tableId: number, rowId: number, input: { slug?: string; position?: number; cells: Record<string, unknown> }) =>
+    request<{ row: DataRow }>(`/tables/${tableId}/rows/${rowId}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  deleteDataRow: (tableId: number, rowId: number) =>
+    request<void>(`/tables/${tableId}/rows/${rowId}`, { method: 'DELETE' }),
 
   getSettings: () => request<{ settings: CommerceSettings }>('/settings'),
   updateSettings: (input: CommerceSettingsInput) =>

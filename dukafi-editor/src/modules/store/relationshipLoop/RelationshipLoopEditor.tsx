@@ -54,6 +54,7 @@ export function RelationshipLoopEditor({ props, children, mcClassName, nodeWrapp
     : parsedSource?.fields.at(-1)
       ?? (parsedSource?.kind === 'products' ? 'products'
         : parsedSource?.kind === 'reviews' ? 'reviews'
+          : parsedSource?.kind === 'data' ? (parsedSource.slug || 'rows')
           : parsedSource?.kind === 'orders' ? 'orders' : 'items')
 
   // EVERY hook must run before this early return. An empty loop used to bail

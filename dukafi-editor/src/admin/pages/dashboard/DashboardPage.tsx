@@ -13,6 +13,7 @@ import { useAdminNavigate } from '@admin/lib/useAdminNavigate'
 import { Button } from '@ui/components/Button'
 import { AdminPageLayout } from '@admin/layouts/AdminPageLayout'
 import { BoxStackSolidIcon } from 'pixel-art-icons/icons/box-stack-solid'
+import { Grid2x22SolidIcon } from 'pixel-art-icons/icons/grid-2x2-2-solid'
 import { CloudUploadSolidIcon } from 'pixel-art-icons/icons/cloud-upload-solid'
 import { PackageSolidIcon } from 'pixel-art-icons/icons/package-solid'
 import { Settings2SolidIcon } from 'pixel-art-icons/icons/settings-2-solid'
@@ -23,6 +24,7 @@ import { CommandIcon } from 'pixel-art-icons/icons/command'
 import { StarSolidIcon } from 'pixel-art-icons/icons/star-solid'
 import { TargetSolidIcon } from 'pixel-art-icons/icons/target-solid'
 import { CollectionsSection } from './sections/CollectionsSection'
+import { TablesSection } from './sections/TablesSection'
 import { ConnectSection } from './sections/ConnectSection'
 import { ReviewsSection } from './sections/ReviewsSection'
 import { ImportSection } from './sections/ImportSection'
@@ -38,6 +40,7 @@ import styles from './DashboardPage.module.css'
 const SECTION_LABELS: Record<CommerceSection, string> = {
   products: 'Products',
   collections: 'Collections',
+  tables: 'Tables',
   orders: 'Orders',
   discounts: 'Discounts',
   forms: 'Forms',
@@ -51,6 +54,7 @@ const SECTION_LABELS: Record<CommerceSection, string> = {
 const SECTION_ICONS = {
   products: PackageSolidIcon,
   collections: BoxStackSolidIcon,
+  tables: Grid2x22SolidIcon,
   orders: ListBoxSolidIcon,
   discounts: TargetSolidIcon,
   forms: FileTextSolidIcon,
@@ -61,7 +65,7 @@ const SECTION_ICONS = {
   settings: Settings2SolidIcon,
 } satisfies Record<CommerceSection, typeof PackageSolidIcon>
 
-const SECTIONS: CommerceSection[] = ['products', 'collections', 'orders', 'discounts', 'forms', 'plugins', 'import', 'reviews', 'connect', 'settings']
+const SECTIONS: CommerceSection[] = ['products', 'collections', 'tables', 'orders', 'discounts', 'forms', 'plugins', 'import', 'reviews', 'connect', 'settings']
 
 /** `products` is the landing area; anything unrecognised falls back to it. */
 export function sectionFromParam(value: string | undefined): CommerceSection {
@@ -83,7 +87,7 @@ export function DashboardPage() {
         <aside className={styles.workspaceSidebar} aria-label="Dashboard workspace">
           <div className={styles.workspaceIdentity}>
             <h1 id="dashboard-title">Dashboard</h1>
-            <p>Products, collections, and imports.</p>
+            <p>Products, collections, tables, and imports.</p>
           </div>
 
           <nav className={styles.workspaceNavigation} aria-label="Dashboard sections">
@@ -118,6 +122,7 @@ export function DashboardPage() {
           {section === 'forms' && <FormsSection />}
           {section === 'plugins' && <PluginsSection data={data} />}
           {section === 'collections' && <CollectionsSection data={data} />}
+          {section === 'tables' && <TablesSection />}
           {section === 'import' && <ImportSection data={data} />}
           {section === 'reviews' && <ReviewsSection data={data} />}
           {section === 'connect' && <ConnectSection />}

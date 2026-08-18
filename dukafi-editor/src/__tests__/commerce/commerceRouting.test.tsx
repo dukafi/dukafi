@@ -19,6 +19,7 @@ import { sectionFromParam } from '@admin/pages/dashboard/DashboardPage'
 describe('Commerce area from the URL', () => {
   it('opens the area named in the path', () => {
     expect(sectionFromParam('orders')).toBe('orders')
+    expect(sectionFromParam('tables')).toBe('tables')
     expect(sectionFromParam('settings')).toBe('settings')
     expect(sectionFromParam('import')).toBe('import')
   })

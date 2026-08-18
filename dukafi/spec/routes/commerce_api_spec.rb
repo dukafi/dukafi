@@ -13,6 +13,8 @@ class CommerceApiSpec < Minitest::Test
     CollectionProduct.dataset.delete
     Collection.dataset.delete
     ProductImage.dataset.delete
+    CustomRow.dataset.delete
+    CustomTable.dataset.delete
     MediaAsset.dataset.delete
     Variant.dataset.delete
     Product.dataset.delete
@@ -223,5 +225,43 @@ class CommerceApiSpec < Minitest::Test
 
     assert_equal 200, last_response.status, last_response.body
     assert_equal "featured", json.dig("collection", "slug")
+  end
+
+  def test_custom_table_and_row_crud
+    post_json "/admin/api/cms/commerce/tables",
+              name: "Team", slug: "team",
+              columns: [
+                { id: "name", label: "Name", type: "text" },
+                { id: "image", label: "Image", type: "media" },
+              ]
+    assert_equal 201, last_response.status, last_response.body
+    table_id = json.dig("table", "id")
+    assert_equal "team", json.dig("table", "slug")
+
+    post_json "/admin/api/cms/commerce/tables/#{table_id}/rows",
+              slug: "jane", cells: { name: "Jane" }
+    assert_equal 201, last_response.status, last_response.body
+    row_id = json.dig("row", "id")
+    assert_equal "Jane", json.dig("row", "cells", "name")
+
+    get "/admin/api/cms/commerce/tables/team"
+    assert_equal 200, last_response.status
+    assert_equal "Jane", json.dig("table", "rows", 0, "cells", "name")
+    assert_equal "Jane", json.dig("table", "rows", 0, "entry", "name")
+
+    patch_json "/admin/api/cms/commerce/tables/#{table_id}/rows/#{row_id}",
+               cells: { name: "Jane Doe" }
+    assert_equal 200, last_response.status, last_response.body
+    assert_equal "Jane Doe", json.dig("row", "cells", "name")
+
+    delete "/admin/api/cms/commerce/tables/#{table_id}/rows/#{row_id}"
+    assert_equal 204, last_response.status
+    get "/admin/api/cms/commerce/tables"
+    assert_equal 1, json.fetch("tables").length, "deleting a row must not delete the table"
+
+    delete "/admin/api/cms/commerce/tables/#{table_id}"
+    assert_equal 204, last_response.status
+    get "/admin/api/cms/commerce/tables"
+    assert_equal [], json.fetch("tables")
   end
 end

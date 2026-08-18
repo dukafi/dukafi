@@ -7,7 +7,7 @@
 import type { ReactNode } from 'react'
 
 export type CommerceSection =
-  | 'products' | 'collections' | 'orders' | 'discounts' | 'forms' | 'plugins' | 'import' | 'reviews'
+  | 'products' | 'collections' | 'tables' | 'orders' | 'discounts' | 'forms' | 'plugins' | 'import' | 'reviews'
   | 'connect' | 'settings'
 
 export interface CommerceSettings {
@@ -74,6 +74,32 @@ export interface Collection {
   description: string
   sortOrder: number
   productIds: number[]
+}
+
+export type DataColumnType = 'text' | 'longText' | 'number' | 'boolean' | 'url' | 'media'
+
+export interface DataColumn {
+  id: string
+  label: string
+  type: DataColumnType
+}
+
+export interface DataTable {
+  id: number
+  name: string
+  slug: string
+  columns: DataColumn[]
+  rowCount: number
+  rows?: DataRow[]
+}
+
+export interface DataRow {
+  id: number
+  slug: string
+  position: number
+  cells: Record<string, unknown>
+  /** Baked loop entry — media columns are public URLs, not asset ids. */
+  entry?: Record<string, unknown>
 }
 
 export interface VariantFormState {
@@ -224,6 +250,60 @@ export interface Plugin {
   productFields: CatalogueFieldDef[]
   variantFields: CatalogueFieldDef[]
   settings: PluginSettingField[]
+  pages?: PluginDashboardPage[]
+}
+
+export interface PluginDashboardPage {
+  id: string
+  title: string
+  navLabel: string
+  description: string | null
+  stats: { id: string; label: string }[]
+  info: { id: string; label: string }[]
+  tables: PluginDashboardTable[]
+  actions: PluginDashboardAction[]
+}
+
+export interface PluginDashboardTable {
+  id: string
+  label: string
+  empty: string
+  columns: { key: string; label: string }[]
+}
+
+export interface PluginDashboardAction {
+  id: string
+  label: string
+  kind: 'primary' | 'secondary' | 'danger'
+  confirm: string | null
+}
+
+export interface PluginDashboardData {
+  pluginId: string
+  pageId: string
+  stats: Record<string, { value: string; hint: string | null; tone: 'default' | 'good' | 'warn' | 'bad' }>
+  info: Record<string, { value: string }>
+}
+
+export interface PluginDashboardTablePage {
+  pluginId: string
+  pageId: string
+  tableId: string
+  columns: { key: string; label: string }[]
+  empty: string
+  rows: Record<string, string | number | boolean | null>[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface PluginDashboardActionResult {
+  ok: boolean
+  pluginId: string
+  pageId: string
+  actionId: string
+  message: string
+  reload: boolean
 }
 
 /** One form the site has received something through, newest activity first. */

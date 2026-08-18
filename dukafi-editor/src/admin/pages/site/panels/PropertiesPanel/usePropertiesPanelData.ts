@@ -20,8 +20,11 @@ import { getAncestors, resolveProps } from '@core/page-tree'
 import { loopSourceRegistry } from '@core/loops/registry'
 import { primaryTemplateTableSlug } from '@core/templates'
 import { COMMERCE_ENTITIES, listFields, scalarFields, type EntityId } from '@core/commerce/entitySchema'
-import { entityForLoopSource, loopSourceFor } from '@core/commerce/loopSource'
+import { entityForLoopSource, loopSourceFor, parseLoopSource } from '@core/commerce/loopSource'
 import { type CommerceEntityKind } from '../../property-controls/DynamicBindingControl/commerceEntry'
+import { useAsyncResource } from '@admin/lib/useAsyncResource'
+import { commerceApi } from '@admin/pages/dashboard/api'
+import type { DataColumn, DataTable as CustomDataTable } from '@admin/pages/dashboard/types'
 import { buildClassTokenUsageMap, buildSelectorUsageMap, resolveSelectorUsage } from '../selectorUsage'
 import type {
   AnyModuleDefinition,
@@ -87,6 +90,7 @@ interface PropertiesPanelData {
   enclosingLoopSource: EnclosingBindingSource | undefined
   enclosingLoopTableId: string | null
   commerceEntityKind: CommerceEntityKind | null
+  dataTableLoopOptions: Array<{ label: string; value: string }>
   dynamicBindingsEnabled: boolean
 
   // ─── Panel chrome state ────────────────────────────────────────────────
@@ -193,10 +197,19 @@ export function usePropertiesPanelData(): PropertiesPanelData {
   // For nodes with such an ancestor we expose the same `currentEntry`
   // bindings — they resolve to the loop's iteration item via the publisher's
   // entry-stack semantics.
-  const { enclosingLoopSource, enclosingLoopTableId, commerceEntityKind } = resolveEnclosingLoopContext(
+  const { enclosingLoopSource: baseLoopSource, enclosingLoopTableId, commerceEntityKind, dataTableSlug } = resolveEnclosingLoopContext(
     activePage,
     selectedNodeId,
   )
+  const { data: dataTables } = useAsyncResource<CustomDataTable[]>(
+    () => commerceApi.listDataTables().then((result) => result.tables).catch(() => []),
+    [],
+  )
+  const dataTableLoopOptions = (dataTables ?? []).map((table) => ({
+    label: table.name,
+    value: `data/${table.slug}`,
+  }))
+  const enclosingLoopSource = mergeDataTableFields(baseLoopSource, commerceEntityKind, dataTableSlug, dataTables ?? [])
   // Bindings are always available. The picker decides which sources are
   // meaningful in the current context (`currentEntry` / `parentEntry`
   // only when inside a loop or template page; page / site / route
@@ -277,6 +290,7 @@ export function usePropertiesPanelData(): PropertiesPanelData {
     enclosingLoopSource,
     enclosingLoopTableId,
     commerceEntityKind,
+    dataTableLoopOptions,
     dynamicBindingsEnabled,
 
     panelState,
@@ -325,12 +339,14 @@ interface EnclosingLoopContext {
   enclosingLoopSource: EnclosingBindingSource | undefined
   enclosingLoopTableId: string | null
   commerceEntityKind: CommerceEntityKind | null
+  dataTableSlug: string | null
 }
 
 const EMPTY_ENCLOSING_CONTEXT: EnclosingLoopContext = {
   enclosingLoopSource: undefined,
   enclosingLoopTableId: null,
   commerceEntityKind: null,
+  dataTableSlug: null,
 }
 
 /**
@@ -355,9 +371,8 @@ function commerceBindingSource(entity: EntityId): EnclosingLoopContext {
   return {
     enclosingLoopSource: { label: schema.label, fields },
     enclosingLoopTableId: null,
-    // The legacy kind only knows three entities; anything else has no
-    // preview-value support yet and is reported as null rather than lied about.
-    commerceEntityKind: (entity === 'product' || entity === 'variant' || entity === 'collection')
+    dataTableSlug: null,
+    commerceEntityKind: (entity === 'product' || entity === 'variant' || entity === 'collection' || entity === 'dataRow')
       ? entity
       : null,
   }
@@ -390,7 +405,7 @@ function resolveEnclosingLoopContext(
       if (ancestor.moduleId !== 'store.relationship-loop') continue
       inScope = entityForLoopSource(loopSourceFor(ancestor.props), inScope)
     }
-    return inScope ? commerceBindingSource(inScope) : EMPTY_ENCLOSING_CONTEXT
+    return inScope ? withDataTableSlug(commerceBindingSource(inScope), loopSourceFor(relationshipLoopNode.props)) : EMPTY_ENCLOSING_CONTEXT
   }
 
   // Instatic-era generic loop — kept for any pre-existing document still
@@ -432,4 +447,39 @@ function extractLoopTableId(
   if (!filters || typeof filters !== 'object' || Array.isArray(filters)) return null
   const tableId = (filters as Record<string, unknown>).tableId
   return typeof tableId === 'string' && tableId ? tableId : null
+}
+
+function withDataTableSlug(context: EnclosingLoopContext, source: string): EnclosingLoopContext {
+  const parsed = parseLoopSource(source)
+  if (parsed?.kind !== 'data' || !parsed.slug) return context
+  return { ...context, dataTableSlug: parsed.slug }
+}
+
+function columnFormat(column: DataColumn): LoopSourceField['format'] {
+  if (column.type === 'media') return 'media'
+  if (column.type === 'url') return 'url'
+  return 'plain'
+}
+
+function mergeDataTableFields(
+  source: EnclosingBindingSource | undefined,
+  kind: CommerceEntityKind | null,
+  tableSlug: string | null,
+  tables: CustomDataTable[],
+): EnclosingBindingSource | undefined {
+  if (kind !== 'dataRow' || !tableSlug || !source) return source
+  const table = tables.find((item) => item.slug === tableSlug)
+  if (!table) return { ...source, label: tableSlug }
+  const extras: LoopSourceField[] = []
+  for (const column of table.columns) {
+    extras.push({ id: column.id, label: column.label, format: columnFormat(column) })
+    if (column.type === 'media') {
+      extras.push({ id: `${column.id}Alt`, label: `${column.label} alt text`, format: 'plain' })
+    }
+  }
+  const seen = new Set(source.fields.map((field) => field.id))
+  return {
+    label: table.name,
+    fields: [...source.fields, ...extras.filter((field) => !seen.has(field.id))],
+  }
 }

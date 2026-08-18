@@ -318,6 +318,23 @@
     background: var(--bg-surface-2);
 }
 
+.columnFields {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr) 8rem auto;
+    gap: var(--space-s);
+    align-items: end;
+    width: 100%;
+}
+
+.cellThumb {
+    display: block;
+    width: 2.25rem;
+    height: 2.25rem;
+    object-fit: cover;
+    border-radius: var(--card-radius);
+    background: var(--bg-surface-2);
+}
+
 .identityLabel {
     flex: 1;
     min-width: 0;

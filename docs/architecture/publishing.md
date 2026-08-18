@@ -63,11 +63,26 @@ restored. Visitors therefore do not observe a partially written release.
 
 ## Dependency-aware partial publishing
 
-During a bake, `DependencyTracker` records page path to product-id edges.
-Product and variant writes use `PartialBake` to identify affected paths, copy
-the current slot, rerender only those paths, delete obsolete renamed paths, and
-atomically activate the new slot. A regression test exercises a 500-product
-catalog and verifies that an isolated edit touches only its dependents.
+Published pages stay static HTML. A catalogue or data-table write must re-bake
+every page that would show the change — including listings that did not yet
+contain the new row.
+
+Two indexes are filled at bake (`RebuildIndex`):
+
+- `page_dependencies` — this path listed these **product ids**
+- `page_sources` — this path loops this **source** (`products`, `data/team`,
+  `reviews`, `collections/featured.products`)
+
+The first finds the product page and every listing that already showed the
+row. The second finds listings that would show a **new** row (a product added
+to the catalogue, a team member added to `data/team`) without walking every
+document. Writes look those paths up and `PartialBake` copies the current
+slot, rerenders only those paths, deletes obsolete renamed paths, and
+atomically activates the new slot.
+
+`list_rebuild_targets` (MCP) and `GET /admin/api/cms/publish/rebuild-targets`
+export the same map. A regression test exercises a 500-product catalog and
+verifies that an isolated edit touches only its dependents.
 
 ## Storefront request selection
 

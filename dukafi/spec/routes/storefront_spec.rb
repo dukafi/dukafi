@@ -11,6 +11,7 @@ class StorefrontSpec < Minitest::Test
 
   def setup
     PageDependency.dataset.delete
+    PageSource.dataset.delete
     CollectionProduct.dataset.delete
     Collection.dataset.delete
     Variant.dataset.delete

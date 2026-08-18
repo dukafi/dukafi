@@ -118,6 +118,12 @@ class AdminApi < Roda
     request.halt([status, { "content-type" => "application/json" }, [JSON.generate(error_payload(code, message))]])
   end
 
+  def plugin_page_payload
+    yield
+  rescue PluginPages::Error => error
+    halt_json(error.http_status, error.code, error.message)
+  end
+
   def catalogue_status(error)
     case error.code
     when "plugin_not_found" then 404
@@ -316,6 +322,20 @@ class AdminApi < Roda
       description: collection.description.to_s, sortOrder: collection.sort_order,
       productIds: memberships.map(&:product_id),
     }
+  end
+
+  def find_custom_table(identifier)
+    if identifier.to_s.match?(/\A\d+\z/)
+      CustomTable[identifier.to_i]
+    else
+      CustomTable.first(slug: identifier.to_s)
+    end
+  end
+
+  def rebuild_targets_payload(params)
+    McpTools.run_list_rebuild_targets(params)
+  rescue McpTools::ArgumentError => error
+    halt_json(422, "invalid_rebuild_query", error.message)
   end
 
   # `existing_id` excludes the product being edited from the collision check,
@@ -630,6 +650,7 @@ class AdminApi < Roda
       r.on("publish") do
         require_admin!
         r.get("status") { PublishSite.status }
+        r.get("rebuild-targets") { rebuild_targets_payload(r.params) }
         r.post do
           result = PublishSite.call
           { publishedPages: result.published_pages }
@@ -869,6 +890,36 @@ class AdminApi < Roda
             ])
           end
 
+          r.on("pages") do
+            visible = Dukafi::Plugins.find_visible(plugin_id) ||
+                      halt_json(404, "plugin_not_found", "Plugin not found")
+            r.is do
+              r.get { { pages: PluginPages.manifest(visible) } }
+            end
+            r.on(String) do |page_id|
+              r.get("data") { plugin_page_payload { PluginPages.data(visible, page_id) } }
+              r.on("tables", String) do |table_id|
+                r.get do
+                  plugin_page_payload do
+                    PluginPages.table(
+                      visible, page_id, table_id,
+                      limit: r.params["limit"], offset: r.params["offset"],
+                      query: r.params["q"]
+                    )
+                  end
+                end
+              end
+              r.on("actions", String) do |action_id|
+                r.post do
+                  incoming = r.params["params"]
+                  incoming = {} unless incoming.is_a?(Hash)
+                  plugin_page_payload { PluginPages.action(visible, page_id, action_id, params: incoming) }
+                end
+              end
+              r.get { plugin_page_payload { { page: PluginPages.page(visible, page_id) } } }
+            end
+          end
+
           plugin = Dukafi::Plugins.find(plugin_id) || halt_json(404, "plugin_not_found", "Plugin not found")
           r.put("settings") do
             submitted = r.params["settings"]
@@ -1047,6 +1098,66 @@ class AdminApi < Roda
               { collection: commerce_collection_payload(collection), rebakedPages: rebake_collection(collection) }
             rescue ArgumentError
               halt_json(422, "invalid_products", "Product IDs must be integers")
+            end
+          end
+        end
+        r.on("tables") do
+          r.is do
+            r.get { { tables: CustomTable.order(:name).map { |table| CustomTableWrites.table_payload(table) } } }
+            r.post do
+              table = CustomTableWrites.create_table!(r.params)
+              response.status = 201
+              { table: CustomTableWrites.table_payload(table) }
+            rescue CustomTableWrites::Invalid => error
+              halt_json(422, "invalid_table", error.message)
+            end
+          end
+          r.on(String) do |identifier|
+            table = find_custom_table(identifier) || halt_json(404, "table_not_found", "Data table not found")
+            # Exact-path only. Without `r.is`, PATCH/DELETE on /rows/:id would
+            # update or destroy the TABLE — Roda's method matchers do not
+            # consume leftover path.
+            r.is do
+              r.get do
+                { table: CustomTableWrites.table_payload(table).merge(
+                  "rows" => CustomTableWrites.admin_rows(table),
+                ) }
+              end
+              r.patch do
+                updated = CustomTableWrites.update_table!(table, r.params)
+                { table: CustomTableWrites.table_payload(updated) }
+              rescue CustomTableWrites::Invalid => error
+                halt_json(422, "invalid_table", error.message)
+              end
+              r.delete do
+                CustomTableWrites.delete_table!(table)
+                no_content!
+              end
+            end
+            r.on("rows") do
+              r.is do
+                r.get { { rows: CustomTableWrites.admin_rows(table) } }
+                r.post do
+                  row = CustomTableWrites.create_row!(table, r.params)
+                  response.status = 201
+                  { row: CustomTableWrites.row_payload(row) }
+                rescue CustomTableWrites::Invalid => error
+                  halt_json(422, "invalid_row", error.message)
+                end
+              end
+              r.on(String) do |row_id|
+                row = table.custom_rows_dataset.first(id: row_id.to_i) || halt_json(404, "row_not_found", "Row not found")
+                r.patch do
+                  updated = CustomTableWrites.update_row!(row, r.params)
+                  { row: CustomTableWrites.row_payload(updated) }
+                rescue CustomTableWrites::Invalid => error
+                  halt_json(422, "invalid_row", error.message)
+                end
+                r.delete do
+                  CustomTableWrites.delete_row!(row)
+                  no_content!
+                end
+              end
             end
           end
         end

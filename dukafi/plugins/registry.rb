@@ -1,5 +1,6 @@
 require "timeout"
 require_relative "filter_context"
+require_relative "page"
 
 # The plugin system.
 #
@@ -12,15 +13,15 @@ require_relative "filter_context"
 #
 # A plugin extends Dukafi through registries that already exist (publisher
 # modules, node actions, binding frames, fragments, runtimes) plus settings,
-# payment rails, quotes, filters, events, public routes, jobs, and install
-# lifecycle. See docs/plugin-api.md.
+# payment rails, quotes, filters, events, public routes, jobs, dashboard
+# pages, and install lifecycle. See docs/plugin-api.md.
 class Dukafi
   module Plugins
     class Plugin
       Setting = Data.define(:key, :type, :label, :secret)
 
       attr_reader :id, :settings_schema, :payment_providers, :event_handlers,
-                  :quotes, :filters, :public_routes, :jobs, :catalogue_fields
+                  :quotes, :filters, :public_routes, :jobs, :catalogue_fields, :pages
 
       def initialize(id)
         @id = id.to_s
@@ -35,6 +36,7 @@ class Dukafi
         @filters = Hash.new { |hash, key| hash[key] = [] }
         @public_routes = []
         @jobs = []
+        @pages = []
         @catalogue_fields = { product: [], variant: [] }
         @install_hooks = []
         @activate_hooks = []
@@ -144,6 +146,17 @@ class Dukafi
         @catalogue_fields[owner] << { key: name, label: (label || name).to_s, type: kind }
       end
 
+      # A Dashboard page the host renders. Stats, info, tables, actions —
+      # the plugin names them and later fills them; it does not ship UI.
+      def page(id, title:, nav_label: nil, description: nil, &block)
+        raise ArgumentError, "A plugin may declare at most #{PluginPage::MAX_PAGES} pages." if @pages.length >= PluginPage::MAX_PAGES
+
+        built = PluginPage.build(id, title:, nav_label:, description:, &block)
+        raise ArgumentError, "This plugin already has a page #{built.id.inspect}." if @pages.any? { |entry| entry.id == built.id }
+
+        @pages << built
+      end
+
       def on_install(&handler) = @install_hooks << handler
       def on_activate(&handler) = @activate_hooks << handler
       def on_uninstall(&handler) = @uninstall_hooks << handler
@@ -182,6 +195,7 @@ class Dukafi
           "paymentProviders" => payment_providers.keys,
           "productFields" => @catalogue_fields[:product].map { |entry| entry.merge(pluginId: id).transform_keys(&:to_s) },
           "variantFields" => @catalogue_fields[:variant].map { |entry| entry.merge(pluginId: id).transform_keys(&:to_s) },
+          "pages" => @pages.map(&:to_h),
           "settings" => settings_schema.map do |setting|
             stored = values[setting.key].to_s
             {

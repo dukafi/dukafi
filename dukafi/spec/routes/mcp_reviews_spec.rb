@@ -14,6 +14,7 @@ class McpReviewsSpec < Minitest::Test
     Review.dataset.delete
     Variant.dataset.delete
     Product.dataset.delete
+    PageSource.dataset.delete
   end
 
   def tool(name) = McpTools.all.find { |entry| entry.fetch(:name) == name }.fetch(:run)

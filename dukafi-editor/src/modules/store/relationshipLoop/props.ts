@@ -8,7 +8,7 @@ export const RelationshipLoopPropsSchema = Type.Object({
    *   collections/featured.products   one collection's products
    *   products/canvas-bag.variants    one product's variants
    *   currentEntry.images             a list field of the entity in scope
-   *   cart.items
+   *   data/team                       every row in the Team table
    *
    * The relative form is what makes nesting composable. Blank falls back to
    * the legacy `relationship` + `sourceSlug` pair, so documents authored
@@ -16,7 +16,7 @@ export const RelationshipLoopPropsSchema = Type.Object({
    */
   source: Type.String({ default: '' }),
   relationship: Type.Union(
-    [Type.Literal('products'), Type.Literal('variants'), Type.Literal('cartItems')],
+    [Type.Literal('products'), Type.Literal('variants'), Type.Literal('cartItems'), Type.Literal('dataRows')],
     { default: 'products' },
   ),
   sourceSlug: Type.String({ default: '' }),

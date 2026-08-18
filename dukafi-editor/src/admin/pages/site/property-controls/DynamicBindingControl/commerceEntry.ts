@@ -2,12 +2,10 @@
  * Commerce `currentEntry` binding support for the DynamicBindingControl
  * picker.
  *
- * Dukafi has no generic `data_tables`/`data_rows` CMS (that's Instatic-era
- * plumbing this fork never implemented — see `base.loop`, kept registered
- * but hidden from the module picker). Products, variants, and collections
- * are their own first-class entities, resolved server-side by
- * `CommercePrefetcher` + `render_page.rb`'s `resolve_dynamic_bindings` — not
- * by anything in `core/loops` or `core/data`.
+ * Products, variants, collections, and Dashboard Tables rows are first-class
+ * store entities. They bake through `CommercePrefetcher` + `render_page.rb`'s
+ * `resolve_dynamic_bindings` — not Instatic `core/loops` / `core/data`.
+ * Custom tables loop as `data/<slug>`; column ids become `currentEntry.<id>`.
  *
  * This module is the editor-side counterpart: it tells the binding picker
  * which fields are available for `currentEntry.<field>` when the selected
@@ -16,17 +14,19 @@
  * in Ruby), plus a live preview value for each field so the picker shows
  * real data instead of blanks. Field ids MUST match the keys
  * `CommercePrefetcher`/`relationship_items` actually put on the hash — see
- * `dukafi/services/commerce_prefetcher.rb`.
+ * `dukafi/services/commerce_prefetcher.rb`. Table-specific columns are merged
+ * in `usePropertiesPanelData` once the table list loads.
  */
 import type { LoopSourceField } from '@core/loops/types'
 import { commerceApi } from '@admin/pages/dashboard/api'
 
-export type CommerceEntityKind = 'product' | 'variant' | 'collection'
+export type CommerceEntityKind = 'product' | 'variant' | 'collection' | 'dataRow'
 
 export const COMMERCE_ENTITY_LABELS: Record<CommerceEntityKind, string> = {
   product: 'Product',
   variant: 'Variant',
   collection: 'Collection',
+  dataRow: 'Data row',
 }
 
 export const COMMERCE_ENTITY_FIELDS: Record<CommerceEntityKind, LoopSourceField[]> = {
@@ -47,6 +47,10 @@ export const COMMERCE_ENTITY_FIELDS: Record<CommerceEntityKind, LoopSourceField[
     { id: 'title', label: 'Title', format: 'plain' },
     { id: 'description', label: 'Description', format: 'plain' },
   ],
+  dataRow: [
+    { id: 'slug', label: 'Slug', format: 'plain' },
+    { id: 'tableName', label: 'Table name', format: 'plain' },
+  ],
 }
 
 function formatPriceCents(cents: number, currency: string): string {
@@ -58,6 +62,7 @@ interface CommercePreviewCache {
   product: Record<string, unknown> | null
   variant: Record<string, unknown> | null
   collection: Record<string, unknown> | null
+  dataRow: Record<string, unknown> | null
 }
 
 export let _cachedCommercePreview: CommercePreviewCache | null = null
@@ -69,10 +74,21 @@ export function clearCommercePreviewCache(): void {
   _commercePreviewPromise = null
 }
 
+async function firstDataRowPreview(): Promise<Record<string, unknown> | null> {
+  const tables = await commerceApi.listDataTables().then((result) => result.tables).catch(() => [])
+  const table = tables.find((item) => item.rowCount > 0) ?? tables[0]
+  if (!table) return null
+  const detailed = await commerceApi.getDataTable(table.slug).catch(() => null)
+  const row = detailed?.table.rows?.[0]
+  if (!row) return null
+  return row.entry ?? { slug: row.slug, tableName: table.name, tableSlug: table.slug, ...row.cells }
+}
+
 async function fetchCommercePreview(): Promise<CommercePreviewCache> {
-  const [productsResult, collectionsResult] = await Promise.all([
+  const [productsResult, collectionsResult, dataRow] = await Promise.all([
     commerceApi.listProducts().catch(() => ({ products: [] })),
     commerceApi.listCollections().catch(() => ({ collections: [] })),
+    firstDataRowPreview(),
   ])
   const product = productsResult.products[0]
   const collection = collectionsResult.collections[0]
@@ -102,6 +118,7 @@ async function fetchCommercePreview(): Promise<CommercePreviewCache> {
         description: collection.description,
       }
       : null,
+    dataRow,
   }
 }
 
@@ -117,7 +134,7 @@ export function loadCommercePreview(): Promise<CommercePreviewCache> {
     })
     .catch(() => {
       _commercePreviewPromise = null
-      const empty: CommercePreviewCache = { product: null, variant: null, collection: null }
+      const empty: CommercePreviewCache = { product: null, variant: null, collection: null, dataRow: null }
       return empty
     })
   return _commercePreviewPromise

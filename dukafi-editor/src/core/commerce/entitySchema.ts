@@ -59,7 +59,7 @@ export interface EntitySchema {
 export type EntityId =
   | 'product' | 'variant' | 'image' | 'imageVariant' | 'collection' | 'cartItem'
   | 'review' | 'star' | 'order' | 'orderLine' | 'payment'
-  | 'paymentProvider' | 'paymentField' | 'catalogueField'
+  | 'paymentProvider' | 'paymentField' | 'catalogueField' | 'dataRow'
 
 const scalar = (id: string, label: string, format: EntityFieldFormat = 'plain'): EntityScalarField =>
   ({ id, label, kind: 'scalar', format })
@@ -337,6 +337,19 @@ export const COMMERCE_ENTITIES: Record<EntityId, EntitySchema> = {
       scalar('label', 'Label'),
       scalar('value', 'Value'),
       scalar('pluginId', 'Plugin'),
+    ],
+  },
+
+  dataRow: {
+    id: 'dataRow',
+    label: 'Data row',
+    fields: [
+      scalar('id', 'ID'),
+      scalar('slug', 'Slug'),
+      scalar('position', 'Position'),
+      scalar('createdAt', 'Created at'),
+      scalar('tableSlug', 'Table slug'),
+      scalar('tableName', 'Table name'),
     ],
   },
 }

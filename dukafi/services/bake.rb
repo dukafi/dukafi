@@ -3,7 +3,7 @@ require "securerandom"
 
 class Bake
   Result = Data.define(:version, :page_count, :slot)
-  Entry = Data.define(:path, :title, :rendered, :product_ids)
+  Entry = Data.define(:path, :title, :rendered, :product_ids, :sources)
   SAFE_SLUG = /\A[a-zA-Z0-9][a-zA-Z0-9_\/-]*\z/
 
   def self.call(
@@ -63,7 +63,9 @@ class Bake
       flip_current(slot_name)
       flipped = true
       DB.transaction do
-        DependencyTracker.replace!(entries.to_h { |entry| [dependency_path(entry.path), entry.product_ids] })
+        DependencyTracker.replace!(entries.to_h do |entry|
+          [dependency_path(entry.path), { product_ids: entry.product_ids, sources: entry.sources }]
+        end)
         if @commit
           @commit.call(version)
         else
@@ -106,7 +108,8 @@ class Bake
         # the only route to it runs the session check first.
         path: page.bake_path, title: page.title,
         rendered: render_document_data(document, prefetched:),
-        product_ids: DependencyTracker.product_ids(document:, prefetched:)
+        product_ids: DependencyTracker.product_ids(document:, prefetched:),
+        sources: RebuildIndex.sources(document),
       )
     end
   end
@@ -115,12 +118,14 @@ class Bake
     return [] unless @product_template
 
     prefetched.fetch("products", {}).values.map do |product|
+      document = render_document(@product_template)
       Entry.new(
         path: "products/#{product.fetch('slug')}", title: product.fetch("title"),
         rendered: render_page(@product_template, prefetched:, current_entry: product),
         product_ids: DependencyTracker.product_ids(
-          document: render_document(@product_template), prefetched:, current_entry: product
-        )
+          document:, prefetched:, current_entry: product
+        ),
+        sources: RebuildIndex.sources(document, current_entry: product),
       )
     end
   end
@@ -129,12 +134,14 @@ class Bake
     return [] unless @collection_template
 
     prefetched.fetch("collections", {}).values.map do |collection|
+      document = render_document(@collection_template)
       Entry.new(
         path: "collections/#{collection.fetch('slug')}", title: collection.fetch("title"),
         rendered: render_page(@collection_template, prefetched:, current_entry: collection),
         product_ids: DependencyTracker.product_ids(
-          document: render_document(@collection_template), prefetched:, current_entry: collection
-        )
+          document:, prefetched:, current_entry: collection
+        ),
+        sources: RebuildIndex.sources(document, current_entry: collection),
       )
     end
   end

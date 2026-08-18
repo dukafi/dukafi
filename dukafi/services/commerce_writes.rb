@@ -73,10 +73,13 @@ module CommerceWrites
 
   def delete_product!(product)
     slug = product.slug
+    paths = RebuildIndex.targets_for_product(product)
+    paths << "/products/#{slug}"
     DB.transaction { product.destroy }
     # Bake AFTER the row is gone so the loops that included it re-render
-    # without it.
-    PartialBake.call(product: product, old_slug: slug).page_count
+    # without it. Paths are snapshotted first: destroying the row also
+    # drops its `page_dependencies`, which would hide listing pages.
+    PartialBake.call(paths: paths).page_count
   rescue Sequel::ValidationFailed => e
     raise Invalid, e.message
   end
@@ -181,8 +184,10 @@ module CommerceWrites
 
   def delete_collection!(collection)
     slug = collection.slug
+    paths = RebuildIndex.targets_for_collection(collection)
+    paths << "/collections/#{slug}"
     DB.transaction { collection.destroy }
-    PartialBake.call(collection: collection, old_slug: slug).page_count
+    PartialBake.call(paths: paths).page_count
   end
 
   # Membership, as a SET rather than add/remove calls: a caller says what the

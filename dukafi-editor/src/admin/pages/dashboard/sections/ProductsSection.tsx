@@ -40,6 +40,8 @@ import styles from '../DashboardPage.module.css'
 function declaredFields(plugins: Plugin[], owner: 'product' | 'variant'): CatalogueFieldDef[] {
   return plugins.flatMap((plugin) => (owner === 'product' ? plugin.productFields : plugin.variantFields) || [])
 }
+
+const STATUS_OPTIONS = [
   { value: 'draft', label: 'Draft', textValue: 'Draft' },
   { value: 'active', label: 'Active', textValue: 'Active' },
 ]

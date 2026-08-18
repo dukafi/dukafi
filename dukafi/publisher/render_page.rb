@@ -701,18 +701,7 @@ class Dukafi
       # CommercePrefetcher emits, checked against the declared entity schema by
       # `spec/publisher/commerce_entities_spec.rb`.
       def loop_source(props, definition)
-        explicit = props["source"].to_s
-        return explicit unless explicit.empty?
-
-        # Documents authored before `source` existed carry relationship +
-        # sourceSlug. Map them rather than migrating anything on disk.
-        relationship = definition.id == "store.collection-loop" ? "products" : props.fetch("relationship", "products").to_s
-        slug = (props["sourceSlug"].to_s.empty? ? props["collectionSlug"].to_s : props["sourceSlug"].to_s)
-        case relationship
-        when "cartItems" then "cart.items"
-        when "variants" then slug.empty? ? "currentEntry.variants" : "products/#{slug}.variants"
-        else slug.empty? ? "products" : "collections/#{slug}.products"
-        end
+        Dukafi::Publisher::LoopSource.call(props, module_id: definition.id)
       end
 
       # The entity a source yields, from its last segment. Used to decide
@@ -726,6 +715,7 @@ class Dukafi
         # no cart facts and its price is a snapshot, so it must not collide
         # with `cart.items`.
         "orders" => "order", "lines" => "orderLine",
+        "data" => "dataRow",
       }.freeze
 
       def source_entity(source)
@@ -762,6 +752,8 @@ class Dukafi
         # The signed-in customer's own orders, supplied per request by the
         # fragment endpoint. Never present while baking.
         when "orders" then @orders
+        when "data"
+          slug ? (@prefetched.dig("dataTables", slug)&.fetch("rows", []) || []) : []
         when "currentEntry" then current_entry
         when "parentEntry" then parent_entry
         when "cart" then @cart
