@@ -130,6 +130,7 @@ class FormRegionSpec < Minitest::Test
 
     assert_includes html, 'hx-post="/fragments/account/login"'
     assert_includes html, 'hx-include="closest form"'
+    assert_includes html, 'hx-disabled-elt="this"'
   end
 
   # The button is the merchant's own design. Swapping a response into it would

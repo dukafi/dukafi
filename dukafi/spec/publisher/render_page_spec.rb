@@ -366,6 +366,8 @@ class RenderPageSpec < Minitest::Test
     # The surrounding form is submitted too, so a merchant's own
     # `<select name="variant_sku">` is honoured.
     assert_includes html, 'hx-include="closest form"'
+    # Disabled for the length of the POST so a double-click cannot add twice.
+    assert_includes html, 'hx-disabled-elt="this"'
     # Still an ordinary button — no Dukafi markup.
     assert_includes html, "<button"
     assert_includes html, "Add to cart"

@@ -94,11 +94,50 @@ class FormModulesSpec < Minitest::Test
     custom = render("base.form", { "mode" => "custom", "formId" => "c", "action" => "/x", "method" => "post" })
     assert_includes custom, 'action="/x"'
     refute_includes custom, "honeypot"
+    # Custom forms post off-site — htmx would CORS-fail and steal the native submit.
+    refute_includes custom, "hx-post"
+  end
+
+  def test_cms_forms_use_htmx_for_in_flight_feedback_without_dropping_native_post
+    html = render("base.form", { "mode" => "cms", "formId" => "contact" })
+    output = Dukafi::Publisher::REGISTRY.fetch("base.form").render(
+      { "mode" => "cms", "formId" => "contact" }, [], prefetched: {}
+    )
+
+    assert_includes html, 'hx-post="/forms/contact"'
+    assert_includes html, 'hx-disabled-elt="find button[type=submit]"'
+    assert_includes html, 'class="dukafy-form-result"'
+    # Native POST still works with JavaScript switched off.
+    assert_includes html, 'action="/forms/contact"'
+    assert_includes html, 'method="post"'
+    assert_equal [:htmx], output.fetch(:runtimes)
+  end
+
+  def test_a_form_whose_submit_already_posts_does_not_double_wire
+    # Login / checkout verbs live on the button. Enhancing the wrapping form
+    # would POST to /forms/:id AND the verb when the visitor hits Enter.
+    document = {
+      "rootNodeId" => "form",
+      "nodes" => {
+        "form" => node("form", "base.form", children: %w[submit],
+                      props: { "mode" => "cms", "formId" => "contact" }),
+        "submit" => node("submit", "base.submit", props: { "label" => "Sign in" })
+                    .merge("actions" => { "click" => { "type" => "account.login" } }),
+      },
+    }
+    html = Dukafi::Publisher::RenderPage.call(
+      document: document, registry: Dukafi::Publisher::REGISTRY, prefetched: {}
+    ).html
+
+    assert_includes html, 'hx-post="/fragments/account/login"'
+    refute_includes html, 'hx-post="/forms/contact"'
   end
 
   def test_form_method_falls_back_to_post_for_unknown_values
     assert_includes render("base.form", { "method" => "sideways" }), 'method="post"'
-    assert_includes render("base.form", { "method" => "get" }), 'method="get"'
+    get_form = render("base.form", { "method" => "get" })
+    assert_includes get_form, 'method="get"'
+    refute_includes get_form, "hx-post"
   end
 
   def test_user_supplied_values_are_escaped

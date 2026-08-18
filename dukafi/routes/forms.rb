@@ -35,10 +35,11 @@ class Forms < Roda
 
       destination = result.behavior == "redirect" ? safe_local_path(result.redirect_url) : nil
 
-      # A CMS form is a real <form> doing a real POST — no htmx involved unless
-      # the merchant wired some. `HX-Redirect` is an htmx instruction, so on a
-      # native submit the browser simply rendered the message div as a bare
-      # page and the merchant's chosen destination was never honoured.
+      # A CMS form is a real <form> doing a real POST. htmx intercepts when
+      # the page shipped it (in-flight spinner, no full reload); without JS
+      # the native submit still runs. `HX-Redirect` is an htmx instruction, so
+      # on a native submit the browser simply rendered the message div as a
+      # bare page and the merchant's chosen destination was never honoured.
       #
       # For a native submit the answer is the ordinary one: 303 See Other, so
       # the browser GETs the destination and a refresh cannot resubmit the

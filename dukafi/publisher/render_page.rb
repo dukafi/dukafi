@@ -148,7 +148,9 @@ class Dukafi
       # Union across the page, in first-seen order. Deduped because the same
       # module (or several htmx-driven ones) commonly appears many times.
       def collect_runtimes(declared)
-        RuntimeScripts.normalize(declared).each do |name|
+        names = RuntimeScripts.normalize(declared)
+        @css.add("dukafy.htmx-busy", CssCollector::HTMX_BUSY_CSS) if names.include?(:htmx)
+        names.each do |name|
           @runtimes << name unless @runtimes.include?(name)
         end
       end
@@ -357,7 +359,7 @@ class Dukafi
             # render it.
             values["node"] = @form_region_id if @form_region_id
           end
-          attrs = %( hx-post="#{spec[:path]}" hx-include="closest form")
+          attrs = %( hx-post="#{spec[:path]}" hx-include="closest form" hx-disabled-elt="this")
           attrs += %( hx-target="#{spec[:target]}" hx-swap="outerHTML") if spec[:target]
           # No target means htmx would swap the response into the button
           # itself, replacing the merchant's own label with Dukafi's markup.
@@ -390,7 +392,7 @@ class Dukafi
           number = Integer(action[field].to_s, exception: false)
           values[field] = number.to_s if number
         end
-        attrs = %( hx-post="#{spec[:path]}" hx-vals="#{CGI.escapeHTML(JSON.generate(values))}")
+        attrs = %( hx-post="#{spec[:path]}" hx-disabled-elt="this" hx-vals="#{CGI.escapeHTML(JSON.generate(values))}")
         attrs += if @cart_loop_id
           # In a cart list: swap just this row (see `cart_line_fragment`).
           %( hx-target="closest [data-dukafy-cart-line]" hx-swap="outerHTML")

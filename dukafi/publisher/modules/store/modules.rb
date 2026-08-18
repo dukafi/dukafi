@@ -115,7 +115,7 @@ class Dukafi
           sku = variant&.fetch("sku", props["variantSku"]).to_s
           label = disabled ? "Sold out" : props["label"].to_s
           quantity = [Integer(props["quantity"] || 1), 1].max
-          html = %(<form class="dukafy-buy-form" method="post" action="/fragments/cart/items" hx-post="/fragments/cart/items" hx-target="find .dukafy-buy-result" hx-swap="outerHTML"><input type="hidden" name="product_slug" value="#{CGI.escapeHTML(product_slug)}"><input type="hidden" name="variant_sku" value="#{CGI.escapeHTML(sku)}"><input type="hidden" name="quantity" value="#{quantity}"><button class="dukafy-buy-button" type="submit"#{disabled ? ' disabled' : ''}>#{CGI.escapeHTML(label)}</button><output class="dukafy-buy-result" aria-live="polite"></output></form>)
+          html = %(<form class="dukafy-buy-form" method="post" action="/fragments/cart/items" hx-post="/fragments/cart/items" hx-target="find .dukafy-buy-result" hx-swap="outerHTML" hx-disabled-elt="find .dukafy-buy-button"><input type="hidden" name="product_slug" value="#{CGI.escapeHTML(product_slug)}"><input type="hidden" name="variant_sku" value="#{CGI.escapeHTML(sku)}"><input type="hidden" name="quantity" value="#{quantity}"><button class="dukafy-buy-button" type="submit"#{disabled ? ' disabled' : ''}>#{CGI.escapeHTML(label)}</button><output class="dukafy-buy-result" aria-live="polite"></output></form>)
           { html:, css: BUY_BUTTON_CSS, runtimes: [:htmx] }
         end
         registry.register(

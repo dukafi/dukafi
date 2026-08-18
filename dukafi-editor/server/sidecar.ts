@@ -18,11 +18,14 @@
  * comes back. That keeps ownership of the data in one place and makes this
  * process restartable at any moment.
  *
- * Bound to loopback ONLY. It applies arbitrary edits with no authentication of
- * its own beyond a shared token; reachable from outside the container it would
- * be a way to rewrite the store.
+ * Production binds a Unix socket (`DUKAFI_SIDECAR_SOCKET`), not a second TCP
+ * port: platforms like Railway detect listening ports, and a second bind can
+ * steal the public one. Local `bin/dev` still uses loopback TCP. Either way
+ * this process must never be reachable from outside the container — it applies
+ * arbitrary edits with no authentication of its own beyond a shared token.
  */
 
+import { unlinkSync } from 'node:fs'
 import { GlobalWindow } from 'happy-dom'
 import { applyEditsToTree, parseAiEdits } from '@core/ai'
 import type { EditableSite, EditableTree } from '@core/ai'
@@ -38,6 +41,7 @@ const window = new GlobalWindow()
 await import('@modules/base')
 await import('@modules/store')
 
+const SOCKET = process.env.DUKAFI_SIDECAR_SOCKET
 const PORT = Number(process.env.DUKAFI_SIDECAR_PORT ?? 9293)
 const TOKEN = process.env.DUKAFI_SIDECAR_TOKEN ?? ''
 
@@ -98,30 +102,45 @@ async function applyEdits(request: Request): Promise<Response> {
   return json({ applied, received: edits.length, document, styleRules: site.styleRules })
 }
 
-const server = Bun.serve({
-  port: PORT,
-  // Loopback only. See the header: this endpoint rewrites pages.
-  hostname: '127.0.0.1',
-  async fetch(request) {
-    const url = new URL(request.url)
+async function handle(request: Request): Promise<Response> {
+  const url = new URL(request.url)
 
-    // Unauthenticated so a container healthcheck can use it, and it reveals
-    // nothing beyond "the process is up".
-    if (url.pathname === '/health') return json({ ok: true })
+  // Unauthenticated so a container healthcheck can use it, and it reveals
+  // nothing beyond "the process is up".
+  if (url.pathname === '/health') return json({ ok: true })
 
-    if (!authorized(request)) {
-      return json({ error: 'unauthorized', message: 'A valid sidecar token is required' }, 401)
-    }
+  if (!authorized(request)) {
+    return json({ error: 'unauthorized', message: 'A valid sidecar token is required' }, 401)
+  }
 
-    if (url.pathname === '/apply-edits' && request.method === 'POST') {
-      return applyEdits(request)
-    }
+  if (url.pathname === '/apply-edits' && request.method === 'POST') {
+    return applyEdits(request)
+  }
 
-    return json({ error: 'not_found' }, 404)
-  },
-})
+  return json({ error: 'not_found' }, 404)
+}
 
-console.log(`[sidecar] listening on http://127.0.0.1:${server.port}`)
+if (SOCKET) {
+  try {
+    unlinkSync(SOCKET)
+  } catch (error) {
+    if ((error as { code?: string }).code !== 'ENOENT') throw error
+  }
+}
+
+const server = SOCKET
+  ? Bun.serve({ unix: SOCKET, fetch: handle })
+  : Bun.serve({
+      port: PORT,
+      hostname: '127.0.0.1',
+      fetch: handle,
+    })
+
+console.log(
+  SOCKET
+    ? `[sidecar] listening on unix:${SOCKET}`
+    : `[sidecar] listening on http://127.0.0.1:${server.port}`,
+)
 if (TOKEN.length === 0) {
   console.warn('[sidecar] DUKAFI_SIDECAR_TOKEN is not set — every request will be refused')
 }

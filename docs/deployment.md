@@ -50,7 +50,7 @@ running untouched. `DUKAFI_*` wins if both are set.
 |---|---|---|
 | `SESSION_SECRET` | **yes** | `openssl rand -hex 64`. The entrypoint refuses to start without it. |
 | `DATABASE_URL` | no | Set → Postgres. Unset → SQLite. Both `postgres://` and `postgresql://` work. |
-| `PORT` | no | Railway assigns this; the image binds to whatever it is handed. |
+| `PORT` | no | Railway assigns this; the image binds to whatever it is handed. The edit sidecar (MCP writes) uses a Unix socket inside the container — it is not a second published port. |
 | `DB_POOL` | no | Postgres connection pool, default 5. |
 | `SKIP_MIGRATIONS` | no | `1` to skip. Only for a second instance that must not migrate. |
 

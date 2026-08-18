@@ -5,6 +5,14 @@ class Dukafi
     class CssCollector
       Bundle = Data.define(:filename, :hash, :content)
 
+      # Shown while an htmx request is in flight. htmx stamps `.htmx-request`
+      # on the element that issued it (the form for add-to-cart / CMS submit,
+      # the button for attachable verbs). Collected only on pages that already
+      # pull htmx — a text page stays CSS-free of this too.
+      HTMX_BUSY_CSS = <<~CSS.chomp
+        @keyframes dukafy-spin{to{transform:rotate(360deg)}}form.htmx-request :is(button[type=submit],input[type=submit])::after,button.htmx-request::after{content:"";box-sizing:border-box;display:inline-block;width:1em;height:1em;margin-inline-start:.5em;border:.125em solid currentColor;border-right-color:transparent;border-radius:999px;vertical-align:-.125em;animation:dukafy-spin .6s linear infinite}form.htmx-request :is(button[type=submit],input[type=submit]),button.htmx-request{cursor:wait}form.htmx-request :is(button[type=submit],input[type=submit]):disabled,button.htmx-request:disabled{opacity:.85}.dukafy-form-result:empty{display:none}@media (prefers-reduced-motion:reduce){form.htmx-request :is(button[type=submit],input[type=submit])::after,button.htmx-request::after{animation:none;border-right-color:currentColor;opacity:.5}}
+      CSS
+
       def initialize
         @rules = {}
       end

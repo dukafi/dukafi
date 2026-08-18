@@ -138,11 +138,13 @@ ENV DUKAFI_STORAGE_ROOT=/data
 # the payment providers its owner installed and no others. First-party
 # plugins are distributed in `plugins-available/` in the repo.
 ENV DUKAFI_PLUGINS_ROOT=/data/plugins
-# Where Ruby reaches the edit sidecar. Loopback only — it applies arbitrary
-# edits, so it must never be published. The entrypoint mints its shared token
-# per boot, so there is nothing here for a deployer to configure.
-ENV DUKAFI_SIDECAR_PORT=9293
-ENV DUKAFI_SIDECAR_URL=http://127.0.0.1:9293
+# Where Ruby reaches the edit sidecar. A Unix socket, not a second TCP port:
+# Railway (and similar) detect listening ports, and a second bind can steal
+# the public one. The socket cannot be published even by accident. The
+# entrypoint mints the shared token per boot, so there is nothing here for a
+# deployer to configure.
+ENV DUKAFI_SIDECAR_SOCKET=/tmp/dukafi-sidecar.sock
+ENV DUKAFI_SIDECAR_URL=unix:///tmp/dukafi-sidecar.sock
 ENV BUNDLE_WITHOUT="development:test"
 
 VOLUME ["/data"]

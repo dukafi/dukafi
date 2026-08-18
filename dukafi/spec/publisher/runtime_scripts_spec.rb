@@ -98,8 +98,14 @@ class RuntimeScriptsSpec < Minitest::Test
   # Every module that emits hx- attributes must declare :htmx, or the published
   # page silently loses its interactivity. This catches the mismatch directly
   # rather than waiting for someone to notice a dead Add-to-cart button.
+  def test_htmx_pages_include_in_flight_busy_styles
+    result = render("needs.htmx")
+    assert_includes result.css, "@keyframes dukafy-spin"
+    refute_includes render("plain.text").css, "dukafy-spin"
+  end
+
   def test_every_module_emitting_hx_attributes_declares_the_htmx_runtime
-    %w[store.buy-button store.stock-badge].each do |module_id|
+    %w[store.buy-button store.stock-badge base.form].each do |module_id|
       document = {
         "rootNodeId" => "r",
         "nodes" => { "r" => node("r", "base.body", children: ["n"]), "n" => node("n", module_id) },

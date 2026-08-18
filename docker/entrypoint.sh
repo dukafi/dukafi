@@ -79,9 +79,9 @@ fi
 # taking the container down.
 #
 # The shared token is minted per boot rather than configured. It only ever
-# travels over loopback between two processes in this container, so a fresh
-# random value each start is strictly better than anything a deployer would
-# paste into a dashboard.
+# travels between two processes in this container (Unix socket in the image,
+# loopback TCP in local bin/dev), so a fresh random value each start is
+# strictly better than anything a deployer would paste into a dashboard.
 SIDECAR_JS=/app/sidecar/sidecar.js
 
 if [ "$SKIP_SIDECAR" = "1" ]; then
@@ -91,6 +91,13 @@ elif [ ! -f "$SIDECAR_JS" ]; then
 else
   DUKAFI_SIDECAR_TOKEN="$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
   export DUKAFI_SIDECAR_TOKEN
+
+  if [ -n "$DUKAFI_SIDECAR_SOCKET" ]; then
+    rm -f "$DUKAFI_SIDECAR_SOCKET"
+    log "edit sidecar starting on unix:${DUKAFI_SIDECAR_SOCKET}"
+  else
+    log "edit sidecar starting on 127.0.0.1:${DUKAFI_SIDECAR_PORT:-9293}"
+  fi
 
   # Restarted if it exits. A crash should cost one request, not every edit for
   # the life of the container. The sleep keeps a persistent failure from
@@ -103,7 +110,6 @@ else
       sleep 2
     done
   ) &
-  log "edit sidecar starting on 127.0.0.1:${DUKAFI_SIDECAR_PORT:-9293}"
 fi
 
 log "starting: $*"

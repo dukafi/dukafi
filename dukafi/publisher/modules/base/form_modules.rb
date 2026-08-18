@@ -96,6 +96,12 @@ class Dukafi
           # ancestor; anything unknown falls back to POST so typed values never
           # end up in the URL.
           method = %w[get post dialog].include?(props["method"].to_s) ? props["method"].to_s : "post"
+          child_html = children.join
+          # A descendant with its own hx-post (login, checkout, add-to-cart)
+          # already owns the request. Boosting the form as well would fire
+          # BOTH on Enter — /forms/:id AND the verb.
+          verb_on_child = child_html.include?(" hx-post=")
+          enhance = !custom && method == "post" && !verb_on_child
           wiring = attrs([
             ["data-dukafy-form-id", form_id],
             ["data-dukafy-form-mode", custom ? "custom" : "cms"],
@@ -108,6 +114,13 @@ class Dukafi
              props["successBehavior"].to_s == "message" ? props["successMessage"] : nil],
             ["data-dukafy-success-redirect",
              props["successBehavior"].to_s == "redirect" ? BaseHelpers.safe_url(props["redirectUrl"]) : nil],
+            # htmx intercepts when present; the native action is the no-JS
+            # path. innerHTML into a stable slot so a 422 error message does
+            # not replace the fields the visitor still needs to fix.
+            ["hx-post", enhance ? "/forms/#{form_id}" : nil],
+            ["hx-target", enhance ? "find .dukafy-form-result" : nil],
+            ["hx-swap", enhance ? "innerHTML" : nil],
+            ["hx-disabled-elt", enhance ? "find button[type=submit]" : nil],
           ])
           # Anti-spam is server-side and JS-free: a honeypot a human never
           # sees, plus a SIGNED render timestamp so the elapsed-time check
@@ -120,8 +133,9 @@ class Dukafi
             %(<input type="text" name="#{trap}" autocomplete="off" tabindex="-1" data-dukafy-honeypot hidden>) +
               %(<input type="hidden" name="_ts" value="#{CGI.escapeHTML(token)}">)
           end
-          html = %(<form#{wiring}#{BaseHelpers.html_attributes(props['htmlAttributes'])} method="#{method}">#{hidden_fields}#{children.join}</form>)
-          { html: html }
+          result_slot = enhance ? %(<div class="dukafy-form-result" aria-live="polite"></div>) : ""
+          html = %(<form#{wiring}#{BaseHelpers.html_attributes(props['htmlAttributes'])} method="#{method}">#{hidden_fields}#{child_html}#{result_slot}</form>)
+          { html: html, runtimes: enhance ? [:htmx] : [] }
         end
       end
 
