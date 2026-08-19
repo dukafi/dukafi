@@ -508,6 +508,7 @@ export const createUiSlice: EditorStoreSliceCreator<UiSlice> = (set, get) => ({
           if (prevDoc === null && state.activePageId !== null) {
             state.previousActivePageId = state.activePageId
           }
+          state.inlineEditingRefId = null
         } else {
           // Leaving VC mode (setting to null or a page doc) → clear the captured id.
           state.previousActivePageId = null
@@ -530,6 +531,7 @@ export const createUiSlice: EditorStoreSliceCreator<UiSlice> = (set, get) => ({
     set((state) => {
         const prevPageId = state.previousActivePageId
         state.activeDocument = null
+        state.inlineEditingRefId = null
         // Restore the page we came from if it still exists in the site.
         if (prevPageId !== null && state.site?.pages.some((p) => p.id === prevPageId)) {
           state.activePageId = prevPageId

@@ -3,10 +3,12 @@ class PublishSite
 
   def self.call(
     state: SiteState.first,
-    pages: Page.where(kind: "page").order(:id).all,
+    pages: nil,
     output_root: Paths.published_root
   )
     raise ArgumentError, "site state is required" unless state
+    SearchPage.ensure!
+    pages = pages.nil? ? Page.where(kind: "page").order(:id).all : pages
     raise ArgumentError, "site must contain at least one page" if pages.empty?
     # Partials publish alongside the templates: their content reaches the
     # storefront through the bake, so an edited header that never had its
@@ -35,7 +37,9 @@ class PublishSite
     Result.new(published_pages: baked.page_count, version: baked.version)
   end
 
-  def self.status(state: SiteState.first, pages: Page.where(kind: "page").order(:id).all)
+  def self.status(state: SiteState.first, pages: nil)
+    SearchPage.ensure!
+    pages = pages.nil? ? Page.where(kind: "page").order(:id).all : pages
     templates = [ProductTemplate.ensure!, CollectionTemplate.ensure!, OrderTemplate.ensure!] +
                 SitePartials.ensure!(store_name: state&.site.is_a?(Hash) ? state.site["name"].to_s : "Store")
     documents = pages + templates

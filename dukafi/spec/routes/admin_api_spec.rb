@@ -93,6 +93,48 @@ class AdminApiSpec < Minitest::Test
     assert_equal "Saved Store", SiteState.first.site.fetch("name")
   end
 
+  def test_components_round_trip_through_site_document
+    setup_and_login
+    get "/admin/api/cms/site"
+    shell = json.fetch("site")
+    refute shell.key?("visualComponents")
+
+    get "/admin/api/cms/components"
+    assert_equal [], json.fetch("rows")
+
+    root = "body1"
+    component = {
+      "id" => "cmp_news", "name" => "Newsletter form",
+      "tree" => {
+        "rootNodeId" => root,
+        "nodes" => {
+          root => { "id" => root, "moduleId" => "base.body", "children" => ["txt"],
+                    "props" => {}, "classIds" => [], "breakpointOverrides" => {} },
+          "txt" => { "id" => "txt", "moduleId" => "base.text", "children" => [],
+                     "props" => { "text" => "Join the list" }, "classIds" => [], "breakpointOverrides" => {} },
+        },
+      },
+      "params" => [], "classIds" => [], "createdAt" => 1_700_000_000_000,
+    }
+
+    put "/admin/api/cms/site-document", JSON.generate({
+      mode: "replace", site: shell,
+      changedPages: [], deletedPageIds: [],
+      changedComponents: [component], deletedComponentIds: [],
+    }), "CONTENT_TYPE" => "application/json"
+    assert_equal 200, last_response.status, last_response.body
+
+    get "/admin/api/cms/site"
+    refute json.fetch("site").key?("visualComponents")
+
+    get "/admin/api/cms/components"
+    row = json.fetch("rows").first
+    assert_equal "cmp_news", row.fetch("id")
+    assert_equal "Newsletter form", row.dig("cells", "name")
+    assert_equal "Join the list", row.dig("cells", "body", "nodes", "txt", "props", "text")
+    assert_equal "components", row.fetch("tableId")
+  end
+
   # Loads the seeded site shell + first page, returning both as the editor
   # would hold them in memory (the preview endpoint never reads Page rows).
   def draft_site_document
@@ -490,13 +532,14 @@ class AdminApiSpec < Minitest::Test
 
     post "/admin/api/cms/publish"
     assert_equal 200, last_response.status, last_response.body
-    assert_equal 1, json.fetch("publishedPages")
+    assert_equal 2, json.fetch("publishedPages")
     assert File.file?(File.join(@published_root, "current", "index.html"))
+    assert File.file?(File.join(@published_root, "current", "search.html"))
 
     get "/admin/api/cms/publish/status"
     assert_equal true, json.fetch("hasPublishedVersion")
     assert_equal true, json.fetch("draftMatchesPublished")
-    assert_equal 1, json.fetch("publishedPages")
+    assert_equal 2, json.fetch("publishedPages")
     refute_nil json["lastPublishedAt"]
 
     page = Page.first

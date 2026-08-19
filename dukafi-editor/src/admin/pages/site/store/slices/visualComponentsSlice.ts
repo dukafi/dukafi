@@ -21,6 +21,9 @@ import type { VisualComponent, VCParam, VCNode } from '@core/visualComponents'
 import type { BaseNode, PageNode } from '@core/page-tree'
 import { reindexNodeParents } from '@core/page-tree'
 import {
+  instantiateVCAtRef,
+  resolveSlotName,
+  safePropOverrides,
   validateComponentName,
   validateParamName,
   wouldCreateCycle,
@@ -33,6 +36,7 @@ import {
   VisualComponentRecursionError,
   cascadeRemoveVCRefs,
   clonePageSubtreeToFlatNodes,
+  cloneInstantiatedToPage,
   collectSubtreeNodeIds,
   collectVCRefsFromPageSubtree,
 } from './vcTreeOps'
@@ -152,6 +156,15 @@ interface VisualComponentsSlice {
    *   - nodeId is the page root
    */
   convertNodeToComponent(nodeId: string, name: string): string
+
+  /**
+   * Replace one visual-component-ref on the active page with an ordinary
+   * section that looks identical, then is no longer linked. Other instances
+   * of the same component are untouched.
+   *
+   * Returns the first new page node id, or null if the ref could not detach.
+   */
+  detachComponentRef(refNodeId: string): string | null
 }
 
 // ---------------------------------------------------------------------------
@@ -710,6 +723,84 @@ export const createVisualComponentsSlice: EditorStoreSliceCreator<VisualComponen
       })
 
     return newVcId
+  },
+
+  detachComponentRef(refNodeId) {
+    const { activeDocument, activePageId, site } = get()
+    if (!site) return null
+    if (activeDocument?.kind === 'visualComponent') return null
+
+    const pageId = activeDocument?.kind === 'page' ? activeDocument.pageId : activePageId
+    if (!pageId) return null
+
+    let nextRootId: string | null = null
+
+    const detached = mutateSiteState((state, draftSite) => {
+      const page = (draftSite.pages ?? []).find((entry) => entry.id === pageId)
+      if (!page) return false
+
+      const ref = page.nodes[refNodeId]
+      if (!ref || ref.moduleId !== 'base.visual-component-ref') return false
+
+      const componentId = typeof ref.props.componentId === 'string' ? ref.props.componentId : ''
+      const vc = (draftSite.visualComponents ?? []).find((entry) => entry.id === componentId)
+      if (!vc) return false
+
+      const slotInstancesByName: Record<string, string[]> = {}
+      for (const childId of ref.children) {
+        const child = page.nodes[childId]
+        if (child?.moduleId === 'base.slot-instance') {
+          slotInstancesByName[resolveSlotName(child.props)] = child.children
+        }
+      }
+
+      const instantiated = instantiateVCAtRef(
+        vc,
+        safePropOverrides(ref.props),
+        slotInstancesByName,
+        page.nodes,
+        refNodeId,
+      )
+      const cloned = cloneInstantiatedToPage(
+        instantiated.nodes as Record<string, BaseNode>,
+        instantiated.rootNodeId,
+      )
+      const body = cloned.nodes[cloned.rootNodeId]
+      if (!body) return false
+
+      const insertIds = body.moduleId === 'base.body' ? [...body.children] : [cloned.rootNodeId]
+      if (insertIds.length === 0) return false
+
+      let parent: PageNode | undefined
+      for (const node of Object.values(page.nodes)) {
+        if (node.children.includes(refNodeId)) {
+          parent = node
+          break
+        }
+      }
+      if (!parent) return false
+
+      const index = parent.children.indexOf(refNodeId)
+      parent.children.splice(index, 1, ...insertIds)
+
+      for (const [id, node] of Object.entries(cloned.nodes)) {
+        if (body.moduleId === 'base.body' && id === body.id) continue
+        page.nodes[id] = node
+      }
+
+      for (const oldId of collectSubtreeNodeIds(page.nodes, refNodeId)) {
+        delete page.nodes[oldId]
+      }
+
+      reindexNodeParents(page.nodes)
+      state.inlineEditingRefId = null
+      state.selectedNodeId = insertIds[0] ?? null
+      state.selectedNodeIds = insertIds[0] ? [insertIds[0]] : []
+      nextRootId = insertIds[0] ?? null
+      return true
+    })
+
+    return detached ? nextRootId : null
   },
   }
 }

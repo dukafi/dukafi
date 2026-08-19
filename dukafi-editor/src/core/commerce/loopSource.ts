@@ -37,6 +37,7 @@ export function parseLoopSource(source: string): ParsedLoopSource | null {
 export function legacyLoopSource(relationship: string, sourceSlug: string): string {
   const slug = sourceSlug.trim()
   if (relationship === 'cartItems') return 'cart.items'
+  if (relationship === 'currentQuery') return 'current-query'
   if (relationship === 'dataRows') return slug ? `data/${slug}` : 'data'
   if (relationship === 'variants') return slug ? `products/${slug}.variants` : 'currentEntry.variants'
   return slug ? `collections/${slug}.products` : 'products'
@@ -73,6 +74,8 @@ export function entityForLoopSource(source: string, inScope: EntityId | null): E
         : (parsed.fields.length === 0 ? 'collection' : null)
     case 'cart':
       return parsed.fields.join('.') === 'items' ? 'cartItem' : null
+    case 'current-query':
+      return parsed.slug || parsed.fields.length > 0 ? null : 'product'
     // Approved reviews, a flat list with no slug to name — the only top-level
     // source that is not a slug-keyed catalogue.
     case 'reviews':

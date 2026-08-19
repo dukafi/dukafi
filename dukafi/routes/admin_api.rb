@@ -318,6 +318,7 @@ class AdminApi < Roda
       images: product.media_assets.map do |asset|
         { id: asset.id, publicPath: "/#{asset.path}", width: asset.width, height: asset.height }
       end,
+      ogMediaAssetId: product.og_media_asset_id,
       fields: CatalogueFields.hash_for(product.fields, owner: :product),
       fieldList: CatalogueFields.list_for(product.fields, owner: :product),
     }
@@ -367,10 +368,12 @@ class AdminApi < Roda
 
   def commerce_collection_payload(collection)
     memberships = CollectionProduct.where(collection_id: collection.id).order(:position).all
+    asset = collection.media_asset_id ? MediaAsset[collection.media_asset_id] : nil
     {
       id: collection.id, title: collection.title, slug: collection.slug,
       description: collection.description.to_s, sortOrder: collection.sort_order,
       productIds: memberships.map(&:product_id),
+      image: asset && { id: asset.id, publicPath: "/#{asset.path}" },
     }
   end
 
@@ -532,9 +535,11 @@ class AdminApi < Roda
 
     # The shell is checked coarsely, and only when the incoming one actually
     # differs — otherwise every save that merely touches a page would collide
-    # with any unrelated settings change.
+    # with any unrelated settings change. Components live beside the shell,
+    # not inside it, so they are stripped before this comparison.
     shell_base = params["shellBaseSeq"]
-    if shell_base && params.key?("site") && state.site != params["site"] &&
+    if shell_base && params.key?("site") &&
+       VisualComponents.shell(state.site) != VisualComponents.shell(params["site"]) &&
        state.seq > shell_base.to_i
       conflicts << { table: "site", rowId: "default", seq: state.seq }
     end
@@ -599,14 +604,24 @@ class AdminApi < Roda
       )
     )
 
+    meta = Dukafi::Publisher::PageMeta.for_page(page, site)
     html = Dukafi::Publisher::HtmlDocument.call(
       # Same title/language/description precedence Bake uses, so what the user
       # previews is what publishing will emit.
-      title: site.dig("settings", "metaTitle") || page["title"].to_s,
+      title: meta.fetch(:title),
       body: rendered.html, body_classes: rendered.body_classes,
       language: site.dig("settings", "language") || "en",
-      description: site.dig("settings", "metaDescription"),
-      css: bundle.content, runtimes: rendered.runtimes
+      description: meta[:description],
+      css: bundle.content, runtimes: rendered.runtimes,
+      json_ld: Dukafi::Publisher::ListingJsonLd.call(
+        document: page, prefetched:, path: page["slug"].to_s,
+        title: meta.fetch(:title), description: meta[:description],
+        current_entry: current_entry, site: site
+      ),
+      open_graph: Dukafi::Publisher::OpenGraph.for_page(
+        page, site, path: page["slug"].to_s, title: meta.fetch(:title),
+        description: meta[:description]
+      )
     )
 
     {
@@ -707,6 +722,17 @@ class AdminApi < Roda
         end
       end
 
+      r.on("sitemaps") do
+        require_admin!
+        r.get { SitemapWriter.payload(origin: public_origin) }
+        r.post do
+          result = SitemapWriter.write_published!(origin: public_origin)
+          SitemapWriter.payload(origin: result.origin).merge("urlCount" => result.url_count)
+        rescue ArgumentError => error
+          halt_json(422, "sitemap_unavailable", error.message)
+        end
+      end
+
       r.post("tailwind", "compile") do
         require_admin!
         classes = r.params["classes"]
@@ -802,7 +828,10 @@ class AdminApi < Roda
       r.get("site") do
         require_admin!
         state = SiteState.first || halt_json(404, "site_not_found", "Site has not been created")
-        { site: state.site, seq: state.seq }
+        # Components are a parallel collection (GET /components), not part of
+        # the editor shell. Leaving them on this payload made every incremental
+        # save look like a shell conflict.
+        { site: VisualComponents.shell(state.site), seq: state.seq }
       end
 
       # Just the version, for polling.
@@ -816,10 +845,33 @@ class AdminApi < Roda
         { seq: state.seq }
       end
 
+      # Optional facts the merchant typed about the business. Empty is a
+      # valid store. Assist and the storefront do not read this.
+      r.is("store-profile") do
+        require_admin!
+        r.get { { profile: StoreProfile.current.to_payload } }
+        r.put do
+          profile = StoreProfile.current
+          profile.apply!(request.params)
+          { profile: profile.to_payload }
+        end
+      end
+
+      r.get("store-context") do
+        require_admin!
+        StoreContext.call
+      end
+
+      r.get("store-media") do
+        require_admin!
+        { media: StoreContext.search_media(r.params["q"].to_s) }
+      end
+
       r.get("pages") do
         require_admin!
         ProductTemplate.ensure!
         CollectionTemplate.ensure!
+        SearchPage.ensure!
         { rows: Page.order(:kind, :id).map { |page| data_row(page) } }
       end
 
@@ -1076,7 +1128,11 @@ class AdminApi < Roda
         end
       end
 
-      r.get("components") { require_admin!; { rows: [] } }
+      r.get("components") do
+        require_admin!
+        state = SiteState.first || halt_json(404, "site_not_found", "Site has not been created")
+        { rows: VisualComponents.rows(state.site, seq: state.seq) }
+      end
       r.get("layouts") { require_admin!; { rows: [] } }
 
       r.on("commerce") do
@@ -1148,18 +1204,19 @@ class AdminApi < Roda
               halt_json(422, "invalid_product", error.message)
             end
             r.put("images") do
-              ids = r.params.fetch("mediaAssetIds", []).map { |value| Integer(value) }
-              valid_ids = MediaAsset.where(id: ids).select_map(:id)
-              halt_json(422, "invalid_images", "One or more media assets do not exist") unless ids.uniq.sort == valid_ids.sort
-              DB.transaction do
-                ProductImage.where(product_id: product.id).delete
-                ids.uniq.each_with_index do |media_asset_id, position|
-                  ProductImage.dataset.insert(product_id: product.id, media_asset_id:, position:)
-                end
-              end
-              { product: commerce_product_payload(product), rebakedPages: rebake_product(product) }
-            rescue ArgumentError
-              halt_json(422, "invalid_images", "Media asset IDs must be integers")
+              ids = r.params.fetch("mediaAssetIds", [])
+              product = CommerceWrites.set_product_images!(product, ids)
+              { product: commerce_product_payload(product) }
+            rescue CommerceWrites::Invalid => error
+              halt_json(422, "invalid_images", error.message)
+            end
+            r.put("og-image") do
+              raw = r.params["mediaAssetId"]
+              id = raw.nil? || raw.to_s.strip.empty? ? nil : raw
+              product = CommerceWrites.set_product_og_image!(product, id)
+              { product: commerce_product_payload(product) }
+            rescue CommerceWrites::Invalid => error
+              halt_json(422, "invalid_og_image", error.message)
             end
             r.put("collections") do
               ids = r.params.fetch("collectionIds", []).map { |value| Integer(value) }
@@ -1209,6 +1266,19 @@ class AdminApi < Roda
               halt_json(422, "invalid_collection", error.message)
             end
             r.delete { collection.destroy; no_content! }
+            r.put("image") do
+              raw = r.params["mediaAssetId"]
+              if raw.nil? || raw.to_s.strip.empty?
+                CommerceWrites.set_collection_image!(collection, nil)
+              else
+                id = Integer(raw)
+                asset = MediaAsset[id] || halt_json(404, "media_not_found", "Media asset not found")
+                CommerceWrites.set_collection_image!(collection, asset)
+              end
+              { collection: commerce_collection_payload(collection.refresh) }
+            rescue ArgumentError
+              halt_json(422, "invalid_image", "mediaAssetId must be an integer or empty")
+            end
             r.put("products") do
               ids = r.params.fetch("productIds", []).map { |value| Integer(value) }
               valid_ids = Product.where(id: ids).select_map(:id)
@@ -1336,7 +1406,17 @@ class AdminApi < Roda
         end
 
         DB.transaction do
-          state.site = r.params.fetch("site")
+          incoming = r.params.fetch("site")
+          incoming = incoming.is_a?(Hash) ? incoming : {}
+          replace = r.params["mode"].to_s != "incremental"
+          state.site = VisualComponents.apply!(
+            VisualComponents.shell(incoming).merge(
+              "visualComponents" => VisualComponents.roster(state.site),
+            ),
+            changed: r.params.fetch("changedComponents", []),
+            deleted: r.params.fetch("deletedComponentIds", []),
+            replace: replace,
+          )
           seq = state.bump_seq!
           # Each page records the site seq it was written at, which is what a
           # later save compares its base against.

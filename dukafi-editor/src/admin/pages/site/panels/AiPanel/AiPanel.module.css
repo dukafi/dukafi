@@ -83,13 +83,85 @@
     color: var(--text-subtle);
 }
 
-/* Settings button and Send share a row; settings sits left so Send stays the
-   rightmost, primary target. */
+/* Settings sits left so Send stays the rightmost, primary target. Build is
+   the secondary action on the same row — Enter still sends Assist. */
 .composerActions {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-2xs);
+}
+
+.composerButtons {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-s);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-surface-2);
+    padding: var(--space-s);
+}
+
+.cardTitle {
+    margin: 0;
+    font-size: var(--text-s);
+    font-weight: 600;
+    color: var(--text-bright);
+}
+
+.cardBody {
+    margin: 0;
+    font-size: var(--text-s);
+    line-height: 1.5;
+    color: var(--text);
+}
+
+.cardActions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2xs);
+}
+
+.blockList {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+}
+
+.block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+}
+
+.blockHeading {
+    margin: 0;
+    font-size: var(--text-s);
+    font-weight: 600;
+    color: var(--text-bright);
+}
+
+.blockBody {
+    margin: 0;
+    font-size: var(--text-s);
+    line-height: 1.5;
+    color: var(--text);
+}
+
+.missed {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--text-muted);
 }
 
 .settings {

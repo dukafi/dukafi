@@ -407,6 +407,15 @@
     "title": {
       "type": "string"
     },
+    "seoTitle": {
+      "type": "string"
+    },
+    "seoDescription": {
+      "type": "string"
+    },
+    "ogImage": {
+      "type": "string"
+    },
     "kind": {
       "type": "string"
     },

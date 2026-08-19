@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { mutative } from 'zustand-mutative'
 import { subscribeWithSelector } from 'zustand/middleware'
-import type { Page } from '@core/page-tree'
+import type { Page, PageNode } from '@core/page-tree'
 import { flattenVCToVirtualPage } from '@core/visualComponents'
 import type { EditorStore } from './types'
 import { createSiteSlice } from './slices/siteSlice'
@@ -220,14 +220,6 @@ export const selectRightSidebarExpanded = (s: EditorStore) =>
 /** @internal — module-level WeakMap for stable virtual-page references */
 const _vcVirtualPageCache = new WeakMap<object, Page>()
 
-/**
- * Select the current canvas document as a Page.
- *
- * - activeDocument === null or kind === 'page': returns the active page (same as selectActivePage).
- * - activeDocument.kind === 'visualComponent': returns a virtual Page built from the VC's rootNode.
- *   The virtual Page is memoised via WeakMap on vc (the whole VC object) so Zustand's Object.is
- *   check passes between renders when the VC has not mutated.
- */
 export const selectActiveCanvasPage = (s: EditorStore): Page | null => {
   const { activeDocument } = s
 
@@ -256,15 +248,36 @@ export const selectActiveCanvasPage = (s: EditorStore): Page | null => {
 }
 
 /**
- * Select the currently selected PageNode.
+ * Node lookup for the canvas renderer.
  *
- * Uses selectActiveCanvasPage so this works in BOTH page mode and VC canvas mode.
- * Without this, PropertiesPanel returns null when a node is
- * selected inside a VC tree (O-1 / CR #666 finding — promoted to MUST-FIX).
+ * In-place component edit keeps the PAGE as the canvas document (so Contacts
+ * stays on screen) while inner nodes live on the component definition.
+ * VCNode is structurally a PageNode for every field the canvas reads.
  */
+export function selectCanvasNode(s: EditorStore, nodeId: string): PageNode | null {
+  if (nodeIsOnInlineComponent(s, nodeId)) {
+    const page = selectActivePage(s)
+    const ref = page?.nodes[s.inlineEditingRefId ?? '']
+    const componentId = typeof ref?.props.componentId === 'string' ? ref.props.componentId : ''
+    const vc = s.site?.visualComponents.find((entry) => entry.id === componentId)
+    return (vc?.tree.nodes[nodeId] as PageNode | undefined) ?? null
+  }
+  return selectActiveCanvasPage(s)?.nodes[nodeId] ?? null
+}
+
+export function nodeIsOnInlineComponent(s: EditorStore, nodeId: string): boolean {
+  if (!s.inlineEditingRefId || !s.site) return false
+  const page = selectActivePage(s)
+  const ref = page?.nodes[s.inlineEditingRefId]
+  const componentId = typeof ref?.props.componentId === 'string' ? ref.props.componentId : ''
+  if (!componentId) return false
+  const vc = s.site.visualComponents.find((entry) => entry.id === componentId)
+  return Boolean(vc?.tree.nodes[nodeId])
+}
+
 export const selectSelectedNode = (s: EditorStore) => {
   if (!s.selectedNodeId) return null
-  return selectActiveCanvasPage(s)?.nodes[s.selectedNodeId] ?? null
+  return selectCanvasNode(s, s.selectedNodeId)
 }
 
 // ---------------------------------------------------------------------------

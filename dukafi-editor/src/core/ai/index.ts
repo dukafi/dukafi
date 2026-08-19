@@ -11,6 +11,15 @@ export {
 } from './editSchema'
 
 export {
+  compileBuildPlan,
+  matchLibraryAsset,
+  parseBuildPlan,
+  resolvePlanMedia,
+  type BuildPlan,
+  type LibraryAsset,
+} from './buildPlan'
+
+export {
   applyEditsToTree,
   type EditableSite,
   type EditableTree,

@@ -21,7 +21,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Button } from '@ui/components/Button'
 import { FormField } from '@ui/components/FormField'
-import { Input } from '@ui/components/Input'
+import { Input, Textarea } from '@ui/components/Input'
 import { SkeletonBlock } from '@ui/components/Skeleton'
 import { getErrorMessage } from '@core/utils/errorMessage'
 import { SaveSolidIcon } from 'pixel-art-icons/icons/save-solid'
@@ -31,7 +31,7 @@ import {
   useEditorSelectPreference,
 } from '@site/preferences/editorPreferences'
 import { commerceApi } from '../api'
-import type { CommerceSettings } from '../types'
+import type { CommerceSettings, StoreProfile } from '../types'
 import styles from '../DashboardPage.module.css'
 
 /**
@@ -58,6 +58,88 @@ function AppearanceFields() {
         <option value="light">Light</option>
       </Select>
     </FormField>
+  )
+}
+
+function BusinessProfileFields() {
+  const [profile, setProfile] = useState<StoreProfile | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    commerceApi.getStoreProfile()
+      .then((result) => { if (!cancelled) setProfile(result.profile) })
+      .catch((err) => { if (!cancelled) setError(getErrorMessage(err, 'Could not load business profile')) })
+    return () => { cancelled = true }
+  }, [])
+
+  async function handleSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    setBusy(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const result = await commerceApi.updateStoreProfile({
+        startedOn: String(form.get('startedOn') || ''),
+        audience: String(form.get('audience') || ''),
+        difference: String(form.get('difference') || ''),
+      })
+      setProfile(result.profile)
+      setNotice('Saved.')
+    } catch (err) {
+      setError(getErrorMessage(err, 'Could not save business profile'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <h2>Business</h2>
+        <p>
+          Optional. Used when an assistant writes an about page so it does not invent a founding story.
+          Leave blank — the store works the same either way.
+        </p>
+      </div>
+      {error && <p className={styles.error} role="alert">{error}</p>}
+      {notice && <p role="status">{notice}</p>}
+      {!profile && !error ? (
+        <SkeletonBlock minHeight={160} ariaLabel="Loading business profile" />
+      ) : (
+        <form className={styles.dialogForm} onSubmit={handleSave}>
+          <FormField
+            label="When did you start?"
+            htmlFor="store-started-on"
+            description="A year or a short phrase is enough. Blank is fine."
+          >
+            <Input id="store-started-on" name="startedOn" defaultValue={profile?.startedOn ?? ''} maxLength={80} />
+          </FormField>
+          <FormField
+            label="Who do you sell to?"
+            htmlFor="store-audience"
+            description="In your own words."
+          >
+            <Textarea id="store-audience" name="audience" defaultValue={profile?.audience ?? ''} rows={3} maxLength={500} />
+          </FormField>
+          <FormField
+            label="What makes you different?"
+            htmlFor="store-difference"
+          >
+            <Textarea id="store-difference" name="difference" defaultValue={profile?.difference ?? ''} rows={3} maxLength={500} />
+          </FormField>
+          <div className={styles.dialogFormActions}>
+            <Button type="submit" variant="primary" size="sm" disabled={busy}>
+              <SaveSolidIcon size={14} aria-hidden="true" />
+              <span>Save profile</span>
+            </Button>
+          </div>
+        </form>
+      )}
+    </div>
   )
 }
 
@@ -114,6 +196,7 @@ export function SettingsSection() {
     return (
       <>
         <p className={styles.error} role="alert">{error}</p>
+        <BusinessProfileFields />
         {appearance}
       </>
     )
@@ -122,6 +205,7 @@ export function SettingsSection() {
     return (
       <>
         <SkeletonBlock minHeight={160} ariaLabel="Loading commerce settings" />
+        <BusinessProfileFields />
         {appearance}
       </>
     )
@@ -178,6 +262,7 @@ export function SettingsSection() {
         </div>
       </form>
     </div>
+    <BusinessProfileFields />
     {appearance}
     </>
   )

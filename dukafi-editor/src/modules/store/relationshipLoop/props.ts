@@ -7,6 +7,8 @@ export const RelationshipLoopPropsSchema = Type.Object({
    *   products                        every active product
    *   collections/featured.products   one collection's products
    *   products/canvas-bag.variants    one product's variants
+   *   current-query                   products matching ?keyword= on this request
+   *   currentEntry.related            other products in the same collection (product page)
    *   currentEntry.images             a list field of the entity in scope
    *   data/team                       every row in the Team table
    *
@@ -16,7 +18,13 @@ export const RelationshipLoopPropsSchema = Type.Object({
    */
   source: Type.String({ default: '' }),
   relationship: Type.Union(
-    [Type.Literal('products'), Type.Literal('variants'), Type.Literal('cartItems'), Type.Literal('dataRows')],
+    [
+      Type.Literal('products'),
+      Type.Literal('variants'),
+      Type.Literal('cartItems'),
+      Type.Literal('dataRows'),
+      Type.Literal('currentQuery'),
+    ],
     { default: 'products' },
   ),
   sourceSlug: Type.String({ default: '' }),

@@ -25,7 +25,7 @@ import { readInlineEditableText, seedInlineEditableContent } from '@modules/base
 import { activeEditorDocId } from '@site/collab/awarenessState'
 import { attachInlineEditRemoteMerge } from '@site/collab/inlineEditRemoteMerge'
 import { collabDocFor } from '@site/store/slices/site/collabBinding'
-import { useEditorStore, selectActiveCanvasPage } from '@site/store/store'
+import { useEditorStore, selectActiveCanvasPage, selectCanvasNode, nodeIsOnInlineComponent } from '@site/store/store'
 import { resolveProps } from '@core/page-tree'
 import { registry } from '@core/module-engine'
 import type { NodeWrapperProps as NodeWrapperPropsType } from '@core/module-engine'
@@ -59,7 +59,7 @@ interface NodeRendererProps {
 export const NodeRenderer = memo(function NodeRenderer({ nodeId }: NodeRendererProps) {
   // Per-node subscription — editing this node's props only re-renders THIS component.
   // Uses selectActiveCanvasPage (Task #438) so VC canvas mode works alongside page mode.
-  const node = useEditorStore((s) => selectActiveCanvasPage(s)?.nodes[nodeId] ?? null)
+  const node = useEditorStore((s) => selectCanvasNode(s, nodeId))
   const breakpointId = use(CanvasBreakpointContext)
   const templateContext = use(CanvasTemplateContext)
 
@@ -124,7 +124,7 @@ export const NodeRenderer = memo(function NodeRenderer({ nodeId }: NodeRendererP
   const editorFormPreviewState = useEditorStore((s) => resolveEditorFormPreviewState(s, nodeId))
   const editorFormPreviewSuccessMessage = useEditorStore((s) => resolveEditorFormPreviewSuccessMessage(s, nodeId))
   const mcClassName = useEditorStore((s) => {
-    const canvasNode = selectActiveCanvasPage(s)?.nodes[nodeId]
+    const canvasNode = selectCanvasNode(s, nodeId)
     const preview = s.previewClassAssignment?.nodeId === nodeId ? s.previewClassAssignment : null
     return getCanvasNodeClassName(canvasNode?.classIds, preview, nodeId, s.site?.styleRules)
   })
@@ -134,6 +134,16 @@ export const NodeRenderer = memo(function NodeRenderer({ nodeId }: NodeRendererP
     // B3 — VC lock-down: redirect clicks inside inlined VC bodies to the ref node.
     // Imperative store access is correct here (event handler, not render path).
     const state = useEditorStore.getState()
+    if (state.inlineEditingRefId) {
+      if (
+        !nodeIsOnInlineComponent(state, clickedNodeId) &&
+        clickedNodeId !== state.inlineEditingRefId
+      ) {
+        state.endInlineComponentEdit()
+      }
+      onNodeClick(clickedNodeId, e, breakpointId)
+      return
+    }
     if (state.activeDocument?.kind !== 'visualComponent') {
       const page = selectActiveCanvasPage(state)
       if (page) {
@@ -157,8 +167,13 @@ export const NodeRenderer = memo(function NodeRenderer({ nodeId }: NodeRendererP
 
   const handleNodeHover = (hoveredNodeId: string | null) => {
     if (hoveredNodeId !== null) {
-      // B3 — VC lock-down: clamp hover ring to the ref node for VC body nodes.
       const state = useEditorStore.getState()
+      // In-place edit: inner nodes are live, so don't clamp hover to the ref.
+      if (state.inlineEditingRefId) {
+        onNodeHover(hoveredNodeId, breakpointId)
+        return
+      }
+      // B3 — VC lock-down: clamp hover ring to the ref node for VC body nodes.
       if (state.activeDocument?.kind !== 'visualComponent') {
         const page = selectActiveCanvasPage(state)
         if (page) {

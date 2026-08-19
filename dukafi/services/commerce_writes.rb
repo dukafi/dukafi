@@ -182,6 +182,13 @@ module CommerceWrites
     raise Invalid, e.message
   end
 
+  def set_collection_image!(collection, asset)
+    collection.update(media_asset_id: asset&.id)
+    CollectionTemplate.ensure!
+    rebake_collection(collection)
+    collection
+  end
+
   def delete_collection!(collection)
     slug = collection.slug
     paths = RebuildIndex.targets_for_collection(collection)
@@ -219,6 +226,47 @@ module CommerceWrites
   def add_product_to_collection!(collection, product)
     ids = CollectionProduct.where(collection_id: collection.id).select_map(:product_id)
     set_collection_products!(collection, ids + [product.id])
+  end
+
+  def set_product_images!(product, asset_ids)
+    ids = Array(asset_ids).map { |value| Integer(value) }
+    valid_ids = MediaAsset.where(id: ids).select_map(:id)
+    raise Invalid, "One or more media assets do not exist" unless ids.uniq.sort == valid_ids.sort
+
+    DB.transaction do
+      ProductImage.where(product_id: product.id).delete
+      ids.uniq.each_with_index do |media_asset_id, position|
+        ProductImage.dataset.insert(product_id: product.id, media_asset_id:, position:)
+      end
+      drop_stale_og_image!(product, ids)
+    end
+    rebake_product(product.refresh)
+    product
+  rescue ArgumentError
+    raise Invalid, "Media asset IDs must be integers"
+  end
+
+  def set_product_og_image!(product, media_asset_id)
+    if media_asset_id.nil?
+      product.update(og_media_asset_id: nil)
+    else
+      id = Integer(media_asset_id, exception: false)
+      raise Invalid, "og image must be a media asset id" if id.nil?
+      unless ProductImage.first(product_id: product.id, media_asset_id: id)
+        raise Invalid, "That image is not attached to this product. Attach it first, then pick it as the share image."
+      end
+
+      product.update(og_media_asset_id: id)
+    end
+    rebake_product(product)
+    product
+  end
+
+  def drop_stale_og_image!(product, remaining_ids)
+    return unless product.og_media_asset_id
+    return if remaining_ids.map(&:to_i).include?(product.og_media_asset_id)
+
+    product.update(og_media_asset_id: nil)
   end
 
   # ── Shared ─────────────────────────────────────────────────────────────────

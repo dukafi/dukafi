@@ -34,6 +34,9 @@ class CommercePrefetcherSpec < Minitest::Test
     assert_equal "$10.00", result.dig("products", "first", "variants", 0, "priceDisplay")
     assert_equal now.to_i, result.dig("products", "first", "createdAt")
     assert_equal "<p>Handwoven canvas</p>", result.dig("products", "first", "descriptionHtml")
+    assert_equal ["second"], result.dig("products", "first", "related").map { |product| product.fetch("slug") }
+    assert_equal [], result.dig("products", "first", "related").first.fetch("related")
+    refute_includes result.dig("products", "first", "related").map { |product| product.fetch("slug") }, "first"
   end
 
   def test_prefetches_a_products_attached_images_in_order
@@ -48,8 +51,24 @@ class CommercePrefetcherSpec < Minitest::Test
     entry = result.dig("products", "tote")
 
     assert_equal "/uploads/first.jpg", entry.fetch("imageUrl")
+    assert_equal "/uploads/first.jpg", entry.fetch("ogImageUrl")
     assert_equal ["/uploads/first.jpg", "/uploads/second.jpg"], entry.fetch("images").map { |image| image.fetch("url") }
     assert_equal 400, entry.dig("images", 0, "width")
+  end
+
+  def test_a_product_can_pick_a_share_image_that_is_not_the_first
+    now = Time.now
+    product = Product.create(title: "Tote", slug: "tote", status: "active", created_at: now, updated_at: now)
+    first = MediaAsset.create(path: "uploads/first.jpg", mime: "image/jpeg", width: 400, height: 300, variants_json: "[]", created_at: now)
+    hero = MediaAsset.create(path: "uploads/hero.jpg", mime: "image/jpeg", width: 1200, height: 800, variants_json: "[]", created_at: now)
+    ProductImage.dataset.insert(product_id: product.id, media_asset_id: first.id, position: 0)
+    ProductImage.dataset.insert(product_id: product.id, media_asset_id: hero.id, position: 1)
+    product.update(og_media_asset_id: hero.id)
+
+    entry = CommercePrefetcher.call.dig("products", "tote")
+
+    assert_equal "/uploads/first.jpg", entry.fetch("imageUrl")
+    assert_equal "/uploads/hero.jpg", entry.fetch("ogImageUrl")
   end
 
   def test_imageless_product_has_an_empty_image_url_not_a_broken_one
@@ -58,6 +77,17 @@ class CommercePrefetcherSpec < Minitest::Test
     entry = CommercePrefetcher.call.dig("products", "bare")
 
     assert_equal "", entry.fetch("imageUrl")
+    assert_equal "", entry.fetch("ogImageUrl")
     assert_equal [], entry.fetch("images")
+  end
+
+  def test_prefetches_a_collection_cover_image
+    now = Time.now
+    cover = MediaAsset.create(path: "uploads/cover.jpg", mime: "image/jpeg", width: 800, height: 600, variants_json: "[]", created_at: now)
+    Collection.create(title: "Featured", slug: "featured", description: "", sort_order: 0, media_asset_id: cover.id)
+
+    entry = CommercePrefetcher.call.dig("collections", "featured")
+
+    assert_equal "/uploads/cover.jpg", entry.fetch("imageUrl")
   end
 end

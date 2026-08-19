@@ -93,6 +93,13 @@ class Dukafi
         # and no runtime, and its children are never walked.
         return "" unless node_visible?(node)
 
+        if node.fetch("moduleId") == "base.visual-component-ref"
+          html = render_visual_component_ref(node)
+          classes = class_names(node)
+          html = inject_classes(html, classes) if classes.any?
+          return html
+        end
+
         definition = @registry.fetch(node.fetch("moduleId"))
         if %w[store.relationship-loop store.collection-loop].include?(definition.id)
           return render_relationship_loop(node, definition)
@@ -143,6 +150,32 @@ class Dukafi
         html
       ensure
         @visiting.delete(node_id)
+      end
+
+      def render_visual_component_ref(node)
+        component_id = node.dig("props", "componentId").to_s.strip
+        return "<!-- dukafi: visual-component-ref missing componentId -->" if component_id.empty?
+
+        vc = VisualComponents.find(@site, component_id)
+        unless vc
+          return %(<!-- dukafi: unknown component "#{CGI.escapeHTML(component_id)}" -->)
+        end
+
+        @vc_stack ||= []
+        return "<!-- dukafi: component cycle -->" if @vc_stack.include?(component_id)
+
+        @vc_stack << component_id
+        previous_document = @document
+        previous_visiting = @visiting
+        begin
+          @document = VisualComponents.instantiate(vc, node, previous_document)
+          @visiting = {}
+          render_node(@document.fetch("rootNodeId"))
+        ensure
+          @document = previous_document
+          @visiting = previous_visiting
+          @vc_stack.pop
+        end
       end
 
       # Union across the page, in first-seen order. Deduped because the same
@@ -696,6 +729,8 @@ class Dukafi
       #   currentEntry.variants
       #   currentEntry.stars              the five stars of a review's rating
       #   cart.items
+      #   currentEntry.related            other products in the same collection
+      #   current-query                   products matching ?keyword= on this request
       #
       # The relative form is what makes nesting composable: loop a list field
       # and the entity in scope becomes that field's item type, whose own list
@@ -712,6 +747,8 @@ class Dukafi
         "products" => "product", "variants" => "variant",
         "images" => "image", "items" => "cartItem",
         "reviews" => "review", "stars" => "star",
+        "current-query" => "product",
+        "related" => "product",
         "paymentProviders" => "paymentProvider", "fields" => "paymentField",
         # `lines`, not `items`: an order line is not a cart item — it carries
         # no cart facts and its price is a snapshot, so it must not collide
@@ -725,6 +762,8 @@ class Dukafi
       end
 
       def source_items(source)
+        return SearchQuery.filter(@prefetched.fetch("products", {}).values, SearchQuery.keyword(@query_params)) if source == "current-query"
+
         segments = source.split(".")
         root = segments.first.to_s
         # `products` / `collections` alone mean "all of them".
@@ -799,11 +838,12 @@ class Dukafi
       # controls, where a value may mix static text with a bound field, e.g.
       # "Only {currentEntry.stock} left!"). Mirrors
       # `dukafi-editor/src/core/templates/tokenInterpolation.ts`'s syntax.
-      # Every source `binding_frame` can resolve. `page`/`site`/`route` have no
+      # Every source `binding_frame` can resolve. `page`/`site` have no
       # server-side frames yet, so those tokens are deliberately left verbatim
       # rather than silently blanked — an unresolvable token should look
-      # unresolved, not like empty content.
-      TOKEN_SOURCES = %w[currentEntry parentEntry cart payment form].freeze
+      # unresolved, not like empty content. `route` is populated from the
+      # request so `/search?keyword=` can bind the query into the heading.
+      TOKEN_SOURCES = %w[currentEntry parentEntry cart payment form route].freeze
       TOKEN_PATTERN = /\{(#{TOKEN_SOURCES.join('|')})\.([a-zA-Z0-9_.]+)(?:\|([^}]*))?\}/
 
       # The frame a binding source reads from. Shared by structured
@@ -824,6 +864,23 @@ class Dukafi
         # region's own fragment render; nil on a baked page, where every field
         # correctly reads as "nothing has happened yet".
         when "form" then @form
+        when "route" then route_frame
+        end
+      end
+
+      def route_frame
+        slug = @document.is_a?(Hash) ? @document["slug"].to_s : ""
+        path = slug.empty? || slug == "index" ? "/" : "/#{slug}"
+        { "path" => path, "slug" => slug, "query" => query_frame }
+      end
+
+      def query_frame
+        params = @query_params.is_a?(Hash) ? @query_params : {}
+        params.each_with_object({}) do |(key, value), hash|
+          text = Array(value).first.to_s
+          next if text.empty?
+
+          hash[key.to_s] = text
         end
       end
 

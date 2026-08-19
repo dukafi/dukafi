@@ -62,11 +62,11 @@ export function createPageActions({
       }
     },
 
-    renamePage: (pageId, title, slug) => {
+    renamePage: (pageId, title, slug, seo) => {
       mutateSite((p) => {
         const page = p.pages.find((candidate) => candidate.id === pageId)
         if (!page) return false
-        renamePage(p, pageId, title, slug)
+        renamePage(p, pageId, title, slug, seo)
         return true
       })
     },

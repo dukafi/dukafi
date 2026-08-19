@@ -16,16 +16,30 @@
  * its HTML goes through `importHtml` — the identical pipeline behind the
  * paste-HTML UI, including `stripUnsafe`. There is no path by which a reply
  * reaches the document that a merchant pasting markup does not also take.
+ *
+ * Build is a second, optional path: plan JSON, merchant approval, then the
+ * same `applyAiEdits`. Send (Assist) is unchanged. Neither path requires a
+ * hosted Dukafi AI account — both use the merchant's configured model.
  */
 
 import { apiRequest, ApiError } from '@core/http'
 import { Type } from '@core/utils/typeboxHelpers'
-import { applyEditsToTree, extractEditsFromReply, type AiEdit } from '@core/ai'
+import {
+  applyEditsToTree,
+  compileBuildPlan,
+  extractEditsFromReply,
+  parseBuildPlan,
+  resolvePlanMedia,
+  type AiEdit,
+  type BuildPlan,
+  type LibraryAsset,
+} from '@core/ai'
 import { getErrorMessage } from '@core/utils/errorMessage'
 import { pushToast } from '@ui/components/Toast'
 import type { EditorStoreSliceCreator } from '@site/store/types'
 import { buildSiteHelpers } from './site/helpers'
 import { buildAiContext, SYSTEM_PROMPT } from '@site/ai/context'
+import { BUILD_PROMPT } from '@site/ai/buildPrompt'
 
 export interface AiMessage {
   role: 'user' | 'assistant'
@@ -34,20 +48,68 @@ export interface AiMessage {
   applied?: number
 }
 
+export interface AiProfileDraft {
+  startedOn: string
+  audience: string
+  difference: string
+}
+
 const ChatResponseSchema = Type.Object({ reply: Type.String() })
+const ProfileEnvelopeSchema = Type.Object({
+  profile: Type.Object({
+    startedOn: Type.String(),
+    audience: Type.String(),
+    difference: Type.String(),
+    thin: Type.Boolean(),
+  }),
+})
+const MediaAssetSchema = Type.Object({
+  id: Type.String(),
+  path: Type.String(),
+  filename: Type.String(),
+  altText: Type.String(),
+})
+const StoreContextSchema = Type.Object({
+  store: Type.Object({ name: Type.String(), currency: Type.String() }),
+  profile: Type.Object({
+    startedOn: Type.String(),
+    audience: Type.String(),
+    difference: Type.String(),
+    thin: Type.Boolean(),
+  }),
+  products: Type.Object({
+    total: Type.Number(),
+    sample: Type.Array(Type.Object({
+      slug: Type.String(),
+      title: Type.String(),
+      status: Type.String(),
+      hasImage: Type.Boolean(),
+    })),
+  }),
+  media: Type.Object({
+    total: Type.Number(),
+    sample: Type.Array(MediaAssetSchema),
+  }),
+}, { additionalProperties: true })
+const MediaSearchSchema = Type.Object({ media: Type.Array(MediaAssetSchema) })
 
 interface AiSlice {
   aiMessages: AiMessage[]
   aiPending: boolean
-  /** Set when the model is not configured yet, so the panel can say so. */
   aiNotConfigured: boolean
   aiError: string | null
+  aiNeedProfile: boolean
+  aiBuildRequest: string | null
+  aiPlan: BuildPlan | null
+  aiPlanNote: string | null
 
   sendAiMessage: (text: string) => Promise<void>
-  /** Apply a batch as ONE undo step. Returns how many edits landed. */
+  startAiBuild: (text: string) => Promise<void>
+  submitAiProfile: (draft: AiProfileDraft) => Promise<void>
+  applyAiPlan: () => void
+  cancelAiPlan: () => void
   applyAiEdits: (edits: AiEdit[]) => number
   clearAiConversation: () => void
-  /** Cleared by the settings popover the moment a model is saved. */
   setAiNotConfigured: (value: boolean) => void
 }
 
@@ -58,19 +120,66 @@ declare module '@site/store/types' {
 export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
   const { mutateActiveTreeAndSite } = buildSiteHelpers(set, get)
 
+  async function runBuildPlan(request: string) {
+    const context = await apiRequest('/admin/api/cms/store-context', {
+      schema: StoreContextSchema,
+      fallbackMessage: 'Could not load the store',
+    })
+    const { reply } = await apiRequest('/admin/api/cms/ai/chat', {
+      method: 'POST',
+      body: {
+        messages: [
+          { role: 'system', content: BUILD_PROMPT },
+          { role: 'user', content: `Store context:\n${JSON.stringify(context)}\n\nMerchant request:\n${request}` },
+        ],
+      },
+      schema: ChatResponseSchema,
+      fallbackMessage: 'The assistant could not answer',
+    })
+    const { plan, text } = parseBuildPlan(reply)
+    if (!plan) {
+      set({
+        aiPending: false,
+        aiError: 'The model did not return a usable plan. Try again, or use Send for a small edit.',
+      })
+      return
+    }
+    const library: LibraryAsset[] = context.media.sample.map((asset) => ({
+      path: asset.path,
+      filename: asset.filename,
+      altText: asset.altText,
+    }))
+    const queries = [...new Set(plan.blocks.flatMap((block) => (block.media?.query ? [block.media.query] : [])))]
+    for (const query of queries) {
+      const { media } = await apiRequest('/admin/api/cms/store-media', {
+        query: { q: query },
+        schema: MediaSearchSchema,
+        fallbackMessage: 'Could not search media',
+      })
+      for (const asset of media) {
+        library.push({ path: asset.path, filename: asset.filename, altText: asset.altText })
+      }
+    }
+    set({
+      aiPending: false,
+      aiPlan: resolvePlanMedia(plan, library),
+      aiPlanNote: text,
+    })
+  }
+
   return {
     aiMessages: [],
     aiPending: false,
     aiNotConfigured: false,
     aiError: null,
+    aiNeedProfile: false,
+    aiBuildRequest: null,
+    aiPlan: null,
+    aiPlanNote: null,
 
     applyAiEdits: (edits) => {
       if (edits.length === 0) return 0
 
-      // ONE `mutateActiveTreeAndSite` recipe for the whole batch, so a reply
-      // that lands five edits is a single Cmd+Z rather than five. The edits
-      // themselves are applied by `applyEditsToTree`, which is shared with the
-      // headless write path and knows nothing about undo.
       let applied = 0
       mutateActiveTreeAndSite((tree, site) => {
         applied = applyEditsToTree(tree, site, edits)
@@ -93,9 +202,6 @@ export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
           body: {
             messages: [
               { role: 'system', content: SYSTEM_PROMPT },
-              // The page snapshot rides on the latest user turn rather than the
-              // system prompt so it reflects the document as it is NOW, after
-              // any edits earlier in this conversation already landed.
               ...history.slice(0, -1).map((m) => ({ role: m.role, content: m.content })),
               { role: 'user', content: `${buildAiContext(get())}\n\n${trimmed}` },
             ],
@@ -125,19 +231,111 @@ export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
           })
         }
       } catch (error) {
-        // 409 is the one failure the merchant can fix themselves, so it gets
-        // its own state rather than a generic error line.
-        const notConfigured = error instanceof ApiError && error.status === 409
-        set({
-          aiPending: false,
-          aiNotConfigured: notConfigured,
-          aiError: notConfigured ? null : getErrorMessage(error, 'Something went wrong.'),
+        failAi(set, error)
+      }
+    },
+
+    startAiBuild: async (text) => {
+      const trimmed = text.trim()
+      if (trimmed.length === 0 || get().aiPending) return
+
+      const history = [...get().aiMessages, { role: 'user' as const, content: trimmed }]
+      set({
+        aiMessages: history,
+        aiPending: true,
+        aiError: null,
+        aiNotConfigured: false,
+        aiNeedProfile: false,
+        aiPlan: null,
+        aiPlanNote: null,
+        aiBuildRequest: trimmed,
+      })
+
+      try {
+        const { profile } = await apiRequest('/admin/api/cms/store-profile', {
+          schema: ProfileEnvelopeSchema,
+          fallbackMessage: 'Could not load the business profile',
+        })
+        if (profile.thin) {
+          set({ aiPending: false, aiNeedProfile: true })
+          return
+        }
+        await runBuildPlan(trimmed)
+      } catch (error) {
+        failAi(set, error)
+      }
+    },
+
+    submitAiProfile: async (draft) => {
+      const request = get().aiBuildRequest
+      if (!request || get().aiPending) return
+      set({ aiPending: true, aiError: null })
+      try {
+        await apiRequest('/admin/api/cms/store-profile', {
+          method: 'PUT',
+          body: draft,
+          fallbackMessage: 'Could not save the business profile',
+        })
+        set({ aiNeedProfile: false })
+        await runBuildPlan(request)
+      } catch (error) {
+        failAi(set, error)
+      }
+    },
+
+    applyAiPlan: () => {
+      const plan = get().aiPlan
+      if (!plan || get().aiPending) return
+      const applied = get().applyAiEdits(compileBuildPlan(plan))
+      const note = get().aiPlanNote
+      set((state) => ({
+        aiPlan: null,
+        aiPlanNote: null,
+        aiBuildRequest: null,
+        aiNeedProfile: false,
+        aiMessages: [...state.aiMessages, {
+          role: 'assistant',
+          content: note && note.length > 0 ? note : 'Added the section.',
+          ...(applied > 0 ? { applied } : {}),
+        }],
+      }))
+      if (applied > 0) {
+        pushToast({
+          kind: 'success',
+          title: applied === 1 ? 'Applied 1 change' : `Applied ${applied} changes`,
+          body: 'Press Cmd+Z to undo.',
+          location: 'site-editor',
         })
       }
     },
 
-    clearAiConversation: () => set({ aiMessages: [], aiError: null, aiNotConfigured: false }),
+    cancelAiPlan: () => set({
+      aiNeedProfile: false,
+      aiBuildRequest: null,
+      aiPlan: null,
+      aiPlanNote: null,
+      aiError: null,
+    }),
+
+    clearAiConversation: () => set({
+      aiMessages: [],
+      aiError: null,
+      aiNotConfigured: false,
+      aiNeedProfile: false,
+      aiBuildRequest: null,
+      aiPlan: null,
+      aiPlanNote: null,
+    }),
 
     setAiNotConfigured: (value) => set({ aiNotConfigured: value }),
   }
+}
+
+function failAi(set: (partial: { aiPending: boolean; aiNotConfigured: boolean; aiError: string | null }) => void, error: unknown) {
+  const notConfigured = error instanceof ApiError && error.status === 409
+  set({
+    aiPending: false,
+    aiNotConfigured: notConfigured,
+    aiError: notConfigured ? null : getErrorMessage(error, 'Something went wrong.'),
+  })
 }

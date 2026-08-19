@@ -38,3 +38,6 @@ dukafi-editor/.tmp-sidecar/
 
 # GHCR token for ./registry/deploy-registry — never commit this
 registry/.ghcr-token
+
+# Assist shadow meter (billing off)
+dukafi/tmp/

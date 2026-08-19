@@ -189,6 +189,11 @@ export const commerceApi = {
       method: 'PUT',
       body: JSON.stringify({ mediaAssetIds }),
     }),
+  setProductOgImage: (productId: number, mediaAssetId: number | null) =>
+    request<{ product: Product }>(`/products/${productId}/og-image`, {
+      method: 'PUT',
+      body: JSON.stringify({ mediaAssetId }),
+    }),
   setProductCollections: (productId: number, collectionIds: number[]) =>
     request<{ collectionIds: number[] }>(`/products/${productId}/collections`, {
       method: 'PUT',
@@ -205,6 +210,11 @@ export const commerceApi = {
     request<{ collection: Collection }>(`/collections/${id}/products`, {
       method: 'PUT',
       body: JSON.stringify({ productIds }),
+    }),
+  setCollectionImage: (id: number, mediaAssetId: string | null) =>
+    request<{ collection: Collection }>(`/collections/${id}/image`, {
+      method: 'PUT',
+      body: JSON.stringify({ mediaAssetId }),
     }),
 
   listDataTables: () => request<{ tables: DataTable[] }>('/tables'),
@@ -225,6 +235,13 @@ export const commerceApi = {
   getSettings: () => request<{ settings: CommerceSettings }>('/settings'),
   updateSettings: (input: CommerceSettingsInput) =>
     request<{ settings: CommerceSettings }>('/settings', { method: 'PATCH', body: JSON.stringify(input) }),
+
+  getStoreProfile: () => requestAbsolute<{ profile: import('./types').StoreProfile }>('/admin/api/cms/store-profile'),
+  updateStoreProfile: (input: { startedOn: string; audience: string; difference: string }) =>
+    requestAbsolute<{ profile: import('./types').StoreProfile }>('/admin/api/cms/store-profile', {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    }),
 
   importCsv: async (file: File) => {
     const body = new FormData()

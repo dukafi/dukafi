@@ -68,9 +68,17 @@ class DependencyTracker
       collection = prefetched.dig("collections", slug)
       collection ? collection.fetch("products", []).filter_map { |product| product["id"] } : []
     when "currentEntry"
-      return [] unless fields == ["variants"]
+      if fields == ["related"]
+        return [] unless current_entry.is_a?(Hash)
 
-      current_entry.is_a?(Hash) ? [current_entry["id"]] : []
+        ids = [current_entry["id"]]
+        ids.concat(Array(current_entry["related"]).filter_map { |item| item["id"] if item.is_a?(Hash) })
+        ids
+      elsif fields == ["variants"]
+        current_entry.is_a?(Hash) ? [current_entry["id"]] : []
+      else
+        []
+      end
     else
       []
     end

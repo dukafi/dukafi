@@ -36,6 +36,12 @@ interface CanvasSlice {
    * the default page canvas (activeDocument === null). Cleared on exit.
    */
   previousActivePageId: string | null
+  /**
+   * Page-level visual-component-ref currently being edited in place.
+   * The page stays open; mutations route to the component definition so
+   * every instance updates. Null when not in-place editing.
+   */
+  inlineEditingRefId: string | null
   /** Current editor interaction mode */
   canvasMode: CanvasMode
   /**
@@ -61,6 +67,8 @@ interface CanvasSlice {
   /** Set (or clear, with null) the active custom-condition editing context. */
   setActiveConditionId: (id: string | null) => void
   setActivePage: (pageId: string) => void
+  startInlineComponentEdit: (refNodeId: string) => void
+  endInlineComponentEdit: () => void
   setCanvasMode: (mode: CanvasMode) => void
   /** Toggle whether a breakpoint's design-canvas frame is collapsed to its slim header. */
   toggleBreakpointCollapsed: (id: string) => void
@@ -94,6 +102,7 @@ export const createCanvasSlice: EditorStoreSliceCreator<CanvasSlice> = (set, get
   activeConditionId: null,
   activePageId: null,
   previousActivePageId: null,
+  inlineEditingRefId: null,
   canvasMode: 'select',
   collapsedBreakpointIds: [],
   agentSnapshotCaptureRequest: null,
@@ -114,7 +123,39 @@ export const createCanvasSlice: EditorStoreSliceCreator<CanvasSlice> = (set, get
 
   setActiveConditionId: (id) => set({ activeConditionId: id }),
 
-  setActivePage: (pageId) => set({ activePageId: pageId }),
+  setActivePage: (pageId) => set({ activePageId: pageId, inlineEditingRefId: null }),
+
+  startInlineComponentEdit: (refNodeId) =>
+    set((state) => {
+      const pageId =
+        state.activeDocument?.kind === 'page' ? state.activeDocument.pageId : state.activePageId
+      const page = state.site?.pages.find((entry) => entry.id === pageId)
+      const ref = page?.nodes[refNodeId]
+      if (!ref || ref.moduleId !== 'base.visual-component-ref') return
+
+      const componentId = typeof ref.props.componentId === 'string' ? ref.props.componentId : ''
+      const vc = state.site?.visualComponents.find((entry) => entry.id === componentId)
+      if (!vc) return
+
+      state.inlineEditingRefId = refNodeId
+      const body = vc.tree.nodes[vc.tree.rootNodeId]
+      const first =
+        body?.moduleId === 'base.body' ? body.children[0] : vc.tree.rootNodeId
+      if (first) {
+        state.selectedNodeId = first
+        state.selectedNodeIds = [first]
+      }
+    }),
+
+  endInlineComponentEdit: () =>
+    set((state) => {
+      const refId = state.inlineEditingRefId
+      state.inlineEditingRefId = null
+      if (refId) {
+        state.selectedNodeId = refId
+        state.selectedNodeIds = [refId]
+      }
+    }),
 
   setCanvasMode: (mode) => set({ canvasMode: mode }),
 

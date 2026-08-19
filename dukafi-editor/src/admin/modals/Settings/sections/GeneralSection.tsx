@@ -52,7 +52,9 @@ export function GeneralSection() {
   return (
     <div>
       <p className={s.sectionDescription}>
-        Site name and HTML metadata used by the published CMS pages.
+        Site name, plus fallback title and description for pages that have not
+        set their own SEO in Page settings. Product and collection URLs use
+        the catalogue name instead of this title.
       </p>
 
       {/* ── Site name ─────────────────────────────────────────────────────── */}
@@ -129,6 +131,21 @@ export function GeneralSection() {
           updateSiteSettings({ faviconUrl: next.trim() || undefined })
         }
       />
+
+      <LibraryImageField
+        label="Default share image"
+        emptyLabel="No share image selected"
+        browseLabel="Browse library…"
+        changeLabel="Change share image"
+        currentValue={settings.ogImageUrl ?? ''}
+        onChange={(next) =>
+          updateSiteSettings({ ogImageUrl: next.trim() || undefined })
+        }
+      />
+      <p className={s.sectionDescription} style={{ marginTop: 0 }}>
+        og:image for pages that have not picked their own. Product pages use
+        the product image instead — pick that on the product.
+      </p>
     </div>
   )
 }
@@ -146,52 +163,62 @@ interface FaviconFieldProps {
  * sharing semantics, and never depends on a third-party host.
  */
 function FaviconField({ currentValue, onChange }: FaviconFieldProps) {
-  const [pickerOpen, setPickerOpen] = useState(false)
+  return (
+    <LibraryImageField
+      label="Favicon"
+      emptyLabel="No favicon selected"
+      browseLabel="Browse library…"
+      changeLabel="Change favicon"
+      currentValue={currentValue}
+      onChange={onChange}
+    />
+  )
+}
 
-  // Single fetch of the asset list so the "currently picked" tile can show the
-  // right thumbnail + filename for the saved publicPath. The modal mounts its
-  // own workspace when opened; this resource only backs the inline preview.
+interface LibraryImageFieldProps {
+  label: string
+  emptyLabel: string
+  browseLabel: string
+  changeLabel: string
+  currentValue: string
+  onChange: (next: string) => void
+}
+
+function LibraryImageField({
+  label, emptyLabel, browseLabel, changeLabel, currentValue, onChange,
+}: LibraryImageFieldProps) {
+  const [pickerOpen, setPickerOpen] = useState(false)
   const { data: cmsAssets, error } = useAsyncResource<CmsMediaAsset[]>(
     () => listCmsMediaAssets(),
     [],
     { fallbackError: 'Unable to load media library' },
   )
   const libraryError = error === 'Unauthorized' ? 'Sign in again to use CMS media.' : error
-
-  // A just-picked asset may post-date the loaded snapshot (e.g. uploaded inside
-  // the modal), so keep it alongside the read-only resource to render its
-  // thumbnail immediately without re-fetching the whole library.
   const [pickedAsset, setPickedAsset] = useState<CmsMediaAsset | null>(null)
-
   const currentAsset =
     (cmsAssets ?? []).find((asset) => asset.publicPath === currentValue) ??
     (pickedAsset?.publicPath === currentValue ? pickedAsset : null)
 
-  function handlePickFromModal(asset: CmsMediaAsset) {
-    setPickedAsset(asset)
-    onChange(asset.publicPath)
-  }
-
   return (
     <div className={s.genFieldRow}>
-      <span className={s.label}>Favicon</span>
-      <FaviconPreview asset={currentAsset} currentValue={currentValue} />
+      <span className={s.label}>{label}</span>
+      <FaviconPreview asset={currentAsset} currentValue={currentValue} emptyLabel={emptyLabel} />
       <div className={s.faviconActions}>
         <Button
           variant="secondary"
           size="sm"
           onClick={() => setPickerOpen(true)}
-          aria-label="Browse media library for favicon"
+          aria-label={`${browseLabel} for ${label}`}
         >
           <ImagesSolidIcon size={13} />
-          <span>{currentValue ? 'Change favicon' : 'Browse library…'}</span>
+          <span>{currentValue ? changeLabel : browseLabel}</span>
         </Button>
         {currentValue && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => onChange('')}
-            aria-label="Clear favicon"
+            aria-label={`Clear ${label}`}
           >
             Clear
           </Button>
@@ -200,7 +227,6 @@ function FaviconField({ currentValue, onChange }: FaviconFieldProps) {
       {libraryError && (
         <p className={s.faviconStatus} role="alert">{libraryError}</p>
       )}
-
       {pickerOpen && (
         <Suspense fallback={null}>
           <MediaPickerModal
@@ -208,7 +234,11 @@ function FaviconField({ currentValue, onChange }: FaviconFieldProps) {
             onClose={() => setPickerOpen(false)}
             mediaKind="image"
             currentValue={currentValue || null}
-            onPick={handlePickFromModal}
+            onPick={(asset) => {
+              setPickedAsset(asset)
+              onChange(asset.publicPath)
+              setPickerOpen(false)
+            }}
           />
         </Suspense>
       )}
@@ -219,23 +249,17 @@ function FaviconField({ currentValue, onChange }: FaviconFieldProps) {
 interface FaviconPreviewProps {
   asset: CmsMediaAsset | null
   currentValue: string
+  emptyLabel: string
 }
 
-/**
- * Three states for the currently-saved favicon:
- *   1. asset matched in the library → real thumb + filename
- *   2. publicPath saved but no matching asset yet (loading / replaced
- *      asset) → render the raw path so authors can see what's saved
- *   3. nothing saved → empty hint
- */
-function FaviconPreview({ asset, currentValue }: FaviconPreviewProps) {
+function FaviconPreview({ asset, currentValue, emptyLabel }: FaviconPreviewProps) {
   if (!asset && !currentValue) {
     return (
       <div className={s.faviconEmpty}>
         <span className={s.faviconEmptyIcon} aria-hidden="true">
           <ImagesSolidIcon size={18} />
         </span>
-        <span>No favicon selected</span>
+        <span>{emptyLabel}</span>
       </div>
     )
   }

@@ -376,6 +376,16 @@ function sameTree(state: EditorStore, existingIds: string[], id: string): boolea
 export function getActiveTree(state: EditorStore): NodeTree<PageNode> | null {
   if (!state.site) return null
   const activeDocument = state.activeDocument
+  if (state.inlineEditingRefId) {
+    const pageId = activeDocument?.kind === 'page' ? activeDocument.pageId : state.activePageId
+    const page = state.site.pages.find((entry) => entry.id === pageId)
+    const ref = page?.nodes[state.inlineEditingRefId]
+    const componentId = typeof ref?.props.componentId === 'string' ? ref.props.componentId : ''
+    const vc = componentId
+      ? state.site.visualComponents?.find((entry) => entry.id === componentId)
+      : null
+    if (vc) return vc.tree as NodeTree<PageNode>
+  }
   if (activeDocument?.kind === 'visualComponent') {
     const vc = state.site.visualComponents?.find((v) => v.id === activeDocument.vcId)
     return vc ? (vc.tree as NodeTree<PageNode>) : null
@@ -412,21 +422,13 @@ function getSelectionActiveClassId(state: EditorStore, nodeId: string | null): s
 }
 
 function findSelectableNode(state: EditorStore, nodeId: string): BaseNode | null {
+  const tree = getActiveTree(state)
+  if (tree?.nodes[nodeId]) return tree.nodes[nodeId]
+
   if (!state.site) return null
-
-  const activeDocument = state.activeDocument
-  if (activeDocument?.kind === 'visualComponent') {
-    const component = state.site.visualComponents?.find((vc) => vc.id === activeDocument.vcId)
-    if (component) {
-      const node = component.tree.nodes[nodeId]
-      if (node) return node
-    }
-  }
-
   for (const page of state.site.pages) {
     const node = page.nodes[nodeId]
     if (node) return node
   }
-
   return null
 }

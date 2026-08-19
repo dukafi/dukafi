@@ -12,6 +12,7 @@ describe('entityForLoopSource', () => {
     expect(entityForLoopSource('collections/featured.products', null)).toBe('product')
     expect(entityForLoopSource('products/canvas-bag.variants', null)).toBe('variant')
     expect(entityForLoopSource('cart.items', null)).toBe('cartItem')
+    expect(entityForLoopSource('current-query', null)).toBe('product')
     expect(entityForLoopSource('data/team', null)).toBe('dataRow')
     expect(entityForLoopSource('data', null)).toBeNull()
   })
@@ -29,6 +30,7 @@ describe('entityForLoopSource', () => {
     // The whole point: loop a list field, get that field's entity.
     expect(entityForLoopSource('currentEntry.images', 'product')).toBe('image')
     expect(entityForLoopSource('currentEntry.variants', 'product')).toBe('variant')
+    expect(entityForLoopSource('currentEntry.related', 'product')).toBe('product')
     expect(entityForLoopSource('currentEntry.products', 'collection')).toBe('product')
   })
 
@@ -56,6 +58,7 @@ describe('legacy props', () => {
     expect(legacyLoopSource('variants', '')).toBe('currentEntry.variants')
     expect(legacyLoopSource('variants', 'canvas-bag')).toBe('products/canvas-bag.variants')
     expect(legacyLoopSource('cartItems', '')).toBe('cart.items')
+    expect(legacyLoopSource('currentQuery', '')).toBe('current-query')
     expect(legacyLoopSource('dataRows', 'team')).toBe('data/team')
   })
 

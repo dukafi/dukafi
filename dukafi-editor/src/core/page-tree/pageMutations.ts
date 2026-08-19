@@ -45,7 +45,13 @@ export function deletePage(site: SiteDocument, pageId: string): void {
   if (index !== -1) site.pages.splice(index, 1)
 }
 
-export function renamePage(site: SiteDocument, pageId: string, title: string, slug?: string): void {
+export function renamePage(
+  site: SiteDocument,
+  pageId: string,
+  title: string,
+  slug?: string,
+  seo?: { seoTitle?: string; seoDescription?: string; ogImage?: string },
+): void {
   const page = site.pages.find((p) => p.id === pageId)
   if (!page) throw new Error(`[PageTree] Page "${pageId}" not found`)
   page.title = title
@@ -57,6 +63,23 @@ export function renamePage(site: SiteDocument, pageId: string, title: string, sl
     page.slug = normalized === 'index'
       ? 'index'
       : uniquePageSlug(slug, site.pages, pageId)
+  }
+  if (seo) {
+    if ('seoTitle' in seo) {
+      const seoTitle = seo.seoTitle?.trim() ?? ''
+      if (seoTitle) page.seoTitle = seoTitle
+      else delete page.seoTitle
+    }
+    if ('seoDescription' in seo) {
+      const seoDescription = seo.seoDescription?.trim() ?? ''
+      if (seoDescription) page.seoDescription = seoDescription
+      else delete page.seoDescription
+    }
+    if ('ogImage' in seo) {
+      const ogImage = seo.ogImage?.trim() ?? ''
+      if (ogImage) page.ogImage = ogImage
+      else delete page.ogImage
+    }
   }
 }
 

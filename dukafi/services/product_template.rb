@@ -15,7 +15,7 @@ class ProductTemplate
 
   def self.document
     nodes = {
-      "product-body" => node("product-body", "base.body", ["product-main"]),
+      "product-body" => node("product-body", "base.body", %w[product-main product-related]),
       "product-main" => node("product-main", "base.container", %w[product-title product-image product-price product-variants product-stock product-buy]),
       "product-title" => node("product-title", "base.text", [], { "tag" => "h1", "text" => "Product title" }).merge(
         "dynamicBindings" => { "text" => { "source" => "currentEntry", "field" => "title", "format" => "plain", "fallback" => "static" } }
@@ -29,6 +29,24 @@ class ProductTemplate
       "product-variants" => node("product-variants", "store.variant-picker"),
       "product-stock" => node("product-stock", "store.stock-badge", [], { "lowStockThreshold" => CommerceSettings.current.low_stock_threshold }),
       "product-buy" => node("product-buy", "store.buy-button"),
+      "product-related" => node("product-related", "base.container", %w[related-heading related-loop]),
+      "related-heading" => node("related-heading", "base.text", [], { "tag" => "h2", "text" => "Related products" }),
+      "related-loop" => node(
+        "related-loop", "store.relationship-loop", ["related-card"],
+        { "source" => "currentEntry.related", "perPage" => 4 }
+      ),
+      "related-card" => node("related-card", "base.link", %w[related-image related-title related-price]).merge(
+        "dynamicBindings" => { "href" => { "source" => "currentEntry", "field" => "href", "format" => "url", "fallback" => "static" } }
+      ),
+      "related-image" => node("related-image", "base.image").merge(
+        "dynamicBindings" => { "src" => { "source" => "currentEntry", "field" => "imageUrl", "format" => "media", "fallback" => "empty" } }
+      ),
+      "related-title" => node("related-title", "base.text", [], { "tag" => "h3", "text" => "Product title" }).merge(
+        "dynamicBindings" => { "text" => { "source" => "currentEntry", "field" => "title", "format" => "plain", "fallback" => "static" } }
+      ),
+      "related-price" => node("related-price", "base.text", [], { "tag" => "span", "text" => "KES 0.00" }).merge(
+        "dynamicBindings" => { "text" => { "source" => "currentEntry", "field" => "priceDisplay", "format" => "plain", "fallback" => "static" } }
+      ),
     }
     {
       "id" => "product-template", "slug" => SLUG, "title" => "Product template",

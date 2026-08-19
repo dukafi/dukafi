@@ -137,4 +137,26 @@ describe('PageSettingsDialog access', () => {
 
     expect((screen.getByLabelText('Who can see this') as HTMLInputElement).value).toBe('Anyone')
   })
+
+  it('saves SEO title and description with the page', async () => {
+    globalThis.fetch = mock(async () => json(accessBody())) as unknown as typeof fetch
+    const saved: Array<{ seoTitle: string; seoDescription: string }> = []
+    render(
+      <PageSettingsDialog
+        page={page}
+        pages={[page]}
+        onCancel={() => {}}
+        onSave={(payload) => saved.push(payload)}
+      />,
+    )
+
+    await waitFor(() => expect(screen.getByLabelText('SEO title')).toBeDefined())
+    await userEvent.type(screen.getByLabelText('SEO title'), 'Checkout — secure payment')
+    await userEvent.type(screen.getByLabelText('SEO description'), 'Pay for your order.')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(saved.length).toBe(1))
+    expect(saved[0].seoTitle).toBe('Checkout — secure payment')
+    expect(saved[0].seoDescription).toBe('Pay for your order.')
+  })
 })

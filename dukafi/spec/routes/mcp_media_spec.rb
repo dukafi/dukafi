@@ -18,6 +18,8 @@ class McpMediaSpec < Minitest::Test
   def setup
     ProductImage.dataset.delete
     Variant.dataset.delete
+    CollectionProduct.dataset.delete
+    Collection.dataset.delete
     Product.dataset.delete
     MediaAsset.dataset.delete
     Admin.dataset.delete
@@ -234,6 +236,22 @@ class McpMediaSpec < Minitest::Test
     refute_nil MediaAsset.first(path: "uploads/one.png")
   end
 
+  def test_a_product_share_image_can_be_a_later_gallery_image
+    first = asset!(path: "uploads/one.png")
+    hero = asset!(path: "uploads/hero.png")
+    call("create_product", { "title" => "Blue Shirt" })
+    call("set_product_images", { "productSlug" => "blue-shirt",
+                                 "media" => ["/uploads/one.png", "/uploads/hero.png"] })
+
+    outcome = call("set_product_og_image", { "productSlug" => "blue-shirt", "media" => "/uploads/hero.png" })
+
+    assert_equal "/uploads/hero.png", outcome.fetch("ogImage")
+    cleared = call("set_product_og_image", { "productSlug" => "blue-shirt", "media" => "" })
+    assert_nil cleared.fetch("ogImage")
+    refute_nil first
+    refute_nil hero
+  end
+
   def test_a_product_knows_whether_it_has_a_picture_at_all
     call("create_product", { "title" => "Blue Shirt" })
 
@@ -248,11 +266,31 @@ class McpMediaSpec < Minitest::Test
     assert_equal ["blue-shirt"], call("read_media", { "reference" => "/uploads/hero.png" }).fetch("usedByProducts")
   end
 
+  def test_a_collection_cover_is_set_from_a_media_path
+    asset!
+    CollectionProduct.dataset.delete
+    Collection.dataset.delete
+    call("create_collection", { "title" => "Summer" })
+
+    outcome = call("set_collection_image", { "slug" => "summer", "media" => "/uploads/hero.png" })
+
+    assert_equal true, outcome.fetch("hasImage")
+    assert_equal "/uploads/hero.png", outcome.fetch("imageUrl")
+    listed = call("list_collections")
+    assert_equal true, listed.fetch("collections").first.fetch("hasImage")
+
+    cleared = call("set_collection_image", { "slug" => "summer", "media" => "" })
+    assert_equal false, cleared.fetch("hasImage")
+    assert_equal "", cleared.fetch("imageUrl")
+  end
+
   # ── Scopes ───────────────────────────────────────────────────────────────
 
   def test_describing_media_needs_the_write_scope
     assert McpTools.write_tool?("update_media")
     assert McpTools.write_tool?("set_product_images")
+    assert McpTools.write_tool?("set_product_og_image")
+    assert McpTools.write_tool?("set_collection_image")
     refute McpTools.write_tool?("list_media")
     refute McpTools.write_tool?("read_media")
   end

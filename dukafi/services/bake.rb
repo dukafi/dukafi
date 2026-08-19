@@ -3,7 +3,7 @@ require "securerandom"
 
 class Bake
   Result = Data.define(:version, :page_count, :slot)
-  Entry = Data.define(:path, :title, :rendered, :product_ids, :sources)
+  Entry = Data.define(:path, :title, :description, :json_ld, :rendered, :product_ids, :sources, :open_graph)
   SAFE_SLUG = /\A[a-zA-Z0-9][a-zA-Z0-9_\/-]*\z/
 
   def self.call(
@@ -60,6 +60,7 @@ class Bake
         classes: DeclaredClassNames.call(source_documents, @state.site),
       )
       entries.each { |entry| bake_entry(entry, tailwind_css, slot_path) }
+      SitemapWriter.call(slot_path:, origin: Dukafi::Publisher::ListingJsonLd.public_origin)
       flip_current(slot_name)
       flipped = true
       DB.transaction do
@@ -102,14 +103,27 @@ class Bake
   def page_entries(prefetched)
     @pages.map do |page|
       document = render_document(page)
+      meta = Dukafi::Publisher::PageMeta.for_page(document, @state.site, fallback_title: page.title)
+      if page.slug == SearchPage::SLUG
+        meta = meta.merge(Dukafi::Publisher::PageHead.search)
+      end
       Entry.new(
         # A gated page bakes under `private/`, which the storefront will not
         # serve by path — so the file exists (fast to serve, one render) but
         # the only route to it runs the session check first.
-        path: page.bake_path, title: page.title,
+        path: page.bake_path, title: meta.fetch(:title),
+        description: meta[:description],
+        json_ld: Dukafi::Publisher::ListingJsonLd.call(
+          document:, prefetched:, path: page.bake_path, title: meta.fetch(:title),
+          description: meta[:description], site: @state.site
+        ),
         rendered: render_document_data(document, prefetched:),
         product_ids: DependencyTracker.product_ids(document:, prefetched:),
         sources: RebuildIndex.sources(document),
+        open_graph: Dukafi::Publisher::OpenGraph.for_page(
+          document, @state.site, path: page.slug, title: meta.fetch(:title),
+          description: meta[:description]
+        ),
       )
     end
   end
@@ -119,13 +133,21 @@ class Bake
 
     prefetched.fetch("products", {}).values.map do |product|
       document = render_document(@product_template)
+      meta = Dukafi::Publisher::PageMeta.for_entry(
+        @state.site, title: product.fetch("title"),
+        description: Dukafi::Publisher::PageMeta.plain_text(product["descriptionHtml"])
+      )
       Entry.new(
-        path: "products/#{product.fetch('slug')}", title: product.fetch("title"),
+        path: "products/#{product.fetch('slug')}", title: meta.fetch(:title),
+        description: meta[:description], json_ld: nil,
         rendered: render_page(@product_template, prefetched:, current_entry: product),
         product_ids: DependencyTracker.product_ids(
           document:, prefetched:, current_entry: product
         ),
         sources: RebuildIndex.sources(document, current_entry: product),
+        open_graph: Dukafi::Publisher::OpenGraph.for_product(
+          product, @state.site, title: meta.fetch(:title), description: meta[:description]
+        ),
       )
     end
   end
@@ -135,13 +157,22 @@ class Bake
 
     prefetched.fetch("collections", {}).values.map do |collection|
       document = render_document(@collection_template)
+      meta = Dukafi::Publisher::PageMeta.for_collection(@state.site, collection)
+      path = "collections/#{collection.fetch('slug')}"
       Entry.new(
-        path: "collections/#{collection.fetch('slug')}", title: collection.fetch("title"),
+        path:, title: meta.fetch(:title), description: meta[:description],
+        json_ld: Dukafi::Publisher::ListingJsonLd.call(
+          document:, prefetched:, current_entry: collection, path:,
+          title: meta.fetch(:title), description: meta[:description], site: @state.site
+        ),
         rendered: render_page(@collection_template, prefetched:, current_entry: collection),
         product_ids: DependencyTracker.product_ids(
           document:, prefetched:, current_entry: collection
         ),
         sources: RebuildIndex.sources(document, current_entry: collection),
+        open_graph: Dukafi::Publisher::OpenGraph.for_collection(
+          collection, @state.site, title: meta.fetch(:title), description: meta[:description]
+        ),
       )
     end
   end
@@ -204,7 +235,7 @@ class Bake
     File.write(File.join(slot_path, "assets", bundle.filename), bundle.content)
     destination = File.join(slot_path, relative_html)
     FileUtils.mkdir_p(File.dirname(destination))
-    File.write(destination, html_document(entry.title, entry.rendered, bundle.filename))
+    File.write(destination, html_document(entry, bundle.filename))
   end
 
   def html_path(slug)
@@ -215,14 +246,14 @@ class Bake
     value == "index" ? "index.html" : "#{value}.html"
   end
 
-  def html_document(entry_title, rendered, css_filename)
+  def html_document(entry, css_filename)
     language = @state.site.dig("settings", "language") || "en"
-    title = @state.site.dig("settings", "metaTitle") || entry_title
-    description = @state.site.dig("settings", "metaDescription")
+    head = Dukafi::Publisher::PageHead.for_bake_path(entry.path, has_listing: !entry.json_ld.nil?)
     Dukafi::Publisher::HtmlDocument.call(
-      title:, body: rendered.html, body_classes: rendered.body_classes,
-      language:, description:, css_href: "/assets/#{bundle_name(css_filename)}",
-      runtimes: rendered.runtimes
+      title: entry.title, body: entry.rendered.html, body_classes: entry.rendered.body_classes,
+      language:, description: entry.description, css_href: "/assets/#{bundle_name(css_filename)}",
+      runtimes: entry.rendered.runtimes, json_ld: entry.json_ld,
+      robots: head[:robots], canonical: head[:canonical], open_graph: entry.open_graph
     )
   end
 

@@ -17,6 +17,8 @@ import { ArrowDownIcon } from 'pixel-art-icons/icons/arrow-down'
 import { ExternalLinkSolidIcon } from 'pixel-art-icons/icons/external-link-solid'
 import { GlobeSolidIcon } from 'pixel-art-icons/icons/globe-solid'
 import { Settings2SolidIcon } from 'pixel-art-icons/icons/settings-2-solid'
+import { Copy2SolidIcon } from 'pixel-art-icons/icons/copy-2-solid'
+import { copyStorefrontUrl } from '@admin/lib/storefrontUrl'
 import { SiteCreateDialog, buildScriptPath, buildStylePath, slugifySiteItemName, type SiteCreatePayload, type SiteCreateKind } from '@admin/shared/dialogs/SiteCreateDialog'
 import type { ExplorerContextMenuItem } from '@site/explorer-actions'
 import { usePageSettingsDialogs } from './usePageSettingsDialogs'
@@ -445,6 +447,14 @@ export function SiteExplorerPanel({
           setContextMenu(null)
         },
       },
+      ...(!page.template ? [{
+        label: 'Copy page URL',
+        icon: <Copy2SolidIcon size={13} />,
+        action: () => {
+          void copyStorefrontUrl(pagePublicPath(page.slug), 'Copied page URL')
+          setContextMenu(null)
+        },
+      }] : []),
       {
         label: 'Export page',
         icon: <ArrowDownIcon size={13} />,

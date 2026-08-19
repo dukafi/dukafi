@@ -54,6 +54,13 @@ class CommerceEntitiesSpec < Minitest::Test
     ProductImage.dataset.insert(product_id: product.id, media_asset_id: asset.id, position: 0)
     collection = Collection.create(title: "Featured", slug: "featured", description: "Picks", sort_order: 0)
     CollectionProduct.dataset.insert(collection_id: collection.id, product_id: product.id, position: 0)
+    sibling = Product.create(
+      title: "Mug", slug: "mug", status: "active",
+      description_document: "", created_at: Time.now, updated_at: Time.now
+    )
+    Variant.create(product_id: sibling.id, sku: "MUG-1", title: "Default", price_cents: 500,
+                   currency: "USD", stock: 2, position: 0)
+    CollectionProduct.dataset.insert(collection_id: collection.id, product_id: sibling.id, position: 1)
 
     cart = Cart.create(session_key: "k", status: "active", created_at: Time.now, updated_at: Time.now)
     CartItem.create(cart_id: cart.id, variant_id: Variant.first.id, quantity: 2,

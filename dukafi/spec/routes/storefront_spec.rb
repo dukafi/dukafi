@@ -84,6 +84,24 @@ class StorefrontSpec < Minitest::Test
     assert_includes last_response.headers.fetch("content-type"), "text/css"
   end
 
+  def test_serves_the_baked_sitemap_and_robots_txt
+    create_page(slug: "index", text: "Home", title: "Home")
+    Bake.call(state: @state, output_root: @published_root)
+
+    get "/sitemap.xml"
+    assert_equal 200, last_response.status
+    assert_match(/xml/, last_response.content_type)
+    assert_includes last_response.body, "sitemap-0.xml"
+
+    get "/sitemap-0.xml"
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, "<urlset"
+
+    get "/robots.txt"
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, "Sitemap:"
+  end
+
   def test_uses_authored_404_page
     create_page(slug: "404", text: "Nothing here", title: "Missing")
 
@@ -140,8 +158,90 @@ class StorefrontSpec < Minitest::Test
 
     assert_equal 200, last_response.status
     assert_equal "live", last_response.headers.fetch("x-dukafy-render")
+    assert_includes last_response.body, "<title>Featured — 2 Products — Page 2 | Store</title>"
+    assert_includes last_response.body, 'name="robots" content="noindex, follow"'
+    assert_includes last_response.body, 'rel="canonical" href="/collections/featured"'
     assert_includes last_response.body, 'href="/products/product-2"'
     refute_includes last_response.body, 'href="/products/product-1"'
     assert_includes last_response.body, "Page 2 of 2"
+  end
+
+  def publish_search_page
+    page = SearchPage.ensure!
+    page.update(status: "published")
+    page
+  end
+
+  def create_product(title:, slug:, sku:)
+    product = Product.create(
+      title:, slug:, status: "active", description_document: "",
+      created_at: Time.now, updated_at: Time.now
+    )
+    Variant.create(product_id: product.id, sku:, title: "Default", price_cents: 1_000,
+                   currency: "USD", stock: 1, position: 0)
+    product
+  end
+
+  def test_search_reads_the_keyword_query_and_lists_matches
+    publish_search_page
+    create_product(title: "Water 500ml", slug: "water", sku: "WAT-500")
+    create_product(title: "Navy Suit", slug: "suit", sku: "SUIT-1")
+
+    get "/search?keyword=water500ml"
+
+    assert_equal 200, last_response.status
+    assert_equal "live", last_response.headers.fetch("x-dukafy-render")
+    assert_includes last_response.body, "<title>Water500ml — 1 Product | Store</title>"
+    assert_includes last_response.body, 'content="Shop 1 water500ml product at Store. Prices from $10.00."'
+    assert_includes last_response.body, 'name="robots" content="noindex, follow"'
+    assert_includes last_response.body, 'rel="canonical" href="/search?keyword=water500ml"'
+    assert_includes last_response.body, 'name="keyword"'
+    assert_includes last_response.body, 'action="/search"'
+    assert_includes last_response.body, 'value="water500ml"'
+    assert_includes last_response.body, 'href="/products/water"'
+    refute_includes last_response.body, 'href="/products/suit"'
+    assert_includes last_response.body, '"@type":"CollectionPage"'
+    assert_includes last_response.body, '"@type":"Product"'
+    assert_includes last_response.body, '"@type":"Offer"'
+    assert_includes last_response.body, "Water 500ml"
+  end
+
+  def test_search_without_a_keyword_is_the_form
+    publish_search_page
+
+    get "/search"
+
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, "<title>Search</title>"
+    assert_includes last_response.body, 'name="robots" content="noindex, follow"'
+    assert_includes last_response.body, 'rel="canonical" href="/search"'
+    assert_includes last_response.body, 'name="keyword"'
+    refute_includes last_response.body, '"@type":"CollectionPage"'
+  end
+
+  def test_baked_search_is_still_served_live_with_noindex
+    publish_search_page
+    Bake.call(state: @state, output_root: @published_root)
+
+    get "/search"
+
+    assert_equal 200, last_response.status
+    assert_equal "live", last_response.headers.fetch("x-dukafy-render")
+    assert_includes last_response.body, 'name="robots" content="noindex, follow"'
+  end
+
+  def test_search_with_a_keyword_and_no_hits_is_a_404
+    publish_search_page
+    create_product(title: "Water 500ml", slug: "water", sku: "WAT-500")
+
+    get "/search?keyword=no-such-product"
+
+    assert_equal 404, last_response.status
+    assert_includes last_response.body, "<title>No-such-product | Store</title>"
+    refute_includes last_response.body, "0 Product"
+    assert_includes last_response.body, 'name="robots" content="noindex, follow"'
+    assert_includes last_response.body, 'name="keyword"'
+    refute_includes last_response.body, '"@type":"CollectionPage"'
+    refute_includes last_response.body, 'href="/products/water"'
   end
 end

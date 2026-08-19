@@ -286,6 +286,37 @@ export function useRelationshipPreviewEntry(
     // previewing — no fetch needed, the data is already in hand.
     if (parsed.kind === 'currentEntry') {
       if (!parentEntry) { setEntry(null); return }
+      if (parsed.fields.join('.') === 'related') {
+        const existing = parentEntry.fields.related
+        const firstRelated = Array.isArray(existing) ? existing[0] : null
+        if (firstRelated && typeof firstRelated === 'object') {
+          setEntry({ id: `${parentEntry.id}-related-0`, fields: firstRelated as Record<string, unknown> })
+          return
+        }
+        const selfId = Number(parentEntry.fields.id)
+        const controller = new AbortController()
+        void (async () => {
+          const [productsRes, collectionsRes] = await Promise.all([
+            fetch('/admin/api/cms/commerce/products', { credentials: 'same-origin', signal: controller.signal }),
+            fetch('/admin/api/cms/commerce/collections', { credentials: 'same-origin', signal: controller.signal }),
+          ])
+          if (!productsRes.ok || !collectionsRes.ok) return null
+          const { products } = await productsRes.json() as { products: ApiProduct[] }
+          const { collections } = await collectionsRes.json() as { collections: ApiCollection[] }
+          const active = products.filter((product) => product.status === 'active')
+          const pool = active.length > 0 ? active : products
+          const ranked = [...collections].sort((a, b) => a.productIds.length - b.productIds.length)
+          for (const collection of ranked) {
+            if (!collection.productIds.includes(selfId)) continue
+            const sibling = pool.find((product) => collection.productIds.includes(product.id) && product.id !== selfId)
+            if (sibling) return productEntry(sibling)
+          }
+          return null
+        })()
+          .then((next) => { if (!controller.signal.aborted) setEntry(next) })
+          .catch(() => undefined)
+        return () => controller.abort()
+      }
       let value: unknown = parentEntry.fields
       for (const field of parsed.fields) {
         value = (value as Record<string, unknown> | undefined)?.[field]

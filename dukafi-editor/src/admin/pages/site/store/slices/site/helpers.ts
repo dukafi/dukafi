@@ -79,10 +79,23 @@ export function depthInTree(tree: NodeTree<PageNode>, nodeId: string): number {
  * draft proxies.
  */
 export function resolveActiveTreeTarget(
-  state: Pick<EditorStore, 'site' | 'activeDocument' | 'activePageId'>,
+  state: Pick<EditorStore, 'site' | 'activeDocument' | 'activePageId'> & {
+    inlineEditingRefId?: string | null
+  },
 ): { tree: NodeTree<PageNode>; vc: VisualComponent | null } | null {
   const { site, activeDocument } = state
   if (!site) return null
+
+  if (state.inlineEditingRefId) {
+    const pageId = activeDocument?.kind === 'page' ? activeDocument.pageId : state.activePageId
+    const page = site.pages.find((entry) => entry.id === pageId)
+    const ref = page?.nodes[state.inlineEditingRefId]
+    const componentId = typeof ref?.props.componentId === 'string' ? ref.props.componentId : ''
+    const vc = componentId
+      ? site.visualComponents.find((entry) => entry.id === componentId) ?? null
+      : null
+    if (vc) return { tree: vc.tree as NodeTree<PageNode>, vc }
+  }
 
   if (activeDocument?.kind === 'visualComponent') {
     const vc = site.visualComponents.find((v) => v.id === activeDocument.vcId)

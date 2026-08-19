@@ -27,6 +27,7 @@ class LoopSourceSpec < Minitest::Test
 
   def test_cart_and_variants_keep_their_request_time_spellings
     assert_equal "cart.items", Dukafi::Publisher::LoopSource.call({ "relationship" => "cartItems" })
+    assert_equal "current-query", Dukafi::Publisher::LoopSource.call({ "relationship" => "currentQuery" })
     assert_equal "currentEntry.variants", Dukafi::Publisher::LoopSource.call({ "relationship" => "variants" })
     assert_equal "products/bag.variants", Dukafi::Publisher::LoopSource.call(
       { "relationship" => "variants", "sourceSlug" => "bag" }

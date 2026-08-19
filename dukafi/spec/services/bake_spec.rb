@@ -51,9 +51,31 @@ class BakeSpec < Minitest::Test
     html = File.read(File.join(@output_root, "current", "index.html"))
     assert_includes html, "<title>Home &amp; Shop</title>"
     assert_includes html, "<h1>Published</h1>"
+    assert File.file?(File.join(@output_root, "current", "sitemap.xml"))
+    assert File.file?(File.join(@output_root, "current", "sitemap-0.xml"))
+    assert File.file?(File.join(@output_root, "current", "robots.txt"))
     css_name = html[%r{/assets/(site-[0-9a-f]{12}\.css)}, 1]
     assert File.file?(File.join(@output_root, "current", "assets", css_name))
     assert_equal 1, @state.refresh.publish_version
+  end
+
+  def test_a_page_seo_title_beats_the_site_meta_title
+    doc = document
+    doc["seoTitle"] = "About the shop"
+    doc["seoDescription"] = "Who we are."
+    Page.create(slug: "about", title: "About", kind: "page", status: "published", document: doc)
+    @state.update(site: @state.site.merge("settings" => {
+      "language" => "en", "metaTitle" => "Same title everywhere", "metaDescription" => "Site blurb",
+      "framework" => { "colors" => { "tokens" => [] } },
+    }))
+
+    Bake.call(state: @state, output_root: @output_root)
+    html = File.read(File.join(@output_root, "current", "about.html"))
+
+    assert_includes html, "<title>About the shop</title>"
+    assert_includes html, 'content="Who we are."'
+    refute_includes html, "Same title everywhere"
+    refute_includes html, "Site blurb"
   end
 
   def test_failed_bake_preserves_current_symlink_and_version
@@ -132,6 +154,8 @@ class BakeSpec < Minitest::Test
     assert_equal 2, result.page_count
     html = File.read(File.join(@output_root, "current", "products", "canvas-bag.html"))
     assert_includes html, "<title>Canvas &amp; Carry Bag</title>"
+    assert_includes html, 'property="og:type" content="product"'
+    assert_includes html, 'property="og:title" content="Canvas &amp; Carry Bag"'
     assert_includes html, "<h1>Canvas &amp; Carry Bag</h1>"
     assert_includes html, "<span>$129.00</span>"
     assert_includes html, 'name="product_slug" value="canvas-bag"'
@@ -166,7 +190,14 @@ class BakeSpec < Minitest::Test
 
     assert_equal 2, result.page_count
     html = File.read(File.join(@output_root, "current", "collections", "featured.html"))
-    assert_includes html, "<title>Featured Bags</title>"
+    assert_includes html, "<title>Featured Bags — 3 Products | Test</title>"
+    assert_includes html, 'type="application/ld+json"'
+    assert_includes html, '"@type":"CollectionPage"'
+    assert_includes html, '"@type":"Organization"'
+    assert_includes html, 'name="robots" content="index, follow"'
+    assert_includes html, 'rel="canonical" href="/collections/featured"'
+    assert_includes html, "/products/bag-1"
+    refute_includes html, '"@type":"Product"'
     assert_includes html, "<h1>Featured Bags</h1>"
     assert_includes html, 'href="/products/bag-1"'
     assert_includes html, 'href="/products/bag-2"'

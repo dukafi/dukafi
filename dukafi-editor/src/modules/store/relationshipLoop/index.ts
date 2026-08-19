@@ -18,7 +18,7 @@ export const RelationshipLoopModule: ModuleDefinition<RelationshipLoopProps> = {
     source: {
       type: 'text',
       label: 'Source',
-      placeholder: 'products · currentEntry.images · collections/<slug>.products',
+      placeholder: 'products · current-query · currentEntry.related · currentEntry.images · collections/<slug>.products',
     },
     relationship: {
       type: 'select',
@@ -27,6 +27,7 @@ export const RelationshipLoopModule: ModuleDefinition<RelationshipLoopProps> = {
         { label: 'Collection products', value: 'products' },
         { label: 'Product variants', value: 'variants' },
         { label: 'Cart items', value: 'cartItems' },
+        { label: 'Search results', value: 'currentQuery' },
         { label: 'Data table', value: 'dataRows' },
       ],
     },

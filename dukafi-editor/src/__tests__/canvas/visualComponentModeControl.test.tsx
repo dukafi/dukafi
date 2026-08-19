@@ -14,6 +14,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
 import { useEditorStore } from '@site/store/store'
 import VisualComponentModeControl from '@site/canvas/VisualComponentModeControl'
+import '@modules/base/index'
 
 // ---------------------------------------------------------------------------
 // Store reset helper
@@ -26,6 +27,7 @@ function resetStore() {
     activePageId: null,
     activeDocument: null,
     previousActivePageId: null,
+    inlineEditingRefId: null,
     selectedNodeId: null,
     selectedNodeIds: [],
     hoveredNodeId: null,
@@ -128,6 +130,29 @@ describe('VisualComponentModeControl — back button', () => {
 // ---------------------------------------------------------------------------
 // 4 — The switcher lists other documents and excludes the current VC
 // ---------------------------------------------------------------------------
+
+describe('VisualComponentModeControl — in-place edit on the page', () => {
+  it('names the component and offers Detach', () => {
+    const store = useEditorStore.getState()
+    const site = store.createSite('Test Site')
+    const pageId = site.pages[0].id
+    const vcId = store.createVisualComponent('Newsletter form')
+    act(() => {
+      useEditorStore.getState().setActiveDocument({ kind: 'page', pageId })
+    })
+    const page = useEditorStore.getState().site!.pages.find((entry) => entry.id === pageId)!
+    const refId = useEditorStore.getState().insertComponentRef(page.rootNodeId, vcId)!
+    act(() => {
+      useEditorStore.getState().startInlineComponentEdit(refId)
+    })
+
+    render(<VisualComponentModeControl />)
+    const control = screen.getByTestId('vc-mode-control')
+    expect(control.textContent).toContain('Editing Newsletter form — changes update every page')
+    expect(control.textContent).toContain('Detach')
+    expect(control.textContent).toContain('Done')
+  })
+})
 
 describe('VisualComponentModeControl — document switcher', () => {
   it('lists other components but excludes the one being edited', () => {

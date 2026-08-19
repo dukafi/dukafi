@@ -56,6 +56,22 @@ class DependencyTrackerSpec < Minitest::Test
     assert_equal [11], DependencyTracker.product_ids(document:, prefetched: {}, current_entry: { "id" => 11, "variants" => [] })
   end
 
+  def test_related_loop_tracks_the_product_and_its_siblings
+    document = {
+      "nodes" => {
+        "loop" => {
+          "moduleId" => "store.relationship-loop",
+          "props" => { "source" => "currentEntry.related" },
+        },
+      },
+    }
+
+    assert_equal [11, 12], DependencyTracker.product_ids(
+      document:, prefetched: {},
+      current_entry: { "id" => 11, "related" => [{ "id" => 12, "title" => "Yoghurt" }] }
+    )
+  end
+
   def test_relationship_loop_with_no_collection_and_no_entry_tracks_every_product
     document = {
       "nodes" => {

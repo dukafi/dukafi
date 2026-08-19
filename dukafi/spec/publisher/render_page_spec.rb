@@ -271,6 +271,78 @@ class RenderPageSpec < Minitest::Test
     assert_includes html, "Mug"
   end
 
+  def test_a_current_query_source_filters_by_the_keyword_param
+    prefetched = {
+      "products" => {
+        "water" => {
+          "slug" => "water", "title" => "Water 500ml",
+          "variants" => [{ "sku" => "WAT-500", "title" => "Bottle" }],
+        },
+        "suit" => { "slug" => "suit", "title" => "Navy Suit", "variants" => [] },
+      },
+    }
+    html = Dukafi::Publisher::RenderPage.call(
+      document: loop_document("current-query", "title"),
+      registry: Dukafi::Publisher::REGISTRY, prefetched: prefetched,
+      query_params: { "keyword" => "water500ml" }
+    ).html
+
+    assert_includes html, "Water 500ml"
+    refute_includes html, "Navy Suit"
+  end
+
+  def test_current_entry_related_lists_other_products_in_the_same_collection
+    html = Dukafi::Publisher::RenderPage.call(
+      document: loop_document("currentEntry.related", "title"),
+      registry: Dukafi::Publisher::REGISTRY, prefetched: {},
+      current_entry: {
+        "title" => "Milk 500ml", "slug" => "milk",
+        "related" => [
+          { "title" => "Yoghurt", "slug" => "yoghurt", "href" => "/products/yoghurt" },
+        ],
+      }
+    ).html
+
+    assert_includes html, "Yoghurt"
+    refute_includes html, "Milk 500ml"
+  end
+
+  def test_a_current_query_source_is_empty_without_a_keyword
+    html = Dukafi::Publisher::RenderPage.call(
+      document: loop_document("current-query", "title"),
+      registry: Dukafi::Publisher::REGISTRY, prefetched: catalogue,
+      query_params: {}
+    ).html
+
+    refute_includes html, "Canvas Bag"
+    refute_includes html, "Mug"
+  end
+
+  def test_route_query_keyword_binds_into_the_heading
+    document = {
+      "slug" => "search",
+      "rootNodeId" => "body",
+      "nodes" => {
+        "body" => node("body", "base.body", children: ["title"]),
+        "title" => node("title", "base.text", props: { "tag" => "h1", "text" => "Search" }).merge(
+          "dynamicBindings" => { "text" => { "source" => "route", "field" => "query.keyword", "fallback" => "static" } }
+        ),
+      },
+    }
+
+    with_keyword = Dukafi::Publisher::RenderPage.call(
+      document: document, registry: Dukafi::Publisher::REGISTRY,
+      query_params: { "keyword" => "water500ml" }
+    ).html
+    without = Dukafi::Publisher::RenderPage.call(
+      document: document, registry: Dukafi::Publisher::REGISTRY, query_params: {}
+    ).html
+
+    assert_includes with_keyword, "water500ml"
+    assert_includes without, "Search"
+    refute_includes without, "water500ml"
+  end
+
   def test_a_collection_scoped_source_iterates_only_its_products
     html = render_loop("collections/featured.products", "title")
 
@@ -703,5 +775,38 @@ class RenderPageSpec < Minitest::Test
   def test_a_cart_region_requests_the_htmx_runtime_on_both_paths
     assert_includes render_region.runtimes, :htmx
     assert_includes render_region(cart: { "items" => [], "cart" => {} }).runtimes, :htmx
+  end
+
+  def test_inlines_a_visual_component_ref_from_the_site_roster
+    body = "vc-body"
+    text = "vc-text"
+    site = {
+      "styleRules" => {},
+      "visualComponents" => [{
+        "id" => "cmp_news", "name" => "Newsletter",
+        "tree" => {
+          "rootNodeId" => body,
+          "nodes" => {
+            body => node(body, "base.body", children: [text]),
+            text => node(text, "base.text", props: { "text" => "Join the list" }),
+          },
+        },
+        "params" => [],
+      }],
+    }
+    document = {
+      "rootNodeId" => "root",
+      "nodes" => {
+        "root" => node("root", "base.body", children: ["ref"]),
+        "ref" => node("ref", "base.visual-component-ref", props: { "componentId" => "cmp_news" }),
+      },
+    }
+
+    result = Dukafi::Publisher::RenderPage.call(
+      document: document, registry: Dukafi::Publisher::REGISTRY, site: site,
+    )
+
+    assert_includes result.html, "<p>Join the list</p>"
+    refute_includes result.html, "unknown component"
   end
 end

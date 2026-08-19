@@ -62,6 +62,11 @@ function attr(el: Element, name: string): string {
   return el.getAttribute(name) ?? ''
 }
 
+/** Form overlays: agents write data-dukafy-*; the live runtime also emits data-dukafi-*. */
+function formOverlayAttr(el: Element, suffix: string): string {
+  return attr(el, `data-dukafy-${suffix}`) || attr(el, `data-dukafi-${suffix}`)
+}
+
 function normalizedAttr(el: Element, name: string): string {
   return attr(el, name).trim().toLowerCase()
 }
@@ -74,12 +79,12 @@ function numberAttr(el: Element, name: string, fallback: number = 0): number {
 }
 
 function formControlFieldId(el: Element): string {
-  return attr(el, 'data-dukafi-field-id') || attr(el, 'name') || attr(el, 'id')
+  return formOverlayAttr(el, 'field-id') || attr(el, 'name') || attr(el, 'id')
 }
 
 function formIdentifier(el: Element): string {
   return normalizeIdentifierValue(
-    attr(el, 'data-dukafi-form-id') || attr(el, 'id') || attr(el, 'name'),
+    formOverlayAttr(el, 'form-id') || attr(el, 'id') || attr(el, 'name'),
     'form',
   )
 }
@@ -183,15 +188,15 @@ export const HTML_TO_MODULE_RULES: ImportRule[] = [
   {
     match: 'form',
     map: (el) => {
-      const mode = normalizedAttr(el, 'data-dukafi-form-mode') === 'cms' ? 'cms' : 'custom'
-      const redirectUrl = attr(el, 'data-dukafi-success-redirect')
-      const successMessage = attr(el, 'data-dukafi-success-message')
+      const mode = formOverlayAttr(el, 'form-mode').trim().toLowerCase() === 'cms' ? 'cms' : 'custom'
+      const redirectUrl = formOverlayAttr(el, 'success-redirect')
+      const successMessage = formOverlayAttr(el, 'success-message')
       return {
         moduleId: 'base.form',
         props: {
           mode,
           formId: formIdentifier(el),
-          targetTableId: mode === 'cms' ? attr(el, 'data-dukafi-target-table') : '',
+          targetTableId: mode === 'cms' ? formOverlayAttr(el, 'target-table') : '',
           action: attr(el, 'action'),
           method: normalizeFormMethod(el),
           successBehavior: redirectUrl ? 'redirect' : 'message',

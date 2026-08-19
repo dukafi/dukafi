@@ -7,11 +7,14 @@ class CommercePrefetcher
     products = Product.where(status: "active").eager(:variants, :media_assets).all.to_h do |product|
       [product.slug, product_hash(product, default_currency)]
     end
-    collections = Collection.eager(:products).all.to_h do |collection|
+    collections = Collection.eager(:products, :media_asset).all.to_h do |collection|
       items = collection.products.filter_map { |product| products[product.slug] }
+      cover = collection.media_asset
       [collection.slug, {
         "id" => collection.id, "slug" => collection.slug, "title" => collection.title,
-        "description" => collection.description.to_s, "products" => items,
+        "description" => collection.description.to_s,
+        "imageUrl" => cover ? "/#{cover.path}" : "",
+        "products" => items,
       }]
     end
     # Only APPROVED reviews, newest first. Un-approved text must never reach a
@@ -42,6 +45,7 @@ class CommercePrefetcher
       }
     end
 
+    attach_related!(products, collections)
     MediaPrefetcher.call.merge(
       "products" => products, "collections" => collections, "reviews" => reviews,
       "paymentProviders" => providers, "dataTables" => data_tables,
@@ -96,19 +100,20 @@ class CommercePrefetcher
     currency = variant&.currency || default_currency
     images = product.media_assets.map do |asset|
       {
-        # Was hardcoded to "" — a product photo announced itself to a screen
-        # reader as nothing at all.
         "url" => "/#{asset.path}", "alt" => asset.alt_text.to_s,
         "width" => asset.width, "height" => asset.height, "variants" => asset.variants,
       }
     end
+    og_asset = product.og_media_asset_id && product.media_assets.find { |asset| asset.id == product.og_media_asset_id }
     CatalogueFields.flatten({
       "id" => product.id, "slug" => product.slug, "title" => product.title,
       "href" => "/products/#{product.slug}", "imageUrl" => images.first&.fetch("url") || "",
+      "ogImageUrl" => og_asset ? "/#{og_asset.path}" : (images.first&.fetch("url") || ""),
       "images" => images, "createdAt" => product.created_at.to_i,
       "descriptionHtml" => product.description_document.to_s,
       "priceCents" => variant&.price_cents, "currency" => currency,
       "priceDisplay" => Dukafi::Publisher::StoreModules.format_price(variant&.price_cents || 0, currency),
+      "related" => [],
       "fields" => CatalogueFields.list_for(product.fields, owner: :product),
       "variants" => product.variants.sort_by(&:position).map do |item|
         CatalogueFields.flatten({
@@ -122,4 +127,40 @@ class CommercePrefetcher
     }, product.fields, owner: :product)
   end
   private_class_method :product_hash
+
+  # Other products that share a collection with this one. Tight categories
+  # (few members) come first so a "Milk" collection beats a store-wide
+  # Featured dump. Nested copies omit `related` so the graph cannot cycle.
+  RELATED_LIMIT = 12
+
+  def self.attach_related!(products, collections)
+    membership = Hash.new { |hash, key| hash[key] = [] }
+    collections.each_value do |collection|
+      slugs = Array(collection["products"]).map { |item| item["slug"] }
+      slugs.each { |slug| membership[slug] << collection["slug"] if slug }
+    end
+    products.each do |slug, hash|
+      collection_slugs = membership[slug].sort_by do |collection_slug|
+        Array(collections.dig(collection_slug, "products")).length
+      end
+      seen = { slug => true }
+      related = []
+      collection_slugs.each do |collection_slug|
+        Array(collections.dig(collection_slug, "products")).each do |item|
+          other = item["slug"]
+          next if seen[other]
+          seen[other] = true
+          sibling = products[other]
+          next unless sibling
+
+          related << sibling.merge("related" => [])
+          break if related.length >= RELATED_LIMIT
+        end
+        break if related.length >= RELATED_LIMIT
+      end
+      hash["collectionSlugs"] = collection_slugs
+      hash["related"] = related
+    end
+  end
+  private_class_method :attach_related!
 end

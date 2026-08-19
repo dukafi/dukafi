@@ -24,7 +24,9 @@ import { ListBoxSolidIcon } from 'pixel-art-icons/icons/list-box-solid'
 import { PlusIcon } from 'pixel-art-icons/icons/plus'
 import { SaveSolidIcon } from 'pixel-art-icons/icons/save-solid'
 import { TrashSolidIcon } from 'pixel-art-icons/icons/trash-solid'
-import { commerceApi } from '../api'
+import { Copy2SolidIcon } from 'pixel-art-icons/icons/copy-2-solid'
+import { copyStorefrontUrl } from '@admin/lib/storefrontUrl'
+import { MediaPickerModal } from '@admin/pages/media/components/MediaPickerModal/MediaPickerModal'
 import { Pagination } from '../components/Pagination'
 import { RowActionMenu } from '../components/RowActionMenu'
 import type { CommerceData } from '../hooks/useCommerceData'
@@ -148,6 +150,7 @@ export function CollectionsSection({ data }: { data: CommerceData }) {
                     menuLabel={`Collection actions for ${collection.title}`}
                     items={[
                       { label: 'Edit', icon: <EditSolidIcon size={12} aria-hidden="true" />, onSelect: () => openEdit(collection) },
+                      { label: 'Copy collection URL', icon: <Copy2SolidIcon size={12} aria-hidden="true" />, onSelect: () => { void copyStorefrontUrl(`/collections/${collection.slug}`, 'Copied collection URL') } },
                       { label: 'Manage products', icon: <ListBoxSolidIcon size={12} aria-hidden="true" />, onSelect: () => setMembershipCollection(collection) },
                       { label: 'Delete', icon: <TrashSolidIcon size={12} aria-hidden="true" />, danger: true, onSelect: () => setRemoveCandidate(collection) },
                     ]}
@@ -174,6 +177,10 @@ export function CollectionsSection({ data }: { data: CommerceData }) {
           busy={busy}
           onSave={handleSave}
           onClose={closeDialog}
+          onCoverChange={async (next) => {
+            setEditingCollection(next)
+            await refresh()
+          }}
         />
       )}
 
@@ -220,12 +227,14 @@ function CollectionDialog({
   busy,
   onSave,
   onClose,
+  onCoverChange,
 }: {
   mode: 'create' | 'edit'
   collection: Collection | null
   busy: boolean
   onSave: (event: FormEvent<HTMLFormElement>) => void
   onClose: () => void
+  onCoverChange?: (collection: Collection) => Promise<void>
 }) {
   return (
     <Dialog
@@ -271,8 +280,66 @@ function CollectionDialog({
         <FormField label="Sort order" htmlFor="collection-sort-order">
           <Input id="collection-sort-order" name="sortOrder" type="number" min={0} defaultValue={collection?.sortOrder ?? 0} />
         </FormField>
+        {mode === 'edit' && collection ? (
+          <CollectionCoverField collection={collection} onChange={onCoverChange} />
+        ) : null}
       </form>
     </Dialog>
+  )
+}
+
+function CollectionCoverField({
+  collection,
+  onChange,
+}: {
+  collection: Collection
+  onChange?: (collection: Collection) => Promise<void>
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function persist(mediaAssetId: string | null) {
+    setBusy(true)
+    setError(null)
+    try {
+      const result = await commerceApi.setCollectionImage(collection.id, mediaAssetId)
+      await onChange?.(result.collection)
+    } catch (err) {
+      setError(getErrorMessage(err, 'Could not update cover'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div>
+      <p className={styles.identityLabel}>Cover image</p>
+      {error && <p className={styles.error} role="alert">{error}</p>}
+      {collection.image ? (
+        <div className={styles.memberRow}>
+          <img src={collection.image.publicPath} alt="" className={styles.imageThumb} />
+          <span className={styles.identityLabel}>{collection.image.publicPath.split('/').pop()}</span>
+          <Button type="button" variant="ghost" tone="danger" size="xs" disabled={busy} onClick={() => void persist(null)}>
+            <TrashSolidIcon size={12} aria-hidden="true" />
+            <span>Remove</span>
+          </Button>
+        </div>
+      ) : (
+        <p className={styles.emptyInline}>No cover yet. The collection page shows no picture until one is added.</p>
+      )}
+      <Button type="button" variant="ghost" size="xs" disabled={busy} onClick={() => setPickerOpen(true)}>
+        <PlusIcon size={12} aria-hidden="true" />
+        <span>{collection.image ? 'Replace cover' : 'Add cover'}</span>
+      </Button>
+      <MediaPickerModal
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        mediaKind="image"
+        currentValues={collection.image ? [String(collection.image.id)] : []}
+        onPick={(asset) => void persist(asset.id).then(() => setPickerOpen(false))}
+      />
+    </div>
   )
 }
 

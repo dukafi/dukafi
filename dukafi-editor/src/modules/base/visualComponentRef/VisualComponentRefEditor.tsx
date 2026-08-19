@@ -24,8 +24,10 @@ import { instantiateVCAtRef, resolveSlotName, safePropOverrides } from '@core/vi
 import type { BaseNode } from '@core/page-tree'
 import { BracesIcon } from 'pixel-art-icons/icons/braces'
 import { CanvasModulePlaceholder } from '@ui/components/CanvasModulePlaceholder'
+import { NodeRenderer } from '@site/canvas/NodeRenderer'
 import { VCInlineTree } from './VCInlineTree'
 import type { VisualComponentRefStoredProps } from './props'
+import styles from './VisualComponentRefEditor.module.css'
 
 export const VisualComponentRefEditor: React.FC<ModuleComponentProps<VisualComponentRefStoredProps>> = ({
   props,
@@ -59,6 +61,9 @@ export const VisualComponentRefEditor: React.FC<ModuleComponentProps<VisualCompo
   // edits made elsewhere in the editor.
   const classes = useEditorStore((s) => s.site?.styleRules ?? null)
 
+  const inlineEditingRefId = useEditorStore((s) => s.inlineEditingRefId)
+  const editingHere = inlineEditingRefId === nodeId
+
   if (!vc) {
     return (
       <CanvasModulePlaceholder
@@ -86,6 +91,22 @@ export const VisualComponentRefEditor: React.FC<ModuleComponentProps<VisualCompo
   }
 
   const { nodes, rootNodeId } = instantiateVCAtRef(vc, propOverrides, slotInstancesByName, pageNodes, nodeId)
+
+  if (editingHere) {
+    const body = vc.tree.nodes[vc.tree.rootNodeId]
+    const childIds = body?.moduleId === 'base.body' ? body.children : [vc.tree.rootNodeId]
+    return (
+      <div
+        {...nodeWrapperProps}
+        className={[mcClassName, styles.editing].filter(Boolean).join(' ')}
+        data-dukafi-editing-component={vc.id}
+      >
+        {childIds.map((childId) => (
+          <NodeRenderer key={childId} nodeId={childId} />
+        ))}
+      </div>
+    )
+  }
 
   return (
     <VCInlineTree

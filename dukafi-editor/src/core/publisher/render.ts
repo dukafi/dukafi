@@ -299,7 +299,7 @@ function bodyHtmlAttributes(value: unknown): string {
 /**
  * `<head>` metadata tags derived from site settings + page.
  *
- * - `title` falls back through metaTitle → page.title → site.name.
+ * - `title` falls back through page.seoTitle → page.title → metaTitle → site.name.
  * - URL-typed settings (faviconUrl) are validated by
  *   isSafeUrl() (blocks `javascript:` / `vbscript:` schemes) and then
  *   escapeHtml()'d for safe attribute interpolation.
@@ -310,22 +310,41 @@ interface DocumentMetaTags {
   pageTitle: string
   metaDesc: string
   favicon: string
+  openGraph: string
   langAttr: string
+}
+
+function presentMeta(value: string | undefined): string | undefined {
+  const text = value?.trim() ?? ''
+  return text.length > 0 ? text : undefined
 }
 
 function buildDocumentMetaTags(site: SiteDocument, page: Page): DocumentMetaTags {
   const { settings } = site
-  const metaDesc = settings.metaDescription
-    ? `\n  <meta name="description" content="${escapeHtml(settings.metaDescription)}">`
+  const description = presentMeta(page.seoDescription) ?? presentMeta(settings.metaDescription)
+  const metaDesc = description
+    ? `\n  <meta name="description" content="${escapeHtml(description)}">`
     : ''
   const favicon =
     settings.faviconUrl && isSafeUrl(settings.faviconUrl)
       ? `\n  <link rel="icon" href="${escapeHtml(settings.faviconUrl)}">`
       : ''
+  const titleText = presentMeta(page.seoTitle) ?? presentMeta(page.title) ?? presentMeta(settings.metaTitle) ?? site.name
+  const image = presentMeta(page.ogImage) ?? presentMeta(settings.ogImageUrl)
+  const safeImage = image && isSafeUrl(image) ? image : undefined
+  const openGraph = [
+    `\n  <meta property="og:type" content="website">`,
+    `\n  <meta property="og:title" content="${escapeHtml(titleText)}">`,
+    description ? `\n  <meta property="og:description" content="${escapeHtml(description)}">` : '',
+    site.name ? `\n  <meta property="og:site_name" content="${escapeHtml(site.name)}">` : '',
+    safeImage ? `\n  <meta property="og:image" content="${escapeHtml(safeImage)}">` : '',
+    `\n  <meta name="twitter:card" content="${safeImage ? 'summary_large_image' : 'summary'}">`,
+  ].join('')
   return {
-    pageTitle: escapeHtml(settings.metaTitle ?? page.title ?? site.name),
+    pageTitle: escapeHtml(titleText),
     metaDesc,
     favicon,
+    openGraph,
     langAttr: escapeHtml(settings.language ?? 'en'),
   }
 }
@@ -440,6 +459,7 @@ interface AssembledDocumentParts {
   pageTitle: string
   metaDesc: string
   favicon: string
+  openGraph: string
   styleHeadHtml: string
   importmapTag: string
   headRuntimeScripts: string
@@ -458,7 +478,7 @@ function assembleHtmlDocument(parts: AssembledDocumentParts): string {
     `<head>\n` +
     `  <meta charset="UTF-8">\n` +
     `  <meta name="viewport" content="width=device-width, initial-scale=1.0">${parts.csp}\n` +
-    `  <title>${parts.pageTitle}</title>${parts.metaDesc}${parts.favicon}\n` +
+    `  <title>${parts.pageTitle}</title>${parts.metaDesc}${parts.favicon}${parts.openGraph}\n` +
     parts.styleHeadHtml +
     lineOrEmpty(parts.importmapTag) +
     lineOrEmpty(parts.headRuntimeScripts) +
@@ -565,6 +585,7 @@ export function publishPage(
     pageTitle: meta.pageTitle,
     metaDesc: meta.metaDesc,
     favicon: meta.favicon,
+    openGraph: meta.openGraph,
     styleHeadHtml,
     importmapTag: runtime.importmapTag,
     headRuntimeScripts: runtime.headRuntimeScripts,

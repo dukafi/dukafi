@@ -48,7 +48,24 @@ class McpServer
   INSTRUCTIONS = <<~TEXT.freeze
     This is a Dukafi store — a commerce CMS whose pages are trees of nodes,
     not files. Read a page before changing it; node ids in the returned HTML
-    are what edits refer to.
+    are what edits refer to. Call get_store_context for a planning snapshot.
+    Call list_children for structure (omit nodeId for the page root), then
+    read_page with a child's nodeId to work on that section in detail.
+    Call get_page_context before adding a section — it returns two existing
+    sections and their colors/spacing so new work can match the page.
+    Call get_design_tokens before designing — colors, fonts, type, and spacing
+    live in one registry. To change an accent or a font, call
+    update_design_tokens then publish; do not restyle every page.
+    Call get_recipes before a product loop, search page, homepage spotlight,
+    CMS loop, form, cart, reusable component, or SEO / "rank for" job — those
+    overlays are Dukafi-specific; paste the returned HTML into apply_edits.
+    Ranking a keyword is an indexable collection or landing page, never
+    /search?keyword= (always noindex). To show a product on the homepage,
+    add it to Featured or on-sale and loop collections/<slug>.products —
+    discount codes are checkout-only, not a loop. Call list_components before
+    rebuilding a newsletter or header that may already exist; insert with
+    <div data-dukafy-component="<id>"></div>.
+    If the profile is thin, do not invent a founding story or audience.
   TEXT
 
   def initialize(tools: McpTools.all)

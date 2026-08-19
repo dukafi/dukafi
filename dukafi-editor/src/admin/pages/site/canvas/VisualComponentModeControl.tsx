@@ -18,14 +18,28 @@ import styles from './VisualComponentModeControl.module.css'
 export default function VisualComponentModeControl() {
   const activeDocument = useEditorStore((s) => s.activeDocument)
   const exitVisualComponentMode = useEditorStore((s) => s.exitVisualComponentMode)
+  const inlineEditingRefId = useEditorStore((s) => s.inlineEditingRefId)
+  const endInlineComponentEdit = useEditorStore((s) => s.endInlineComponentEdit)
+  const detachComponentRef = useEditorStore((s) => s.detachComponentRef)
 
   const vcId = activeDocument?.kind === 'visualComponent' ? activeDocument.vcId : null
+  const inlineVcId = useEditorStore((s): string | null => {
+    if (!s.inlineEditingRefId || !s.site) return null
+    const pageId = s.activeDocument?.kind === 'page' ? s.activeDocument.pageId : s.activePageId
+    const page = s.site.pages.find((entry) => entry.id === pageId)
+    const ref = page?.nodes[s.inlineEditingRefId]
+    return typeof ref?.props.componentId === 'string' ? ref.props.componentId : null
+  })
+  const resolvedVcId = vcId ?? inlineVcId
   const vc = useEditorStore(
     (s): VisualComponent | null =>
-      s.site?.visualComponents?.find((component) => component.id === vcId) ?? null,
+      s.site?.visualComponents?.find((component) => component.id === resolvedVcId) ?? null,
   )
 
-  if (activeDocument?.kind !== 'visualComponent' || !vc) return null
+  if (!vc) return null
+  if (activeDocument?.kind !== 'visualComponent' && !inlineEditingRefId) return null
+
+  const inline = Boolean(inlineEditingRefId)
 
   return (
     <div className={styles.control} data-testid="vc-mode-control">
@@ -34,19 +48,35 @@ export default function VisualComponentModeControl() {
         size="sm"
         shape="pill"
         className={styles.backButton}
-        onClick={exitVisualComponentMode}
+        onClick={inline ? endInlineComponentEdit : exitVisualComponentMode}
         data-testid="vc-mode-control-back"
-        aria-label="Back to page"
+        aria-label={inline ? 'Done editing component' : 'Back to page'}
       >
         <ArrowLeftIcon size={12} aria-hidden="true" />
-        Back to page
+        {inline ? 'Done' : 'Back to page'}
       </Button>
 
       <span className={styles.divider} aria-hidden="true" />
 
-      <span className={styles.modeLabel}>Editing component</span>
+      <span className={styles.modeLabel}>
+        {inline
+          ? `Editing ${vc.name} — changes update every page`
+          : 'Editing component'}
+      </span>
 
-      <DocumentSwitcher current={{ kind: 'component', id: vc.id, label: vc.name }} />
+      {inline ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          shape="pill"
+          onClick={() => inlineEditingRefId && detachComponentRef(inlineEditingRefId)}
+          tooltip="Turn this instance into an ordinary section"
+        >
+          Detach
+        </Button>
+      ) : (
+        <DocumentSwitcher current={{ kind: 'component', id: vc.id, label: vc.name }} />
+      )}
     </div>
   )
 }

@@ -13,7 +13,7 @@
 module RebuildIndex
   LOOP_MODULES = %w[store.relationship-loop store.collection-loop].freeze
   # Request-time loops never bake, so they are not rebuild targets.
-  SKIP_SOURCE_ROOTS = %w[cart orders currentEntry parentEntry].freeze
+  SKIP_SOURCE_ROOTS = %w[cart orders currentEntry parentEntry current-query].freeze
 
   module_function
 
@@ -25,18 +25,28 @@ module RebuildIndex
   def sources(document, current_entry: nil)
     return [] unless document.is_a?(Hash)
 
-    document.fetch("nodes", {}).each_value.filter_map do |node|
+    found = []
+    document.fetch("nodes", {}).each_value do |node|
       next unless LOOP_MODULES.include?(node["moduleId"])
 
       source = Dukafi::Publisher::LoopSource.call(node.fetch("props", {}), module_id: node["moduleId"])
       next if source.empty?
-      next if SKIP_SOURCE_ROOTS.include?(source.split(/[\/.]/, 2).first)
+      if source == "currentEntry.related"
+        Array(current_entry.is_a?(Hash) ? current_entry["collectionSlugs"] : nil).each do |slug|
+          next if slug.to_s.empty?
+
+          found << "collections/#{slug}.products"
+        end
+        next
+      end
+      next if SKIP_SOURCE_ROOTS.include?(source.split(%r{[/.]}, 2).first)
 
       if source == "products" && current_entry.is_a?(Hash) && current_entry.key?("products") && current_entry["slug"]
         source = "collections/#{current_entry["slug"]}.products"
       end
-      source
-    end.uniq.sort
+      found << source
+    end
+    found.uniq.sort
   end
 
   def record_path!(path, product_ids:, sources:)

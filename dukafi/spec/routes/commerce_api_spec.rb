@@ -97,6 +97,21 @@ class CommerceApiSpec < Minitest::Test
     assert_equal ["New Featured"], json.fetch("collections").map { |collection| collection.fetch("title") }
   end
 
+  def test_a_collection_cover_can_be_set_and_cleared
+    now = Time.now
+    cover = MediaAsset.create(path: "uploads/cover.jpg", mime: "image/jpeg", width: 800, height: 600, variants_json: "[]", created_at: now)
+    post_json "/admin/api/cms/commerce/collections", title: "Featured", slug: "featured", description: "", sortOrder: 0
+    collection_id = json.dig("collection", "id")
+
+    put "/admin/api/cms/commerce/collections/#{collection_id}/image", JSON.generate(mediaAssetId: cover.id), "CONTENT_TYPE" => "application/json"
+    assert_equal 200, last_response.status, last_response.body
+    assert_equal cover.id, json.dig("collection", "image", "id")
+    assert_equal "/uploads/cover.jpg", json.dig("collection", "image", "publicPath")
+
+    put "/admin/api/cms/commerce/collections/#{collection_id}/image", JSON.generate(mediaAssetId: nil), "CONTENT_TYPE" => "application/json"
+    assert_nil json.dig("collection", "image")
+  end
+
   def test_product_collections_membership_can_be_set_directly_from_the_product
     product = Product.create(title: "Bag", slug: "bag", status: "active")
     featured = Collection.create(title: "Featured", slug: "featured", description: "", sort_order: 0)

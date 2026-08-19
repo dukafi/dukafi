@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent, Suspense, lazy } from 'react'
 import { Type } from '@core/utils/typeboxHelpers'
 import { apiRequest } from '@core/http'
 import { getErrorMessage } from '@core/utils/errorMessage'
@@ -6,15 +6,25 @@ import type { Page } from '@core/page-tree'
 import {
   isHomePage,
   normalizePageSlug,
+  pagePublicPath,
   pageSlugDuplicateError,
   pageSlugError,
 } from '@core/page-tree'
+import { copyStorefrontUrl } from '@admin/lib/storefrontUrl'
 import { Button } from '@ui/components/Button'
 import { Dialog } from '@ui/components/Dialog'
-import { Input } from '@ui/components/Input'
+import { Input, Textarea } from '@ui/components/Input'
 import { Checkbox } from '@ui/components/Checkbox'
 import { Select } from '@ui/components/Select'
+import { ImagesSolidIcon } from 'pixel-art-icons/icons/images-solid'
+import { Copy2SolidIcon } from 'pixel-art-icons/icons/copy-2-solid'
 import dialogStyles from '../SiteCreateDialog/SiteCreateDialog.module.css'
+
+const MediaPickerModal = lazy(() =>
+  import('@admin/pages/media/components/MediaPickerModal/MediaPickerModal').then(
+    (m) => ({ default: m.MediaPickerModal }),
+  ),
+)
 
 const AccessSchema = Type.Object({
   access: Type.String(),
@@ -30,6 +40,9 @@ const ACCESS_OPTIONS = [
 export interface PageSettingsPayload {
   title: string
   slug: string
+  seoTitle: string
+  seoDescription: string
+  ogImage: string
 }
 
 interface PageSettingsDialogProps {
@@ -61,6 +74,10 @@ export function PageSettingsDialog({
 }: PageSettingsDialogProps) {
   const [title, setTitle] = useState(page.title)
   const [slug, setSlug] = useState(page.slug)
+  const [seoTitle, setSeoTitle] = useState(page.seoTitle ?? '')
+  const [seoDescription, setSeoDescription] = useState(page.seoDescription ?? '')
+  const [ogImage, setOgImage] = useState(page.ogImage ?? '')
+  const [ogPickerOpen, setOgPickerOpen] = useState(false)
   const [access, setAccess] = useState('public')
   const [authRedirect, setAuthRedirect] = useState(false)
   const [signInPageSlug, setSignInPageSlug] = useState<string | null>(null)
@@ -74,6 +91,8 @@ export function PageSettingsDialog({
   const inputRef = useRef<HTMLInputElement>(null)
   const titleInputId = useId()
   const slugInputId = useId()
+  const seoTitleInputId = useId()
+  const seoDescriptionInputId = useId()
   const accessSelectId = useId()
 
   const trimmedTitle = title.trim()
@@ -131,7 +150,13 @@ export function PageSettingsDialog({
       }
     }
 
-    onSave({ title: trimmedTitle, slug: isHome ? page.slug : normalizedSlug })
+    onSave({
+      title: trimmedTitle,
+      slug: isHome ? page.slug : normalizedSlug,
+      seoTitle: seoTitle.trim(),
+      seoDescription: seoDescription.trim(),
+      ogImage: ogImage.trim(),
+    })
   }
 
   return (
@@ -139,7 +164,7 @@ export function PageSettingsDialog({
       open
       onClose={onCancel}
       title="Page settings"
-      size="sm"
+      size="md"
       initialFocusRef={inputRef}
       footer={
         <>
@@ -189,6 +214,81 @@ export function PageSettingsDialog({
           ) : slugValidation ? (
             <p role="alert" className={dialogStyles.errorText}>{slugValidation}</p>
           ) : null}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => void copyStorefrontUrl(pagePublicPath(isHome ? page.slug : normalizedSlug), 'Copied page URL')}
+          >
+            <Copy2SolidIcon size={13} aria-hidden="true" />
+            <span>Copy page URL</span>
+          </Button>
+        </div>
+
+        <div className={dialogStyles.field}>
+          <label htmlFor={seoTitleInputId} className={dialogStyles.label}>SEO title</label>
+          <Input
+            id={seoTitleInputId}
+            fieldSize="sm"
+            value={seoTitle}
+            onChange={(event) => setSeoTitle(event.target.value)}
+            autoComplete="off"
+            spellCheck
+            placeholder={trimmedTitle || 'Title shown in search results'}
+          />
+          <p className={dialogStyles.label}>
+            Unique to this page. Leave blank to use the page title. Not a list of keywords.
+          </p>
+        </div>
+
+        <div className={dialogStyles.field}>
+          <label htmlFor={seoDescriptionInputId} className={dialogStyles.label}>SEO description</label>
+          <Textarea
+            id={seoDescriptionInputId}
+            fieldSize="sm"
+            value={seoDescription}
+            onChange={(event) => setSeoDescription(event.target.value)}
+            rows={3}
+            spellCheck
+            placeholder="Short pitch for search results — what this page is, who it is for."
+          />
+        </div>
+
+        <div className={dialogStyles.field}>
+          <span className={dialogStyles.label}>Share image</span>
+          <p className={dialogStyles.label}>
+            og:image for this page. Product URLs pick an image on the product instead.
+          </p>
+          {ogImage ? (
+            <p className={dialogStyles.label}>{ogImage.split('/').pop()}</p>
+          ) : (
+            <p className={dialogStyles.label}>Uses the site default, if one is set.</p>
+          )}
+          <div style={{ display: 'flex', gap: 'var(--space-s)' }}>
+            <Button type="button" variant="secondary" size="sm" onClick={() => setOgPickerOpen(true)}>
+              <ImagesSolidIcon size={13} aria-hidden="true" />
+              <span>{ogImage ? 'Change image' : 'Choose image'}</span>
+            </Button>
+            {ogImage ? (
+              <Button type="button" variant="ghost" size="sm" onClick={() => setOgImage('')}>
+                Clear
+              </Button>
+            ) : null}
+          </div>
+          {ogPickerOpen && (
+            <Suspense fallback={null}>
+              <MediaPickerModal
+                open={ogPickerOpen}
+                onClose={() => setOgPickerOpen(false)}
+                mediaKind="image"
+                currentValue={ogImage || null}
+                onPick={(asset) => {
+                  setOgImage(asset.publicPath)
+                  setOgPickerOpen(false)
+                }}
+              />
+            </Suspense>
+          )}
         </div>
 
         <div className={dialogStyles.field}>

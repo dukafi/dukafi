@@ -1009,23 +1009,49 @@ describe('publishPage', () => {
     expect(html).not.toContain('zustand')
   })
 
-  it('uses site metaTitle for <title> when set', () => {
+  it('uses the page title for <title>, not a site-wide metaTitle', () => {
     const proj = makeSite({
       settings: { ...makeSite().settings, metaTitle: 'My Site — Home' },
     })
     const page = makePage({ root: { moduleId: 'base.text', props: { text: 'Hi' } } })
+    page.title = 'About'
     const { html } = publishPage(page, proj, registry)
-    expect(html).toContain('<title>My Site — Home</title>')
+    expect(html).toContain('<title>About</title>')
+    expect(html).not.toContain('My Site — Home')
   })
 
-  it('XSS: escapes metaTitle with special chars', () => {
+  it('uses page seoTitle and seoDescription when set', () => {
     const proj = makeSite({
-      settings: {
-        ...makeSite().settings,
-        metaTitle: '<script>alert(1)</script>',
-      },
+      settings: { ...makeSite().settings, metaTitle: 'Shop', metaDescription: 'Site blurb' },
     })
     const page = makePage({ root: { moduleId: 'base.text', props: { text: 'Hi' } } })
+    page.title = 'About'
+    page.seoTitle = 'About Dukafi'
+    page.seoDescription = 'How the store works.'
+    const { html } = publishPage(page, proj, registry)
+    expect(html).toContain('<title>About Dukafi</title>')
+    expect(html).toContain('content="How the store works."')
+    expect(html).not.toContain('Site blurb')
+  })
+
+  it('emits og tags from the page share image', () => {
+    const proj = makeSite({
+      settings: { ...makeSite().settings, ogImageUrl: '/uploads/site.jpg' },
+    })
+    const page = makePage({ root: { moduleId: 'base.text', props: { text: 'Hi' } } })
+    page.title = 'About'
+    page.ogImage = '/uploads/about.jpg'
+    const { html } = publishPage(page, proj, registry)
+    expect(html).toContain('property="og:type" content="website"')
+    expect(html).toContain('property="og:title" content="About"')
+    expect(html).toContain('property="og:image" content="/uploads/about.jpg"')
+    expect(html).toContain('name="twitter:card" content="summary_large_image"')
+  })
+
+  it('XSS: escapes seoTitle with special chars', () => {
+    const proj = makeSite()
+    const page = makePage({ root: { moduleId: 'base.text', props: { text: 'Hi' } } })
+    page.seoTitle = '<script>alert(1)</script>'
     const { html } = publishPage(page, proj, registry)
     expect(html).not.toContain('<script>')
     expect(html).toContain('&lt;script&gt;')

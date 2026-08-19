@@ -8,6 +8,7 @@ class Product < Sequel::Model
   many_to_many :collections, join_table: :collection_products, order: Sequel[:collection_products][:position]
   one_to_many :product_images, order: :position
   many_to_many :media_assets, join_table: :product_images, order: Sequel[:product_images][:position]
+  many_to_one :og_media_asset, class: :MediaAsset, key: :og_media_asset_id
 
   def fields=(value)
     super(value.is_a?(String) ? value : JSON.generate(value || {}))

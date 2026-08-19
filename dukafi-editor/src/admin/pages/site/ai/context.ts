@@ -58,10 +58,16 @@ LOOPS — repeat one child per record
 <div data-dukafy-loop="products" data-dukafy-loop-per-page="8" class="grid grid-cols-2 gap-6 md:grid-cols-4">
   <article> … ONE card; it repeats … </article>
 </div>
-Sources: products · collections/<slug>.products · currentEntry.variants · currentEntry.images · cart.items
+Sources: products · current-query (/search?keyword= — always noindex; do not rank here) · collections/<slug>.products · currentEntry.related (same collection, on a product page) · data/<table-slug> · currentEntry.variants · currentEntry.images · cart.items
 Options: data-dukafy-loop-per-page="12" · -order-by="price|title|newest|manual" · -direction="desc"
 Put exactly ONE child inside a loop — that child is the repeated item.
 Inside a loop, currentEntry is the record. Its fields: title, priceDisplay, imageUrl, href, slug, stock, inCart, cartQuantity.
+
+MERCHANDISING
+To put a product on the homepage (featured, on sale, "make it seen"): loop collections/<slug>.products. The SKU must already be in that collection (Featured, on-sale, deals). Keep it in its category collection too. Discount codes are not a loop — there is no data-dukafy-loop="discounts". Do not invent a pin-this-SKU overlay.
+
+SEO
+"Rank for …" / "optimize SEO" is not the search page. Put matching products in a collection and loop collections/<slug>.products on an indexable page (home, a landing page, or the collection template). Unique H1 and intro per page. Never <meta name="keywords">, never a <title> or meta description tag in HTML — those live in page settings. Do not invent shipping, origin stories, or reviews.
 
 PRODUCT CARD with cart states
 <article class="rounded-lg border p-4">
@@ -103,6 +109,20 @@ FORMS
 Verbs: account.login · account.register · account.logout · cart.createOrder (checkout) · payment.initiate
 form fields: hasError · error · message · signedIn · email · name
 Wrap a form in data-dukafy-region="form" or its errors have nowhere to render.
+
+CMS TABLES
+Loop rows from a merchant table (slug from list_data_tables):
+<div data-dukafy-loop="data/team">
+  <article>
+    <p data-dukafy-bind-text="currentEntry.name"></p>
+  </article>
+</div>
+Connect a form so it writes rows into that table:
+<form data-dukafy-form-mode="cms" data-dukafy-form-id="contact" data-dukafy-target-table="team">
+  <input name="name" required>
+  <button type="submit">Send</button>
+</form>
+A plain <form> is custom and does not save CMS rows. Input name must match a column id.
 
 SHEETS AND MODALS
 Mark any container as an overlay; it is hidden until something opens it.

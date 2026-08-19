@@ -162,7 +162,7 @@ describe('overlay attributes', () => {
   })
 
   it('accepts the relative sources that make nesting work', () => {
-    for (const source of ['currentEntry.variants', 'currentEntry.stars', 'cart.items', 'products/canvas-bag.variants']) {
+    for (const source of ['currentEntry.variants', 'currentEntry.stars', 'currentEntry.related', 'cart.items', 'products/canvas-bag.variants']) {
       expect(only(`<div data-dukafy-loop="${source}"><p>x</p></div>`).props.source).toBe(source)
     }
   })
@@ -171,6 +171,13 @@ describe('overlay attributes', () => {
     const node = only('<div data-dukafy-loop="data/team"><article>card</article></div>')
     expect(node.moduleId).toBe('store.relationship-loop')
     expect(node.props.source).toBe('data/team')
+  })
+
+  it('accepts the search-results source', () => {
+    const node = only('<div data-dukafy-loop="current-query" data-dukafy-loop-per-page="12"><article>card</article></div>')
+    expect(node.moduleId).toBe('store.relationship-loop')
+    expect(node.props.source).toBe('current-query')
+    expect(node.props.perPage).toBe(12)
   })
 
   // An unrecognised source would render an empty loop with no hint why.

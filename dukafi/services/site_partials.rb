@@ -2,12 +2,13 @@ require "securerandom"
 
 # The header and footer that appear on every page.
 #
-# ── Why not the editor's "visual components" ────────────────────────────────
-# The editor has a component system and a `base.visual-component-ref` module,
-# but the server side of it does not exist: `GET /admin/api/cms/components`
-# returns an empty list and the publisher has no renderer for that module. A
-# header built as a component would therefore bake as NOTHING. This is the
-# smaller thing that actually works.
+# ── Why header/footer are still partials, not visual components ────────────
+# Components now persist (`GET /admin/api/cms/components`) and bake (RenderPage
+# inlines `base.visual-component-ref`). Header and footer stay `kind: "partial"`
+# because the fragment endpoints address nodes by id: a cart badge in the header
+# must find itself after compose. A namespaced component instance would break
+# that. Use a visual component for a newsletter form; keep site chrome as
+# partials.
 #
 # ── Partials are pages ──────────────────────────────────────────────────────
 # `kind: "partial"` rather than a new table, because everything a header needs

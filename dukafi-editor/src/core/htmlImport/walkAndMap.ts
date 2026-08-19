@@ -124,6 +124,11 @@ const MODULE_GENERATED_ATTRIBUTE_NAMES: Record<string, readonly string[]> = {
     'data-dukafi-success-message',
     'data-dukafi-success-redirect',
     'data-dukafi-target-table',
+    'data-dukafy-form-id',
+    'data-dukafy-form-mode',
+    'data-dukafy-success-message',
+    'data-dukafy-success-redirect',
+    'data-dukafy-target-table',
     'method',
   ],
   'base.image': [

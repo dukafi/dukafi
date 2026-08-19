@@ -73,7 +73,9 @@ class PartialBakeSpec < Minitest::Test
     collection.update(title: "Featured Picks")
     result = PartialBake.call(collection:, state: @state, output_root: @output_root)
 
-    assert_equal ["/collections/featured"], result.paths
+    # Product pages that pull `currentEntry.related` from this collection
+    # rebuild too — the related grid is membership, not just the collection URL.
+    assert_equal ["/collections/featured", "/products/bag"], result.paths.sort
     assert_equal unrelated_content, File.read(unrelated_path)
     assert_equal 2, @state.refresh.publish_version
   end
@@ -158,6 +160,31 @@ class PartialBakeSpec < Minitest::Test
     html = File.read(File.join(@output_root, "current", "index.html"))
     assert_includes html, "Jane"
     assert_includes html, "Kamau Mwangi"
+  end
+
+  def test_rebaking_a_collection_picks_up_a_cover_added_to_the_published_template
+    asset = MediaAsset.create(
+      path: "uploads/cover.png", mime: "image/png", width: 800, height: 600,
+      variants_json: "[]", alt_text: "Featured cover", created_at: Time.now
+    )
+    collection = Collection.create(
+      title: "Featured", slug: "featured", description: "", sort_order: 0, media_asset_id: asset.id
+    )
+    template = CollectionTemplate.find
+    published = template.published_document_data
+    published.fetch("nodes").delete("collection-cover")
+    published.fetch("nodes").fetch("collection-main")["children"] =
+      Array(published.dig("nodes", "collection-main", "children")).reject { |id| id == "collection-cover" }
+    template.update(published_document: JSON.generate(published))
+    Bake.call(state: @state, output_root: @output_root)
+    html = File.read(File.join(@output_root, "current", "collections", "featured.html"))
+    refute_match(%r{<img[^>]+/uploads/cover\.png}, html)
+
+    CollectionTemplate.ensure!
+    PartialBake.call(collection:, state: @state, output_root: @output_root)
+
+    html = File.read(File.join(@output_root, "current", "collections", "featured.html"))
+    assert_match(%r{<img[^>]+/uploads/cover\.png}, html)
   end
 
   private

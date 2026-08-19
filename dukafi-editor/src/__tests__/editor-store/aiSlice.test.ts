@@ -11,7 +11,7 @@ import { beforeEach, describe, expect, it } from 'bun:test'
 import { useEditorStore } from '@site/store/store'
 import '@modules/base/index'
 import '@modules/store/index'
-import { extractEditsFromReply, type AiEdit } from '@core/ai'
+import { extractEditsFromReply, type AiEdit, type BuildPlan } from '@core/ai'
 
 function freshStore() {
   localStorage.clear()
@@ -24,6 +24,10 @@ function freshStore() {
     activeDocument: null,
     aiMessages: [],
     aiPending: false,
+    aiNeedProfile: false,
+    aiBuildRequest: null,
+    aiPlan: null,
+    aiPlanNote: null,
     _historyPast: [],
     _historyFuture: [],
     canUndo: false,
@@ -276,6 +280,29 @@ describe('applyAiEdits', () => {
     expect(button.classIds.map((id) => rules[id]!.name)).toContain('bg-black')
 
     // And the merchant's one safety net still covers all of it.
+    useEditorStore.getState().undo()
+    expect(page().nodes[rootId]!.children).toHaveLength(0)
+  })
+
+  it('applies an approved Build plan as one undo step', () => {
+    const { rootId } = seedSite()
+    const plan: BuildPlan = {
+      title: 'About us',
+      summary: 'A short story.',
+      blocks: [
+        { heading: 'Started in 2019', body: 'Same-day sewing for Nairobi offices.', media: null },
+        { heading: 'Visit', body: 'Come by the shop.', media: { description: 'yacht', query: 'yacht', path: 'https://placehold.co/600', altText: '', missed: true } },
+      ],
+    }
+
+    useEditorStore.setState({ aiPlan: plan, aiPlanNote: 'Added the section.' })
+    useEditorStore.getState().applyAiPlan()
+
+    expect(useEditorStore.getState().aiPlan).toBeNull()
+    expect(useEditorStore.getState().aiMessages.at(-1)?.applied).toBe(1)
+    expect(page().nodes[rootId]!.children).toHaveLength(1)
+    expect(Object.values(page().nodes).some((node) => node.moduleId === 'base.image')).toBe(false)
+
     useEditorStore.getState().undo()
     expect(page().nodes[rootId]!.children).toHaveLength(0)
   })

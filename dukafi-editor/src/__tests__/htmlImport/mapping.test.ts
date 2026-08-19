@@ -371,6 +371,23 @@ describe('base form primitives — semantic form elements', () => {
     expect(submit.props.label).toBe('Send')
   })
 
+  it('connects a CMS form from data-dukafy-form-mode the same as data-dukafi-form-mode', () => {
+    const dukafy = imported(
+      '<form data-dukafy-form-mode="cms" data-dukafy-form-id="contact" data-dukafy-target-table="team"><input name="name"></form>',
+    )
+    const dukafi = imported(
+      '<form data-dukafi-form-mode="cms" data-dukafi-form-id="contact" data-dukafi-target-table="team"><input name="name"></form>',
+    )
+    const a = dukafy.nodes[dukafy.rootIds[0]!]!
+    const b = dukafi.nodes[dukafi.rootIds[0]!]!
+    expect(a.moduleId).toBe('base.form')
+    expect(a.props.mode).toBe('cms')
+    expect(a.props.targetTableId).toBe('team')
+    expect(a.props.formId).toBe('contact')
+    expect(a.props.mode).toBe(b.props.mode)
+    expect(a.props.targetTableId).toBe(b.props.targetTableId)
+  })
+
   it('imports checkbox, radio, select, optgroup, option, and input-submit elements as form modules', () => {
     const result = imported(`
       <form name="signup">

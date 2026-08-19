@@ -21,9 +21,10 @@ module McpTools
   module_function
 
   def all
-    [list_pages, create_page, read_page, apply_edits, list_rebuild_targets, publish, set_page_access] +
+    [get_store_context, list_pages, create_page, read_page, list_children, get_page_context, get_design_tokens, get_recipes, apply_edits, update_design_tokens, list_rebuild_targets, publish, set_page_access, set_page_seo] +
       McpCommerceTools.all + McpMediaTools.all + McpReviewTools.all +
-      McpDiscountTools.all + McpPluginTools.all + McpDataTableTools.all
+      McpDiscountTools.all + McpPluginTools.all + McpDataTableTools.all +
+      McpComponentTools.all + McpSitemapTools.all
   end
 
   # Which tools change the store. Drives the `mcp:read` / `mcp:write` split, so
@@ -33,20 +34,50 @@ module McpTools
   # should have to declare which side it is on, and the default below — treat
   # anything unrecognised as a WRITE — means forgetting to update this list
   # fails closed.
-  READ_TOOLS = (%w[list_pages read_page list_rebuild_targets] +
+  READ_TOOLS = (%w[get_store_context list_pages read_page list_children get_page_context get_design_tokens get_recipes list_rebuild_targets] +
                 McpCommerceTools::READ_TOOLS + McpMediaTools::READ_TOOLS +
                 McpReviewTools::READ_TOOLS + McpDiscountTools::READ_TOOLS +
-                McpPluginTools::READ_TOOLS + McpDataTableTools::READ_TOOLS).freeze
+                McpPluginTools::READ_TOOLS + McpDataTableTools::READ_TOOLS +
+                McpComponentTools::READ_TOOLS + McpSitemapTools::READ_TOOLS).freeze
 
   def write_tool?(name) = !READ_TOOLS.include?(name.to_s)
+
+  def get_store_context
+    {
+      name: "get_store_context",
+      title: "Get store context",
+      description: "One planning snapshot: store name, optional business " \
+                   "profile, page list, a sample of products and media, and " \
+                   "saved components. Prefer this over many list_* calls when " \
+                   "you need to understand the store. It does not include " \
+                   "page trees — call list_children for structure, then " \
+                   "read_page with a nodeId for that section. A thin profile " \
+                   "means the merchant has not filled in their story; do not " \
+                   "invent founding dates or audiences. Includes a compact " \
+                   "tokens summary — call get_design_tokens for the full " \
+                   "color/font/type/spacing registry. Includes a recipes " \
+                   "index — call get_recipes before a product loop, search, " \
+                   "homepage spotlight, CMS loop, form, cart, reusable " \
+                   "component, or SEO / 'rank for' job; those overlays " \
+                   "are not general HTML. Call list_components before " \
+                   "rebuilding a newsletter or header that may already exist.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {},
+        "additionalProperties" => false,
+      },
+      run: ->(_args) { StoreContext.call },
+    }
+  end
 
   def list_pages
     {
       name: "list_pages",
       title: "List pages",
-      description: "List the pages in this store — slug, title, kind and " \
-                   "whether each is published. Start here: the slug is how " \
-                   "every other page tool refers to a page.",
+      description: "List the pages in this store — slug, title, kind, " \
+                   "whether each is published, and the public path/url for " \
+                   "CMS pages (to share or submit to Search Console). Start " \
+                   "here: the slug is how every other page tool refers to a page.",
       input_schema: {
         "type" => "object",
         "properties" => {
@@ -78,6 +109,7 @@ module McpTools
     dataset = dataset.where(status: status) unless status == "any"
 
     pages = dataset.limit(clamp_limit(args["limit"])).map do |page|
+      path = page.kind == "page" ? PagePaths.public_path(page.slug) : nil
       {
         "slug" => page.slug,
         "title" => page.title,
@@ -85,6 +117,8 @@ module McpTools
         "status" => page.status,
         "access" => page.access,
         "authRedirect" => page.auth_redirect,
+        "path" => path,
+        "url" => path && Dukafi::Publisher::ListingJsonLd.absolute(path, Dukafi::Publisher::ListingJsonLd.public_origin),
         "updatedAt" => page.updated_at&.utc&.iso8601,
       }
     end
@@ -110,15 +144,23 @@ module McpTools
     {
       name: "read_page",
       title: "Read a page",
-      description: "Read one page's structure. The default 'outline' format " \
-                   "is an indented tree where every line starts with the " \
-                   "node's id in [brackets] — those ids are how edits address " \
-                   "nodes, so read a page before changing it. Use 'json' only " \
-                   "when you need the raw stored document.",
+      description: "Read a page, or one section of it. Call list_children " \
+                   "first to get the top-level sections, then pass a child's " \
+                   "id as nodeId to read that section's tree in detail. Omit " \
+                   "nodeId only when you truly need the whole page. The " \
+                   "outline is an indented tree; every line starts with the " \
+                   "node id in [brackets] — those ids are how apply_edits " \
+                   "addresses nodes. Use json only when you need the raw " \
+                   "stored document (scoped to the same nodeId).",
       input_schema: {
         "type" => "object",
         "properties" => {
           "slug" => { "type" => "string", "description" => "The page slug, from list_pages." },
+          "nodeId" => {
+            "type" => "string",
+            "description" => "Read this node and its descendants only. " \
+                             "Defaults to the page root.",
+          },
           "format" => {
             "type" => "string", "enum" => %w[outline json],
             "description" => "outline (default, compact) or json (raw document).",
@@ -152,22 +194,49 @@ module McpTools
       raise ArgumentError, "#{slug.inspect} has never been published; read the draft instead."
     end
 
-    return document if args["format"].to_s == "json"
+    nodes = document["nodes"]
+    raise ArgumentError, "That page's document could not be read." unless nodes.is_a?(Hash)
+
+    node_id = args["nodeId"].to_s.strip
+    node_id = document["rootNodeId"].to_s if node_id.empty?
+    raise ArgumentError, "No node #{node_id.inspect} on #{slug.inspect}." if nodes[node_id].nil?
+
+    return subtree(document, node_id) if args["format"].to_s == "json"
 
     {
       "slug" => page.slug, "title" => page.title,
       "status" => page.status, "version" => version,
-      "outline" => outline(document),
+      "nodeId" => node_id,
+      "seoTitle" => document["seoTitle"],
+      "seoDescription" => document["seoDescription"],
+      "ogImage" => document["ogImage"],
+      "outline" => outline(document, from_id: node_id),
     }
+  end
+
+  # Nodes reachable from one parent — so a fill call can work on a section
+  # without loading the rest of the page.
+  def subtree(document, node_id)
+    nodes = document["nodes"]
+    kept = {}
+    walk = lambda do |id|
+      node = nodes[id]
+      return if node.nil? || kept.key?(id)
+
+      kept[id] = node
+      Array(node["children"]).each { |child| walk.call(child) }
+    end
+    walk.call(node_id)
+    document.merge("rootNodeId" => node_id, "nodes" => kept)
   end
 
   # An indented tree, one line per node. Far smaller than the raw document and
   # it keeps what a model editing a STORE actually needs: the node id, what
   # kind of node it is, its visible text, its classes, and the commerce
   # overlays (bindings, cart actions, conditions) that plain HTML cannot carry.
-  def outline(document)
+  def outline(document, from_id: nil)
     nodes = document["nodes"]
-    root = document["rootNodeId"]
+    root = from_id.to_s.strip.empty? ? document["rootNodeId"] : from_id.to_s.strip
     return "(empty page)" unless nodes.is_a?(Hash) && nodes[root]
 
     styles = style_rules
@@ -236,6 +305,403 @@ module McpTools
     value.length > 80 ? "#{value[0, 77]}..." : value
   end
 
+  # Direct children of one node — what a harness asks for when it is walking
+  # a page left-to-right. Not a dump of the whole tree; call again on a child
+  # id to go one level deeper. The model does not need this; the harness does.
+  def list_children
+    {
+      name: "list_children",
+      title: "List child nodes",
+      description: "The direct children of one node on a page. Omit nodeId " \
+                   "to list the page root's children (the top-level sections). " \
+                   "Each child has the id apply_edits uses, plus any visible " \
+                   "text. Call again with a child's id to go one level down. " \
+                   "Prefer this over a whole-page read_page when walking " \
+                   "structure. After you pick a child, call read_page with " \
+                   "that child's nodeId to work on the section in detail.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "slug" => { "type" => "string", "description" => "The page slug, from list_pages." },
+          "nodeId" => { "type" => "string", "description" => "Parent node. Defaults to the page root." },
+          "version" => {
+            "type" => "string", "enum" => %w[draft published],
+            "description" => "draft (default) or published.",
+          },
+        },
+        "required" => ["slug"],
+        "additionalProperties" => false,
+      },
+      run: ->(args) { run_list_children(args) },
+    }
+  end
+
+  def run_list_children(args)
+    slug = args["slug"].to_s.strip
+    raise ArgumentError, "slug is required" if slug.empty?
+
+    page = Page.first(slug: slug)
+    raise ArgumentError, "No page with slug #{slug.inspect}. Call list_pages to see what exists." if page.nil?
+
+    version = args.fetch("version", "draft").to_s
+    unless %w[draft published].include?(version)
+      raise ArgumentError, "version must be draft or published"
+    end
+
+    document = version == "published" ? page.published_document_data : page.document_data
+    if document.nil?
+      raise ArgumentError, "#{slug.inspect} has never been published; read the draft instead."
+    end
+
+    nodes = document["nodes"]
+    raise ArgumentError, "That page's document could not be read." unless nodes.is_a?(Hash)
+
+    parent_id = args["nodeId"].to_s.strip
+    parent_id = document["rootNodeId"].to_s if parent_id.empty?
+    parent = nodes[parent_id]
+    raise ArgumentError, "No node #{parent_id.inspect} on #{slug.inspect}." if parent.nil?
+
+    children = Array(parent["children"]).filter_map { |id| child_row(nodes[id]) }
+    {
+      "slug" => page.slug,
+      "parentId" => parent_id,
+      "children" => children,
+    }
+  end
+
+  def child_row(node)
+    return nil unless node.is_a?(Hash) && !node["id"].to_s.empty?
+
+    {
+      "id" => node["id"].to_s,
+      "moduleId" => node["moduleId"].to_s,
+      "text" => visible_text(node["props"]).to_s,
+      "childCount" => Array(node["children"]).length,
+    }
+  end
+
+  # Enough of an existing page to add a section that matches it. Lists the
+  # top-level sections, then reads up to two of them (outline + classes).
+  # The harness should call this before a build/fill on a page that already
+  # has content. Empty samples means a blank page — store context is enough.
+  def get_page_context
+    {
+      name: "get_page_context",
+      title: "Get page design context",
+      description: "The page's top-level sections plus up to two sampled " \
+                   "section trees and the Tailwind classes they use (colors, " \
+                   "spacing, type). Call this before adding a section so the " \
+                   "new work matches the page. Pass nodeId to sample that " \
+                   "section and a neighbor. Omit it to sample the first two.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "slug" => { "type" => "string", "description" => "The page slug, from list_pages." },
+          "nodeId" => { "type" => "string", "description" => "Prefer this section and a neighbor." },
+          "samples" => {
+            "type" => "integer", "minimum" => 1, "maximum" => 3,
+            "description" => "How many sections to read in detail. Defaults to 2.",
+          },
+          "version" => {
+            "type" => "string", "enum" => %w[draft published],
+            "description" => "draft (default) or published.",
+          },
+        },
+        "required" => ["slug"],
+        "additionalProperties" => false,
+      },
+      run: ->(args) { run_get_page_context(args) },
+    }
+  end
+
+  def run_get_page_context(args)
+    slug = args["slug"].to_s.strip
+    raise ArgumentError, "slug is required" if slug.empty?
+
+    page = Page.first(slug: slug)
+    raise ArgumentError, "No page with slug #{slug.inspect}. Call list_pages to see what exists." if page.nil?
+
+    version = args.fetch("version", "draft").to_s
+    unless %w[draft published].include?(version)
+      raise ArgumentError, "version must be draft or published"
+    end
+
+    document = version == "published" ? page.published_document_data : page.document_data
+    if document.nil?
+      raise ArgumentError, "#{slug.inspect} has never been published; read the draft instead."
+    end
+
+    nodes = document["nodes"]
+    raise ArgumentError, "That page's document could not be read." unless nodes.is_a?(Hash)
+
+    parent_id, child_ids = section_parent(document, nodes)
+    styles = style_rules
+    want = Integer(args["samples"], exception: false) || 2
+    want = want.clamp(1, 3)
+    sample_ids = pick_sample_ids(child_ids, args["nodeId"].to_s.strip, want)
+
+    sections = child_ids.filter_map { |id| section_summary(nodes[id], styles) }
+    samples = sample_ids.filter_map { |id| section_sample(document, nodes[id], styles) }
+    class_names = samples.flat_map { |row| row["classes"] }.uniq
+
+    {
+      "slug" => page.slug,
+      "parentId" => parent_id,
+      "sections" => sections,
+      "samples" => samples,
+      "design" => design_from(class_names, samples),
+    }
+  end
+
+  def section_parent(document, nodes)
+    root_id = document["rootNodeId"].to_s
+    root = nodes[root_id]
+    kids = Array(root && root["children"])
+    if kids.length == 1
+      wrap = nodes[kids.first]
+      inner = Array(wrap && wrap["children"])
+      return [wrap["id"].to_s, inner] if wrap.is_a?(Hash) && inner.length > 1
+    end
+    [root_id, kids]
+  end
+
+  def pick_sample_ids(child_ids, node_id, want)
+    ids = child_ids.map(&:to_s)
+    return ids.first(want) if node_id.empty? || !ids.include?(node_id)
+
+    index = ids.index(node_id)
+    neighbor = ids[index - 1] || ids[index + 1]
+    [node_id, neighbor].compact.uniq.first(want)
+  end
+
+  def section_summary(node, styles)
+    row = child_row(node)
+    return nil unless row
+
+    row.merge("classes" => node_classes(node, styles))
+  end
+
+  def section_sample(document, node, styles)
+    return nil unless node.is_a?(Hash) && !node["id"].to_s.empty?
+
+    {
+      "id" => node["id"].to_s,
+      "text" => visible_text(node["props"]).to_s,
+      "rootClasses" => node_classes(node, styles),
+      "classes" => collect_classes(document["nodes"], node["id"], styles, {}),
+      "outline" => outline(document, from_id: node["id"]),
+    }
+  end
+
+  def node_classes(node, styles)
+    Array(node && node["classIds"]).filter_map { |cid| styles.dig(cid, "name") }.uniq
+  end
+
+  def collect_classes(nodes, id, styles, seen)
+    node = nodes[id]
+    return [] if node.nil? || seen[id]
+
+    seen[id] = true
+    own = node_classes(node, styles)
+    kids = Array(node["children"]).flat_map { |child| collect_classes(nodes, child, styles, seen) }
+    (own + kids).uniq.first(80)
+  end
+
+  def design_from(class_names, samples)
+    names = Array(class_names)
+    roots = Array(samples).flat_map { |row| Array(row["rootClasses"]) }.uniq
+    {
+      "colors" => names.select { |name| color_class?(name) }.first(12),
+      "spacing" => names.select { |name| name.match?(/\A(p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr)-/) }.first(12),
+      "type" => names.select { |name| type_class?(name) }.first(12),
+      "layout" => names.select { |name| layout_class?(name) }.first(12),
+      "sectionClasses" => roots.first(8),
+    }
+  end
+
+  def color_class?(name)
+    name.match?(/\A(bg|border|from|to|via|ring)-/) ||
+      name.match?(/\Atext-(black|white|transparent|slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-/) ||
+      (name.match?(/\A(text|bg|border|fill)-[a-z][a-z0-9-]+\z/) && !type_class?(name) && !text_align_class?(name))
+  end
+
+  def type_class?(name)
+    name.match?(/\A(font-|tracking-|leading-|uppercase|lowercase|italic)/) ||
+      name.match?(/\Atext-(xs|s|sm|m|base|l|lg|xl|[2-9]xl)\z/)
+  end
+
+  def text_align_class?(name)
+    name.match?(/\Atext-(left|right|center|justify|start|end|clip|ellipsis|wrap|nowrap|balance|pretty)\z/)
+  end
+
+  def layout_class?(name)
+    name.match?(/\A(flex|grid|inline|block|hidden|contents|mx-auto|max-w-|w-|h-|gap-|items-|justify-|col-|row-)/)
+  end
+
+  # ── design tokens ──────────────────────────────────────────────────────────
+
+  def get_design_tokens
+    {
+      name: "get_design_tokens",
+      title: "Get design tokens",
+      description: "The site's color, font, type, and spacing tokens — CSS " \
+                   "variables and the utility classes bound to them. Call " \
+                   "this before designing or restyling. To change an accent " \
+                   "or a font, patch here rather than editing every page.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {},
+        "additionalProperties" => false,
+      },
+      run: ->(_args) { DesignTokens.snapshot },
+    }
+  end
+
+  def get_recipes
+    {
+      name: "get_recipes",
+      title: "Get operational recipes",
+      description: "Dukafi-specific HTML for product loops, search, homepage " \
+                   "spotlights, CMS loops, connected forms, cart, overlays, " \
+                   "reusable components, and SEO / 'rank for' playbooks — " \
+                   "filled with this store's collection slugs, table columns, " \
+                   "and component ids. Call this before apply_edits when the " \
+                   "job is a grid, search, putting a product on the homepage, " \
+                   "a CMS list, a form, a cart, inserting a saved component, " \
+                   "or ranking for a keyword. Paste the recipe html; do not " \
+                   "invent {{ }} templates. Pass topic to fetch one family.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "topic" => {
+            "type" => "string",
+            "enum" => Recipes::TOPICS,
+            "description" => "Omit for every recipe. Pass one to keep the payload small. " \
+                             "seo = rank-for / unique titles. loops includes search and homepage spotlight.",
+          },
+        },
+        "additionalProperties" => false,
+      },
+      run: ->(args) { run_get_recipes(args) },
+    }
+  end
+
+  def run_get_recipes(args)
+    args = {} unless args.is_a?(Hash)
+    Recipes.snapshot(args["topic"])
+  rescue ArgumentError => error
+    raise McpTools::ArgumentError, error.message
+  end
+
+  def update_design_tokens
+    {
+      name: "update_design_tokens",
+      title: "Update design tokens",
+      description: "Patch site-wide colors, fonts, type scale, or spacing. " \
+                   "A color value change updates every class that uses that " \
+                   "token (text-primary, bg-primary). Font family must already " \
+                   "be installed — this does not download Google fonts. " \
+                   "Saves the draft; call publish to go live.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "colors" => {
+            "type" => "array",
+            "maxItems" => 12,
+            "description" => "Upsert by slug. Pass value (hex or hsla) to change the accent.",
+            "items" => {
+              "type" => "object",
+              "properties" => {
+                "slug" => { "type" => "string" },
+                "name" => { "type" => "string" },
+                "value" => { "type" => "string" },
+                "lightValue" => { "type" => "string" },
+                "darkValue" => { "type" => "string" },
+                "category" => { "type" => "string" },
+                "utilities" => {
+                  "type" => "array",
+                  "items" => { "type" => "string", "enum" => %w[text background border fill] },
+                },
+              },
+              "additionalProperties" => false,
+            },
+          },
+          "fonts" => {
+            "type" => "array",
+            "maxItems" => 8,
+            "description" => "Remap a font token to an installed family.",
+            "items" => {
+              "type" => "object",
+              "properties" => {
+                "variable" => { "type" => "string" },
+                "name" => { "type" => "string" },
+                "family" => { "type" => "string" },
+                "fallback" => { "type" => "string" },
+              },
+              "additionalProperties" => false,
+            },
+          },
+          "typography" => {
+            "type" => "array",
+            "maxItems" => 4,
+            "items" => {
+              "type" => "object",
+              "properties" => {
+                "id" => { "type" => "string" },
+                "name" => { "type" => "string" },
+                "namingConvention" => { "type" => "string" },
+                "minFontSize" => { "type" => "number" },
+                "maxFontSize" => { "type" => "number" },
+                "min" => { "type" => "number" },
+                "max" => { "type" => "number" },
+                "scaleRatio" => { "type" => "number" },
+                "steps" => { "type" => "string" },
+              },
+              "additionalProperties" => false,
+            },
+          },
+          "spacing" => {
+            "type" => "array",
+            "maxItems" => 4,
+            "items" => {
+              "type" => "object",
+              "properties" => {
+                "id" => { "type" => "string" },
+                "name" => { "type" => "string" },
+                "namingConvention" => { "type" => "string" },
+                "minSize" => { "type" => "number" },
+                "maxSize" => { "type" => "number" },
+                "min" => { "type" => "number" },
+                "max" => { "type" => "number" },
+                "scaleRatio" => { "type" => "number" },
+                "steps" => { "type" => "string" },
+              },
+              "additionalProperties" => false,
+            },
+          },
+          "preferences" => {
+            "type" => "object",
+            "properties" => {
+              "rootFontSize" => { "type" => "number" },
+              "minScreenWidth" => { "type" => "number" },
+              "maxScreenWidth" => { "type" => "number" },
+              "isRem" => { "type" => "boolean" },
+            },
+            "additionalProperties" => false,
+          },
+        },
+        "additionalProperties" => false,
+      },
+      run: ->(args) { run_update_design_tokens(args) },
+    }
+  end
+
+  def run_update_design_tokens(args)
+    DesignTokens.apply!(args)
+  rescue ArgumentError => error
+    raise McpTools::ArgumentError, error.message
+  end
+
   # ── create_page ────────────────────────────────────────────────────────────
 
   # The slug becomes a URL, so it has to satisfy the same pattern the storefront
@@ -243,9 +709,10 @@ module McpTools
   # letting a bad slug through means an agent hears why instead of creating a
   # page that can never be reached.
   SAFE_SLUG = %r{\A[a-z0-9][a-z0-9_/-]*\z}
-  # `index` is the storefront's home page and the templates are structural.
+  # `index` is the storefront's home page, the templates are structural, and
+  # `search` is the dedicated `/search?keyword=` page.
   # Creating one of these through this tool would quietly shadow something.
-  RESERVED_SLUGS = %w[index product-template collection-template].freeze
+  RESERVED_SLUGS = %w[index product-template collection-template search].freeze
 
   def create_page
     {
@@ -380,6 +847,101 @@ module McpTools
     }
   end
 
+  def set_page_seo
+    {
+      name: "set_page_seo",
+      title: "Set a page's SEO title, description, and share image",
+      description: "Unique search-result title, meta description, and og:image " \
+                   "on a CMS page (page settings — not HTML tags). Draft until " \
+                   "publish. Pass an empty string to clear a field. Collections " \
+                   "and products use update_collection / update_product and " \
+                   "set_product_og_image instead. Search is always noindex; " \
+                   "do not use this to rank a keyword — call get_recipes topic=seo.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "slug" => { "type" => "string", "description" => "Which page, from list_pages." },
+          "seoTitle" => {
+            "type" => "string",
+            "description" => "Search-result title. Unique to this page. Empty string clears it.",
+          },
+          "seoDescription" => {
+            "type" => "string",
+            "description" => "Short pitch for search results. Not a keyword list. Empty string clears it.",
+          },
+          "ogImage" => {
+            "type" => "string",
+            "description" => "Share image: a path from list_media, or empty string to clear.",
+          },
+        },
+        "required" => ["slug"],
+        "additionalProperties" => false,
+      },
+      run: ->(args) { run_set_page_seo(args) },
+    }
+  end
+
+  def run_set_page_seo(args)
+    slug = args["slug"].to_s.strip.downcase
+    raise ArgumentError, "slug is required" if slug.empty?
+
+    present = %w[seoTitle seoDescription ogImage].select { |key| args.key?(key) }
+    if present.empty?
+      raise ArgumentError, "Pass seoTitle, seoDescription, and/or ogImage. Empty string clears that field."
+    end
+
+    page = Page.first(slug: slug)
+    raise ArgumentError, "No page with slug #{slug.inspect}. Call list_pages to see what exists." if page.nil?
+
+    document = page.document_data
+    assign_seo_field!(document, "seoTitle", args["seoTitle"]) if args.key?("seoTitle")
+    assign_seo_field!(document, "seoDescription", args["seoDescription"]) if args.key?("seoDescription")
+    if args.key?("ogImage")
+      document["ogImage"] = resolve_page_og_image(args["ogImage"])
+      document.delete("ogImage") if document["ogImage"].nil?
+    end
+
+    persist_document!(page, document)
+
+    {
+      "slug" => page.slug,
+      "seoTitle" => document["seoTitle"],
+      "seoDescription" => document["seoDescription"],
+      "ogImage" => document["ogImage"],
+      "note" => "Saved to the draft. Call publish to put it live.",
+    }
+  rescue Sequel::ValidationFailed => e
+    raise ArgumentError, e.message
+  end
+
+  def assign_seo_field!(document, key, value)
+    text = value.to_s.strip
+    if text.empty?
+      document.delete(key)
+    else
+      document[key] = text
+    end
+  end
+
+  def resolve_page_og_image(value)
+    reference = value.to_s.strip
+    return nil if reference.empty?
+
+    "/#{McpMediaTools.find!(reference).path}"
+  end
+
+  def persist_document!(page, document)
+    state = SiteState.first
+    raise ArgumentError, "This store has no site yet." if state.nil?
+
+    DB.transaction do
+      seq = state.bump_seq!
+      page.document = JSON.generate(document)
+      page.seq = seq
+      page.save
+    end
+  end
+
   # ── apply_edits ────────────────────────────────────────────────────────────
 
   # A batch large enough to be a mistake. A model that wants 60 edits on one
@@ -402,19 +964,17 @@ module McpTools
       title: "Edit a page",
       description: "Change a page. Each edit names an op and, except for " \
                    "insert, the id of the node it targets — call read_page " \
-                   "first to learn the ids. Content is written as ordinary " \
-                   "HTML with Tailwind classes; commerce behaviour goes on " \
-                   "data-dukafy-* attributes (data-dukafy-action=\"cart.addItem\", " \
-                   "data-dukafy-bind-text=\"currentEntry.title\", " \
-                   "data-dukafy-visible-when=\"currentEntry.inCart:isFalse\"). " \
-                   "Repeating anything is data-dukafy-loop on a wrapper: " \
-                   "\"products\", \"collections/<slug>.products\", \"reviews\" " \
-                   "(approved customer reviews), \"cart.items\", or a list field " \
-                   "of whatever the enclosing loop is on — \"currentEntry.images\", " \
-                   "\"currentEntry.variants\", \"currentEntry.stars\" (a review's " \
-                   "five stars, each with symbol/filled/state/position, for " \
-                   "drawing a rating out of styleable elements). " \
-                   "Edits apply to the DRAFT; call publish to make them live.",
+                   "first to learn the ids. Content is ordinary HTML with " \
+                   "Tailwind classes. Store behaviour is data-dukafy-* " \
+                   "overlays — call get_recipes first for a product loop, " \
+                   "search results (current-query / ?keyword=), homepage " \
+                   "spotlight (collections/<slug>.products), related " \
+                   "products on a PDP (currentEntry.related), CMS loop, form, " \
+                   "cart, or SEO / 'rank for' (do not invent {{ }} or React). " \
+                   "Edits apply to the DRAFT; call publish to make them live. " \
+                   "Reuse a saved component with " \
+                   "<div data-dukafy-component=\"<id>\"></div> — call " \
+                   "list_components / get_recipes topic=components first.",
       input_schema: {
         "type" => "object",
         "properties" => {

@@ -19,7 +19,10 @@ class Mcp < Roda
 
   # Bodies are small JSON-RPC messages. A cap stops an unauthenticated POST
   # from making us allocate megabytes before the token is even checked.
-  MAX_BODY_BYTES = 1_048_576
+  # 1 MB is enough for page edits. upload_media also sends base64 of a file
+  # that may be 10 MB, which is ~14 MB encoded, so the cap is the file limit
+  # plus envelope.
+  MAX_BODY_BYTES = 16 * 1_048_576
 
   def json_response(status, payload, headers = {})
     body = JSON.generate(payload)

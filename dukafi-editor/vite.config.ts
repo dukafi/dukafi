@@ -7,6 +7,7 @@ import {
   proxyLargeDevRequest,
   shouldBufferLargeDevProxyRequest,
 } from './scripts/lib/largeBodyDevProxy'
+import { shouldProxyPublicSiteRequest } from './scripts/lib/publicSiteDevProxy'
 
 // Dukafi's dev Ruby server is fixed at port 9292 — Procfile.dev hardcodes
 // `rackup -p 9292` unconditionally, ignoring any ambient PORT env var
@@ -20,41 +21,6 @@ import {
 // in the environment can override it, matching the /admin/api entry.
 const CMS_DEV_PORT = '9292'
 const CMS_DEV_SERVER_ORIGIN = `http://localhost:${CMS_DEV_PORT}`
-const FILE_EXTENSION_RE = /\.[a-zA-Z0-9]+$/
-
-function isEditorAppPath(pathname: string): boolean {
-  return (
-    pathname === '/admin' ||
-    pathname.startsWith('/admin/') ||
-    pathname === '/index.html' ||
-    pathname.startsWith('/@') ||
-    pathname.startsWith('/__vite') ||
-    pathname.startsWith('/src/') ||
-    pathname.startsWith('/node_modules/') ||
-    pathname.startsWith('/assets/') ||
-    pathname.startsWith('/api/') ||
-    pathname.startsWith('/uploads/')
-  )
-}
-
-function shouldProxyPublicSiteRequest(req: IncomingMessage): boolean {
-  if (req.method !== 'GET' && req.method !== 'HEAD') return false
-  if (!req.url) return false
-
-  const { pathname } = new URL(req.url, CMS_DEV_SERVER_ORIGIN)
-  if (isEditorAppPath(pathname)) return false
-
-  // Bun server namespaces — explicitly proxied even though they carry a file
-  // extension. The fallthrough rule below rejects anything with `.<ext>` to
-  // avoid swallowing requests for editor static assets, which means we have
-  // to opt in any backend route whose URL ends with `.something`.
-  //   /_dukafi/assets/  → runtime script bundles (esbuild output)
-  //   /_dukafi/css/     → per-site published CSS bundle (reset / framework / style)
-  if (pathname.startsWith('/_dukafi/assets/')) return true
-  if (pathname.startsWith('/_dukafi/css/')) return true
-
-  return pathname === '/' || !FILE_EXTENSION_RE.test(pathname)
-}
 
 async function proxyPublicSiteRequest(
   req: IncomingMessage,
@@ -306,6 +272,17 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/uploads': {
+        target: CMS_DEV_SERVER_ORIGIN,
+        changeOrigin: true,
+      },
+      // Published storefront CSS (`/assets/site-<hash>.css`) and `/js/htmx.min.js`.
+      // HTML pages are forwarded by publicSiteDevProxyPlugin; these hashed files
+      // must go the same way or 5173 serves unstyled HTML.
+      '/assets': {
+        target: CMS_DEV_SERVER_ORIGIN,
+        changeOrigin: true,
+      },
+      '/js': {
         target: CMS_DEV_SERVER_ORIGIN,
         changeOrigin: true,
       },

@@ -90,6 +90,12 @@
         "of": "variant"
       },
       {
+        "id": "related",
+        "label": "Related products",
+        "kind": "list",
+        "of": "product"
+      },
+      {
         "id": "fields",
         "label": "Extra fields",
         "kind": "list",

@@ -5,7 +5,7 @@ import { PageSettingsDialog, type PageSettingsPayload } from '@admin/shared/dial
 
 interface UsePageSettingsDialogsOptions {
   pages: Page[]
-  renamePage: (pageId: string, title: string, slug?: string) => void
+  renamePage: (pageId: string, title: string, slug?: string, seo?: { seoTitle?: string; seoDescription?: string; ogImage?: string }) => void
   convertPageToTemplate: (pageId: string, config: PageTemplateConfig) => void
   openPageInCanvas: (pageId: string) => void
 }
@@ -35,7 +35,11 @@ export function usePageSettingsDialogs({
 
   function handleSavePageSettings(payload: PageSettingsPayload) {
     if (!pageSettingsTarget) return
-    renamePage(pageSettingsTarget.id, payload.title, payload.slug)
+    renamePage(pageSettingsTarget.id, payload.title, payload.slug, {
+      seoTitle: payload.seoTitle,
+      seoDescription: payload.seoDescription,
+      ogImage: payload.ogImage,
+    })
     setPageSettingsTarget(null)
   }
 

@@ -16,6 +16,8 @@
 import { useEditorStore } from '@site/store/store'
 import { WarningDiamondSolidIcon } from 'pixel-art-icons/icons/warning-diamond-solid'
 import { BracesIcon } from 'pixel-art-icons/icons/braces'
+import { EditSolidIcon } from 'pixel-art-icons/icons/edit-solid'
+import { CopySolidIcon } from 'pixel-art-icons/icons/copy-solid'
 import { ExternalLinkSolidIcon } from 'pixel-art-icons/icons/external-link-solid'
 import { Button } from '@ui/components/Button'
 import { ParamRow } from './ParamRow'
@@ -33,6 +35,9 @@ interface ComponentRefViewProps {
 export function ComponentRefView({ nodeId, componentId, propOverrides }: ComponentRefViewProps) {
   const setActiveDocument = useEditorStore((s) => s.setActiveDocument)
   const updateNodeProps = useEditorStore((s) => s.updateNodeProps)
+  const startInlineComponentEdit = useEditorStore((s) => s.startInlineComponentEdit)
+  const detachComponentRef = useEditorStore((s) => s.detachComponentRef)
+  const inlineEditingRefId = useEditorStore((s) => s.inlineEditingRefId)
 
   const vc = useEditorStore(
     (s) => s.site?.visualComponents?.find((v) => v.id === componentId) ?? null,
@@ -42,6 +47,14 @@ export function ComponentRefView({ nodeId, componentId, propOverrides }: Compone
     if (componentId) {
       setActiveDocument({ kind: 'visualComponent', vcId: componentId })
     }
+  }
+
+  function handleEditHere() {
+    startInlineComponentEdit(nodeId)
+  }
+
+  function handleDetach() {
+    detachComponentRef(nodeId)
   }
 
   function handleParamChange(paramId: string, value: unknown) {
@@ -72,6 +85,24 @@ export function ComponentRefView({ nodeId, componentId, propOverrides }: Compone
           <BracesIcon size={12} color="currentColor" />
         </span>
         <span className={styles.headerName}>{vc.name}</span>
+        <Button
+          variant="ghost"
+          size="xs"
+          onClick={handleEditHere}
+          tooltip="Edit this component in place — changes update every page"
+        >
+          <EditSolidIcon size={10} color="currentColor" aria-hidden="true" />
+          {inlineEditingRefId === nodeId ? 'Editing' : 'Edit'}
+        </Button>
+        <Button
+          variant="ghost"
+          size="xs"
+          onClick={handleDetach}
+          tooltip="Turn this instance into an ordinary section"
+        >
+          <CopySolidIcon size={10} color="currentColor" aria-hidden="true" />
+          Detach
+        </Button>
         <Button
           variant="ghost"
           size="xs"

@@ -42,6 +42,8 @@ module McpCommerceTools
       # Whether a card would render a picture or a blank box. Cheap to include
       # and it is the first thing that matters when building a listing.
       "hasImage" => !product.media_assets.empty?,
+      "path" => "/products/#{product.slug}",
+      "url" => Dukafi::Publisher::ListingJsonLd.absolute("/products/#{product.slug}", Dukafi::Publisher::ListingJsonLd.public_origin),
       "priceFrom" => variants.map(&:price_cents).min,
       "currency" => variants.first&.currency,
       "stock" => variants.sum(&:stock),
@@ -52,6 +54,10 @@ module McpCommerceTools
     product_summary(product).merge(
       "images" => product.media_assets.map do |asset|
         { "path" => "/#{asset.path}", "altText" => asset.alt_text.to_s }
+      end,
+      "ogImage" => product.og_media_asset_id && begin
+        asset = product.media_assets.find { |item| item.id == product.og_media_asset_id }
+        asset ? "/#{asset.path}" : nil
       end,
       "descriptionHtml" => product.description_document.to_s,
       "collections" => product.collections.map(&:slug),
@@ -68,10 +74,15 @@ module McpCommerceTools
   end
 
   def collection_detail(collection)
+    asset = collection.media_asset_id ? MediaAsset[collection.media_asset_id] : nil
     {
       "slug" => collection.slug, "title" => collection.title,
       "description" => collection.description.to_s,
       "sortOrder" => collection.sort_order,
+      "hasImage" => !asset.nil?,
+      "imageUrl" => asset ? "/#{asset.path}" : "",
+      "path" => "/collections/#{collection.slug}",
+      "url" => Dukafi::Publisher::ListingJsonLd.absolute("/collections/#{collection.slug}", Dukafi::Publisher::ListingJsonLd.public_origin),
       "products" => collection.products.map(&:slug),
     }
   end
@@ -170,7 +181,7 @@ module McpCommerceTools
         "additionalProperties" => false,
       },
       run: lambda do |args|
-        rows = Collection.order(:sort_order, :slug).limit(clamp_limit(args["limit"]))
+        rows = Collection.order(:sort_order, :slug).eager(:media_asset, :products).limit(clamp_limit(args["limit"]))
         { "collections" => rows.map { |c| collection_detail(c) }, "total" => Collection.count }
       end,
     }

@@ -101,6 +101,7 @@ export const COMMERCE_ENTITIES: Record<EntityId, EntitySchema> = {
       ...CART_FACTS,
       list('images', 'Images', 'image'),
       list('variants', 'Variants', 'variant'),
+      list('related', 'Related products', 'product'),
       list('fields', 'Extra fields', 'catalogueField'),
     ],
   },

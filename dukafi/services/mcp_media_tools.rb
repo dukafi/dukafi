@@ -24,7 +24,7 @@ module McpMediaTools
   module_function
 
   def all
-    [list_media, read_media, upload_media, update_media, set_product_images]
+    [list_media, read_media, upload_media, update_media, set_product_images, set_product_og_image, set_collection_image]
   end
 
   READ_TOOLS = %w[list_media read_media].freeze
@@ -232,10 +232,11 @@ module McpMediaTools
       name: "set_product_images",
       title: "Set a product's images",
       description: "Attach images to a product, in order — the FIRST is the one " \
-                   "product cards and listings show. Send every image the " \
-                   "product should have: anything omitted is detached (the file " \
-                   "itself is not deleted). Paths come from list_media. This " \
-                   "changes the live storefront immediately.",
+                   "product cards and listings show. The share / Open Graph image " \
+                   "defaults to the first too unless set_product_og_image picked " \
+                   "another. Send every image the product should have: anything " \
+                   "omitted is detached (the file itself is not deleted). Paths " \
+                   "come from list_media. This changes the live storefront immediately.",
       input_schema: {
         "type" => "object",
         "properties" => {
@@ -251,18 +252,68 @@ module McpMediaTools
       run: lambda do |args|
         product = McpCommerceTools.find_product!(args["productSlug"])
         assets = Array(args["media"]).map { |reference| find!(reference) }
-
-        DB.transaction do
-          ProductImage.where(product_id: product.id).delete
-          assets.each_with_index do |asset, index|
-            ProductImage.dataset.insert(product_id: product.id, media_asset_id: asset.id, position: index)
-          end
-        end
-
-        # Published pages carry the image URL inline, so a product whose photo
-        # changed keeps serving the old one until its pages are rebuilt.
-        CommerceWrites.rebake_product(product)
+        McpCommerceTools.writing { CommerceWrites.set_product_images!(product, assets.map(&:id)) }
         McpCommerceTools.product_detail(product.refresh)
+      end,
+    }
+  end
+
+  def set_product_og_image
+    {
+      name: "set_product_og_image",
+      title: "Set a product's Open Graph image",
+      description: "Pick which attached product image is used for link previews " \
+                   "on /products/{slug} (og:image). Pass a path from list_media " \
+                   "that is already on the product, or an empty string to fall " \
+                   "back to the first product image. This changes the live " \
+                   "storefront immediately.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "productSlug" => { "type" => "string" },
+          "media" => {
+            "type" => "string",
+            "description" => "Asset id or path already attached to the product. Empty string clears the override.",
+          },
+        },
+        "required" => %w[productSlug media],
+        "additionalProperties" => false,
+      },
+      run: lambda do |args|
+        product = McpCommerceTools.find_product!(args["productSlug"])
+        reference = args["media"].to_s.strip
+        asset = reference.empty? ? nil : find!(reference)
+        McpCommerceTools.writing { CommerceWrites.set_product_og_image!(product, asset&.id) }
+        McpCommerceTools.product_detail(product.refresh)
+      end,
+    }
+  end
+
+  def set_collection_image
+    {
+      name: "set_collection_image",
+      title: "Set a collection's cover image",
+      description: "Attach one cover photo to a collection — the image on " \
+                   "the collection page, not a product packshot. Pass a path " \
+                   "from list_media, or an empty string to clear it. This " \
+                   "changes the live storefront immediately.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "slug" => { "type" => "string", "description" => "The collection." },
+          "media" => {
+            "type" => "string",
+            "description" => "Asset id or path. Empty string clears the cover.",
+          },
+        },
+        "required" => %w[slug media], "additionalProperties" => false,
+      },
+      run: lambda do |args|
+        collection = McpCommerceTools.find_collection!(args["slug"])
+        reference = args["media"].to_s.strip
+        asset = reference.empty? ? nil : find!(reference)
+        McpCommerceTools.writing { CommerceWrites.set_collection_image!(collection, asset) }
+        McpCommerceTools.collection_detail(collection.refresh)
       end,
     }
   end

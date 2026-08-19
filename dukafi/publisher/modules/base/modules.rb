@@ -11,6 +11,7 @@ class Dukafi
         register_button(registry)
         register_link(registry)
         register_list(registry)
+        register_component_modules(registry)
         BaseFormModules.register(registry)
         BaseMediaModules.register(registry)
         registry
@@ -103,6 +104,21 @@ class Dukafi
           tag = props["listType"] == "ordered" ? "ol" : "ul"
           items = props["items"].to_s.lines(chomp: true).map(&:strip).reject(&:empty?)
           { html: "<#{tag}>#{items.map { |item| "<li>#{item}</li>" }.join}</#{tag}>" }
+        end
+      end
+
+      # A VC instance is inlined by RenderPage before this runs. These exist
+      # so the importer can emit the module ids without Publish dying on
+      # `key not found`.
+      def register_component_modules(registry)
+        registry.register("base.visual-component-ref", defaults: { "componentId" => "", "propOverrides" => {} }) do |_props, _children, _context|
+          { html: "" }
+        end
+        registry.register("base.slot-outlet", defaults: { "slotName" => "children" }) do |_props, _children, _context|
+          { html: "" }
+        end
+        registry.register("base.slot-instance", defaults: { "slotName" => "children" }) do |_props, children, _context|
+          { html: children.join }
         end
       end
     end

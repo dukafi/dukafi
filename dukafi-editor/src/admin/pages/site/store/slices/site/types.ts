@@ -120,7 +120,7 @@ export interface SiteSlice {
   // Page mutations
   addPage: (title: string, slug?: string) => Page
   deletePage: (pageId: string) => void
-  renamePage: (pageId: string, title: string, slug?: string) => void
+  renamePage: (pageId: string, title: string, slug?: string, seo?: { seoTitle?: string; seoDescription?: string; ogImage?: string }) => void
   duplicatePage: (sourcePageId: string, title: string, slug?: string) => Page
   importPage: (exported: DukafiPageExportFile) => Page
   reorderPages: (fromIndex: number, toIndex: number) => void

@@ -61,10 +61,11 @@ const SITE_SOURCE: SystemSource = {
 const ROUTE_SOURCE: SystemSource = {
   id: 'route',
   label: 'Route',
-  description: 'Current URL path and slug. Useful for SEO and breadcrumbs.',
+  description: 'Current URL path, slug, and search keyword (`?keyword=`).',
   fields: [
     { id: 'path', label: 'Path', format: 'url' },
     { id: 'slug', label: 'URL slug' },
+    { id: 'query.keyword', label: 'Search keyword' },
   ],
 }
 

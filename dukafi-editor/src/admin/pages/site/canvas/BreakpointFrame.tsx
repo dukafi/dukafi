@@ -74,6 +74,7 @@ export function BreakpointFrame({
   // Opening the source of a read-only composed region (template chrome,
   // inlined component, outlet preview) on double-click.
   const openPageInCanvas = useEditorStore((s) => s.openPageInCanvas)
+  const startInlineComponentEdit = useEditorStore((s) => s.startInlineComponentEdit)
   const setActiveDocument = useEditorStore((s) => s.setActiveDocument)
 
   // Per-frame chrome: collapse the frame to its slim header so not every
@@ -84,7 +85,9 @@ export function BreakpointFrame({
   const handleToggleCollapsed = () => toggleBreakpointCollapsed(breakpoint.id)
   const handleReadonlyOpen = (kind: 'page' | 'component', id: string) => {
     if (kind === 'component') {
-      setActiveDocument({ kind: 'visualComponent', vcId: id })
+      const refId = useEditorStore.getState().selectedNodeId
+      if (refId) startInlineComponentEdit(refId)
+      else setActiveDocument({ kind: 'visualComponent', vcId: id })
     } else {
       openPageInCanvas(id)
     }

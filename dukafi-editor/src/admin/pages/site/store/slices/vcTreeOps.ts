@@ -206,6 +206,54 @@ export function clonePageSubtreeToFlatNodes(
   return { nodes, rootNodeId: idMap.get(rootNodeId)! }
 }
 
-// ---------------------------------------------------------------------------
-// Slice interface
-// ---------------------------------------------------------------------------
+/**
+ * Clone an instantiated VC tree (body + filled slots) into page nodes with
+ * fresh ids. Detach uses this so the copy looks identical but is no longer
+ * linked to the component definition.
+ */
+export function cloneInstantiatedToPage(
+  instantiated: Record<string, BaseNode>,
+  rootNodeId: string,
+): { nodes: Record<string, PageNode>; rootNodeId: string } {
+  const idMap = new Map<string, string>()
+  const stack = [rootNodeId]
+  while (stack.length > 0) {
+    const id = stack.pop()!
+    if (idMap.has(id)) continue
+    idMap.set(id, nanoid())
+    const node = instantiated[id]
+    if (node) stack.push(...node.children)
+  }
+
+  const nodes: Record<string, PageNode> = {}
+  for (const [oldId, newId] of idMap) {
+    const source = instantiated[oldId]
+    if (!source) continue
+    const pageNode: PageNode = {
+      id: newId,
+      moduleId: source.moduleId,
+      props: { ...source.props },
+      breakpointOverrides: Object.fromEntries(
+        Object.entries(source.breakpointOverrides ?? {}).map(([key, value]) => [key, { ...value }]),
+      ),
+      children: source.children.map((childId) => idMap.get(childId)!).filter(Boolean),
+      classIds: [...(source.classIds ?? [])],
+    }
+    if (source.label !== undefined) pageNode.label = source.label
+    if (source.locked !== undefined) pageNode.locked = source.locked
+    if (source.hidden !== undefined) pageNode.hidden = source.hidden
+    if (source.inlineStyles) pageNode.inlineStyles = { ...source.inlineStyles }
+    const withBindings = source as PageNode
+    if (withBindings.dynamicBindings) {
+      pageNode.dynamicBindings = { ...withBindings.dynamicBindings }
+    }
+    if (source.propBindings) {
+      pageNode.propBindings = Object.fromEntries(
+        Object.entries(source.propBindings).map(([key, value]) => [key, { ...value }]),
+      )
+    }
+    nodes[newId] = pageNode
+  }
+
+  return { nodes, rootNodeId: idMap.get(rootNodeId)! }
+}

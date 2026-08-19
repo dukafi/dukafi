@@ -61,7 +61,7 @@ class McpCreatePageSpec < Minitest::Test
   end
 
   def test_reserved_slugs_are_refused
-    %w[index product-template collection-template].each do |slug|
+    %w[index product-template collection-template search].each do |slug|
       assert_match(/reserved/, refusal({ "slug" => slug, "title" => "X" }))
     end
   end

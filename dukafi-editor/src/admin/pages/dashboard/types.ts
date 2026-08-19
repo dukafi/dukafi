@@ -15,6 +15,13 @@ export interface CommerceSettings {
   lowStockThreshold: number
 }
 
+export interface StoreProfile {
+  startedOn: string
+  audience: string
+  difference: string
+  thin: boolean
+}
+
 export interface RowActionMenuItem {
   label: string
   icon: ReactNode
@@ -63,6 +70,7 @@ export interface Product {
   descriptionHtml: string
   variants: Variant[]
   images: ProductImage[]
+  ogMediaAssetId: number | null
   fields: Record<string, string | number | boolean>
   fieldList: CatalogueField[]
 }
@@ -74,6 +82,7 @@ export interface Collection {
   description: string
   sortOrder: number
   productIds: number[]
+  image: { id: number; publicPath: string } | null
 }
 
 export type DataColumnType = 'text' | 'longText' | 'number' | 'boolean' | 'url' | 'media'

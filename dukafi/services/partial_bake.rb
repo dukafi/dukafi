@@ -67,6 +67,7 @@ class PartialBake
         recorded[old_path] = { product_ids: [], sources: [] }
       end
 
+      SitemapWriter.call(slot_path:, origin: Dukafi::Publisher::ListingJsonLd.public_origin)
       flip_current(slot_name)
       DB.transaction do
         recorded.each do |path, data|
@@ -117,34 +118,57 @@ class PartialBake
   end
 
   def render_path(path, prefetched)
+    site = @state.published_site || @state.site
     if (match = path.match(%r{\A/products/([a-z0-9-]+)\z}))
       product = prefetched.dig("products", match[1])
       template = ProductTemplate.find
       return unless product && template&.published_document_data
-      return entry(template.published_document_data, prefetched, product, product.fetch("title"))
+      meta = Dukafi::Publisher::PageMeta.for_entry(
+        site, title: product.fetch("title"),
+        description: Dukafi::Publisher::PageMeta.plain_text(product["descriptionHtml"])
+      )
+      return entry(template.published_document_data, prefetched, product, meta, path:, listing: false,
+                   open_graph: Dukafi::Publisher::OpenGraph.for_product(
+                     product, site, title: meta.fetch(:title), description: meta[:description]
+                   ))
     end
     if (match = path.match(%r{\A/collections/([a-z0-9-]+)\z}))
       collection = prefetched.dig("collections", match[1])
       template = CollectionTemplate.find
       return unless collection && template&.published_document_data
-      return entry(template.published_document_data, prefetched, collection, collection.fetch("title"))
+      meta = Dukafi::Publisher::PageMeta.for_collection(site, collection)
+      return entry(template.published_document_data, prefetched, collection, meta, path:, listing: true,
+                   open_graph: Dukafi::Publisher::OpenGraph.for_collection(
+                     collection, site, title: meta.fetch(:title), description: meta[:description]
+                   ))
     end
 
     slug = path == "/" ? "index" : path.delete_prefix("/")
     page = Page.first(slug:, kind: "page", status: "published")
     return unless page
     document = page.published_document_data || page.document_data
-    entry(document, prefetched, nil, page.title)
+    meta = Dukafi::Publisher::PageMeta.for_page(document, site, fallback_title: page.title)
+    meta = meta.merge(Dukafi::Publisher::PageHead.search) if page.slug == SearchPage::SLUG
+    entry(document, prefetched, nil, meta, path:, listing: true,
+          open_graph: Dukafi::Publisher::OpenGraph.for_page(
+            document, site, path: page.slug, title: meta.fetch(:title),
+            description: meta[:description]
+          ))
   end
 
-  def entry(document, prefetched, current_entry, title)
+  def entry(document, prefetched, current_entry, meta, path:, listing:, open_graph: nil)
     rendered = Dukafi::Publisher::RenderPage.call(
       document:, registry: Dukafi::Publisher::REGISTRY, site: @state.published_site || @state.site,
       prefetched:, current_entry:, page_paths: PagePaths.call
     )
-    { rendered:, title:,
+    json_ld = listing ? Dukafi::Publisher::ListingJsonLd.call(
+      document:, prefetched:, current_entry:, path:, title: meta.fetch(:title),
+      description: meta[:description], site: @state.published_site || @state.site
+    ) : nil
+    { rendered:, title: meta.fetch(:title), description: meta[:description], json_ld:,
       product_ids: DependencyTracker.product_ids(document:, prefetched:, current_entry:),
-      sources: RebuildIndex.sources(document, current_entry: current_entry) }
+      sources: RebuildIndex.sources(document, current_entry: current_entry),
+      open_graph: }
   end
 
   def write_entry(path, entry, slot_path, source_path, fallback_path:)
@@ -154,12 +178,15 @@ class PartialBake
     css_href ||= Dir[File.join(source_path, "assets", "site-*.css")].sort.first&.sub(source_path, "")
     rendered = entry.fetch(:rendered)
     site = @state.published_site || @state.site
+    bake_path = path == "/" ? "index" : path.delete_prefix("/")
+    head = Dukafi::Publisher::PageHead.for_bake_path(bake_path, has_listing: !entry[:json_ld].nil?)
     html = Dukafi::Publisher::HtmlDocument.call(
-      title: site.dig("settings", "metaTitle") || entry.fetch(:title),
+      title: entry.fetch(:title),
       body: rendered.html, body_classes: rendered.body_classes,
       language: site.dig("settings", "language") || "en",
-      description: site.dig("settings", "metaDescription"), css_href:,
-      runtimes: rendered.runtimes
+      description: entry[:description], css_href:,
+      runtimes: rendered.runtimes, json_ld: entry[:json_ld],
+      robots: head[:robots], canonical: head[:canonical], open_graph: entry[:open_graph]
     )
     FileUtils.mkdir_p(File.dirname(destination))
     File.write(destination, html)

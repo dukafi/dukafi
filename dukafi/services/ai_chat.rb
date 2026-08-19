@@ -91,8 +91,17 @@ class AiChat
       return failure(reason, provider_detail(code, response.body))
     end
 
-    reply = extract_reply(response.body)
+    parsed = parse_json(response.body)
+    reply = extract_reply(parsed)
     return failure("empty_reply") if reply.nil? || reply.strip.empty?
+
+    usage = AiShadowMeter.usage_from(parsed)
+    AiShadowMeter.record(
+      action: "edit",
+      model: settings[:model],
+      prompt_tokens: usage[:prompt],
+      completion_tokens: usage[:completion],
+    )
 
     Result.new(reply: reply, reason: nil, detail: nil)
   end
@@ -281,8 +290,8 @@ class AiChat
 
   # Two response shapes: OpenAI's `choices[0].message.content`, and
   # Anthropic's `content[]` block list, of which the text blocks are joined.
-  def self.extract_reply(body)
-    parsed = JSON.parse(body.to_s)
+  def self.extract_reply(parsed)
+    parsed = parse_json(parsed) if parsed.is_a?(String)
     return nil unless parsed.is_a?(Hash)
 
     blocks = parsed["content"]
@@ -296,10 +305,16 @@ class AiChat
 
     message = choice["message"]
     message.is_a?(Hash) ? message["content"].to_s : nil
+  end
+  private_class_method :extract_reply
+
+  def self.parse_json(body)
+    parsed = JSON.parse(body.to_s)
+    parsed.is_a?(Hash) ? parsed : nil
   rescue JSON::ParserError
     nil
   end
-  private_class_method :extract_reply
+  private_class_method :parse_json
 
   def self.failure(reason, detail = nil) = Result.new(reply: nil, reason: reason, detail: detail)
   private_class_method :failure

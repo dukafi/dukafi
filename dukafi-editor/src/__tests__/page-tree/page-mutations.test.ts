@@ -210,6 +210,29 @@ describe('renamePage', () => {
     expect(nextSite.pages[0].title).toBe('Updated')
   })
 
+  it('stores SEO title and description, and clears them when blank', () => {
+    const site = makeSite({ pages: [makePage({ id: 'p1', title: 'About' })] })
+
+    renamePage(site, 'p1', 'About', 'about', {
+      seoTitle: 'About the shop',
+      seoDescription: 'Who we are and how to reach us.',
+    })
+    expect(site.pages[0].seoTitle).toBe('About the shop')
+    expect(site.pages[0].seoDescription).toBe('Who we are and how to reach us.')
+
+    renamePage(site, 'p1', 'About', 'about', { seoTitle: '', seoDescription: '' })
+    expect(site.pages[0].seoTitle).toBeUndefined()
+    expect(site.pages[0].seoDescription).toBeUndefined()
+  })
+
+  it('stores a page share image, and clears it when blank', () => {
+    const site = makeSite({ pages: [makePage({ id: 'p1', title: 'About' })] })
+    renamePage(site, 'p1', 'About', 'about', { ogImage: '/uploads/about.jpg' })
+    expect(site.pages[0].ogImage).toBe('/uploads/about.jpg')
+    renamePage(site, 'p1', 'About', 'about', { ogImage: '' })
+    expect(site.pages[0].ogImage).toBeUndefined()
+  })
+
   it('auto-suffixes a slug that collides with another page', () => {
     const site = makeSite({
       pages: [makePage({ id: 'a', slug: 'about' }), makePage({ id: 'b', slug: 'b' })],

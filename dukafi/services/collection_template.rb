@@ -1,3 +1,5 @@
+require "json"
+
 class CollectionTemplate
   SLUG = "collection-template"
 
@@ -8,9 +10,34 @@ class CollectionTemplate
   end
 
   def self.ensure!
-    find || Page.create(
+    page = find
+    page ? patch_cover!(page) : Page.create(
       slug: SLUG, title: "Collection template", kind: "template", status: "draft", document: document
     )
+  end
+
+  def self.patch_cover!(page)
+    page.update(document: with_cover(page.document_data))
+    if page.published_document
+      page.update(published_document: JSON.generate(with_cover(page.published_document_data)))
+    end
+    page
+  end
+
+  def self.with_cover(doc)
+    nodes = doc.is_a?(Hash) ? doc["nodes"] : nil
+    return doc unless nodes.is_a?(Hash)
+    return doc if nodes["collection-cover"]
+
+    main = nodes["collection-main"]
+    return doc unless main.is_a?(Hash)
+
+    nodes["collection-cover"] = node("collection-cover", "base.image").merge(
+      "dynamicBindings" => { "src" => { "source" => "currentEntry", "field" => "imageUrl", "format" => "media", "fallback" => "empty" } }
+    )
+    children = Array(main["children"])
+    main["children"] = ["collection-cover"] + children.reject { |id| id == "collection-cover" }
+    doc
   end
 
   def self.document
@@ -20,12 +47,16 @@ class CollectionTemplate
     title_node = node("collection-title", "base.text", [], { "tag" => "h1", "text" => "Collection title" }).merge(
       "dynamicBindings" => { "text" => { "source" => "currentEntry", "field" => "title", "format" => "plain", "fallback" => "static" } }
     )
+    cover_node = node("collection-cover", "base.image").merge(
+      "dynamicBindings" => { "src" => { "source" => "currentEntry", "field" => "imageUrl", "format" => "media", "fallback" => "empty" } }
+    )
     {
       "id" => "collection-template", "slug" => SLUG, "title" => "Collection template",
       "rootNodeId" => "collection-body",
       "nodes" => {
         "collection-body" => node("collection-body", "base.body", ["collection-main"]),
-        "collection-main" => node("collection-main", "base.container", %w[collection-title collection-products]),
+        "collection-main" => node("collection-main", "base.container", %w[collection-cover collection-title collection-products]),
+        "collection-cover" => cover_node,
         "collection-title" => title_node,
         "collection-products" => loop_node,
         "product-row" => node("product-row", "base.link", %w[row-image row-title row-price]).merge(

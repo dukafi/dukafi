@@ -29,6 +29,8 @@ import { ListBoxSolidIcon } from 'pixel-art-icons/icons/list-box-solid'
 import { PlusIcon } from 'pixel-art-icons/icons/plus'
 import { SaveSolidIcon } from 'pixel-art-icons/icons/save-solid'
 import { TrashSolidIcon } from 'pixel-art-icons/icons/trash-solid'
+import { Copy2SolidIcon } from 'pixel-art-icons/icons/copy-2-solid'
+import { copyStorefrontUrl } from '@admin/lib/storefrontUrl'
 import { commerceApi } from '../api'
 import { Pagination } from '../components/Pagination'
 import { RowActionMenu } from '../components/RowActionMenu'
@@ -200,6 +202,7 @@ export function ProductsSection({ data }: { data: CommerceData }) {
                     menuLabel={`Product actions for ${product.title}`}
                     items={[
                       { label: 'Edit', icon: <EditSolidIcon size={12} aria-hidden="true" />, onSelect: () => openEdit(product) },
+                      { label: 'Copy product URL', icon: <Copy2SolidIcon size={12} aria-hidden="true" />, onSelect: () => { void copyStorefrontUrl(`/products/${product.slug}`, 'Copied product URL') } },
                       { label: 'Manage variants', icon: <ListBoxSolidIcon size={12} aria-hidden="true" />, onSelect: () => setVariantsProduct(product) },
                       { label: `Manage images (${product.images.length})`, icon: <ImageSolidIcon size={12} aria-hidden="true" />, onSelect: () => setImagesProduct(product) },
                       { label: 'Delete', icon: <TrashSolidIcon size={12} aria-hidden="true" />, danger: true, onSelect: () => setRemoveCandidate(product) },
@@ -643,6 +646,7 @@ function ImagesDialog({ product, refresh, onClose }: { product: Product; refresh
   const [pickerOpen, setPickerOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const shareId = product.ogMediaAssetId ?? product.images[0]?.id ?? null
 
   async function persist(mediaAssetIds: string[]) {
     setSaving(true)
@@ -652,6 +656,19 @@ function ImagesDialog({ product, refresh, onClose }: { product: Product; refresh
       await refresh()
     } catch (err) {
       setError(getErrorMessage(err, 'Could not update images'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function setShareImage(id: number | null) {
+    setSaving(true)
+    setError(null)
+    try {
+      await commerceApi.setProductOgImage(product.id, id)
+      await refresh()
+    } catch (err) {
+      setError(getErrorMessage(err, 'Could not set share image'))
     } finally {
       setSaving(false)
     }
@@ -688,6 +705,15 @@ function ImagesDialog({ product, refresh, onClose }: { product: Product; refresh
               </Button>
               <Button type="button" variant="ghost" tone="danger" size="xs" iconOnly aria-label="Remove image" disabled={saving} onClick={() => remove(image.id)}>
                 <TrashSolidIcon size={12} aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                variant={shareId === image.id ? 'primary' : 'ghost'}
+                size="xs"
+                disabled={saving}
+                onClick={() => void setShareImage(product.ogMediaAssetId === image.id ? null : image.id)}
+              >
+                <span>{shareId === image.id ? 'Share image' : 'Use for sharing'}</span>
               </Button>
             </li>
           ))}

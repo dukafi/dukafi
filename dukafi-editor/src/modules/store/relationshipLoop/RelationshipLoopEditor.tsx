@@ -51,7 +51,9 @@ export function RelationshipLoopEditor({ props, children, mcClassName, nodeWrapp
   const parsedSource = parseLoopSource(source)
   const noun = parsedSource?.kind === 'cart'
     ? 'cart items'
-    : parsedSource?.fields.at(-1)
+    : parsedSource?.kind === 'current-query'
+      ? 'search results'
+      : parsedSource?.fields.at(-1)
       ?? (parsedSource?.kind === 'products' ? 'products'
         : parsedSource?.kind === 'reviews' ? 'reviews'
           : parsedSource?.kind === 'data' ? (parsedSource.slug || 'rows')

@@ -27,7 +27,15 @@ class RebuildIndexSpec < Minitest::Test
   end
 
   def test_request_time_loops_are_not_rebuild_targets
-    assert_equal [], RebuildIndex.sources(loop_document("cart.items", "currentEntry.variants", "orders"))
+    assert_equal [], RebuildIndex.sources(loop_document("cart.items", "currentEntry.variants", "orders", "current-query"))
+  end
+
+  def test_related_on_a_product_records_the_collections_it_belongs_to
+    document = loop_document("currentEntry.related")
+    product = { "slug" => "milk", "collectionSlugs" => %w[milk-products featured] }
+
+    assert_equal %w[collections/featured.products collections/milk-products.products],
+                 RebuildIndex.sources(document, current_entry: product)
   end
 
   def test_a_collection_template_loop_records_that_collection_not_the_whole_catalogue

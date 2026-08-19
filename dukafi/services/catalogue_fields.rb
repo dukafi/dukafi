@@ -24,6 +24,7 @@ module CatalogueFields
     priceDisplay priceCents currency createdAt sku stock position
     inCart cartQuantity url alt width height productSlug variantTitle
     quantity unitPriceCents unitPriceDisplay linePriceCents linePriceDisplay
+    related
   ].freeze
 
   def self.declared(owner)

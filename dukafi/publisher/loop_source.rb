@@ -9,6 +9,8 @@ class Dukafi
     #   products/canvas-bag.variants    one product's variants
     #   data/team                       every row in that custom table
     #   reviews                         every approved review
+    #   current-query                   products matching ?keyword= on this request
+    #   currentEntry.related            other products in the same collection
     #   currentEntry.images             a list field of the entity in scope
     module LoopSource
       module_function
@@ -23,6 +25,7 @@ class Dukafi
         slug = props["collectionSlug"].to_s if slug.empty?
         case relationship
         when "cartItems" then "cart.items"
+        when "currentQuery" then "current-query"
         when "dataRows" then slug.empty? ? "data" : "data/#{slug}"
         when "variants" then slug.empty? ? "currentEntry.variants" : "products/#{slug}.variants"
         else slug.empty? ? "products" : "collections/#{slug}.products"

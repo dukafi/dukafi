@@ -127,6 +127,7 @@ export function CanvasRoot({ editable = true }: CanvasRootProps) {
   const setFocusedPanel = useEditorStore((s) => s.setFocusedPanel)
   const setActiveDocument = useEditorStore((s) => s.setActiveDocument)
   const activeDocument = useEditorStore((s) => s.activeDocument)
+  const inlineEditingRefId = useEditorStore((s) => s.inlineEditingRefId)
   const {
     context: templatePreviewContext,
     loading: templatePreviewContextLoading,
@@ -447,7 +448,7 @@ export function CanvasRoot({ editable = true }: CanvasRootProps) {
           {editable && (
             <CanvasNotch
               floatingControl={
-                activeDocument?.kind === 'visualComponent' ? (
+                inlineEditingRefId || activeDocument?.kind === 'visualComponent' ? (
                   <Suspense fallback={null}>
                     <VisualComponentModeControl />
                   </Suspense>

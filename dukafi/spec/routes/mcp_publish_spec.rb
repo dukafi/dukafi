@@ -86,10 +86,15 @@ class McpPublishSpec < Minitest::Test
   # `PublishSite` raises Ruby's ::ArgumentError, while a bare `ArgumentError`
   # inside McpTools is McpTools' own — an unqualified rescue would miss it and
   # the model would get a bare stack message instead of the reason.
-  def test_a_store_with_no_pages_explains_itself
+  def test_a_store_with_no_merchant_pages_still_publishes_search
     site!
 
-    assert_match(/Could not publish/, refusal)
+    outcome = McpTools.run_publish
+
+    assert outcome.fetch("published")
+    search = Page.first(slug: "search")
+    assert search, "publish should seed the dedicated /search page"
+    assert_equal "published", search.status
   end
 
   def test_a_store_with_no_site_explains_itself

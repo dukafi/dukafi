@@ -211,6 +211,160 @@ class McpSpec < Minitest::Test
     refute_nil tool
     refute_empty tool.fetch("description")
     assert_equal "object", tool.dig("inputSchema", "type")
+
+    context = result.fetch("tools").find { |entry| entry.fetch("name") == "get_store_context" }
+    refute_nil context
+    tokens = result.fetch("tools").find { |entry| entry.fetch("name") == "get_design_tokens" }
+    refute_nil tokens
+    recipes = result.fetch("tools").find { |entry| entry.fetch("name") == "get_recipes" }
+    refute_nil recipes
+    children = result.fetch("tools").find { |entry| entry.fetch("name") == "list_children" }
+    refute_nil children
+    components = result.fetch("tools").find { |entry| entry.fetch("name") == "list_components" }
+    refute_nil components
+  end
+
+  def test_get_store_context_is_a_read_and_does_not_require_a_profile
+    payload = JSON.parse(call_tool("get_store_context").dig("content", 0, "text"))
+
+    assert_equal true, payload.dig("profile", "thin")
+    assert payload.dig("pages").key?("sample")
+    refute McpTools.write_tool?("get_store_context")
+  end
+
+  def test_get_design_tokens_is_a_read_and_update_is_a_write
+    SiteState.dataset.delete
+    SiteState.create(
+      site: { "settings" => { "framework" => { "colors" => { "tokens" => [{
+        "id" => "p", "slug" => "primary", "lightValue" => "#111",
+        "generateUtilities" => { "text" => true, "background" => true },
+      }] } } } },
+      seq: 0, created_at: Time.now, updated_at: Time.now,
+    )
+
+    payload = JSON.parse(call_tool("get_design_tokens").dig("content", 0, "text"))
+    assert_equal "primary", payload.dig("colors", 0, "slug")
+    refute McpTools.write_tool?("get_design_tokens")
+    assert McpTools.write_tool?("update_design_tokens")
+
+    updated = JSON.parse(call_tool("update_design_tokens", {
+      "colors" => [{ "slug" => "primary", "value" => "#be123c" }],
+    }).dig("content", 0, "text"))
+    assert_includes updated.fetch("changed"), "updated color primary"
+    assert_equal "#be123c", updated.dig("tokens", "colors", 0, "value")
+  end
+
+  def test_get_recipes_is_a_read_and_fills_a_cms_loop
+    CustomTable.dataset.delete
+    CustomTable.create(
+      name: "Team", slug: "team",
+      columns_json: JSON.generate([{ "id" => "name", "label" => "Name", "type" => "text" }]),
+    )
+
+    payload = JSON.parse(call_tool("get_recipes", { "topic" => "cms" }).dig("content", 0, "text"))
+    recipe = payload.fetch("recipes").find { |row| row.fetch("id") == "cms-loop" }
+    assert_includes recipe.fetch("html"), 'data-dukafy-loop="data/team"'
+    refute McpTools.write_tool?("get_recipes")
+
+    seo = JSON.parse(call_tool("get_recipes", { "topic" => "seo" }).dig("content", 0, "text"))
+    ids = seo.fetch("recipes").map { |row| row.fetch("id") }
+    assert_includes ids, "rank-for"
+    assert_includes ids, "page-seo"
+  end
+
+  def test_list_children_returns_direct_children_only
+    document = {
+      "id" => "index", "slug" => "index", "title" => "Home", "rootNodeId" => "root",
+      "nodes" => {
+        "root" => { "id" => "root", "moduleId" => "base.body", "children" => %w[hero about],
+                    "props" => {}, "classIds" => [], "breakpointOverrides" => {} },
+        "hero" => { "id" => "hero", "moduleId" => "base.container", "children" => ["inner"],
+                    "props" => { "text" => "Hero" }, "classIds" => [], "breakpointOverrides" => {} },
+        "about" => { "id" => "about", "moduleId" => "base.container", "children" => [],
+                     "props" => { "text" => "About" }, "classIds" => [], "breakpointOverrides" => {} },
+        "inner" => { "id" => "inner", "moduleId" => "base.text", "children" => [],
+                     "props" => { "text" => "nested" }, "classIds" => [], "breakpointOverrides" => {} },
+      },
+    }
+    Page.create(slug: "index", title: "Home", kind: "page", status: "published",
+                document: JSON.generate(document), created_at: Time.now, updated_at: Time.now)
+
+    top = JSON.parse(call_tool("list_children", { "slug" => "index" }).dig("content", 0, "text"))
+    assert_equal %w[hero about], top.fetch("children").map { |row| row.fetch("id") }
+    refute_includes top.fetch("children").map { |row| row.fetch("id") }, "inner"
+    refute McpTools.write_tool?("list_children")
+
+    nested = JSON.parse(call_tool("list_children", { "slug" => "index", "nodeId" => "hero" }).dig("content", 0, "text"))
+    assert_equal ["inner"], nested.fetch("children").map { |row| row.fetch("id") }
+  end
+
+  def test_get_page_context_samples_two_sections_and_their_classes
+    SiteState.dataset.delete
+    document = {
+      "id" => "index", "slug" => "index", "title" => "Home", "rootNodeId" => "root",
+      "nodes" => {
+        "root" => { "id" => "root", "moduleId" => "base.body", "children" => %w[hero about extra],
+                    "props" => {}, "classIds" => [], "breakpointOverrides" => {} },
+        "hero" => { "id" => "hero", "moduleId" => "base.container", "children" => ["inner"],
+                    "props" => { "text" => "Hero" }, "classIds" => ["c1"], "breakpointOverrides" => {} },
+        "about" => { "id" => "about", "moduleId" => "base.container", "children" => [],
+                     "props" => { "text" => "About" }, "classIds" => ["c3"], "breakpointOverrides" => {} },
+        "extra" => { "id" => "extra", "moduleId" => "base.container", "children" => [],
+                     "props" => { "text" => "Extra" }, "classIds" => [], "breakpointOverrides" => {} },
+        "inner" => { "id" => "inner", "moduleId" => "base.text", "children" => [],
+                     "props" => { "text" => "nested" }, "classIds" => ["c2"], "breakpointOverrides" => {} },
+      },
+    }
+    Page.create(slug: "index", title: "Home", kind: "page", status: "published",
+                document: JSON.generate(document), created_at: Time.now, updated_at: Time.now)
+    state = SiteState.new
+    state.site = { "styleRules" => {
+      "c1" => { "id" => "c1", "name" => "px-6", "kind" => "class" },
+      "c2" => { "id" => "c2", "name" => "text-gray-600", "kind" => "class" },
+      "c3" => { "id" => "c3", "name" => "py-16", "kind" => "class" },
+    } }
+    state.created_at = Time.now
+    state.updated_at = Time.now
+    state.save
+
+    payload = JSON.parse(call_tool("get_page_context", { "slug" => "index" }).dig("content", 0, "text"))
+    assert_equal %w[hero about extra], payload.fetch("sections").map { |row| row.fetch("id") }
+    assert_equal %w[hero about], payload.fetch("samples").map { |row| row.fetch("id") }
+    refute_includes payload.dig("samples", 0, "outline"), "[extra]"
+    assert_includes payload.dig("design", "spacing"), "px-6"
+    assert_includes payload.dig("design", "colors"), "text-gray-600"
+    refute McpTools.write_tool?("get_page_context")
+  end
+
+  def test_read_page_with_node_id_returns_that_section_only
+    document = {
+      "id" => "index", "slug" => "index", "title" => "Home", "rootNodeId" => "root",
+      "nodes" => {
+        "root" => { "id" => "root", "moduleId" => "base.body", "children" => %w[hero about],
+                    "props" => {}, "classIds" => [], "breakpointOverrides" => {} },
+        "hero" => { "id" => "hero", "moduleId" => "base.container", "children" => ["inner"],
+                    "props" => { "text" => "Hero" }, "classIds" => [], "breakpointOverrides" => {} },
+        "about" => { "id" => "about", "moduleId" => "base.container", "children" => [],
+                     "props" => { "text" => "About" }, "classIds" => [], "breakpointOverrides" => {} },
+        "inner" => { "id" => "inner", "moduleId" => "base.text", "children" => [],
+                     "props" => { "text" => "nested" }, "classIds" => [], "breakpointOverrides" => {} },
+      },
+    }
+    Page.create(slug: "index", title: "Home", kind: "page", status: "published",
+                document: JSON.generate(document), created_at: Time.now, updated_at: Time.now)
+
+    payload = JSON.parse(call_tool("read_page", { "slug" => "index", "nodeId" => "hero" }).dig("content", 0, "text"))
+    assert_equal "hero", payload.fetch("nodeId")
+    assert_includes payload.fetch("outline"), "[hero]"
+    assert_includes payload.fetch("outline"), "[inner]"
+    refute_includes payload.fetch("outline"), "[about]"
+
+    json = JSON.parse(call_tool("read_page", { "slug" => "index", "nodeId" => "hero", "format" => "json" })
+                        .dig("content", 0, "text"))
+    assert_equal "hero", json.fetch("rootNodeId")
+    assert json.fetch("nodes").key?("hero")
+    assert json.fetch("nodes").key?("inner")
+    refute json.fetch("nodes").key?("about")
   end
 
   def test_list_pages_returns_the_pages

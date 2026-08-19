@@ -36,6 +36,15 @@ export const PageSchema = Type.Object({
   slug: Type.String(),
   /** Display title e.g. "Home", "About Us" */
   title: Type.String(),
+  /** Search-result title. Blank falls back to `title`. */
+  seoTitle: Type.Optional(Type.String()),
+  /** Search-result description. Unique per page; not a keyword list. */
+  seoDescription: Type.Optional(Type.String()),
+  /**
+   * Public media path used as og:image for this page. Blank falls back to
+   * the site-wide share image, then nothing.
+   */
+  ogImage: Type.Optional(Type.String()),
   /**
    * `page` | `template` | `partial`, as the server classifies it. Optional
    * because a page constructed in memory (a test, an import) has no server
@@ -112,6 +121,9 @@ export function parsePage(raw: unknown, pageIndex: number): Page {
       : {}),
     nodes,
     rootNodeId: r.rootNodeId,
+    ...(typeof r.seoTitle === 'string' ? { seoTitle: r.seoTitle } : {}),
+    ...(typeof r.seoDescription === 'string' ? { seoDescription: r.seoDescription } : {}),
+    ...(typeof r.ogImage === 'string' ? { ogImage: r.ogImage } : {}),
     ...(template !== null ? { template } : {}),
   }
 }

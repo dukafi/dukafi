@@ -8,6 +8,7 @@ class Storefront < Roda
   TRACKING_PARAMS = %w[gclid fbclid msclkid].freeze
   SAFE_ASSET = /\Asite-[0-9a-f]{12}\.css\z/
   SAFE_SLUG = /\A[a-zA-Z0-9][a-zA-Z0-9_\/-]*\z/
+  PUBLIC_FILE = SitemapWriter::PUBLIC_FILE
 
   def published_root
     Paths.published_root
@@ -38,6 +39,11 @@ class Storefront < Roda
   def disk_page(slug)
     relative = slug == "index" ? "index.html" : "#{slug}.html"
     path = File.join(published_root, "current", relative)
+    File.file?(path) ? File.binread(path) : nil
+  end
+
+  def disk_public_file(name)
+    path = File.join(published_root, "current", name)
     File.file?(path) ? File.binread(path) : nil
   end
 
@@ -84,9 +90,10 @@ class Storefront < Roda
     return nil unless state
 
     document = with_partials(page.published_document_data || page.document_data)
+    prefetched = CommercePrefetcher.call
     rendered = Dukafi::Publisher::RenderPage.call(
       document:, registry: Dukafi::Publisher::REGISTRY, site: state.site,
-      prefetched: CommercePrefetcher.call, query_params:, page_paths: PagePaths.call
+      prefetched:, query_params:, page_paths: PagePaths.call
     )
     tailwind_html = %(<body class="#{rendered.body_classes.join(' ')}">#{rendered.html}</body>)
     tailwind_css = TailwindCompiler.call(
@@ -100,14 +107,52 @@ class Storefront < Roda
       fonts_css: Dukafi::Publisher::FontsCss.call(state.site),
       style_rules_css: Dukafi::Publisher::StyleRulesCss.call(state.site)
     ).content
+    keyword = page.slug == SearchPage::SLUG ? SearchQuery.keyword(query_params) : nil
+    hits = keyword ? SearchQuery.filter(prefetched.fetch("products", {}).values, keyword) : []
+    listing_page = Dukafi::Publisher::ListingJsonLd.current_page(
+      document, query_params, prefetched:, current_entry: nil
+    )
+    meta = if keyword
+      Dukafi::Publisher::PageMeta.for_search(
+        document, state.site, keyword:, count: hits.length, items: hits, page: listing_page
+      )
+    else
+      Dukafi::Publisher::PageMeta.for_page(document, state.site, fallback_title: page.title)
+    end
+    if page.slug == SearchPage::SLUG
+      meta = meta.merge(Dukafi::Publisher::PageHead.search(keyword: keyword))
+    end
+    json_path = keyword ? "search?keyword=#{CGI.escape(keyword)}" : page.bake_path
     Dukafi::Publisher::HtmlDocument.call(
-      title: state.site.dig("settings", "metaTitle") || page.title,
-      description: state.site.dig("settings", "metaDescription"),
+      title: meta.fetch(:title),
+      description: meta[:description],
+      robots: meta[:robots],
+      canonical: meta[:canonical],
       language: state.site.dig("settings", "language") || "en",
       body: rendered.html,
       body_classes: rendered.body_classes,
       css: css, runtimes: rendered.runtimes,
+      json_ld: Dukafi::Publisher::ListingJsonLd.call(
+        document:, prefetched:, path: json_path, title: meta.fetch(:title),
+        description: meta[:description], query_params:, site: state.site
+      ),
+      open_graph: Dukafi::Publisher::OpenGraph.for_page(
+        document, state.site, path: page.slug, title: meta.fetch(:title),
+        description: meta[:description]
+      ),
     )
+  end
+
+  # A `?keyword=` with no matching products is a 404 (Google faceted-nav).
+  # The search page still renders so a shopper sees the empty results, not
+  # a generic missing-page.
+  def apply_search_status!(slug, params)
+    return unless slug == SearchPage::SLUG
+    keyword = SearchQuery.keyword(params)
+    return unless keyword
+
+    hits = SearchQuery.filter(CommercePrefetcher.call.fetch("products", {}).values, keyword)
+    response.status = 404 if hits.empty?
   end
 
   # An order page: the order template rendered with ONE order as
@@ -168,9 +213,10 @@ class Storefront < Roda
         html: tailwind_html, classes: DeclaredClassNames.call([document], state&.site), site: state&.site
       )
     ).content
+    meta = Dukafi::Publisher::PageMeta.for_entry(state.site, title: title)
     Dukafi::Publisher::HtmlDocument.call(
-      title: title || state.site.dig("settings", "metaTitle"),
-      description: state.site.dig("settings", "metaDescription"),
+      title: meta.fetch(:title),
+      description: meta[:description],
       language: state.site.dig("settings", "language") || "en",
       body: rendered.html, body_classes: rendered.body_classes,
       css: css, runtimes: rendered.runtimes
@@ -216,10 +262,23 @@ class Storefront < Roda
         site: state&.site
       )
     ).content
+    listing_page = Dukafi::Publisher::ListingJsonLd.current_page(
+      document, query_params, prefetched:, current_entry: collection
+    )
+    meta = Dukafi::Publisher::PageMeta.for_collection(state.site, collection, page: listing_page)
     Dukafi::Publisher::HtmlDocument.call(
-      title: collection.fetch("title"), language: state.site.dig("settings", "language") || "en",
-      description: collection["description"], body: rendered.html,
-      body_classes: rendered.body_classes, css:, runtimes: rendered.runtimes
+      title: meta.fetch(:title), language: state.site.dig("settings", "language") || "en",
+      description: meta[:description], robots: meta[:robots], canonical: meta[:canonical],
+      body: rendered.html,
+      body_classes: rendered.body_classes, css:, runtimes: rendered.runtimes,
+      json_ld: Dukafi::Publisher::ListingJsonLd.call(
+        document:, prefetched:, current_entry: collection,
+        path: "collections/#{slug}", title: meta.fetch(:title),
+        description: meta[:description], query_params:, site: state.site
+      ),
+      open_graph: Dukafi::Publisher::OpenGraph.for_collection(
+        collection, state.site, title: meta.fetch(:title), description: meta[:description]
+      ),
     )
   end
 
@@ -234,6 +293,15 @@ class Storefront < Roda
         response["Content-Type"] = "text/css; charset=utf-8"
         response["Cache-Control"] = "public, max-age=31536000, immutable"
         next File.binread(asset)
+      end
+
+      public_name = path.delete_prefix("/")
+      if public_name.match?(PUBLIC_FILE)
+        body = disk_public_file(public_name)
+        request.halt([404, { "content-type" => "text/plain" }, ["Not found"]]) unless body
+        response["Content-Type"] = public_name == "robots.txt" ? "text/plain; charset=utf-8" : "application/xml; charset=utf-8"
+        response["Cache-Control"] = "public, max-age=300"
+        next body
       end
 
       slug = request_slug(path)
@@ -260,16 +328,17 @@ class Storefront < Roda
       gated = slug && Page.first(slug: slug, kind: "page", status: "published", access: "customer")
       if gated
         gate!(gated)
-        baked = canonical_query_empty?(r.params) ? disk_page(gated.bake_path) : nil
+        baked = canonical_query_empty?(r.params) && slug != SearchPage::SLUG ? disk_page(gated.bake_path) : nil
         response["Content-Type"] = "text/html; charset=utf-8"
         # Never store a gated page in a shared cache: the next visitor through
         # that proxy is a different person.
         response["Cache-Control"] = "no-store, private"
+        apply_search_status!(slug, r.params) unless baked
         response["X-Dukafy-Render"] = baked ? "disk" : "live"
         next(baked || live_page(gated, r.params))
       end
 
-      if slug && canonical_query_empty?(r.params)
+      if slug && slug != SearchPage::SLUG && canonical_query_empty?(r.params)
         baked = disk_page(slug)
         if baked
           response["Content-Type"] = "text/html; charset=utf-8"
@@ -290,6 +359,7 @@ class Storefront < Roda
 
       page = slug && Page.first(slug: slug, kind: "page", status: "published")
       if page
+        apply_search_status!(slug, r.params)
         response["Content-Type"] = "text/html; charset=utf-8"
         response["Cache-Control"] = "no-cache"
         response["X-Dukafy-Render"] = "live"
