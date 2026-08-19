@@ -211,9 +211,10 @@ class Dukafi
         page = page_count if page > page_count
         page_items = items.slice((page - 1) * per_page, per_page) || []
         child_ids = node.fetch("children", [])
+        template_ids, chrome_ids = partition_loop_children(child_ids)
         child_cycle_offset = (page - 1) * per_page
         html_items = page_items.each_with_index.map do |item, index|
-          next "" if child_ids.empty?
+          next "" if template_ids.empty?
 
           previous_product = @current_product
           @entry_stack.push(with_cart_facts(item, source_entity(source)))
@@ -224,7 +225,7 @@ class Dukafi
           # a nested loop's children can still resolve product-bound props.
           @current_product = source_entity(source) == "product" ? item : previous_product
           begin
-            row = render_node(child_ids[(child_cycle_offset + index) % child_ids.length])
+            row = render_node(template_ids[(child_cycle_offset + index) % template_ids.length])
             source.start_with?("cart.") ? cart_line_key(row, item) : row
           ensure
             @entry_stack.pop
@@ -246,12 +247,14 @@ class Dukafi
           # be a link that reloads the page — the placeholder would refetch
           # page 1 and the click would appear to do nothing. It pages the
           # fragment in place instead.
-          pagination = if source.start_with?("orders")
-            StoreModules.fragment_pagination(node.fetch("id").to_s, page, page_count, "/fragments/orders/lines")
-          else
-            StoreModules.collection_pagination(parameter, page, page_count)
-          end
-          html = %(<div class="dukafy-collection-loop" data-collection="#{CGI.escapeHTML(source_slug)}" data-page="#{page}">#{html_items}#{pagination}</div>)
+          fragment = loop_scroll_id(node, chrome_ids)
+          orders = source.start_with?("orders")
+          pagination = loop_pagination_html(
+            node, chrome_ids, parameter, page, page_count, fragment,
+            endpoint: orders ? "/fragments/orders/lines" : nil,
+          )
+      extra = loop_wrapper_attributes(node, fragment, page_count > 1)
+          html = %(<div#{extra} class="dukafy-collection-loop" data-collection="#{CGI.escapeHTML(source_slug)}" data-page="#{page}">#{html_items}#{pagination}</div>)
           classes = class_names(node)
           html = inject_classes(html, classes) if classes.any?
         end
@@ -339,6 +342,15 @@ class Dukafi
       # button, a div wrapping an icon, a product image.
       OVERLAY_ACTIONS = %w[overlay.open overlay.close].freeze
 
+      # Pager verbs on a loop's non-repeated pagination sibling. `loop.prev`
+      # is accepted as an alias so HTML authors do not have to remember the
+      # longer spelling.
+      LOOP_NAV_ACTIONS = {
+        "loop.next" => :next,
+        "loop.previous" => :previous,
+        "loop.prev" => :previous,
+      }.freeze
+
       def apply_actions(html, node, definition)
         actions = node["actions"]
         return html unless actions.is_a?(Hash)
@@ -348,6 +360,7 @@ class Dukafi
 
         type = action["type"].to_s
         return apply_overlay_action(html, type, action) if OVERLAY_ACTIONS.include?(type)
+        return apply_loop_action(html, type) if LOOP_NAV_ACTIONS.key?(type)
 
         spec = CART_ACTIONS[type]
         return html unless spec
@@ -452,6 +465,212 @@ class Dukafi
         collect_runtimes([:overlay])
         attrs = %( data-dukafy-overlay-#{type.split('.').last}="#{target}")
         inject_attributes(html, attrs)
+      end
+
+      # Pager verbs. A merchant styles any element; this only fills in the
+      # href (or the htmx swap for an orders fragment) so clicking it pages
+      # the enclosing loop. Out of range stays inert rather than linking to
+      # page 0 or past the last page.
+      def apply_loop_action(html, type)
+        nav = @loop_nav
+        return html unless nav.is_a?(Hash)
+
+        direction = LOOP_NAV_ACTIONS[type]
+        return html unless direction
+
+        target = direction == :next ? nav[:page] + 1 : nav[:page] - 1
+        return html if target < 1 || target > nav[:page_count]
+
+        rel = direction == :next ? "next" : "prev"
+        return apply_loop_fragment_nav(html, nav, target, rel) if nav[:endpoint]
+
+        apply_loop_href(html, loop_page_href(nav[:parameter], target, nav[:fragment]), rel)
+      end
+
+      def apply_loop_fragment_nav(html, nav, target, rel)
+        node_id = nav[:node_id].to_s
+        return html unless node_id.match?(SAFE_NODE_ID)
+
+        collect_runtimes([:htmx])
+        endpoint = nav[:endpoint].to_s
+        attrs = %( href="#" rel="#{rel}" hx-get="#{CGI.escapeHTML(endpoint)}?node=#{CGI.escapeHTML(node_id)}&amp;page=#{target}")
+        attrs += %( hx-target="closest .dukafy-collection-loop" hx-swap="outerHTML")
+        html = html.sub(/\s+href="[^"]*"/i, "")
+        html = html.sub(/\s+rel="[^"]*"/i, "")
+        inject_attributes(promote_loop_nav_anchor(html), attrs)
+      end
+
+      def apply_loop_href(html, href, rel)
+        escaped = CGI.escapeHTML(href)
+        html = html.sub(/\s+href="[^"]*"/i, "")
+        html = html.sub(/\s+rel="[^"]*"/i, "")
+        inject_attributes(promote_loop_nav_anchor(html), %( href="#{escaped}" rel="#{rel}"))
+      end
+
+      # A real href on a <button> or <div> does not navigate. Promote the
+      # outer tag to <a> so the merchant can attach next/previous to anything.
+      def promote_loop_nav_anchor(html)
+        return html if html.match?(/\A<a[\s>]/i)
+
+        html = html.sub(/\A<[a-zA-Z][\w-]*/, "<a")
+        html = html.sub(/\s+type="[^"]*"/i, "")
+        html.sub(/<\/[a-zA-Z][\w-]*>\s*\z/, "</a>")
+      end
+
+      # Direct children marked as pagination chrome (data-dukafy-pagination
+      # or id="pagination") are rendered once after the items, not repeated.
+      def partition_loop_children(child_ids)
+        template = []
+        chrome = []
+        child_ids.each do |id|
+          node = @document.fetch("nodes")[id]
+          if loop_pagination_chrome?(node)
+            chrome << id
+          else
+            template << id
+          end
+        end
+        [template, chrome]
+      end
+
+      def loop_pagination_chrome?(node)
+        return false unless node.is_a?(Hash)
+        return true if node.dig("actions")&.key?("pagination")
+
+        authored_html_id(node).downcase == "pagination"
+      end
+
+      def loop_pagination_html(loop_node, chrome_ids, parameter, page, page_count, fragment, endpoint: nil)
+        return "" if page_count <= 1
+
+        previous_nav = @loop_nav
+        previous_frame = @loop_frame
+        @loop_nav = {
+          parameter: parameter,
+          page: page,
+          page_count: page_count,
+          fragment: fragment,
+          endpoint: endpoint,
+          node_id: loop_node.fetch("id").to_s,
+        }
+        @loop_frame = {
+          "page" => page,
+          "pageCount" => page_count,
+          "hasPrevious" => page > 1,
+          "hasNext" => page < page_count,
+        }
+        begin
+          if chrome_ids.any?
+            chrome_ids.map { |id| render_node(id) }.join
+          elsif endpoint
+            StoreModules.fragment_pagination(loop_node.fetch("id").to_s, page, page_count, endpoint)
+          else
+            href_for = ->(target) { CGI.escapeHTML(loop_page_href(parameter, target, fragment)) }
+            StoreModules.collection_pagination(
+              page, page_count,
+              page > 1 ? href_for.call(page - 1) : nil,
+              page < page_count ? href_for.call(page + 1) : nil,
+            )
+          end
+        ensure
+          @loop_nav = previous_nav
+          @loop_frame = previous_frame
+        end
+      end
+
+      def loop_page_href(parameter, page, fragment)
+        pairs = []
+        (@query_params.is_a?(Hash) ? @query_params : {}).each do |key, value|
+          name = key.to_s
+          next unless name.match?(/\A[A-Za-z0-9_-]{1,64}\z/)
+          next if name == parameter
+
+          text = Array(value).first.to_s
+          next if text.empty?
+
+          pairs << [name, text]
+        end
+        pairs << [parameter, page.to_s]
+        query = pairs.map { |key, value| "#{CGI.escape(key)}=#{CGI.escape(value)}" }.join("&")
+        href = "?#{query}"
+        href += "##{fragment}" unless fragment.to_s.empty?
+        href
+      end
+
+      # Prefer an explicit pagination target, then an ancestor/loop `id`, then
+      # a synthesized id so pager links always have a fragment to land on.
+      def loop_scroll_id(loop_node, chrome_ids)
+        chrome_ids.each do |id|
+          node = @document.fetch("nodes")[id]
+          next unless node.is_a?(Hash)
+
+          target = safe_html_id(node.dig("actions", "pagination").to_s)
+          return target unless target.empty?
+        end
+        authored = authored_html_id(loop_node)
+        return authored unless authored.empty?
+
+        ancestor = ancestor_html_id(loop_node.fetch("id").to_s)
+        return ancestor if ancestor
+
+        chrome_ids.each do |id|
+          node = @document.fetch("nodes")[id]
+          named = authored_html_id(node)
+          return named unless named.empty?
+        end
+
+        synthetic_loop_id(loop_node)
+      end
+
+      def loop_wrapper_attributes(node, fragment, emit_id)
+        extra = BaseHelpers.html_attributes(node.dig("props", "htmlAttributes"))
+        authored = authored_html_id(node)
+        if emit_id && authored.empty? && !extra.include?(" id=") && fragment == synthetic_loop_id(node)
+          extra += %( id="#{CGI.escapeHTML(fragment)}")
+        end
+        extra
+      end
+
+      def synthetic_loop_id(node)
+        "dukafy-loop-#{node.fetch('id').to_s.gsub(/[^a-zA-Z0-9_-]/, '_')}"
+      end
+
+      def authored_html_id(node)
+        return "" unless node.is_a?(Hash)
+
+        safe_html_id(node.dig("props", "htmlAttributes", "id").to_s)
+      end
+
+      def ancestor_html_id(node_id)
+        current = node_id.to_s
+        while (parent_id = node_parent_id(current))
+          parent = @document.fetch("nodes")[parent_id]
+          break unless parent
+
+          named = authored_html_id(parent)
+          return named unless named.empty?
+
+          current = parent_id
+        end
+        nil
+      end
+
+      def node_parent_id(node_id)
+        @parent_ids ||= begin
+          map = {}
+          @document.fetch("nodes").each do |id, child|
+            next unless child.is_a?(Hash)
+
+            Array(child["children"]).each { |cid| map[cid.to_s] = id.to_s }
+          end
+          map
+        end
+        @parent_ids[node_id.to_s]
+      end
+
+      def safe_html_id(raw)
+        candidate = raw.to_s.strip
+        candidate.match?(/\A[A-Za-z][\w:.-]{0,127}\z/) ? candidate : ""
       end
 
       # A container marked as an overlay publishes as a native <dialog>.
@@ -865,6 +1084,7 @@ class Dukafi
         # correctly reads as "nothing has happened yet".
         when "form" then @form
         when "route" then route_frame
+        when "loop" then @loop_frame
         end
       end
 

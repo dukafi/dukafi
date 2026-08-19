@@ -53,6 +53,12 @@ describe('overlay attributes', () => {
     expect(node.visibleWhen).toEqual({ source: 'currentEntry', field: 'inCart', operator: 'isTrue' })
   })
 
+  it('reads a loop pager condition', () => {
+    const node = only('<a data-dukafy-visible-when="loop.hasNext:isTrue">Next</a>')
+
+    expect(node.visibleWhen).toEqual({ source: 'loop', field: 'hasNext', operator: 'isTrue' })
+  })
+
   it('reads a condition that compares against a value', () => {
     const node = only('<div data-dukafy-visible-when="cart.count:greaterThan:2"></div>')
 
@@ -88,6 +94,14 @@ describe('overlay attributes', () => {
     expect(Object.keys(attrs).some((name) => name.startsWith('data-dukafy-'))).toBe(false)
     // Unrelated attributes still survive.
     expect(attrs.id).toBe('add')
+  })
+
+  it('consumes data-dukafy-pagination instead of leaving it on the element', () => {
+    const node = only('<nav data-dukafy-pagination="featured" id="pagination">x</nav>')
+
+    expect(node.actions?.pagination).toBe('featured')
+    expect((node.props.htmlAttributes as Record<string, string>).id).toBe('pagination')
+    expect(node.props.htmlAttributes).not.toHaveProperty('data-dukafy-pagination')
   })
 
   // ── Tolerance ────────────────────────────────────────────────────────────
@@ -205,6 +219,24 @@ describe('overlay attributes', () => {
     const node = only('<button data-dukafy-action="overlay.open" data-dukafy-action-target="sheet1">Cart</button>')
 
     expect(node.actions?.click).toEqual({ type: 'overlay.open', target: 'sheet1' })
+  })
+
+  it('marks a loop pagination sibling and its next/previous verbs', () => {
+    const result = importHtml(
+      '<div data-dukafy-loop="products"><article>card</article>' +
+        '<nav data-dukafy-pagination="featured" class="flex gap-4">' +
+        '<a data-dukafy-action="loop.previous">Previous</a>' +
+        '<a data-dukafy-action="loop.next">Next</a>' +
+        '</nav></div>',
+    )
+    const loop = result.nodes[result.rootIds[0]!]!
+    expect(loop.moduleId).toBe('store.relationship-loop')
+    expect(loop.children).toHaveLength(2)
+    const pager = result.nodes[loop.children[1]!]!
+    expect(pager.actions?.pagination).toBe('featured')
+    expect(pager.classIds).toEqual(['flex', 'gap-4'])
+    const verbs = pager.children.map((id) => result.nodes[id]!.actions?.click?.type)
+    expect(verbs).toEqual(['loop.previous', 'loop.next'])
   })
 
   // The canonical drawer: an overlay whose contents are a cart region.

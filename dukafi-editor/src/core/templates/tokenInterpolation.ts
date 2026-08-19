@@ -46,6 +46,8 @@ const VALID_SOURCES: ReadonlySet<DynamicPropBinding['source']> = new Set([
   // before, on the canvas AND in the published page.
   'cart',
   'payment',
+  'form',
+  'loop',
 ])
 
 function isValidSource(s: string): s is DynamicPropBinding['source'] {
@@ -220,6 +222,8 @@ export function readFrame(
     // one is in scope (the cart-lines / payment-status fragments).
     case 'cart':
     case 'payment':
+    case 'form':
+    case 'loop':
       return null
     default:
       return null

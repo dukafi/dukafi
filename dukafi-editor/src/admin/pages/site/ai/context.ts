@@ -9,9 +9,10 @@
  * plain HTML for "shorter context, lower token cost" and better output
  * (`reference/instatic/.../docs/features/agent.md:604`).
  *
- * The one thing the prompt MUST teach is the part of Dukafi that has no HTML
- * spelling: the `data-dukafy-*` overlays. Everything else — layout, styling,
- * semantics — the model already knows, because it is Tailwind and HTML.
+ * The prompt MUST teach the part of Dukafi that has no HTML spelling: the
+ * `data-dukafy-*` overlays. It also has to pin visual taste. Models already
+ * know Tailwind — they default to indigo/purple gradients — so DESIGN is the
+ * house style, not a layout tutorial.
  */
 
 import { publishPage } from '@core/publisher'
@@ -48,20 +49,34 @@ RULES
 - No {{ }} interpolation. Bind live data with data-dukafy-bind-*.
 - Omit the json block if the merchant asked a question rather than for a change.
 
+DESIGN — quiet storefront, even when the merchant is vague
+- White (or token) canvas. One ink, one muted body color, one accent on buttons and links. Photos and products carry color — section backgrounds stay plain.
+- Prefer bound tokens when listed below: text-primary, bg-primary, font-primary. Do not invent a palette, a hex, or a second accent.
+- Never: bg-gradient-*, from-*/via-*/to-*, indigo/purple/pink/cyan washes, blobs, backdrop-blur, shadow-xl, emoji in headings, arbitrary bg-[#…].
+- "Make it look better" / a short vague request means more space and fewer colors (setClasses). Do not wrap the page in a new gradient. Match the page's spacing and type.
+- Buttons: rounded or rounded-lg, bg-black or bg-primary, text-white. Cards: rounded-lg border, no heavy shadow.
+- Composition: the section is full width (w-full px-6 py-16). Hero is two columns on md (copy | photo), not heading then image stacked. Product grids are max-w-6xl, never inside max-w-3xl. About/contact is a type column (max-w-3xl) on that same full-width canvas.
+
 IMAGES
 Use https://placehold.co/<w>x<h> for any placeholder, e.g.
   <img src="https://placehold.co/600x600" alt="Product photo" class="w-full">
 Real product images come from data, never a URL you invent:
   <img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full">
 
-LOOPS — repeat one child per record
-<div data-dukafy-loop="products" data-dukafy-loop-per-page="8" class="grid grid-cols-2 gap-6 md:grid-cols-4">
-  <article> … ONE card; it repeats … </article>
-</div>
+LOOPS — one repeated card, optional pager sibling
+<section id="featured">
+  <div data-dukafy-loop="products" data-dukafy-loop-per-page="8" class="grid grid-cols-2 gap-6 md:grid-cols-4">
+    <article> … ONE card; it repeats … </article>
+    <nav data-dukafy-pagination class="col-span-full mt-8 flex justify-center gap-4">
+      <a data-dukafy-action="loop.previous" data-dukafy-visible-when="loop.hasPrevious:isTrue">Previous</a>
+      <a data-dukafy-action="loop.next" data-dukafy-visible-when="loop.hasNext:isTrue">Next</a>
+    </nav>
+  </div>
+</section>
 Sources: products · current-query (/search?keyword= — always noindex; do not rank here) · collections/<slug>.products · currentEntry.related (same collection, on a product page) · data/<table-slug> · currentEntry.variants · currentEntry.images · cart.items
 Options: data-dukafy-loop-per-page="12" · -order-by="price|title|newest|manual" · -direction="desc"
-Put exactly ONE child inside a loop — that child is the repeated item.
-Inside a loop, currentEntry is the record. Its fields: title, priceDisplay, imageUrl, href, slug, stock, inCart, cartQuantity.
+Exactly ONE repeated child (the card). A sibling with data-dukafy-pagination or id="pagination" is NOT looped — style it freely. Next/previous work on any element (a, button, div, text). Give the wrapping section an id so paging stays on that section instead of jumping to the top.
+Inside a loop, currentEntry is the record. Fields: title, priceDisplay, imageUrl, href, slug, stock, inCart, cartQuantity. Pager fields: loop.page, loop.pageCount, loop.hasPrevious, loop.hasNext.
 
 MERCHANDISING
 To put a product on the homepage (featured, on sale, "make it seen"): loop collections/<slug>.products. The SKU must already be in that collection (Featured, on-sale, deals). Keep it in its category collection too. Discount codes are not a loop — there is no data-dukafy-loop="discounts". Do not invent a pin-this-SKU overlay.
@@ -206,5 +221,47 @@ export function buildAiContext(state: EditorStore): string {
         components.map((component) => `  ${component.id} — ${component.name}`).join('\n')}`
     : '\n\nThis site has no saved components yet, so build sections inline.'
 
-  return `Current page "${page.title}" (root uid="${page.rootNodeId}"):\n\n${body}${selected}${componentList}`
+  return `Current page "${page.title}" (root uid="${page.rootNodeId}"):\n\n${body}${selected}${designDigest(site)}${componentList}`
+}
+
+/**
+ * Compact token list so Assist binds text-primary instead of inventing indigo.
+ * Missing tokens is valid — the DESIGN rules then fall back to black/white.
+ */
+function designDigest(site: { settings?: unknown }): string {
+  const settings = asRecord(site.settings)
+  const framework = asRecord(settings?.framework)
+  const colors = asRecord(framework?.colors)
+  const tokens = Array.isArray(colors?.tokens) ? colors.tokens : []
+  const colorLines = tokens.slice(0, 6).flatMap((row) => {
+    const token = asRecord(row)
+    const slug = typeof token?.slug === 'string' ? token.slug.trim() : ''
+    if (!slug) return []
+    const value = typeof token?.lightValue === 'string'
+      ? token.lightValue
+      : typeof token?.value === 'string' ? token.value : ''
+    return [`  ${slug}${value ? ` ${value}` : ''} → text-${slug} bg-${slug}`]
+  })
+  const fonts = asRecord(settings?.fonts)
+  const fontTokens = Array.isArray(fonts?.tokens) ? fonts.tokens : []
+  const fontLines = fontTokens.slice(0, 3).flatMap((row) => {
+    const token = asRecord(row)
+    const variable = typeof token?.variable === 'string' ? token.variable : typeof token?.class === 'string' ? token.class : ''
+    const family = typeof token?.family === 'string' ? token.family : ''
+    if (!variable) return []
+    return [`  ${variable}${family ? ` → ${family}` : ''}`]
+  })
+  if (colorLines.length === 0 && fontLines.length === 0) {
+    return '\n\nNo site color/font tokens yet. Use white canvas, black ink, gray body, black buttons.'
+  }
+  return [
+    '\n\nSITE TOKENS — bind these instead of inventing colors:',
+    colorLines.length ? `Colors:\n${colorLines.join('\n')}` : '',
+    fontLines.length ? `Fonts:\n${fontLines.join('\n')}` : '',
+  ].filter(Boolean).join('\n')
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  return value as Record<string, unknown>
 }

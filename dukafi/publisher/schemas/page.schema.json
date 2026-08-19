@@ -141,6 +141,10 @@
                         {
                           "const": "form",
                           "type": "string"
+                        },
+                        {
+                          "const": "loop",
+                          "type": "string"
                         }
                       ]
                     },
@@ -238,6 +242,14 @@
                         {
                           "const": "overlay.close",
                           "type": "string"
+                        },
+                        {
+                          "const": "loop.next",
+                          "type": "string"
+                        },
+                        {
+                          "const": "loop.previous",
+                          "type": "string"
                         }
                       ]
                     },
@@ -299,6 +311,9 @@
                       "type": "string"
                     }
                   ]
+                },
+                "pagination": {
+                  "type": "string"
                 }
               }
             },
@@ -342,6 +357,10 @@
                     },
                     {
                       "const": "form",
+                      "type": "string"
+                    },
+                    {
+                      "const": "loop",
                       "type": "string"
                     }
                   ]

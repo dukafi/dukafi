@@ -6,7 +6,7 @@
 # only see MCP, so this snapshot is how they learn — filled with THIS
 # store's collection slugs and table columns, then pasted into apply_edits.
 module Recipes
-  TOPICS = %w[loops cms forms cart overlays components seo].freeze
+  TOPICS = %w[loops cms forms cart overlays components seo design].freeze
   # Membership collections used to spotlight SKUs on home (not a pin primitive).
   SPOTLIGHT_SLUGS = %w[featured on-sale deals sale clearance].freeze
 
@@ -23,7 +23,8 @@ module Recipes
 
     {
       "note" => "These overlays are Dukafi-specific. Paste the html into apply_edits. " \
-                "Do not invent {{ }} templates, React, or module ids. One child inside a loop. " \
+                "Do not invent {{ }} templates, React, or module ids. One repeated card " \
+                "inside a loop; an optional pagination sibling is not repeated. " \
                 "Call publish when the draft looks right. For 'rank for …' / optimize SEO, " \
                 "or to put a product on the homepage, pass topic seo or loops.",
       "topics" => TOPICS,
@@ -41,8 +42,9 @@ module Recipes
       "topics" => TOPICS,
       "loopSources" => sources.first(12),
       "note" => "Call get_recipes before a product grid, search, homepage spotlight, " \
-                "CMS loop, form, cart, saved component, or SEO / 'rank for' job. " \
-                "Pass topic (loops, cms, forms, cart, overlays, components, seo) to get one family.",
+                "CMS loop, form, cart, saved component, SEO / 'rank for' job, or a " \
+                "vague restyle. Pass topic (loops, cms, forms, cart, overlays, " \
+                "components, seo, design) to get one family.",
     }
   end
 
@@ -84,6 +86,8 @@ module Recipes
       related_grid,
       rank_for(collection),
       page_seo,
+      quiet_section,
+      quiet_hero,
       cms_loop(table),
       cms_form(table),
       account_form,
@@ -107,18 +111,27 @@ module Recipes
       "product-grid", "loops",
       "Product grid — every active product",
       <<~HTML.strip,
-        <div data-dukafy-loop="products" data-dukafy-loop-per-page="8" class="grid grid-cols-2 gap-6 md:grid-cols-4">
-          <article class="rounded-lg border p-4">
-            <a data-dukafy-bind-href="currentEntry.href"><img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full"></a>
-            <h3 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h3>
-            <p data-dukafy-bind-text="currentEntry.priceDisplay" class="text-sm"></p>
-          </article>
-        </div>
+        <section id="products" class="w-full px-6 py-16 md:py-24">
+          <div class="mx-auto max-w-6xl">
+            <div data-dukafy-loop="products" data-dukafy-loop-per-page="8" class="grid grid-cols-2 gap-6 md:grid-cols-4">
+              <article class="rounded-lg border p-4">
+                <a data-dukafy-bind-href="currentEntry.href"><img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full"></a>
+                <h3 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h3>
+                <p data-dukafy-bind-text="currentEntry.priceDisplay" class="text-sm"></p>
+              </article>
+              #{pager_nav}
+            </div>
+          </div>
+        </section>
       HTML
       [
-        "Exactly one child inside the loop — that child is the repeated card.",
+        "Exactly one repeated child inside the loop — that child is the card.",
+        "A sibling with data-dukafy-pagination (or id=pagination) is NOT looped. Style it with any elements. Attach data-dukafy-action=loop.previous / loop.next to a link, button, div, or text.",
+        "Give the wrapping section an id (products, featured, …). Pager links keep that hash so the visitor stays on the section instead of jumping to the top of the page.",
+        "Hide prev/next with loop.hasPrevious / loop.hasNext. Optional binds: loop.page, loop.pageCount. Use col-span-full so the pager spans the grid.",
         "Inside a loop, currentEntry is the product. Fields: title, priceDisplay, imageUrl, href, slug, stock, inCart, cartQuantity.",
         "Options: data-dukafy-loop-per-page, data-dukafy-loop-order-by (price|title|newest|manual), data-dukafy-loop-direction=desc.",
+        "The wrapping section is full width. Do not put this grid inside max-w-3xl — that is the about column, not a catalogue.",
       ],
     )
   end
@@ -133,18 +146,22 @@ module Recipes
           <input type="search" name="keyword" placeholder="Search products" data-dukafy-bind-value="route.query.keyword" class="flex-1 rounded-full border px-4 py-2">
           <button type="submit" class="rounded-full bg-black px-5 py-2 text-white">Search</button>
         </form>
-        <div data-dukafy-loop="current-query" data-dukafy-loop-per-page="12" class="mt-8 grid grid-cols-2 gap-6 md:grid-cols-4">
-          <article class="rounded-lg border p-4">
-            <a data-dukafy-bind-href="currentEntry.href"><img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full"></a>
-            <h3 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h3>
-            <p data-dukafy-bind-text="currentEntry.priceDisplay" class="text-sm"></p>
-          </article>
-        </div>
+        <section id="search-results">
+          <div data-dukafy-loop="current-query" data-dukafy-loop-per-page="12" class="mt-8 grid grid-cols-2 gap-6 md:grid-cols-4">
+            <article class="rounded-lg border p-4">
+              <a data-dukafy-bind-href="currentEntry.href"><img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full"></a>
+              <h3 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h3>
+              <p data-dukafy-bind-text="currentEntry.priceDisplay" class="text-sm"></p>
+            </article>
+            #{pager_nav}
+          </div>
+        </section>
       HTML
       [
         "The dedicated search page lives at slug search. The form MUST GET /search with name=keyword — not q.",
         "data-dukafy-loop=current-query is request-time: it filters active products by that keyword. Empty keyword shows no rows; a keyword with no hits is HTTP 404 (the search page still renders; no JSON-LD).",
         "Search is always noindex, follow and is omitted from the sitemap. Do not use /search?keyword= to rank. For 'rank for X' see topic seo.",
+        "Pager: data-dukafy-pagination sibling, loop.next / loop.previous, wrap the results in a section with an id so paging does not jump to the top.",
       ],
     )
   end
@@ -155,19 +172,25 @@ module Recipes
       "collection-grid", "loops",
       collection ? "Products in collection #{slug}" : "Products in one collection (create a collection first)",
       <<~HTML.strip,
-        <div data-dukafy-loop="collections/#{slug}.products" data-dukafy-loop-per-page="8" class="grid grid-cols-2 gap-6 md:grid-cols-4">
-          <article class="rounded-lg border p-4">
-            <a data-dukafy-bind-href="currentEntry.href"><img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full"></a>
-            <h3 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h3>
-            <p data-dukafy-bind-text="currentEntry.priceDisplay" class="text-sm"></p>
-          </article>
-        </div>
+        <section id="#{escape(slug)}" class="w-full px-6 py-16 md:py-24">
+          <div class="mx-auto max-w-6xl">
+            <div data-dukafy-loop="collections/#{slug}.products" data-dukafy-loop-per-page="8" class="grid grid-cols-2 gap-6 md:grid-cols-4">
+              <article class="rounded-lg border p-4">
+                <a data-dukafy-bind-href="currentEntry.href"><img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full"></a>
+                <h3 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h3>
+                <p data-dukafy-bind-text="currentEntry.priceDisplay" class="text-sm"></p>
+              </article>
+              #{pager_nav}
+            </div>
+          </div>
+        </section>
       HTML
       [
         "Bind by collection SLUG, not title. Call list_collections if you need another.",
         "Nested lists use currentEntry.variants or currentEntry.images inside this card.",
         "A product can belong to many collections. Spotlight it on home by ALSO adding it to Featured or on-sale — see homepage-spotlight. Do not invent a pin-inside-loop overlay.",
         "Collection listings must not use standalone Product schema as the page type. Page 1 with products is indexable; empty or page 2+ is noindex.",
+        "The section id is the scroll target for pager links. data-dukafy-pagination is not repeated; style next/previous however you want.",
       ],
     )
   end
@@ -180,14 +203,17 @@ module Recipes
       collection ? "Homepage spotlight — #{heading} (collections/#{slug}.products)" :
         "Homepage spotlight (create a Featured or on-sale collection first)",
       <<~HTML.strip,
-        <section class="mt-16">
-          <h2 class="text-xl font-semibold">#{escape(heading)}</h2>
-          <div data-dukafy-loop="collections/#{slug}.products" data-dukafy-loop-per-page="4" class="mt-6 grid grid-cols-2 gap-6 md:grid-cols-4">
+        <section id="#{escape(slug)}" class="w-full px-6 py-16 md:py-24">
+          <div class="mx-auto max-w-6xl">
+            <h2 class="text-xl font-semibold">#{escape(heading)}</h2>
+            <div data-dukafy-loop="collections/#{slug}.products" data-dukafy-loop-per-page="4" class="mt-6 grid grid-cols-2 gap-6 md:grid-cols-4">
             <article class="rounded-lg border p-4">
               <a data-dukafy-bind-href="currentEntry.href"><img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full"></a>
               <h3 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h3>
               <p data-dukafy-bind-text="currentEntry.priceDisplay" class="text-sm"></p>
             </article>
+            #{pager_nav}
+          </div>
           </div>
         </section>
       HTML
@@ -196,6 +222,7 @@ module Recipes
         "set_collection_products REPLACES the whole membership list. Call list_collections first, keep every slug that should stay, then append the new one.",
         "On the homepage (slug index), loop collections/<slug>.products — paste this html via apply_edits. There is no data-dukafy-loop=discounts: list_discounts is checkout codes only. A sale row is a collection of those SKUs.",
         "One SKU only: still a one-item collection loop. Do not invent module ids or a pin-this-SKU overlay.",
+        "The section id (featured, on-sale, …) is required so Next/Previous stay on this block instead of scrolling the visitor to the top of the page. Style the data-dukafy-pagination sibling freely.",
       ],
     )
   end
@@ -206,15 +233,20 @@ module Recipes
       "rank-for", "seo",
       "Rank for a keyword — indexable collection or landing page, never /search",
       <<~HTML.strip,
-        <section class="mx-auto max-w-3xl px-6 py-12">
-          <h1 class="text-3xl font-semibold">Write a unique heading for this phrase</h1>
-          <p class="mt-4 text-gray-600">One short intro in the merchant's words. Do not invent shipping, origin stories, or reviews.</p>
-          <div data-dukafy-loop="collections/#{slug}.products" data-dukafy-loop-per-page="12" class="mt-10 grid grid-cols-2 gap-6 md:grid-cols-4">
-            <article class="rounded-lg border p-4">
-              <a data-dukafy-bind-href="currentEntry.href"><img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full"></a>
-              <h2 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h2>
-              <p data-dukafy-bind-text="currentEntry.priceDisplay" class="text-sm"></p>
-            </article>
+        <section class="w-full px-6 py-16 md:py-24">
+          <div class="mx-auto max-w-3xl">
+            <h1 class="text-3xl font-semibold">Write a unique heading for this phrase</h1>
+            <p class="mt-4 text-gray-600">One short intro in the merchant's words. Do not invent shipping, origin stories, or reviews.</p>
+          </div>
+          <div class="mx-auto mt-10 max-w-6xl">
+            <div data-dukafy-loop="collections/#{slug}.products" data-dukafy-loop-per-page="12" class="grid grid-cols-2 gap-6 md:grid-cols-4">
+              <article class="rounded-lg border p-4">
+                <a data-dukafy-bind-href="currentEntry.href"><img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full"></a>
+                <h2 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h2>
+                <p data-dukafy-bind-text="currentEntry.priceDisplay" class="text-sm"></p>
+              </article>
+              #{pager_nav}
+            </div>
           </div>
         </section>
       HTML
@@ -243,12 +275,60 @@ module Recipes
     )
   end
 
+  def quiet_section
+    recipe(
+      "quiet-section", "design",
+      "Quiet storefront section — the default when the merchant is vague",
+      <<~HTML.strip,
+        <section class="w-full bg-white px-6 py-16 md:py-24">
+          <div class="mx-auto max-w-3xl">
+            <p class="text-sm tracking-wide text-neutral-500">A short kicker</p>
+            <h2 class="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">One clear heading</h2>
+            <p class="mt-4 text-base leading-relaxed text-neutral-600">One or two sentences. Products and photos carry color. This block stays plain.</p>
+            <a href="/collections/featured" class="mt-8 inline-block rounded-lg bg-black px-5 py-2.5 text-white">Shop the range</a>
+          </div>
+        </section>
+      HTML
+      [
+        "Vague prompts ('make it look better', 'build me a landing page', 'add a section') use this: white canvas, one ink, one muted body, one black (or text-primary / bg-primary) accent. Do not invent a palette.",
+        "Never bg-gradient-*, from-/via-/to-*, indigo/purple/pink/cyan washes, blobs, backdrop-blur, shadow-xl, or emoji headings. 'Look better' is more space and fewer colors — setClasses — not a new wrapper.",
+        "If get_design_tokens lists primary, swap bg-black/text-neutral-900 for bg-primary/text-primary. Match the page's px/py and type size when a pattern already exists; do not copy a decorative gradient from a sampled section.",
+        "Composition: this recipe is the ABOUT / CONTACT column (max-w-3xl inside a full-width section). Hero uses quiet-hero (split). Product grids stay full width (max-w-6xl) — never wrap a loop in max-w-3xl.",
+        "Photos and product loops sit on this plain ground. Do not put a gradient behind a grid.",
+      ],
+    )
+  end
+
+  def quiet_hero
+    recipe(
+      "quiet-hero", "design",
+      "Quiet hero — type and photo side by side, not a stacked article",
+      <<~HTML.strip,
+        <section class="w-full bg-white px-6 py-16 md:py-24">
+          <div class="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
+            <div>
+              <h1 class="text-4xl font-semibold tracking-tight text-neutral-900 md:text-5xl">One promise from the catalogue</h1>
+              <p class="mt-4 text-base leading-relaxed text-neutral-600">One sentence. No origin story. No extra palette.</p>
+              <a href="/collections/featured" class="mt-8 inline-block rounded-lg bg-black px-5 py-2.5 text-white">Shop the range</a>
+            </div>
+            <img alt="" class="w-full">
+          </div>
+        </section>
+      HTML
+      [
+        "Vague landing pages start here, not with a gradient banner. Copy on one side, one photo on the other (md:grid-cols-2). On a small screen they stack.",
+        "Set the img src from list_media (or currentEntry.imageUrl inside a loop). Never placehold.co, unsplash, or an invented URL.",
+        "Do not put bg-gradient-* behind this. The photo carries color. If SITE TOKENS list primary, use bg-primary on the button.",
+      ],
+    )
+  end
+
   def related_grid
     recipe(
       "related-grid", "loops",
       "Related products — other products in the same collection, on a product page",
       <<~HTML.strip,
-        <section class="mt-16">
+        <section id="related" class="mt-16">
           <h2 class="text-xl font-semibold">Related products</h2>
           <div data-dukafy-loop="currentEntry.related" data-dukafy-loop-per-page="4" class="mt-6 grid grid-cols-2 gap-6 md:grid-cols-4">
             <article class="rounded-lg border p-4">
@@ -256,6 +336,7 @@ module Recipes
               <h3 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h3>
               <p data-dukafy-bind-text="currentEntry.priceDisplay" class="text-sm"></p>
             </article>
+            #{pager_nav}
           </div>
         </section>
       HTML
@@ -431,6 +512,15 @@ module Recipes
         %(<label>#{escape(label)}</label>\n  <input type="#{type}" name="#{id}" class="rounded border px-3 py-2">)
       end
     end
+  end
+
+  def pager_nav
+    <<~HTML.strip
+      <nav data-dukafy-pagination class="col-span-full mt-8 flex items-center justify-center gap-4">
+        <a data-dukafy-action="loop.previous" data-dukafy-visible-when="loop.hasPrevious:isTrue" class="rounded border px-4 py-2">Previous</a>
+        <a data-dukafy-action="loop.next" data-dukafy-visible-when="loop.hasNext:isTrue" class="rounded border px-4 py-2">Next</a>
+      </nav>
+    HTML
   end
 
   def recipe(id, topic, title, html, rules)

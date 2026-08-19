@@ -518,6 +518,89 @@ class RenderPageSpec < Minitest::Test
     assert_includes html, %(class="dukafy-collection-loop")
     # Two variants at one per page — the wrapper is what pagination hangs off.
     assert_includes html, "dukafy-collection-loop__pagination"
+    assert_includes html, 'id="dukafy-loop-loop"'
+    assert_includes html, '?loop_loop_page=2#dukafy-loop-loop'
+  end
+
+  def test_a_styled_pagination_sibling_is_not_repeated_and_keeps_the_section
+    document = {
+      "rootNodeId" => "section",
+      "nodes" => {
+        "section" => node("section", "base.container", children: ["loop"],
+                          props: { "tag" => "section", "htmlAttributes" => { "id" => "featured" } }),
+        "loop" => node("loop", "store.relationship-loop", children: %w[card pager],
+                       props: { "source" => "products", "perPage" => 1 }),
+        "card" => bound_text("card", "currentEntry", "title").merge("props" => { "text" => "item", "tag" => "span" }),
+        "pager" => node("pager", "base.container", children: %w[prev nxt],
+                        props: { "tag" => "nav" })
+          .merge("actions" => { "pagination" => "" }),
+        "prev" => node("prev", "base.text", props: { "text" => "Previous", "tag" => "span" })
+          .merge("actions" => { "click" => { "type" => "loop.previous" } },
+                 "visibleWhen" => { "source" => "loop", "field" => "hasPrevious", "operator" => "isTrue" }),
+        "nxt" => node("nxt", "base.text", props: { "text" => "Next", "tag" => "span" })
+          .merge("actions" => { "click" => { "type" => "loop.next" } },
+                 "visibleWhen" => { "source" => "loop", "field" => "hasNext", "operator" => "isTrue" }),
+      },
+    }
+    prefetched = {
+      "products" => {
+        "a" => { "slug" => "a", "title" => "Alpha" },
+        "b" => { "slug" => "b", "title" => "Beta" },
+      },
+    }
+
+    first = Dukafi::Publisher::RenderPage.call(
+      document: document, registry: Dukafi::Publisher::REGISTRY, prefetched: prefetched
+    ).html
+    refute_includes first, "dukafy-collection-loop__pagination"
+    assert_includes first, ">Alpha<"
+    refute_includes first, ">Beta<"
+    refute_includes first, "Previous"
+    assert_includes first, 'href="?loop_loop_page=2#featured"'
+    assert_includes first, ">Next<"
+    # The pager is chrome, not a second product row.
+    assert_equal 1, first.scan(">Alpha<").length
+
+    second = Dukafi::Publisher::RenderPage.call(
+      document: document, registry: Dukafi::Publisher::REGISTRY, prefetched: prefetched,
+      query_params: { "loop_loop_page" => "2", "keyword" => "bags" }
+    ).html
+    assert_includes second, ">Beta<"
+    refute_includes second, ">Alpha<"
+    refute_includes second, ">Next<"
+    assert_includes second, "keyword=bags"
+    assert_includes second, "loop_loop_page=1"
+    assert_includes second, "#featured"
+  end
+
+  def test_id_pagination_marks_chrome_without_the_overlay
+    document = {
+      "rootNodeId" => "loop",
+      "nodes" => {
+        "loop" => node("loop", "store.relationship-loop", children: %w[card pager],
+                       props: { "source" => "products", "perPage" => 1 }),
+        "card" => node("card", "base.text", props: { "text" => "x", "tag" => "span" }),
+        "pager" => node("pager", "base.container", children: ["nxt"],
+                        props: { "tag" => "div", "htmlAttributes" => { "id" => "pagination" } }),
+        "nxt" => node("nxt", "base.button", props: { "label" => "Next" })
+          .merge("actions" => { "click" => { "type" => "loop.next" } }),
+      },
+    }
+    prefetched = {
+      "products" => {
+        "a" => { "slug" => "a", "title" => "A" },
+        "b" => { "slug" => "b", "title" => "B" },
+      },
+    }
+
+    html = Dukafi::Publisher::RenderPage.call(
+      document: document, registry: Dukafi::Publisher::REGISTRY, prefetched: prefetched
+    ).html
+    refute_includes html, "dukafy-collection-loop__pagination"
+    assert_includes html, 'id="pagination"'
+    assert_includes html, 'href="?loop_loop_page=2#pagination"'
+    assert_includes html, ">Next<"
+    refute_includes html, "<button"
   end
 
   # Inline `{source.field}` tokens must resolve for EVERY source a structured

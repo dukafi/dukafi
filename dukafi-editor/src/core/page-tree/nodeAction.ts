@@ -32,6 +32,11 @@ const NodeActionTypeSchema = Type.Union([
   // close button in a drawer wants.
   Type.Literal('overlay.open'),
   Type.Literal('overlay.close'),
+  // Pager verbs on a loop's non-repeated pagination sibling. The publisher
+  // turns these into `?loop_<id>_page=N#section` (or an htmx swap for an
+  // orders fragment). Any element can carry them — a link, a button, a div.
+  Type.Literal('loop.next'),
+  Type.Literal('loop.previous'),
 ])
 
 export type NodeActionType = Static<typeof NodeActionTypeSchema>
@@ -111,6 +116,14 @@ export const NodeActionsSchema = Type.Object({
     Type.Literal('sheet-right'),
     Type.Literal('sheet-bottom'),
   ])),
+  /**
+   * Marks a direct child of a relationship loop as pagination chrome: rendered
+   * once, not repeated per item. An empty string means "auto" (scroll target
+   * comes from an ancestor `id`, then this node's `id`, then a synthesized
+   * loop id). A non-empty string is the fragment id to jump to after paging,
+   * so the visitor stays in the Featured section instead of landing at the top.
+   */
+  pagination: Type.Optional(Type.String()),
 })
 
 export type NodeActions = Static<typeof NodeActionsSchema>
@@ -119,6 +132,7 @@ const VALID_TYPES: NodeActionType[] = [
   'cart.addItem', 'cart.removeItem', 'cart.setQuantity', 'cart.clear', 'cart.createOrder', 'payment.initiate',
   'account.register', 'account.login', 'account.logout',
   'overlay.open', 'overlay.close',
+  'loop.next', 'loop.previous',
 ]
 
 export type NodeRegion = NonNullable<NodeActions['region']>
@@ -132,9 +146,10 @@ const VALID_OVERLAYS: NodeOverlay[] = ['modal', 'sheet-left', 'sheet-right', 'sh
 function parseNodeAction(raw: unknown): NodeAction | null {
   const r = asPlainObject(raw)
   if (!r) return null
-  if (!VALID_TYPES.includes(r.type as NodeActionType)) return null
+  const type = r.type === 'loop.prev' ? 'loop.previous' : r.type
+  if (!VALID_TYPES.includes(type as NodeActionType)) return null
 
-  const action: NodeAction = { type: r.type as NodeActionType }
+  const action: NodeAction = { type: type as NodeActionType }
   if (typeof r.quantity === 'number' && Number.isFinite(r.quantity)) action.quantity = r.quantity
   if (typeof r.delta === 'number' && Number.isFinite(r.delta)) action.delta = r.delta
   if (typeof r.redirect === 'string' && r.redirect.length > 0) action.redirect = r.redirect
@@ -157,10 +172,18 @@ export function parseNodeActions(raw: unknown): NodeActions | undefined {
   const overlay = VALID_OVERLAYS.includes(r.overlay as NodeOverlay)
     ? (r.overlay as NodeOverlay)
     : undefined
-  if (!click && !region && !overlay) return undefined
+  // Present (including "") marks pagination chrome. `true` is accepted from
+  // a boolean HTML attribute that survived as JSON.
+  const pagination = typeof r.pagination === 'string'
+    ? r.pagination
+    : r.pagination === true
+      ? ''
+      : undefined
+  if (!click && !region && !overlay && pagination === undefined) return undefined
   return {
     ...(click ? { click } : {}),
     ...(region ? { region } : {}),
     ...(overlay ? { overlay } : {}),
+    ...(pagination !== undefined ? { pagination } : {}),
   }
 }

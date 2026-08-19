@@ -16,6 +16,7 @@ describe('parseNodeActions', () => {
     'cart.addItem', 'cart.removeItem', 'cart.setQuantity', 'cart.createOrder',
     'payment.initiate', 'account.register', 'account.login', 'account.logout',
     'overlay.open', 'overlay.close',
+    'loop.next', 'loop.previous',
   ]
 
   it.each(VERBS)('keeps the %s verb', (type) => {
@@ -66,5 +67,16 @@ describe('parseNodeActions', () => {
 
   it('drops an unknown region', () => {
     expect(parseNodeActions({ region: 'checkout' })).toBeUndefined()
+  })
+
+  it('keeps pagination chrome with no click verb', () => {
+    expect(parseNodeActions({ pagination: '' })).toEqual({ pagination: '' })
+    expect(parseNodeActions({ pagination: 'featured' })).toEqual({ pagination: 'featured' })
+    expect(parseNodeActions({ pagination: true })).toEqual({ pagination: '' })
+  })
+
+  it('maps loop.prev to loop.previous', () => {
+    expect(parseNodeActions({ click: { type: 'loop.prev' } }))
+      .toEqual({ click: { type: 'loop.previous' } })
   })
 })

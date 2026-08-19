@@ -16,7 +16,7 @@ class RecipesSpec < Minitest::Test
     Collection.create(title: "Featured", slug: "featured", sort_order: 0)
 
     payload = Recipes.snapshot
-    assert_equal %w[loops cms forms cart overlays components seo], payload.fetch("topics")
+    assert_equal %w[loops cms forms cart overlays components seo design], payload.fetch("topics")
     assert_equal "team", payload.dig("thisStore", "tables", 0, "slug")
     assert_equal "featured", payload.dig("thisStore", "collections", 0, "slug")
 
@@ -31,11 +31,13 @@ class RecipesSpec < Minitest::Test
 
     grid = payload.fetch("recipes").find { |row| row["id"] == "collection-grid" }
     assert_includes grid.fetch("html"), 'data-dukafy-loop="collections/featured.products"'
+    assert_includes grid.fetch("html"), 'data-dukafy-pagination'
 
     search = payload.fetch("recipes").find { |row| row["id"] == "search-grid" }
     assert_includes search.fetch("html"), 'data-dukafy-loop="current-query"'
     assert_includes search.fetch("html"), 'name="keyword"'
     assert_includes search.fetch("html"), 'action="/search"'
+    assert_includes search.fetch("html"), 'id="search-results"'
 
     related = payload.fetch("recipes").find { |row| row["id"] == "related-grid" }
     assert_includes related.fetch("html"), 'data-dukafy-loop="currentEntry.related"'
@@ -48,8 +50,12 @@ class RecipesSpec < Minitest::Test
     spotlight = payload.fetch("recipes").find { |row| row["id"] == "homepage-spotlight" }
     assert_equal "loops", spotlight.fetch("topic")
     assert_includes spotlight.fetch("html"), 'data-dukafy-loop="collections/featured.products"'
+    assert_includes spotlight.fetch("html"), 'id="featured"'
+    assert_includes spotlight.fetch("html"), 'data-dukafy-pagination'
+    assert_includes spotlight.fetch("html"), 'data-dukafy-action="loop.next"'
     assert_match(/REPLACES/, spotlight.fetch("rules").join(" "))
     assert_match(/discounts/i, spotlight.fetch("rules").join(" "))
+    assert_match(/top of the page/i, spotlight.fetch("rules").join(" "))
 
     rank = payload.fetch("recipes").find { |row| row["id"] == "rank-for" }
     assert_equal "seo", rank.fetch("topic")
@@ -82,6 +88,19 @@ class RecipesSpec < Minitest::Test
     assert(payload.fetch("recipes").all? { |row| row["topic"] == "seo" })
   end
 
+  def test_design_topic_is_the_quiet_storefront
+    payload = Recipes.snapshot("design")
+    quiet = payload.fetch("recipes").find { |row| row["id"] == "quiet-section" }
+    assert_equal "design", quiet.fetch("topic")
+    assert_includes quiet.fetch("html"), "bg-white"
+    refute_includes quiet.fetch("html"), "gradient"
+    assert_match(/vague/i, quiet.fetch("rules").join(" "))
+    assert_match(/gradient/i, quiet.fetch("rules").join(" "))
+    hero = payload.fetch("recipes").find { |row| row["id"] == "quiet-hero" }
+    assert_includes hero.fetch("html"), "md:grid-cols-2"
+    refute_includes hero.fetch("html"), "gradient"
+  end
+
   def test_topic_filters_and_rejects_unknown
     payload = Recipes.snapshot("components")
     assert(payload.fetch("recipes").all? { |row| row["topic"] == "components" })
@@ -94,6 +113,7 @@ class RecipesSpec < Minitest::Test
     Collection.create(title: "Featured", slug: "featured", sort_order: 0)
     summary = Recipes.summary
     assert_includes summary.fetch("topics"), "seo"
+    assert_includes summary.fetch("topics"), "design"
     assert_includes summary.fetch("loopSources"), "collections/featured.products"
     assert_includes summary.fetch("loopSources"), "current-query"
     assert_match(/rank for/i, summary.fetch("note"))

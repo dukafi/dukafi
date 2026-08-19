@@ -16,6 +16,10 @@
  *           data-dukafy-action-quantity="1"
  *           data-dukafy-visible-when="currentEntry.inCart:isFalse">Add</button>
  *   <p data-dukafy-bind-text="currentEntry.cartQuantity"></p>
+ *   <nav data-dukafy-pagination>
+ *     <a data-dukafy-action="loop.previous">Previous</a>
+ *     <a data-dukafy-action="loop.next">Next</a>
+ *   </nav>
  *
  * The `data-dukafy-` vocabulary is not invented here: the Ruby publisher
  * already emits `data-dukafy-cart-region`, `data-dukafy-form-id` and friends on
@@ -51,6 +55,7 @@ const LOOP = `${PREFIX}loop`
 const LOOP_PARAM = `${PREFIX}loop-`
 const COMPONENT = `${PREFIX}component`
 const OVERLAY = `${PREFIX}overlay`
+const PAGINATION = `${PREFIX}pagination`
 
 /**
  * Attributes this module consumes, so `collectHtmlAttributes` can skip them.
@@ -69,6 +74,7 @@ export function isOverlayAttribute(name: string): boolean {
     lower === LOOP ||
     lower === COMPONENT ||
     lower === OVERLAY ||
+    lower === PAGINATION ||
     lower.startsWith(ACTION_PARAM) ||
     lower.startsWith(LOOP_PARAM) ||
     lower.startsWith(BIND)
@@ -147,6 +153,11 @@ function readActions(el: Element): NodeActions | undefined {
   // leaving its contents ordinary nodes.
   const overlay = el.getAttribute(OVERLAY)?.trim()
   if (overlay) raw.overlay = overlay
+
+  // A sibling of the repeated card, rendered once. Presence is the marker;
+  // a value is an optional scroll target (`data-dukafy-pagination="featured"`).
+  // `id="pagination"` is accepted later by the publisher without this overlay.
+  if (el.hasAttribute(PAGINATION)) raw.pagination = el.getAttribute(PAGINATION)?.trim() ?? ''
 
   return Object.keys(raw).length > 0 ? parseNodeActions(raw) : undefined
 }

@@ -77,6 +77,7 @@ const CONDITION_SOURCES: Array<{ value: NodeVisibility['source']; label: string 
   { value: 'cart', label: 'The cart' },
   { value: 'payment', label: 'The payment' },
   { value: 'form', label: 'The form result' },
+  { value: 'loop', label: 'This loop’s pager' },
 ]
 
 const OPERATOR_OPTIONS: Array<{ value: ConditionOperator; label: string }> = [
@@ -101,6 +102,8 @@ const CONDITION_PRESETS: Array<{ label: string; condition: NodeVisibility }> = [
   { label: 'The form came back with an error', condition: { source: 'form', field: 'hasError', operator: 'isTrue' } },
   { label: 'The visitor IS signed in', condition: { source: 'form', field: 'signedIn', operator: 'isTrue' } },
   { label: 'The visitor is NOT signed in', condition: { source: 'form', field: 'signedIn', operator: 'isFalse' } },
+  { label: 'There IS a previous page', condition: { source: 'loop', field: 'hasPrevious', operator: 'isTrue' } },
+  { label: 'There IS a next page', condition: { source: 'loop', field: 'hasNext', operator: 'isTrue' } },
 ]
 
 const DEFAULT_CONDITION: NodeVisibility = CONDITION_PRESETS[0].condition
@@ -167,6 +170,8 @@ const ACTION_OPTIONS: Array<{ value: '' | NodeActionType; label: string }> = [
   { value: 'account.logout', label: 'Account — sign out' },
   { value: 'overlay.open', label: 'Overlay — open a sheet or modal' },
   { value: 'overlay.close', label: 'Overlay — close' },
+  { value: 'loop.previous', label: 'Loop — previous page' },
+  { value: 'loop.next', label: 'Loop — next page' },
 ]
 
 /**
@@ -199,6 +204,10 @@ const SCOPE_NOTE: Record<NodeActionType, string> = {
     'Opens the sheet or modal you name below. Works on any element — a button, a box, an image.',
   'overlay.close':
     'Closes the overlay this element sits inside. Name one below only to close a different overlay.',
+  'loop.previous':
+    'Goes to the previous page of the enclosing product (or collection) loop. Put it on any element inside a pagination sibling — a link, a button, a div. Inert on page 1.',
+  'loop.next':
+    'Goes to the next page of the enclosing product (or collection) loop. Put it on any element inside a pagination sibling. Inert on the last page. The link keeps you on that section instead of jumping to the top of the page.',
 }
 
 export function NodeActionsPanel({ nodeId, actions, visibleWhen, readOnly }: NodeActionsPanelProps) {

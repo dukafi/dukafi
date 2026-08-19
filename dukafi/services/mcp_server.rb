@@ -57,8 +57,14 @@ class McpServer
     live in one registry. To change an accent or a font, call
     update_design_tokens then publish; do not restyle every page.
     Call get_recipes before a product loop, search page, homepage spotlight,
-    CMS loop, form, cart, reusable component, or SEO / "rank for" job — those
-    overlays are Dukafi-specific; paste the returned HTML into apply_edits.
+    CMS loop, form, cart, reusable component, SEO / "rank for" job, or a
+    vague restyle — those overlays are Dukafi-specific; paste the returned
+    HTML into apply_edits. Topic design is the quiet storefront (white canvas,
+    one accent, no gradients) for vague prompts: quiet-hero is type+photo split,
+    quiet-section is the about column, product grids stay full width. A product loop may include a
+    data-dukafy-pagination sibling (not repeated)
+    with loop.next / loop.previous; give the wrapping section an id so paging
+    stays on that section instead of jumping to the top.
     Ranking a keyword is an indexable collection or landing page, never
     /search?keyword= (always noindex). To show a product on the homepage,
     add it to Featured or on-sale and loop collections/<slug>.products —

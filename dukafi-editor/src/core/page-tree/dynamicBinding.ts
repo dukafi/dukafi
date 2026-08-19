@@ -24,6 +24,9 @@
  *   signed in (signedIn, email, name). Resolves inside a node marked as the
  *   form region. On a baked page every field reads as "nothing has happened
  *   yet", which is the correct first paint for a visitor nobody has met.
+ * - `loop` — the enclosing relationship loop's pager (page, pageCount,
+ *   hasPrevious, hasNext). Resolves while rendering a pagination sibling
+ *   inside that loop; elsewhere it falls back like any unresolved binding.
  *
  * Format tag controls how the resolved value is rendered (plain text, raw
  * HTML, URL, media path). Fallback strategy controls behaviour when the
@@ -51,6 +54,8 @@ export const DynamicBindingSourceSchema = Type.Union([
   Type.Literal('cart'),
   Type.Literal('payment'),
   Type.Literal('form'),
+  // The enclosing relationship loop's pager: page, pageCount, hasPrevious, hasNext.
+  Type.Literal('loop'),
 ])
 export type DynamicBindingSource = Static<typeof DynamicBindingSourceSchema>
 
@@ -60,7 +65,7 @@ export type DynamicBindingSource = Static<typeof DynamicBindingSourceSchema>
  * copy that can drift.
  */
 export const VALID_BINDING_SOURCES: DynamicBindingSource[] = [
-  'currentEntry', 'parentEntry', 'page', 'site', 'route', 'cart', 'payment', 'form',
+  'currentEntry', 'parentEntry', 'page', 'site', 'route', 'cart', 'payment', 'form', 'loop',
 ]
 
 const DynamicBindingFormatSchema = Type.Union([

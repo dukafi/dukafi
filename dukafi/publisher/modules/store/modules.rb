@@ -183,11 +183,11 @@ class Dukafi
         name.match?(/\A[a-zA-Z][a-zA-Z0-9_.-]*\z/) ? name : "variant"
       end
 
-      def collection_pagination(parameter, page, page_count)
+      def collection_pagination(page, page_count, previous_href, following_href)
         return "" if page_count <= 1
 
-        previous = page > 1 ? %(<a rel="prev" href="?#{CGI.escapeHTML(parameter)}=#{page - 1}">Previous</a>) : ""
-        following = page < page_count ? %(<a rel="next" href="?#{CGI.escapeHTML(parameter)}=#{page + 1}">Next</a>) : ""
+        previous = previous_href ? %(<a rel="prev" href="#{previous_href}">Previous</a>) : ""
+        following = following_href ? %(<a rel="next" href="#{following_href}">Next</a>) : ""
         %(<nav class="dukafy-collection-loop__pagination" aria-label="Collection pages">#{previous}<span>Page #{page} of #{page_count}</span>#{following}</nav>)
       end
 

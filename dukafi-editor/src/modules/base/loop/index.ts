@@ -19,8 +19,9 @@
  *   - 'infinite' — render `pageSize` items then a "load more" sentinel
  *                  serviced by the loop runtime (Phase 6)
  *
- * Numeric pagination is intentionally NOT a mode here — it will live in
- * a separate `base.pagination` module that pairs with a loop by ID.
+ * Numeric pagination is a sibling overlay on the relationship loop, not a
+ * mode here: a child marked `data-dukafy-pagination` (or `id="pagination"`)
+ * is rendered once, and `loop.next` / `loop.previous` become page links.
  *
  * The wrapper element emitted around iterations is configurable via the
  * shared `htmlTag` helper (same controls as `base.container`): authors

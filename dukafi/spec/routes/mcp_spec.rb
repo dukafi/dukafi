@@ -270,6 +270,11 @@ class McpSpec < Minitest::Test
     ids = seo.fetch("recipes").map { |row| row.fetch("id") }
     assert_includes ids, "rank-for"
     assert_includes ids, "page-seo"
+
+    design = JSON.parse(call_tool("get_recipes", { "topic" => "design" }).dig("content", 0, "text"))
+    quiet = design.fetch("recipes").find { |row| row.fetch("id") == "quiet-section" }
+    assert_includes quiet.fetch("html"), "bg-white"
+    refute_includes quiet.fetch("html"), "gradient"
   end
 
   def test_list_children_returns_direct_children_only
@@ -306,7 +311,7 @@ class McpSpec < Minitest::Test
         "root" => { "id" => "root", "moduleId" => "base.body", "children" => %w[hero about extra],
                     "props" => {}, "classIds" => [], "breakpointOverrides" => {} },
         "hero" => { "id" => "hero", "moduleId" => "base.container", "children" => ["inner"],
-                    "props" => { "text" => "Hero" }, "classIds" => ["c1"], "breakpointOverrides" => {} },
+                    "props" => { "text" => "Hero" }, "classIds" => %w[c1 c4 c5], "breakpointOverrides" => {} },
         "about" => { "id" => "about", "moduleId" => "base.container", "children" => [],
                      "props" => { "text" => "About" }, "classIds" => ["c3"], "breakpointOverrides" => {} },
         "extra" => { "id" => "extra", "moduleId" => "base.container", "children" => [],
@@ -322,6 +327,8 @@ class McpSpec < Minitest::Test
       "c1" => { "id" => "c1", "name" => "px-6", "kind" => "class" },
       "c2" => { "id" => "c2", "name" => "text-gray-600", "kind" => "class" },
       "c3" => { "id" => "c3", "name" => "py-16", "kind" => "class" },
+      "c4" => { "id" => "c4", "name" => "bg-gradient-to-br", "kind" => "class" },
+      "c5" => { "id" => "c5", "name" => "from-indigo-600", "kind" => "class" },
     } }
     state.created_at = Time.now
     state.updated_at = Time.now
@@ -333,6 +340,9 @@ class McpSpec < Minitest::Test
     refute_includes payload.dig("samples", 0, "outline"), "[extra]"
     assert_includes payload.dig("design", "spacing"), "px-6"
     assert_includes payload.dig("design", "colors"), "text-gray-600"
+    refute_includes payload.dig("design", "sectionClasses") || [], "bg-gradient-to-br"
+    refute_includes payload.dig("design", "colors"), "from-indigo-600"
+    assert_includes payload.dig("samples", 0, "outline"), "bg-gradient-to-br"
     refute McpTools.write_tool?("get_page_context")
   end
 

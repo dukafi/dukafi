@@ -58,7 +58,8 @@ module McpTools
                    "color/font/type/spacing registry. Includes a recipes " \
                    "index — call get_recipes before a product loop, search, " \
                    "homepage spotlight, CMS loop, form, cart, reusable " \
-                   "component, or SEO / 'rank for' job; those overlays " \
+                   "component, SEO / 'rank for' job, or a vague restyle " \
+                   "(topic design); those overlays " \
                    "are not general HTML. Call list_components before " \
                    "rebuilding a newsletter or header that may already exist.",
       input_schema: {
@@ -391,7 +392,9 @@ module McpTools
       description: "The page's top-level sections plus up to two sampled " \
                    "section trees and the Tailwind classes they use (colors, " \
                    "spacing, type). Call this before adding a section so the " \
-                   "new work matches the page. Pass nodeId to sample that " \
+                   "new work matches spacing and type. Decorative gradients " \
+                   "are omitted from design — for a vague restyle use " \
+                   "get_recipes topic=design. Pass nodeId to sample that " \
                    "section and a neighbor. Omit it to sample the first two.",
       input_schema: {
         "type" => "object",
@@ -511,12 +514,20 @@ module McpTools
     names = Array(class_names)
     roots = Array(samples).flat_map { |row| Array(row["rootClasses"]) }.uniq
     {
-      "colors" => names.select { |name| color_class?(name) }.first(12),
+      "colors" => quiet_classes(names.select { |name| color_class?(name) }).first(12),
       "spacing" => names.select { |name| name.match?(/\A(p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr)-/) }.first(12),
       "type" => names.select { |name| type_class?(name) }.first(12),
       "layout" => names.select { |name| layout_class?(name) }.first(12),
-      "sectionClasses" => roots.first(8),
+      "sectionClasses" => quiet_classes(roots).first(8),
     }
+  end
+
+  # Match spacing/type; do not teach the next section to copy a rainbow wash.
+  DECORATIVE_CLASS = /\A(bg-gradient-|from-|via-|to-|shadow-(xl|2xl)|drop-shadow|backdrop-blur|blur-|ring-offset)/
+  SLOP_FILL_CLASS = /\A(bg|text|border)-(indigo|violet|purple|fuchsia|pink|cyan|sky)-[4-9]00\z/
+
+  def quiet_classes(names)
+    Array(names).reject { |name| name.match?(DECORATIVE_CLASS) || name.match?(SLOP_FILL_CLASS) }
   end
 
   def color_class?(name)
@@ -563,12 +574,13 @@ module McpTools
       title: "Get operational recipes",
       description: "Dukafi-specific HTML for product loops, search, homepage " \
                    "spotlights, CMS loops, connected forms, cart, overlays, " \
-                   "reusable components, and SEO / 'rank for' playbooks — " \
-                   "filled with this store's collection slugs, table columns, " \
+                   "reusable components, SEO / 'rank for' playbooks, and the " \
+                   "quiet storefront (topic design) — filled with this store's " \
+                   "collection slugs, table columns, " \
                    "and component ids. Call this before apply_edits when the " \
                    "job is a grid, search, putting a product on the homepage, " \
                    "a CMS list, a form, a cart, inserting a saved component, " \
-                   "or ranking for a keyword. Paste the recipe html; do not " \
+                   "ranking for a keyword, or a vague restyle. Paste the recipe html; do not " \
                    "invent {{ }} templates. Pass topic to fetch one family.",
       input_schema: {
         "type" => "object",
@@ -577,7 +589,7 @@ module McpTools
             "type" => "string",
             "enum" => Recipes::TOPICS,
             "description" => "Omit for every recipe. Pass one to keep the payload small. " \
-                             "seo = rank-for / unique titles. loops includes search and homepage spotlight.",
+                             "seo = rank-for / unique titles. design = quiet storefront for vague prompts. loops includes search and homepage spotlight.",
           },
         },
         "additionalProperties" => false,
