@@ -1,6 +1,7 @@
 import type { Draft } from 'mutative'
 import type { EditorStore, EditorStoreSliceCreator } from '@site/store/types'
-import { isUserVisibleClass } from '@core/page-tree'
+import { isGeneratedClassLocked, isUserVisibleClass } from '@core/page-tree'
+import { isSchemeAssignmentClass } from '@core/framework'
 import type { BaseNode } from '@core/page-tree'
 import type { NodeTree } from '@core/page-tree'
 import type { PageNode } from '@core/page-tree'
@@ -416,9 +417,15 @@ function getSelectionActiveClassId(state: EditorStore, nodeId: string | null): s
 
   if (visibleClassIds.length === 0) return null
   if (state.activeClassId && visibleClassIds.includes(state.activeClassId)) {
-    return state.activeClassId
+    const current = state.site.styleRules[state.activeClassId]
+    // A scheme class is assignment-only. Keep an explicitly chosen utility
+    // lock (text-primary, px-6) so clicking those chips still works.
+    if (current && !isSchemeAssignmentClass(current)) return state.activeClassId
   }
-  return visibleClassIds[0]
+  return visibleClassIds.find((classId) => {
+    const cls = state.site?.styleRules[classId]
+    return cls && !isGeneratedClassLocked(cls)
+  }) ?? null
 }
 
 function findSelectableNode(state: EditorStore, nodeId: string): BaseNode | null {

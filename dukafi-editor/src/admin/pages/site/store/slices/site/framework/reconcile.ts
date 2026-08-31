@@ -25,7 +25,7 @@
  */
 
 import type { StyleRule, SiteDocument } from '@core/page-tree'
-import { generateFrameworkUtilityClasses } from '@core/framework'
+import { buildDefaultColorSchemes, generateFrameworkUtilityClasses } from '@core/framework'
 
 const FRAMEWORK_ID_PREFIX = 'framework:'
 
@@ -83,7 +83,17 @@ function remapClassIdInSite(
  * and reconcile against `site.styleRules` + every classIds list in the site.
  */
 export function reconcileFrameworkClasses(site: SiteDocument): void {
+  ensureDefaultColorSchemes(site)
   reconcileFrameworkClassRegistry(site, generateFrameworkUtilityClasses(site.settings.framework))
+}
+
+function ensureDefaultColorSchemes(site: SiteDocument): void {
+  const framework = site.settings.framework
+  if (!framework) return
+  if ((framework.colorSchemes?.schemes?.length ?? 0) > 0) return
+  const tokens = framework.colors?.tokens ?? []
+  if (tokens.length === 0) return
+  framework.colorSchemes = { schemes: buildDefaultColorSchemes(tokens) }
 }
 
 function reconcileFrameworkClassRegistry(

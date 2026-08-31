@@ -19,7 +19,7 @@
  *   - `./site/breakpointActions`— breakpoint CRUD
  *   - `./site/settingsActions`  — site-level settings patch
  *   - `./site/fontActions`      — font library CRUD
- *   - `./site/framework/*`      — color / typography / spacing / preferences / preview / class reconciliation
+ *   - `./site/framework/*`      — color / schemes / typography / spacing / preferences / preview / class reconciliation
  */
 
 import type { EditorStoreSliceCreator } from '@site/store/types'
@@ -33,6 +33,7 @@ import { createBreakpointActions } from './site/breakpointActions'
 import { createSettingsActions } from './site/settingsActions'
 import { createFontActions } from './site/fontActions'
 import { createFrameworkColorActions } from './site/framework/colors'
+import { createColorSchemeActions } from './site/framework/schemes'
 import { createFrameworkTypographyActions } from './site/framework/typography'
 import { createFrameworkSpacingActions } from './site/framework/spacing'
 import { createFrameworkPreferencesActions } from './site/framework/preferences'
@@ -78,6 +79,7 @@ export const createSiteSlice: EditorStoreSliceCreator<SiteSlice> = (set, get) =>
     ...createSettingsActions(helpers),
     ...createFontActions(helpers),
     ...createFrameworkColorActions(helpers),
+    ...createColorSchemeActions(helpers),
     ...createFrameworkTypographyActions(helpers),
     ...createFrameworkSpacingActions(helpers),
     ...createFrameworkPreferencesActions(helpers),

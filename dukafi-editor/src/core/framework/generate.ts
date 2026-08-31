@@ -1,5 +1,6 @@
 import type { StyleRule } from '@core/page-tree'
 import type {
+  FrameworkColorSchemeSettings,
   FrameworkColorSettings,
   FrameworkPreferencesSettings,
   FrameworkSpacingSettings,
@@ -25,9 +26,12 @@ import {
 } from './spacing'
 import { resolveFrameworkPreferences } from './preferences'
 import { formatCssVariableBlock } from './cssVariables'
+import { generateColorSchemeClasses } from './colorSchemes'
+import { generateTypeStyleCss } from './typeStyles'
 
 export interface FrameworkGenerationSettings {
   colors?: FrameworkColorSettings | null
+  colorSchemes?: FrameworkColorSchemeSettings | null
   typography?: FrameworkTypographySettings | null
   spacing?: FrameworkSpacingSettings | null
   preferences?: FrameworkPreferencesSettings | null
@@ -50,10 +54,12 @@ interface FrameworkPlan {
 function composeFrameworkRootCss(
   colorVariables: FrameworkColorVariableSets,
   scaleVariables: FrameworkScaleVariable[],
+  typography?: FrameworkTypographySettings | null,
 ): string {
   return [
     formatCssVariableBlock(':root', [...colorVariables.light, ...scaleVariables]),
     formatFrameworkColorThemeCss(colorVariables),
+    generateTypeStyleCss(typography),
   ]
     .filter(Boolean)
     .join('\n\n')
@@ -63,10 +69,14 @@ export function generateFrameworkRootCss(
   settings: FrameworkGenerationSettings | null | undefined,
 ): string {
   const preferences = resolveFrameworkPreferences(settings?.preferences)
-  return composeFrameworkRootCss(generateFrameworkColorVariableSets(settings?.colors), [
-    ...generateFrameworkTypographyVariables(settings?.typography, preferences),
-    ...generateFrameworkSpacingVariables(settings?.spacing, preferences),
-  ])
+  return composeFrameworkRootCss(
+    generateFrameworkColorVariableSets(settings?.colors),
+    [
+      ...generateFrameworkTypographyVariables(settings?.typography, preferences),
+      ...generateFrameworkSpacingVariables(settings?.spacing, preferences),
+    ],
+    settings?.typography,
+  )
 }
 
 export function generateFrameworkUtilityClasses(
@@ -74,6 +84,7 @@ export function generateFrameworkUtilityClasses(
 ): Record<string, StyleRule> {
   return {
     ...generateFrameworkColorUtilityClasses(settings?.colors),
+    ...generateColorSchemeClasses(settings?.colorSchemes, settings?.colors),
     ...generateFrameworkTypographyUtilityClasses(settings?.typography),
     ...generateFrameworkSpacingUtilityClasses(settings?.spacing),
   }
@@ -100,9 +111,10 @@ export function buildFrameworkPlan(
     rootCss: composeFrameworkRootCss(colors.variableSets, [
       ...typography.variables,
       ...spacing.variables,
-    ]),
+    ], settings?.typography),
     utilityClasses: {
       ...colors.utilityClasses,
+      ...generateColorSchemeClasses(settings?.colorSchemes, settings?.colors),
       ...typography.utilityClasses,
       ...spacing.utilityClasses,
     },

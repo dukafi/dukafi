@@ -1,14 +1,9 @@
-.tabsRow {
-    padding: var(--space-s) var(--space-s) 0;
-    flex: 0 0 auto;
-}
-
-.tabBody {
+.accordions {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: var(--space-m);
-    padding: var(--space-s);
+    gap: var(--space-2xs);
+    padding: var(--space-s) var(--space-s) var(--space-m);
 }

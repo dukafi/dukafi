@@ -15,7 +15,7 @@ export type LeftSidebarPanelId =
   | 'framework'
   | 'ai'
 /** Tabs inside the consolidated Framework panel. */
-export type FrameworkPanelTab = 'home' | 'colors' | 'typography' | 'spacing'
+export type FrameworkPanelTab = 'schemes' | 'colors' | 'typography' | 'spacing'
 /**
  * Tabs inside the consolidated Explorer panel.
  *   - `layers` — the current page's DOM tree (DomPanel)
@@ -318,7 +318,7 @@ export const createUiSlice: EditorStoreSliceCreator<UiSlice> = (set, get) => ({
   explorerPanelOpen: true,
   explorerPanelTab: 'layers',
   frameworkPanelOpen: false,
-  frameworkPanelTab: 'home',
+  frameworkPanelTab: 'schemes',
   frameworkManagerOpen: false,
   aiPanelOpen: false,
   activePluginPanelId: null,

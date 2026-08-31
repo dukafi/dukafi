@@ -5,8 +5,9 @@
  * A confirmation dialog on every Assist turn would make it slower than dragging
  * a module in by hand, which is the only bar it has to clear.
  *
- * Build is the other button: elicit (if the business profile is blank), plan,
- * merchant approval, then the same apply path. Enter still sends Assist.
+ * Build is the other button on BYOK providers: elicit (if the business profile
+ * is blank), plan, merchant approval, then the same apply path. Enter still
+ * sends Assist. Dukafi AI has one path, so the composer shows one button.
  */
 
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
@@ -33,13 +34,16 @@ export function AiPanel({ mode = 'docked', dragHandleProps, onToggleMode }: Dock
   const error = useEditorStore((s) => s.aiError)
   const needProfile = useEditorStore((s) => s.aiNeedProfile)
   const plan = useEditorStore((s) => s.aiPlan)
+  const provider = useEditorStore((s) => s.aiProvider)
   const sendAiMessage = useEditorStore((s) => s.sendAiMessage)
   const startAiBuild = useEditorStore((s) => s.startAiBuild)
+  const dukafi = provider === 'dukafi'
   const submitAiProfile = useEditorStore((s) => s.submitAiProfile)
   const applyAiPlan = useEditorStore((s) => s.applyAiPlan)
   const cancelAiPlan = useEditorStore((s) => s.cancelAiPlan)
   const clearAiConversation = useEditorStore((s) => s.clearAiConversation)
   const setAiNotConfigured = useEditorStore((s) => s.setAiNotConfigured)
+  const refreshAiConfig = useEditorStore((s) => s.refreshAiConfig)
 
   const panelRef = useRef<HTMLElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
@@ -47,6 +51,10 @@ export function AiPanel({ mode = 'docked', dragHandleProps, onToggleMode }: Dock
   const busy = pending || needProfile || plan !== null
 
   useAutoFocusPanel(panelRef, isOpen)
+
+  useEffect(() => {
+    if (isOpen) void refreshAiConfig()
+  }, [isOpen, refreshAiConfig])
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight })
@@ -95,7 +103,9 @@ export function AiPanel({ mode = 'docked', dragHandleProps, onToggleMode }: Dock
           {messages.length === 0 && !notConfigured && !needProfile && !plan && (
             <EmptyState
               title="Ask for a change"
-              description="Send applies straight away on the open page — press Cmd+Z to undo. Build proposes a section for you to approve first."
+              description={dukafi
+                ? 'Describe the change. The assistant edits this page. You can undo.'
+                : 'Send applies straight away on the open page — press Cmd+Z to undo. Build proposes a section for you to approve first.'}
             />
           )}
 
@@ -109,8 +119,13 @@ export function AiPanel({ mode = 'docked', dragHandleProps, onToggleMode }: Dock
           {messages.map((message, index) => (
             <div
               key={index}
-              className={message.role === 'user' ? styles.user : styles.assistant}
+              className={
+                message.kind === 'activity'
+                  ? styles.activity
+                  : message.role === 'user' ? styles.user : styles.assistant
+              }
               data-role={message.role}
+              data-kind={message.kind || 'reply'}
             >
               <p className={styles.text}>{message.content}</p>
               {message.applied !== undefined && (
@@ -124,7 +139,9 @@ export function AiPanel({ mode = 'docked', dragHandleProps, onToggleMode }: Dock
           {needProfile && <ProfileElicit onSubmit={submitAiProfile} onCancel={cancelAiPlan} disabled={pending} />}
           {plan && <PlanReview plan={plan} onApply={applyAiPlan} onCancel={cancelAiPlan} />}
 
-          {pending && <p className={styles.thinking} role="status">Thinking…</p>}
+          {pending && !messages.some((message) => message.kind === 'activity') && (
+            <p className={styles.thinking} role="status">Thinking…</p>
+          )}
           {error && <Alert tone="danger" title="That didn’t work">{error}</Alert>}
         </div>
 
@@ -140,17 +157,19 @@ export function AiPanel({ mode = 'docked', dragHandleProps, onToggleMode }: Dock
             aria-label="Message the assistant"
           />
           <div className={styles.composerActions}>
-            <AiSettingsPopover onSaved={() => setAiNotConfigured(false)} />
+            <AiSettingsPopover onSaved={() => { setAiNotConfigured(false); void refreshAiConfig() }} />
             <div className={styles.composerButtons}>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={build}
-                disabled={busy || draft.trim().length === 0}
-                data-testid="ai-build"
-              >
-                Build
-              </Button>
+              {!dukafi && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={build}
+                  disabled={busy || draft.trim().length === 0}
+                  data-testid="ai-build"
+                >
+                  Build
+                </Button>
+              )}
               <Button
                 variant="primary"
                 size="sm"

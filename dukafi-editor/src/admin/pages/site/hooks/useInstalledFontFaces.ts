@@ -13,12 +13,24 @@
  * two injections stay distinguishable in the inspector.
  */
 import { useEffect } from 'react'
-import type { FontEntry } from '@core/fonts'
-import { generateSiteFontsCss } from '@core/fonts'
+import type { FontEntry, SiteFontsSettings } from '@core/fonts'
+import { generateFontsCss, generateSiteFontsCss } from '@core/fonts'
 
-export function useInstalledFontFaces(fonts: readonly FontEntry[], dataSource: string): void {
-  const css = generateSiteFontsCss({ items: [...fonts] })
-  useEffect(() => {
+function asFontSettings(
+  fonts: readonly FontEntry[] | SiteFontsSettings | null | undefined,
+): SiteFontsSettings | null {
+  if (!fonts) return null
+  return Array.isArray(fonts) ? { items: [...fonts] } : fonts
+}
+
+export function useInstalledFontFaces(
+  fonts: readonly FontEntry[] | SiteFontsSettings | null | undefined,
+  dataSource: string,
+): void {
+  const settings = asFontSettings(fonts)
+  const css = settings?.tokens?.length
+    ? generateFontsCss(settings)
+    : generateSiteFontsCss(settings)
     if (!css) return
     const styleEl = document.createElement('style')
     styleEl.setAttribute('data-source', dataSource)

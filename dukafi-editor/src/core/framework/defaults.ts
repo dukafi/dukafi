@@ -139,6 +139,7 @@ export function buildDefaultTypographySettings(): FrameworkTypographySettings {
   return {
     groups: [group],
     classes: buildDefaultTypographyClassGenerators(group.id),
+    styles: [],
   }
 }
 

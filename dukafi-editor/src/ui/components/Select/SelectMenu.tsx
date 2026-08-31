@@ -33,6 +33,8 @@ interface SelectMenuProps {
   onOptionPreview?: (value: string) => void
   onSelect: (value: string) => void
   onClose: () => void
+  addItemLabel?: string
+  onAddItem?: () => void
 }
 
 export function SelectMenu({
@@ -57,6 +59,8 @@ export function SelectMenu({
   onOptionPreview,
   onSelect,
   onClose,
+  addItemLabel,
+  onAddItem,
 }: SelectMenuProps) {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const menuElRef = useRef<HTMLDivElement>(null)
@@ -151,6 +155,15 @@ export function SelectMenu({
             </ContextMenuItem>
           ),
         )
+      )}
+      {onAddItem && addItemLabel && (
+        <button
+          type="button"
+          className={styles.addItem}
+          onClick={onAddItem}
+        >
+          {addItemLabel}
+        </button>
       )}
     </ContextMenu>,
     document.body,

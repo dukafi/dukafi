@@ -25,7 +25,20 @@ export function lastSeenSiteSeq(): number {
   return lastSeenSeq
 }
 
+const changeListeners = new Set<() => void>()
+
+/** An MCP write just landed — show the reload notice without waiting for the poll. */
+export function notifyExternalSiteChange(): void {
+  for (const listener of changeListeners) listener()
+}
+
+export function onExternalSiteChange(listener: () => void): () => void {
+  changeListeners.add(listener)
+  return () => { changeListeners.delete(listener) }
+}
+
 /** Only for tests — a module-level counter otherwise leaks between them. */
 export function resetSiteSeq(): void {
   lastSeenSeq = 0
+  changeListeners.clear()
 }

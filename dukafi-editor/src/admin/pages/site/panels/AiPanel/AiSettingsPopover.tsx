@@ -36,6 +36,7 @@ import styles from './AiPanel.module.css'
  * no credential.
  */
 const PROVIDERS = [
+  { id: 'dukafi', label: 'Dukafi AI', baseUrl: '', key: false },
   { id: 'ollama', label: 'Ollama (local)', baseUrl: 'http://localhost:11434/v1', key: false },
   { id: 'lmstudio', label: 'LM Studio (local)', baseUrl: 'http://localhost:1234/v1', key: false },
   { id: 'anthropic', label: 'Anthropic (Claude)', baseUrl: 'https://api.anthropic.com/v1', key: true },
@@ -49,11 +50,16 @@ const ConfigSchema = Type.Object({
   baseUrl: Type.String(),
   model: Type.String(),
   hasKey: Type.Boolean(),
+  provider: Type.Optional(Type.String()),
+  harnessUrl: Type.Optional(Type.String()),
+  connected: Type.Optional(Type.Boolean()),
 })
 const ModelsSchema = Type.Object({ models: Type.Array(Type.String()) })
 
 /** Which preset a stored base URL came from, so the popover reopens on it. */
-function providerFor(baseUrl: string): string {
+function providerFor(baseUrl: string, stored?: string): string {
+  if (stored === 'dukafi') return 'dukafi'
+  if (stored && PROVIDERS.some((p) => p.id === stored)) return stored
   return PROVIDERS.find((p) => p.baseUrl !== '' && p.baseUrl === baseUrl)?.id ?? 'custom'
 }
 
@@ -66,6 +72,8 @@ export function AiSettingsPopover({ onSaved }: { onSaved: () => void }) {
   const [model, setModel] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [hasKey, setHasKey] = useState(false)
+  const [harnessUrl, setHarnessUrl] = useState('')
+  const [connected, setConnected] = useState(false)
 
   const [models, setModels] = useState<string[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
@@ -91,7 +99,11 @@ export function AiSettingsPopover({ onSaved }: { onSaved: () => void }) {
         setBaseUrl(resolved)
         setModel(config.model)
         setHasKey(config.hasKey)
-        setProvider(config.baseUrl ? providerFor(config.baseUrl) : fallback.id)
+        setHarnessUrl(config.harnessUrl || '')
+        setConnected(Boolean(config.connected))
+        setProvider(config.provider === 'dukafi' || config.baseUrl
+          ? providerFor(config.baseUrl, config.provider)
+          : fallback.id)
         setApiKey('')
         setError(null)
       } catch (err) {
@@ -141,13 +153,56 @@ export function AiSettingsPopover({ onSaved }: { onSaved: () => void }) {
     try {
       await apiRequest('/admin/api/cms/ai/config', {
         method: 'PUT',
-        body: { baseUrl: baseUrl.trim(), model: model.trim(), apiKey, ...(clearKey ? { clearKey } : {}) },
+        body: provider === 'dukafi'
+          ? { provider: 'dukafi', harnessUrl: harnessUrl.trim() }
+          : { provider, baseUrl: baseUrl.trim(), model: model.trim(), apiKey, ...(clearKey ? { clearKey } : {}) },
         fallbackMessage: 'Could not save the AI settings',
       })
       setOpen(false)
       onSaved()
     } catch (err) {
       setError(getErrorMessage(err, 'Could not save the AI settings'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function connect() {
+    setBusy(true)
+    setError(null)
+    try {
+      await apiRequest('/admin/api/cms/ai/config', {
+        method: 'PUT',
+        body: { provider: 'dukafi', harnessUrl: harnessUrl.trim() },
+        fallbackMessage: 'Could not save the AI settings',
+      })
+      const result = await apiRequest('/admin/api/cms/ai/dukafi/connect', {
+        method: 'POST',
+        schema: Type.Object({ connected: Type.Boolean() }),
+        fallbackMessage: 'Could not connect Dukafi AI',
+      })
+      setConnected(result.connected)
+      onSaved()
+    } catch (err) {
+      setError(getErrorMessage(err, 'Could not connect Dukafi AI'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function disconnect() {
+    setBusy(true)
+    setError(null)
+    try {
+      await apiRequest('/admin/api/cms/ai/dukafi/disconnect', {
+        method: 'POST',
+        schema: Type.Object({ connected: Type.Boolean() }),
+        fallbackMessage: 'Could not disconnect Dukafi AI',
+      })
+      setConnected(false)
+      onSaved()
+    } catch (err) {
+      setError(getErrorMessage(err, 'Could not disconnect Dukafi AI'))
     } finally {
       setBusy(false)
     }
@@ -210,7 +265,22 @@ export function AiSettingsPopover({ onSaved }: { onSaved: () => void }) {
               </ControlRow>
             )}
 
-            {needsKey && (
+            {provider === 'dukafi' && connected && (
+              <p className={styles.settingsHint}>Connected. The store holds the MCP token.</p>
+            )}
+
+            {provider === 'dukafi' && (
+              <ControlRow propKey="ai-harness-url" inputId="ai-harness-url" label="Harness URL" layout="stacked">
+                <Input
+                  id="ai-harness-url"
+                  value={harnessUrl}
+                  placeholder="Blank = official (DUKAFI_AI_URL)"
+                  onChange={(event) => setHarnessUrl(event.currentTarget.value)}
+                />
+              </ControlRow>
+            )}
+
+            {needsKey && provider !== 'dukafi' && (
               <ControlRow propKey="ai-key" inputId="ai-key" label="API key" layout="stacked">
                 <Input
                   id="ai-key"
@@ -222,6 +292,7 @@ export function AiSettingsPopover({ onSaved }: { onSaved: () => void }) {
               </ControlRow>
             )}
 
+            {provider !== 'dukafi' && (
             <ControlRow propKey="ai-model" inputId="ai-model" label="Model" layout="stacked">
               {models.length > 0 ? (
                 <select
@@ -244,8 +315,26 @@ export function AiSettingsPopover({ onSaved }: { onSaved: () => void }) {
                 />
               )}
             </ControlRow>
+            )}
 
             <div className={styles.settingsActions}>
+              {provider === 'dukafi' ? (
+                <>
+                  {connected ? (
+                    <Button variant="ghost" size="xs" onClick={() => void disconnect()} disabled={busy}>
+                      Disconnect
+                    </Button>
+                  ) : (
+                    <Button variant="secondary" size="xs" onClick={() => void connect()} disabled={busy}>
+                      {busy ? 'Connecting…' : 'Connect'}
+                    </Button>
+                  )}
+                  <Button variant="primary" size="xs" onClick={() => void save()} disabled={busy}>
+                    {busy ? 'Saving…' : 'Save'}
+                  </Button>
+                </>
+              ) : (
+                <>
               <Button variant="secondary" size="xs" onClick={loadModels} disabled={loadingModels || !baseUrl}>
                 {loadingModels ? 'Loading…' : 'Load models'}
               </Button>
@@ -262,6 +351,8 @@ export function AiSettingsPopover({ onSaved }: { onSaved: () => void }) {
               >
                 {busy ? 'Saving…' : 'Save'}
               </Button>
+                </>
+              )}
             </div>
 
             {error && <p className={styles.settingsError} role="alert">{error}</p>}

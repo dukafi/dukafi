@@ -48,6 +48,19 @@ class StyleRulesCssSpec < Minitest::Test
     assert_includes css({ "a" => rule("styles" => { "--brand" => "#fff" }) }), "--brand: #fff;"
   end
 
+  def test_comma_separated_scheme_selectors_are_emitted
+    result = css({
+      "scheme" => rule(
+        "selector" => '.scheme-3, [data-scheme="scheme-3"]',
+        "styles" => { "--scheme-background" => "var(--dark)", "--scheme-heading" => "var(--light)" },
+      ),
+    })
+
+    assert_includes result, '.scheme-3, [data-scheme="scheme-3"]'
+    assert_includes result, "--scheme-background: var(--dark);"
+    assert_includes result, "--scheme-heading: var(--light);"
+  end
+
   def test_rules_without_declarations_emit_no_empty_block
     assert_equal "", css({ "a" => rule("styles" => {}) })
   end

@@ -70,6 +70,7 @@ describe('AiSettingsPopover', () => {
     render(<AiSettingsPopover onSaved={() => {}} />)
     await openPopover()
 
+    expect(optionLabels('ai-provider')).toContain('Dukafi AI')
     expect(optionLabels('ai-provider')).toContain('Ollama (local)')
     expect(optionLabels('ai-provider')).toContain('OpenRouter')
     // Ollama is the default selection, and it asks for no credential.
@@ -212,5 +213,37 @@ describe('AiSettingsPopover', () => {
       expect(nativeSelect('ai-provider').value).toBe('custom')
       expect((screen.getByLabelText('Base URL') as HTMLInputElement).value).toBe('https://my-own-host/v1')
     })
+  })
+
+  it('offers Dukafi AI without a model or key, and connects without returning a token', async () => {
+    const calls: Call[] = []
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      const method = init?.method ?? 'GET'
+      const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {}
+      calls.push({ url, method, body })
+      const json = (value: unknown) =>
+        new Response(JSON.stringify(value), { status: 200, headers: { 'content-type': 'application/json' } })
+      if (url.includes('/ai/config') && method === 'GET') {
+        return json({ baseUrl: '', model: '', hasKey: false, provider: 'dukafi', connected: false })
+      }
+      if (url.includes('/ai/config')) return new Response(null, { status: 204 })
+      if (url.includes('/dukafi/connect')) return json({ connected: true })
+      return new Response(null, { status: 404 })
+    }) as typeof fetch
+
+    render(<AiSettingsPopover onSaved={() => {}} />)
+    await openPopover()
+
+    expect(nativeSelect('ai-provider').value).toBe('dukafi')
+    expect(screen.queryByLabelText('API key')).toBeNull()
+    expect(screen.queryByLabelText('Model')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
+
+    await waitFor(() => {
+      expect(calls.some((call) => call.url.includes('/dukafi/connect'))).toBe(true)
+    })
+    expect(JSON.stringify(calls)).not.toContain('dkf_')
   })
 })

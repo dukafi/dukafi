@@ -24,7 +24,10 @@ import {
 } from '@site/panels/FrameworkScalePanel'
 import { useFrameworkChangeConfirm } from '@admin/shared/dialogs/FrameworkChangeConfirmDialog'
 import { applyTypographyGroupPatchPreview } from '@site/store/slices/site/framework/typography'
+import { useInstalledFontFaces } from '@site/hooks/useInstalledFontFaces'
 import { FontsSection } from './FontsSection/FontsSection'
+import { FontTokensSection } from './FontsSection/FontTokensSection'
+import { TypeStylesSection } from './TypeStylesSection'
 import styles from './TypographyPanel.module.css'
 
 const TYPOGRAPHY_CSS_PROPERTIES = [
@@ -115,6 +118,8 @@ function TypographyScalePreview({ points }: { points: TypographyScalePoint[] }) 
 }
 
 export function TypographyTab() {
+  const fonts = useEditorStore((s) => s.site?.settings.fonts ?? null)
+  useInstalledFontFaces(fonts, 'dukafi-typography-fonts')
   const onToggleDisabled = useEditorStore((s) => s.toggleFrameworkTypographyDisabled)
   const onCreateGroup = useEditorStore((s) => s.createFrameworkTypographyGroup)
   const onUpdateGroup = useEditorStore((s) => s.updateFrameworkTypographyGroup)
@@ -198,16 +203,31 @@ export function TypographyTab() {
     onDeleteGroup: wrappedDeleteGroup,
     onUpsertManualSize,
     onSetClassGenerators: wrappedSetClassGenerators,
+    hideScaleSections: true,
     extraSections: [
       {
         id: 'fonts',
         title: 'Fonts',
-        // Show above Scales — fonts are loaded once per site and live above
-        // the scale-tweaking workflow.
         position: 'top',
-        defaultOpen: true,
+        defaultOpen: false,
         icon: TextColumsIcon,
         render: () => <FontsSection />,
+      },
+      {
+        id: 'font-tokens',
+        title: 'Font tokens',
+        position: 'top',
+        defaultOpen: false,
+        icon: TextColumsIcon,
+        render: () => <FontTokensSection />,
+      },
+      {
+        id: 'type-styles',
+        title: 'Type styles',
+        position: 'top',
+        defaultOpen: false,
+        icon: TextStartTIcon,
+        render: () => <TypeStylesSection />,
       },
     ],
   }

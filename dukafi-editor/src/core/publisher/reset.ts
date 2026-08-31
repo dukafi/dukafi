@@ -82,7 +82,7 @@ export const PUBLISHER_RESET_CSS = [
   ':where(button) { background: none; border: 0; cursor: pointer; }',
 
   // Long-word safety on text-bearing elements.
-  ':where(p, h1, h2, h3, h4, h5, h6) { overflow-wrap: break-word; }',
+  ':where(p, h1, h2, h3, h4, h5, h6, h7) { overflow-wrap: break-word; }',
 
   // Lists: no bullets by default. Most site lists are styled menus / nav, not
   // editorial bulleted lists. Users who want bullets re-enable via a class.

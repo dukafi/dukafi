@@ -15,6 +15,7 @@ type TextTag =
   | 'h4'
   | 'h5'
   | 'h6'
+  | 'h7'
   | 'span'
   | 'div'
   | 'small'
@@ -30,6 +31,7 @@ const TEXT_TAGS = new Set<TextTag>([
   'h4',
   'h5',
   'h6',
+  'h7',
   'span',
   'div',
   'small',

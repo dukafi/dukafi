@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import React from 'react'
 import { cleanup, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { SpacingTab } from '@site/panels/SpacingPanel'
 import { TypographyTab } from '@site/panels/TypographyPanel'
 import { useEditorStore } from '@site/store/store'
@@ -69,18 +70,15 @@ describe('FrameworkScalePanel', () => {
 
     const typographyPanel = screen.getByTestId('typography-panel')
     const spacingPanel = screen.getByTestId('spacing-panel')
-    const typographyScalePicker = within(typographyPanel).getByRole('group', {
-      name: 'Typography scales',
-    })
     const spacingScalePicker = within(spacingPanel).getByRole('group', {
       name: 'Spacing scales',
     })
 
-    expect(within(typographyScalePicker).getByRole('button', { name: 'Add typography scale' })).toBeDefined()
+    expect(within(typographyPanel).queryByRole('group', { name: 'Typography scales' })).toBeNull()
     expect(within(spacingScalePicker).getByRole('button', { name: 'Add spacing scale' })).toBeDefined()
   })
 
-  it('uses the shared empty state when installed fonts have no font tokens', () => {
+  it('uses the shared empty state when installed fonts have no font tokens', async () => {
     useEditorStore.setState({
       site: makeSite({
         settings: {
@@ -96,11 +94,24 @@ describe('FrameworkScalePanel', () => {
     render(<TypographyPanel />)
 
     const typographyPanel = screen.getByTestId('typography-panel')
+    await userEvent.click(within(typographyPanel).getByRole('button', { name: 'Font tokens' }))
     const fontTokenEmptyText = within(typographyPanel).getByText('No font tokens yet.')
     const emptyState = fontTokenEmptyText.closest('[role="status"]')
 
     expect(emptyState).toBeTruthy()
     expect(within(emptyState as HTMLElement).getByRole('button', { name: 'Create token' })).toBeTruthy()
     expect(within(typographyPanel).getAllByRole('button', { name: 'Create token' })).toHaveLength(1)
+  })
+
+  it('edits H1–H7 and P as default type styles', async () => {
+    render(<TypographyPanel />)
+
+    const typographyPanel = screen.getByTestId('typography-panel')
+    await userEvent.click(within(typographyPanel).getByRole('button', { name: 'Type styles' }))
+    const typeStyles = screen.getByTestId('type-styles')
+    expect(within(typeStyles).getByRole('button', { name: 'H1' })).toBeDefined()
+    expect(within(typeStyles).getByRole('button', { name: 'H7' })).toBeDefined()
+    expect(within(typeStyles).getByRole('button', { name: 'P' })).toBeDefined()
+    expect(within(typeStyles).getByLabelText('Type style font size')).toBeDefined()
   })
 })

@@ -13,6 +13,8 @@ export interface SelectOption {
   icon?: ReactNode
   disabled?: boolean
   placeholder?: boolean
+  /** Non-interactive group heading. Skipped by selection and keyboard nav. */
+  header?: boolean
 }
 
 export interface NormalizedSelectOption {

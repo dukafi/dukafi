@@ -10,6 +10,7 @@
 
 import type { SiteDocument } from '@core/page-tree'
 import type { FrameworkTypographyGroup } from '@core/framework-schema'
+import { resolveTypeStyles } from '@core/framework'
 import {
   buildDefaultTypographyGroup,
   makeFreshTypographyGroup,
@@ -57,6 +58,7 @@ type FrameworkTypographyActions = Pick<
   | 'deleteFrameworkTypographyGroup'
   | 'upsertFrameworkTypographyManualSize'
   | 'setFrameworkTypographyClassGenerators'
+  | 'updateFrameworkTypeStyle'
 >
 
 export function createFrameworkTypographyActions(
@@ -78,5 +80,19 @@ export function createFrameworkTypographyActions(
     deleteFrameworkTypographyGroup: inner.deleteGroup,
     upsertFrameworkTypographyManualSize: inner.upsertManualSize,
     setFrameworkTypographyClassGenerators: inner.setClassGenerators,
+    updateFrameworkTypeStyle(tag, patch) {
+      helpers.mutateSite((draft) => {
+        const framework = draft.settings.framework
+        if (!framework) return false
+        if (!framework.typography) {
+          framework.typography = { groups: [], classes: [], styles: [] }
+        }
+        const typography = framework.typography
+        const current = resolveTypeStyles(typography)
+        const next = current.map((row) => (row.tag === tag ? { ...row, ...patch, tag } : row))
+        typography.styles = next
+        return true
+      }, { coalesceKey: `framework-type-style:${tag}` })
+    },
   }
 }

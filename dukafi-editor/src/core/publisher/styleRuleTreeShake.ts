@@ -58,6 +58,16 @@ function selectorCanMatch(
   )
 }
 
+export interface TreeShakeStyleRulesOptions {
+  /**
+   * Canvas CSS has no separate `framework.css` — generated utilities must
+   * travel with the registry stylesheet or `--scheme-*` / `text-primary`
+   * never paint. The publisher keeps this off because those rules already
+   * ship from `generateFrameworkCss()`.
+   */
+  includeGenerated?: boolean
+}
+
 /**
  * Select only registry rules that can affect the current document trees.
  *
@@ -70,6 +80,7 @@ function selectorCanMatch(
 export function treeShakeStyleRules(
   styleRules: Record<string, StyleRule>,
   usedIds: ReadonlySet<string>,
+  options: TreeShakeStyleRulesOptions = {},
 ): Record<string, StyleRule> {
   const knownClassNames = new Set<string>()
   const usedClassNames = new Set<string>()
@@ -82,7 +93,7 @@ export function treeShakeStyleRules(
 
   const selected: Record<string, StyleRule> = {}
   for (const rule of Object.values(styleRules)) {
-    if (isGeneratedClass(rule)) continue
+    if (isGeneratedClass(rule) && !options.includeGenerated) continue
 
     if (rule.kind === 'class') {
       if (
@@ -126,7 +137,7 @@ export function treeShakeStyleRulesBySignature(
   const usedIds = usedIdSignature
     ? new Set(usedIdSignature.split('\0'))
     : new Set<string>()
-  lastTreeShakenRules = treeShakeStyleRules(styleRules, usedIds)
+  lastTreeShakenRules = treeShakeStyleRules(styleRules, usedIds, { includeGenerated: true })
   lastStyleRules = styleRules
   lastUsedIdSignature = usedIdSignature
   return lastTreeShakenRules

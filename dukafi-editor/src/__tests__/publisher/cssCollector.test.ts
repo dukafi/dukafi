@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'bun:test'
-import { CssCollector, sanitizeModuleCSS } from '@core/publisher'
+import { CssCollector, sanitizeModuleCSS, treeShakeStyleRules } from '@core/publisher'
+import type { StyleRule } from '@core/page-tree'
 
 // ---------------------------------------------------------------------------
 // sanitizeModuleCSS — Constraint #228
@@ -129,5 +130,34 @@ describe('CssCollector', () => {
     collector.add('mod.a', 'a { }')
     collector.add('mod.b', 'b { }')
     expect(collector.collect()).toBe('a { }\nb { }')
+  })
+})
+
+describe('treeShakeStyleRules generated utilities', () => {
+  const scheme: StyleRule = {
+    id: 'framework:scheme:scope:scheme-3',
+    name: 'scheme-3',
+    kind: 'class',
+    selector: '.scheme-3, [data-scheme="scheme-3"]',
+    order: 0,
+    styles: { '--scheme-background': 'var(--dark)' },
+    contextStyles: {},
+    generated: { origin: 'framework', family: 'scheme', sourceId: 'scheme-3', locked: true },
+    createdAt: 1,
+    updatedAt: 1,
+  }
+
+  it('keeps generated utilities out of published class CSS by default', () => {
+    const shaken = treeShakeStyleRules({ [scheme.id]: scheme }, new Set([scheme.id]))
+    expect(shaken[scheme.id]).toBeUndefined()
+  })
+
+  it('includes used generated utilities for the canvas stylesheet', () => {
+    const shaken = treeShakeStyleRules(
+      { [scheme.id]: scheme },
+      new Set([scheme.id]),
+      { includeGenerated: true },
+    )
+    expect(shaken[scheme.id]).toEqual(scheme)
   })
 })

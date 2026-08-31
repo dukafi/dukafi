@@ -1723,27 +1723,27 @@ class AdminApi < Roda
         # model is a two-click job in the panel rather than a trip to the
         # plugin admin. `hasKey` — never the key itself.
         r.is("config") do
-          r.get do
-            settings = AiChat.settings
-            {
-              baseUrl: settings[:base_url].to_s,
-              model: settings[:model].to_s,
-              hasKey: !settings[:api_key].to_s.strip.empty?,
-            }
-          end
+          r.get { DukafiAi.config_payload }
 
           r.put do
-            settings = AiChat.settings
-            settings[:base_url] = r.params["baseUrl"].to_s.strip
-            settings[:model] = r.params["model"].to_s.strip
-            # Same rule the generic plugin form follows: a blank key means
-            # "leave it alone", because the form was never shown the current
-            # one to resubmit. Clearing is explicit, via `clearKey`.
-            key = r.params["apiKey"].to_s
-            settings[:api_key] = "" if r.params["clearKey"] == true
-            settings[:api_key] = key.strip unless key.strip.empty?
+            DukafiAi.save_config!(r.params)
             no_content!
           end
+        end
+
+        r.post("dukafi/connect") { DukafiAi.connect! }
+
+        r.post("dukafi/disconnect") { DukafiAi.disconnect! }
+
+        # Store → harness → store MCP. The minted token never leaves this hop
+        # toward the browser.
+        r.post("run") do
+          request.halt(DukafiAiClient.rack_run(
+            prompt: r.params["prompt"],
+            slug: r.params["slug"],
+            mode: r.params["mode"],
+            origin: public_origin,
+          ))
         end
 
         # The provider's catalogue, so the merchant picks a model instead of

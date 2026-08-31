@@ -46,6 +46,7 @@ export const TextModule: ModuleDefinition<TextStoredProps> = {
         { label: 'Heading 4', value: 'h4' },
         { label: 'Heading 5', value: 'h5' },
         { label: 'Heading 6', value: 'h6' },
+        { label: 'Heading 7', value: 'h7' },
         { label: 'Span', value: 'span' },
         { label: 'Div', value: 'div' },
         { label: 'Small', value: 'small' },

@@ -42,6 +42,7 @@ import type {
   FrameworkSpacingSettings,
   FrameworkTypographySettings,
 } from '@core/framework-schema'
+import { buildDefaultColorSchemes } from './colorSchemes'
 import {
   buildDefaultSpacingGroup,
   buildDefaultSpacingSettings,
@@ -177,7 +178,7 @@ function buildCoreTypographySettings(
   options: CoreFrameworkImportOptions,
 ): FrameworkTypographySettings {
   if (options.includeUtilities) return buildDefaultTypographySettings()
-  return { groups: [buildDefaultTypographyGroup()], classes: [] }
+  return { groups: [buildDefaultTypographyGroup()], classes: [], styles: [] }
 }
 
 function buildCoreSpacingSettings(
@@ -217,8 +218,10 @@ function buildCoreFrameworkPreferences(
 export function buildCoreFrameworkSettings(
   options: CoreFrameworkImportOptions,
 ): FrameworkSettings {
+  const colors = buildCoreFrameworkColorSettings(options)
   return {
-    colors: buildCoreFrameworkColorSettings(options),
+    colors,
+    colorSchemes: { schemes: buildDefaultColorSchemes(colors.tokens) },
     typography: buildCoreTypographySettings(options),
     spacing: buildCoreSpacingSettings(options),
     preferences: buildCoreFrameworkPreferences(options),

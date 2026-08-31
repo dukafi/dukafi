@@ -72,6 +72,14 @@ const GeneratedSpacingClassMetadataSchema = Type.Object({
   locked: Type.Literal(true),
 })
 
+const GeneratedSchemeClassMetadataSchema = Type.Object({
+  origin: Type.Literal('framework'),
+  family: Type.Literal('scheme'),
+  sourceId: Type.String(),
+  tokenName: Type.String(),
+  locked: Type.Literal(true),
+})
+
 
 /**
  * Discriminated union of all framework-generated class metadata.
@@ -81,6 +89,7 @@ export const GeneratedClassMetadataSchema = Type.Union([
   GeneratedColorClassMetadataSchema,
   GeneratedTypographyClassMetadataSchema,
   GeneratedSpacingClassMetadataSchema,
+  GeneratedSchemeClassMetadataSchema,
 ])
 
 
@@ -148,6 +157,44 @@ const FrameworkColorSettingsSchema = Type.Object({
 })
 
 export type FrameworkColorSettings = Static<typeof FrameworkColorSettingsSchema>
+
+export const COLOR_SCHEME_ROLES = [
+  'background',
+  'secondary',
+  'heading',
+  'body',
+  'accent',
+  'border',
+] as const
+
+export type ColorSchemeRole = (typeof COLOR_SCHEME_ROLES)[number]
+
+const FrameworkColorSchemeRolesSchema = Type.Object({
+  background: Type.String(),
+  secondary: Type.String(),
+  heading: Type.String(),
+  body: Type.String(),
+  accent: Type.String(),
+  border: Type.String(),
+})
+
+export type FrameworkColorSchemeRoles = Static<typeof FrameworkColorSchemeRolesSchema>
+
+export const FrameworkColorSchemeSchema = Type.Object({
+  id: Type.String(),
+  slug: Type.String(),
+  name: Type.String(),
+  order: withFallback(Type.Number(), 0),
+  roles: FrameworkColorSchemeRolesSchema,
+})
+
+export type FrameworkColorScheme = Static<typeof FrameworkColorSchemeSchema>
+
+export const FrameworkColorSchemeSettingsSchema = Type.Object({
+  schemes: withFallback(Type.Array(FrameworkColorSchemeSchema), []),
+})
+
+export type FrameworkColorSchemeSettings = Static<typeof FrameworkColorSchemeSettingsSchema>
 
 // ---------------------------------------------------------------------------
 // FrameworkScaleMode
@@ -326,9 +373,36 @@ export type FrameworkSpacingClassGenerator = FrameworkTypographyClassGenerator
 // FrameworkTypographySettings and FrameworkSpacingSettings
 // ---------------------------------------------------------------------------
 
+export const TYPE_STYLE_TAGS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'h7', 'p'] as const
+
+export type TypeStyleTag = (typeof TYPE_STYLE_TAGS)[number]
+
+const FrameworkTypeStyleSchema = Type.Object({
+  tag: Type.Union([
+    Type.Literal('h1'),
+    Type.Literal('h2'),
+    Type.Literal('h3'),
+    Type.Literal('h4'),
+    Type.Literal('h5'),
+    Type.Literal('h6'),
+    Type.Literal('h7'),
+    Type.Literal('p'),
+  ]),
+  fontFamily: withFallback(Type.String(), ''),
+  fontSize: withFallback(Type.String(), ''),
+  fontWeight: withFallback(Type.String(), ''),
+  letterSpacing: withFallback(Type.String(), ''),
+  lineHeight: withFallback(Type.String(), ''),
+  textTransform: withFallback(Type.String(), ''),
+  maxWidth: withFallback(Type.String(), ''),
+})
+
+export type FrameworkTypeStyle = Static<typeof FrameworkTypeStyleSchema>
+
 const FrameworkTypographySettingsSchema = Type.Object({
   groups: withFallback(Type.Array(FrameworkTypographyGroupSchema), []),
   classes: Type.Optional(Type.Array(FrameworkTypographyClassGeneratorSchema)),
+  styles: withFallback(Type.Array(FrameworkTypeStyleSchema), []),
   isDisabled: Type.Optional(Type.Boolean()),
 })
 
@@ -388,6 +462,7 @@ export type FrameworkPreferencesSettings = Static<typeof FrameworkPreferencesSet
  */
 export const FrameworkSettingsSchema = Type.Object({
   colors: FrameworkColorSettingsSchema,
+  colorSchemes: Type.Optional(FrameworkColorSchemeSettingsSchema),
   typography: Type.Optional(FrameworkTypographySettingsSchema),
   spacing: Type.Optional(FrameworkSpacingSettingsSchema),
   preferences: Type.Optional(FrameworkPreferencesSettingsSchema),

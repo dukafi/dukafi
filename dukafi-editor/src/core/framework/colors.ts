@@ -173,6 +173,37 @@ export function formatFrameworkColorThemeCss(sets: FrameworkColorVariableSets): 
     .join('\n\n')
 }
 
+/** WCAG relative luminance, or null when the value cannot be parsed. */
+export function frameworkColorLuminance(value: string): number | null {
+  const channels = parseColor(value)
+  if (!channels) return null
+  const [r, g, b] = hslToRgb(channels.h, channels.s, channels.l)
+  return 0.2126 * srgbToLinear(r) + 0.7152 * srgbToLinear(g) + 0.0722 * srgbToLinear(b)
+}
+
+/** WCAG contrast ratio (1–21), or null when either color cannot be parsed. */
+export function frameworkColorContrast(a: string, b: string): number | null {
+  const left = frameworkColorLuminance(a)
+  const right = frameworkColorLuminance(b)
+  if (left == null || right == null) return null
+  const [hi, lo] = left > right ? [left, right] : [right, left]
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+export function mixFrameworkColor(
+  value: string,
+  next: { l?: number; s?: number; a?: number },
+): string | null {
+  const channels = parseColor(value)
+  if (!channels) return null
+  return formatHsla({
+    ...channels,
+    l: next.l ?? channels.l,
+    s: next.s ?? channels.s,
+    a: next.a ?? channels.a,
+  })
+}
+
 export function generateDefaultDarkColor(lightValue: string): string {
   // Best-effort default for the stored `darkValue` field (a string). When the
   // light color can't be parsed there's no meaningful shade, so fall back to the
@@ -425,6 +456,43 @@ function parseColor(value: string): ColorChannels | null {
   }
 
   return null
+}
+
+function srgbToLinear(channel: number): number {
+  const value = clamp(channel, 0, 255) / 255
+  return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
+}
+
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  const sl = clamp(s, 0, 100) / 100
+  const ll = clamp(l, 0, 100) / 100
+  const chroma = (1 - Math.abs(2 * ll - 1)) * sl
+  const huePrime = normalizeHue(h) / 60
+  const x = chroma * (1 - Math.abs((huePrime % 2) - 1))
+  let r = 0
+  let g = 0
+  let b = 0
+  if (huePrime < 1) {
+    r = chroma
+    g = x
+  } else if (huePrime < 2) {
+    r = x
+    g = chroma
+  } else if (huePrime < 3) {
+    g = chroma
+    b = x
+  } else if (huePrime < 4) {
+    g = x
+    b = chroma
+  } else if (huePrime < 5) {
+    r = x
+    b = chroma
+  } else {
+    r = chroma
+    b = x
+  }
+  const match = ll - chroma / 2
+  return [(r + match) * 255, (g + match) * 255, (b + match) * 255]
 }
 
 function hexToRgb(hex: string): [number, number, number] {

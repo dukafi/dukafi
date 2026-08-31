@@ -1,0 +1,16 @@
+.row {
+    display: grid;
+    grid-template-columns: 7.5rem 1fr;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-s);
+    font-size: var(--text-s);
+}
+
+.label {
+    color: var(--text-subtle);
+}
+
+.select {
+    min-width: 0;
+}

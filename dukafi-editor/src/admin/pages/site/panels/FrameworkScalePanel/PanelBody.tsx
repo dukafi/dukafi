@@ -70,54 +70,48 @@ export function PanelBody<G extends GroupShape, C extends GeneratorShape>({
         </Section>
       ))}
 
-      {/* Scales section — scale picker (FilterBar), name + prefix, mode toggle,
-          fluid/manual editor with chart. When there are no scales or the
-          module is disabled, the section renders an inline empty state so
-          the surrounding sections stay visible. */}
-      <Section title="Scales" defaultOpen icon={adapter.scalesSectionIcon}>
-        <div className={styles.sectionBody}>
-          {isDisabled ? (
-            <EmptyState
-              plain
-              compact
-              title={`${adapter.title} module is disabled.`}
-              action={
-                <Button variant="secondary" size="sm" onClick={adapter.onToggleDisabled}>
-                  Enable
-                </Button>
-              }
-            />
-          ) : group === null ? (
-            <EmptyState
-              plain
-              compact
-              title={`No ${adapter.title.toLowerCase()} scales yet.`}
-              action={
-                <Button variant="secondary" size="sm" onClick={onAddGroup}>
-                  Create scale
-                </Button>
-              }
-            />
-          ) : (
-            <ScalesEditor<G, C>
-              group={group}
-              groups={groups}
-              adapter={adapter}
-              preferences={preferences}
-              onContextMenu={onContextMenu}
-              onActivateGroup={onActivateGroup}
-              onAddGroup={onAddGroup}
-              onDeleteGroup={onDeleteGroup}
-            />
-          )}
-        </div>
-      </Section>
+      {!adapter.hideScaleSections && (
+        <Section title="Scales" defaultOpen icon={adapter.scalesSectionIcon}>
+          <div className={styles.sectionBody}>
+            {isDisabled ? (
+              <EmptyState
+                plain
+                compact
+                title={`${adapter.title} module is disabled.`}
+                action={
+                  <Button variant="secondary" size="sm" onClick={adapter.onToggleDisabled}>
+                    Enable
+                  </Button>
+                }
+              />
+            ) : group === null ? (
+              <EmptyState
+                plain
+                compact
+                title={`No ${adapter.title.toLowerCase()} scales yet.`}
+                action={
+                  <Button variant="secondary" size="sm" onClick={onAddGroup}>
+                    Create scale
+                  </Button>
+                }
+              />
+            ) : (
+              <ScalesEditor<G, C>
+                group={group}
+                groups={groups}
+                adapter={adapter}
+                preferences={preferences}
+                onContextMenu={onContextMenu}
+                onActivateGroup={onActivateGroup}
+                onAddGroup={onAddGroup}
+                onDeleteGroup={onDeleteGroup}
+              />
+            )}
+          </div>
+        </Section>
+      )}
 
-      {/* Utilities section — class generator (utility class patterns).
-          Hidden when no scale exists (utility classes are bound to a scale)
-          or when the module is disabled. The icon (`{ }`) reads as "code
-          that gets generated". */}
-      {!isDisabled && group !== null && (
+      {!adapter.hideScaleSections && !isDisabled && group !== null && (
         <Section title="Utilities" defaultOpen icon={BracesIcon}>
           <div className={styles.sectionBody}>
             <ClassGeneratorList<C>

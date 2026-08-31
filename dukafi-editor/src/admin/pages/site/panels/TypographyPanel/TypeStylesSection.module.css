@@ -1,0 +1,119 @@
+.root {
+    display: grid;
+    gap: var(--space-s);
+}
+
+.hint {
+    margin: 0;
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+    line-height: 1.4;
+}
+
+.tags [role="group"] {
+    flex-wrap: wrap;
+    overflow: visible;
+    mask-image: none;
+    -webkit-mask-image: none;
+}
+
+.preview {
+    min-height: 4.5rem;
+    padding: var(--space-s);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-surface);
+    color: var(--text);
+    overflow: hidden;
+}
+
+.field {
+    display: grid;
+    grid-template-columns: 7.5rem 1fr;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-s);
+}
+
+.field > span {
+    color: var(--text-subtle);
+}
+
+.sliderField {
+    display: grid;
+    gap: var(--space-2xs);
+    font-size: var(--text-s);
+}
+
+.sliderHeader {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 5.25rem;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--text-subtle);
+}
+
+.sliderValue {
+    width: 5.25rem;
+}
+
+.slider {
+    --slider-progress: 50%;
+    width: 100%;
+    height: 1rem;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    accent-color: var(--text);
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.slider:focus-visible {
+    outline: 1px solid var(--overlay-50);
+    outline-offset: 2px;
+}
+
+.slider::-webkit-slider-runnable-track {
+    height: 3px;
+    border-radius: 999px;
+    background: linear-gradient(
+        to right,
+        var(--text) var(--slider-progress),
+        var(--border) var(--slider-progress)
+    );
+}
+
+.slider::-webkit-slider-thumb {
+    width: 12px;
+    height: 12px;
+    margin-top: -4.5px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--text);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.slider::-moz-range-track {
+    height: 3px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--border);
+}
+
+.slider::-moz-range-progress {
+    height: 3px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--text);
+}
+
+.slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--text);
+}

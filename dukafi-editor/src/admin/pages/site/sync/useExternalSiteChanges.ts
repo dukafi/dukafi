@@ -15,7 +15,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Type } from '@core/utils/typeboxHelpers'
 import { apiRequest } from '@core/http'
-import { lastSeenSiteSeq } from './siteSyncSeq'
+import { lastSeenSiteSeq, onExternalSiteChange } from './siteSyncSeq'
 
 const SiteVersionSchema = Type.Object({ seq: Type.Number() })
 
@@ -50,6 +50,11 @@ export function useExternalSiteChanges(
   // not tear down and restart the interval.
   const fetchRef = useRef(fetchSeq)
   fetchRef.current = fetchSeq
+
+  useEffect(() => {
+    if (!enabled || changed) return
+    return onExternalSiteChange(() => setChanged(true))
+  }, [enabled, changed])
 
   useEffect(() => {
     if (!enabled || changed) return

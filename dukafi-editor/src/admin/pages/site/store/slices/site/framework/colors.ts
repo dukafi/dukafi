@@ -36,7 +36,7 @@ const DEFAULT_COLOR_VARIANTS: ColorVariantOptions = { enabled: true, count: 4 }
 // Pure helpers
 // ---------------------------------------------------------------------------
 
-function ensureFrameworkColors(
+export function ensureFrameworkColors(
   site: SiteDocument,
 ): NonNullable<SiteSettings['framework']>['colors'] {
   if (!site.settings.framework) {
@@ -96,7 +96,7 @@ function uniqueColorSlug(
   return `${base}-${suffix}`
 }
 
-function createFrameworkColorTokenFromInput(
+export function createFrameworkColorTokenFromInput(
   input: CreateFrameworkColorTokenInput,
   colors: NonNullable<SiteSettings['framework']>['colors'],
 ): FrameworkColorToken {

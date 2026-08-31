@@ -9,6 +9,7 @@ import { pushToast } from '@ui/components/Toast'
 import { readEditorSelectPreference } from '@site/preferences/editorPreferences'
 import { consumePendingCmsSiteReload, hasPendingCmsSiteReload } from '@admin/state/adminEvents'
 import { recordSiteSeq } from '@site/sync/siteSyncSeq'
+import { consumeSkipSiteAutosave } from '@site/sync/refreshSiteFromServer'
 import { useExternalSiteChanges } from '@site/sync/useExternalSiteChanges'
 
 export interface PersistenceSaveStatus {
@@ -146,6 +147,7 @@ export function usePersistence(
         unsubscribe = useEditorStore.subscribe(
           (state) => state.site,
           (site, previousSite) => {
+            if (consumeSkipSiteAutosave()) return
             if (site !== previousSite) queueSave(site)
           },
         )

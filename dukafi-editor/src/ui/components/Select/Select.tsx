@@ -98,6 +98,9 @@ interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'siz
    */
   onOptionPreview?: (value: string) => void
   onOptionPreviewClear?: () => void
+  /** Extra action pinned under the option list (e.g. "Add brand color"). */
+  addItemLabel?: string
+  onAddItem?: () => void
   'data-testid'?: string
   /** React 19: ref is a regular prop on function components. */
   ref?: Ref<HTMLSelectElement>
@@ -116,6 +119,8 @@ export function Select({
   onChange,
   onOptionPreview,
   onOptionPreviewClear,
+  addItemLabel,
+  onAddItem,
   id,
   name,
   required,
@@ -344,11 +349,13 @@ export function Select({
         {...props}
       >
         {options ? (
-          normalizedOptions.map((option) => (
-            <option key={option.value} value={option.value} disabled={option.disabled}>
-              {option.textValue}
-            </option>
-          ))
+          normalizedOptions
+            .filter((option) => !option.header)
+            .map((option) => (
+              <option key={option.value} value={option.value} disabled={option.disabled}>
+                {option.textValue}
+              </option>
+            ))
         ) : children}
       </select>
 
@@ -407,6 +414,8 @@ export function Select({
           onOptionPreview={onOptionPreview}
           onSelect={commitValue}
           onClose={closeMenu}
+          addItemLabel={addItemLabel}
+          onAddItem={onAddItem ? () => { closeMenu(); onAddItem() } : undefined}
         />
       )}
     </div>

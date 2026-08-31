@@ -26,6 +26,7 @@ import { useEditorStore } from '@site/store/store'
 import type { AnyModuleDefinition } from '@core/module-engine'
 import type { StyleRule, CSSPropertyBag } from '@core/page-tree'
 import { isGeneratedClassLocked, styleRuleSelector } from '@core/page-tree'
+import { isSchemeAssignmentClass } from '@core/framework'
 import { Button } from '@ui/components/Button'
 import { SearchBar } from '@ui/components/SearchBar'
 import { Section } from '@ui/components/Section'
@@ -141,15 +142,21 @@ export function StyleSurface({
   // base-only, so the breakpoint/condition context is irrelevant here.
   const permissions = useEditorPermissions()
   const canEditStyleHere = permissions.canEditStyle
+  // A scheme class remaps --scheme-* — it is not the thing Layout / Position /
+  // Spacing edit. Treat it as "no class" so the composer stays on inline (or
+  // whatever the user had) instead of the generated-utility lock card.
+  const schemeActive = isSchemeAssignmentClass(activeClass)
+  const editClass = schemeActive ? null : activeClass
+  const editClassId = schemeActive ? null : activeClassId
   // `inlineStyleEditing` is the single source of truth for the edit target
   // (seeded on selection for inline-only nodes, toggled via the Inline pill /
   // "Style inline" button). It's mutually exclusive with an active class.
-  const showInline = canEditStyleHere && nodeId != null && activeClass == null && inlineStyleEditing
+  const showInline = canEditStyleHere && nodeId != null && editClass == null && (inlineStyleEditing || schemeActive)
 
   const storedStyles: Record<string, unknown> = showInline
     ? (inlineStyles ?? {})
-    : activeClass
-      ? (activeContextId ? (activeClass.contextStyles[activeContextId] ?? {}) : activeClass.styles)
+    : editClass
+      ? (activeContextId ? (editClass.contextStyles[activeContextId] ?? {}) : editClass.styles)
       : {}
   const sectionSetCounts = getClassStyleSectionSetCounts(storedStyles)
 
@@ -161,8 +168,8 @@ export function StyleSurface({
   // class's, or the node's inline styles. It's hidden only when there are no
   // editable rows at all: a locked generated utility, or the opted-out
   // no-target state.
-  const searchableClass = activeClass != null && !isGeneratedClassLocked(activeClass)
-    ? activeClass
+  const searchableClass = editClass != null && !isGeneratedClassLocked(editClass)
+    ? editClass
     : null
   const searchPlaceholder = searchableClass
     ? `Search styles in ${styleRuleSelector(searchableClass)}...`
@@ -197,19 +204,19 @@ export function StyleSurface({
         styleQuery={styleQuery}
       />
     )
-  } else if (activeClass != null) {
-    if (isGeneratedClassLocked(activeClass)) {
+  } else if (editClass != null) {
+    if (isGeneratedClassLocked(editClass)) {
       cssContent = (
         <div className={styles.lockedContent}>
-          <GeneratedUtilityLockedState cls={activeClass} />
+          <GeneratedUtilityLockedState cls={editClass} />
         </div>
       )
     } else {
       cssContent = (
         <StyleRuleComposer
-          key={`${activeClassId}-${activeTab}`}
-          classId={activeClassId!}
-          cls={activeClass}
+          key={`${editClassId}-${activeTab}`}
+          classId={editClassId!}
+          cls={editClass}
           styleQuery={styleQuery}
         />
       )
@@ -280,7 +287,7 @@ export function StyleSurface({
           sectionSetCounts={sectionSetCounts}
           onSectionClick={handleSectionClick}
           definition={definition ?? null}
-          activeClass={activeClass}
+          activeClass={editClass}
           editingInline={showInline}
         />
       </div>

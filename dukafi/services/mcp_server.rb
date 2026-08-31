@@ -47,10 +47,14 @@ class McpServer
 
   INSTRUCTIONS = <<~TEXT.freeze
     This is a Dukafi store — a commerce CMS whose pages are trees of nodes,
-    not files. Read a page before changing it; node ids in the returned HTML
-    are what edits refer to. Call get_store_context for a planning snapshot.
+    not files. Read a page before changing it. Stamp a stable id and
+    data-section-id on every top-level section (pageSlug__slot, e.g.
+    index__hero or home__hero_banner) and keep that same id on every
+    replace — list_children returns it as sectionId; apply_edits /
+    read_page prefer sectionId over editor node ids, which change on
+    re-import. Call get_store_context for a planning snapshot.
     Call list_children for structure (omit nodeId for the page root), then
-    read_page with a child's nodeId to work on that section in detail.
+    read_page with a child's sectionId to work on that section in detail.
     Call get_page_context before adding a section — it returns two existing
     sections and their colors/spacing so new work can match the page.
     Call get_design_tokens before designing — colors, fonts, type, and spacing

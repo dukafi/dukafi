@@ -222,6 +222,9 @@ class McpSpec < Minitest::Test
     refute_nil children
     components = result.fetch("tools").find { |entry| entry.fetch("name") == "list_components" }
     refute_nil components
+    refute_nil result.fetch("tools").find { |entry| entry.fetch("name") == "update_store_profile" }
+    refute_nil result.fetch("tools").find { |entry| entry.fetch("name") == "list_orders" }
+    refute_nil result.fetch("tools").find { |entry| entry.fetch("name") == "list_customers" }
   end
 
   def test_get_store_context_is_a_read_and_does_not_require_a_profile
@@ -284,7 +287,9 @@ class McpSpec < Minitest::Test
         "root" => { "id" => "root", "moduleId" => "base.body", "children" => %w[hero about],
                     "props" => {}, "classIds" => [], "breakpointOverrides" => {} },
         "hero" => { "id" => "hero", "moduleId" => "base.container", "children" => ["inner"],
-                    "props" => { "text" => "Hero" }, "classIds" => [], "breakpointOverrides" => {} },
+                    "props" => { "text" => "Hero",
+                                 "htmlAttributes" => { "id" => "index__hero", "data-section-id" => "index__hero" } },
+                    "classIds" => [], "breakpointOverrides" => {} },
         "about" => { "id" => "about", "moduleId" => "base.container", "children" => [],
                      "props" => { "text" => "About" }, "classIds" => [], "breakpointOverrides" => {} },
         "inner" => { "id" => "inner", "moduleId" => "base.text", "children" => [],
@@ -296,10 +301,11 @@ class McpSpec < Minitest::Test
 
     top = JSON.parse(call_tool("list_children", { "slug" => "index" }).dig("content", 0, "text"))
     assert_equal %w[hero about], top.fetch("children").map { |row| row.fetch("id") }
+    assert_equal "index__hero", top.fetch("children").fetch(0).fetch("sectionId")
     refute_includes top.fetch("children").map { |row| row.fetch("id") }, "inner"
     refute McpTools.write_tool?("list_children")
 
-    nested = JSON.parse(call_tool("list_children", { "slug" => "index", "nodeId" => "hero" }).dig("content", 0, "text"))
+    nested = JSON.parse(call_tool("list_children", { "slug" => "index", "sectionId" => "index__hero" }).dig("content", 0, "text"))
     assert_equal ["inner"], nested.fetch("children").map { |row| row.fetch("id") }
   end
 
@@ -375,6 +381,31 @@ class McpSpec < Minitest::Test
     assert json.fetch("nodes").key?("hero")
     assert json.fetch("nodes").key?("inner")
     refute json.fetch("nodes").key?("about")
+  end
+
+  def test_read_page_accepts_a_stable_section_id
+    document = {
+      "id" => "index", "slug" => "index", "title" => "Home", "rootNodeId" => "root",
+      "nodes" => {
+        "root" => { "id" => "root", "moduleId" => "base.body", "children" => %w[n1 n2],
+                    "props" => {}, "classIds" => [], "breakpointOverrides" => {} },
+        "n1" => { "id" => "n1", "moduleId" => "base.container", "children" => [],
+                  "props" => { "text" => "Hero",
+                               "htmlAttributes" => { "id" => "index__hero", "data-section-id" => "index__hero" } },
+                  "classIds" => [], "breakpointOverrides" => {} },
+        "n2" => { "id" => "n2", "moduleId" => "base.container", "children" => [],
+                  "props" => { "text" => "About",
+                               "htmlAttributes" => { "id" => "index__about" } },
+                  "classIds" => [], "breakpointOverrides" => {} },
+      },
+    }
+    Page.create(slug: "index", title: "Home", kind: "page", status: "published",
+                document: JSON.generate(document), created_at: Time.now, updated_at: Time.now)
+
+    payload = JSON.parse(call_tool("read_page", { "slug" => "index", "sectionId" => "index__hero" }).dig("content", 0, "text"))
+    assert_equal "n1", payload.fetch("nodeId")
+    assert_includes payload.fetch("outline"), "sectionId=index__hero"
+    refute_includes payload.fetch("outline"), "[n2]"
   end
 
   def test_list_pages_returns_the_pages

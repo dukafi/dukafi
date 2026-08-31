@@ -8,7 +8,7 @@
 
 import type { StoreApi } from 'zustand'
 import type { Draft } from 'mutative'
-import type { FrameworkColorToken, FrameworkColorUtilityType, FrameworkPreferencesSettings, FrameworkScaleManualSize, FrameworkScaleMode, FrameworkSpacingClassGenerator, FrameworkSpacingGroup, FrameworkTypographyClassGenerator, FrameworkTypographyGroup } from '@core/framework-schema'
+import type { FrameworkColorScheme, FrameworkColorSchemeRoles, FrameworkColorToken, FrameworkColorUtilityType, FrameworkPreferencesSettings, FrameworkScaleManualSize, FrameworkScaleMode, FrameworkSpacingClassGenerator, FrameworkSpacingGroup, FrameworkTypeStyle, FrameworkTypographyClassGenerator, FrameworkTypographyGroup, TypeStyleTag } from '@core/framework-schema'
 import type {
   DecorativeSiteExplorerSectionId,
   DukafiPageExportFile,
@@ -287,6 +287,12 @@ export interface SiteSlice {
   reorderFrameworkColorToken: (tokenId: string, direction: 'up' | 'down') => void
   deleteFrameworkColorToken: (tokenId: string) => void
 
+  createColorScheme: () => FrameworkColorScheme
+  /** Build six palette tokens + a scheme from one seed color, in one write. */
+  generateColorSchemeFromColor: (seed: string) => FrameworkColorScheme | null
+  updateColorScheme: (schemeId: string, patch: { name?: string; roles?: Partial<FrameworkColorSchemeRoles> }) => void
+  deleteColorScheme: (schemeId: string) => void
+
   // Framework preferences
   updateFrameworkPreferences: (patch: Partial<FrameworkPreferencesSettings>) => void
 
@@ -303,6 +309,7 @@ export interface SiteSlice {
     patch: Partial<FrameworkScaleManualSize>,
   ) => void
   setFrameworkTypographyClassGenerators: (classes: FrameworkTypographyClassGenerator[]) => void
+  updateFrameworkTypeStyle: (tag: TypeStyleTag, patch: Partial<Omit<FrameworkTypeStyle, 'tag'>>) => void
 
   // Framework spacing mutations
   toggleFrameworkSpacingDisabled: () => void

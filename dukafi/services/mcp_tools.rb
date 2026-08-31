@@ -21,10 +21,11 @@ module McpTools
   module_function
 
   def all
-    [get_store_context, list_pages, create_page, read_page, list_children, get_page_context, get_design_tokens, get_recipes, apply_edits, update_design_tokens, list_rebuild_targets, publish, set_page_access, set_page_seo] +
+    [get_store_context, update_store_profile, list_pages, create_page, read_page, list_children, get_page_context, get_design_tokens, get_recipes, apply_edits, update_design_tokens, list_rebuild_targets, publish, set_page_access, set_page_seo] +
       McpCommerceTools.all + McpMediaTools.all + McpReviewTools.all +
       McpDiscountTools.all + McpPluginTools.all + McpDataTableTools.all +
-      McpComponentTools.all + McpSitemapTools.all
+      McpComponentTools.all + McpSitemapTools.all +
+      McpOrderTools.all + McpCustomerTools.all
   end
 
   # Which tools change the store. Drives the `mcp:read` / `mcp:write` split, so
@@ -38,7 +39,8 @@ module McpTools
                 McpCommerceTools::READ_TOOLS + McpMediaTools::READ_TOOLS +
                 McpReviewTools::READ_TOOLS + McpDiscountTools::READ_TOOLS +
                 McpPluginTools::READ_TOOLS + McpDataTableTools::READ_TOOLS +
-                McpComponentTools::READ_TOOLS + McpSitemapTools::READ_TOOLS).freeze
+                McpComponentTools::READ_TOOLS + McpSitemapTools::READ_TOOLS +
+                McpOrderTools::READ_TOOLS + McpCustomerTools::READ_TOOLS).freeze
 
   def write_tool?(name) = !READ_TOOLS.include?(name.to_s)
 
@@ -51,7 +53,7 @@ module McpTools
                    "saved components. Prefer this over many list_* calls when " \
                    "you need to understand the store. It does not include " \
                    "page trees — call list_children for structure, then " \
-                   "read_page with a nodeId for that section. A thin profile " \
+                   "read_page with a sectionId for that section. A thin profile " \
                    "means the merchant has not filled in their story; do not " \
                    "invent founding dates or audiences. Includes a compact " \
                    "tokens summary — call get_design_tokens for the full " \
@@ -68,6 +70,27 @@ module McpTools
         "additionalProperties" => false,
       },
       run: ->(_args) { StoreContext.call },
+    }
+  end
+
+  def update_store_profile
+    {
+      name: "update_store_profile",
+      title: "Update store profile",
+      description: "Write the optional business profile: startedOn, audience, " \
+                   "difference. Empty strings clear a field. A thin profile " \
+                   "is valid — do not invent a founding story. There is no " \
+                   "store id argument; the token selects this store.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "startedOn" => { "type" => "string", "description" => "Year or a short phrase." },
+          "audience" => { "type" => "string", "description" => "Who they sell to." },
+          "difference" => { "type" => "string", "description" => "What makes them different." },
+        },
+        "additionalProperties" => false,
+      },
+      run: ->(args) { StoreProfile.current.apply!(args).to_payload },
     }
   end
 
@@ -147,20 +170,27 @@ module McpTools
       title: "Read a page",
       description: "Read a page, or one section of it. Call list_children " \
                    "first to get the top-level sections, then pass a child's " \
-                   "id as nodeId to read that section's tree in detail. Omit " \
-                   "nodeId only when you truly need the whole page. The " \
+                   "sectionId (stable HTML id, e.g. home__hero_banner) or " \
+                   "nodeId to read that section's tree in detail. Prefer " \
+                   "sectionId — node ids change when HTML is re-imported. " \
+                   "Omit both only when you truly need the whole page. The " \
                    "outline is an indented tree; every line starts with the " \
-                   "node id in [brackets] — those ids are how apply_edits " \
-                   "addresses nodes. Use json only when you need the raw " \
-                   "stored document (scoped to the same nodeId).",
+                   "node id in [brackets] and includes sectionId when the " \
+                   "markup has one. Use json only when you need the raw " \
+                   "stored document (scoped to the same node).",
       input_schema: {
         "type" => "object",
         "properties" => {
           "slug" => { "type" => "string", "description" => "The page slug, from list_pages." },
+          "sectionId" => {
+            "type" => "string",
+            "description" => "Stable HTML id / data-section-id of a section. " \
+                             "Prefer this over nodeId. From list_children.",
+          },
           "nodeId" => {
             "type" => "string",
             "description" => "Read this node and its descendants only. " \
-                             "Defaults to the page root.",
+                             "Defaults to the page root. Prefer sectionId.",
           },
           "format" => {
             "type" => "string", "enum" => %w[outline json],
@@ -198,8 +228,7 @@ module McpTools
     nodes = document["nodes"]
     raise ArgumentError, "That page's document could not be read." unless nodes.is_a?(Hash)
 
-    node_id = args["nodeId"].to_s.strip
-    node_id = document["rootNodeId"].to_s if node_id.empty?
+    node_id = resolve_target_id!(document, args)
     raise ArgumentError, "No node #{node_id.inspect} on #{slug.inspect}." if nodes[node_id].nil?
 
     return subtree(document, node_id) if args["format"].to_s == "json"
@@ -264,6 +293,8 @@ module McpTools
 
   def describe(node, styles)
     parts = ["[#{node['id']}]", node["moduleId"].to_s]
+    section_id = SectionIdentity.of(node)
+    parts << "sectionId=#{section_id}" unless section_id.empty?
 
     text = visible_text(node["props"])
     parts << text.inspect if text
@@ -314,17 +345,23 @@ module McpTools
       name: "list_children",
       title: "List child nodes",
       description: "The direct children of one node on a page. Omit nodeId " \
-                   "to list the page root's children (the top-level sections). " \
-                   "Each child has the id apply_edits uses, plus any visible " \
-                   "text. Call again with a child's id to go one level down. " \
+                   "and sectionId to list the page root's children (the " \
+                   "top-level sections). Each child has node id (apply_edits) " \
+                   "and sectionId (the HTML id / data-section-id — stable " \
+                   "across restyles; stamp the same id on replacement HTML). " \
+                   "Call again with a child's sectionId to go one level down. " \
                    "Prefer this over a whole-page read_page when walking " \
                    "structure. After you pick a child, call read_page with " \
-                   "that child's nodeId to work on the section in detail.",
+                   "that child's sectionId to work on the section in detail.",
       input_schema: {
         "type" => "object",
         "properties" => {
           "slug" => { "type" => "string", "description" => "The page slug, from list_pages." },
-          "nodeId" => { "type" => "string", "description" => "Parent node. Defaults to the page root." },
+          "sectionId" => {
+            "type" => "string",
+            "description" => "Parent section's stable HTML id. Prefer this over nodeId.",
+          },
+          "nodeId" => { "type" => "string", "description" => "Parent node. Defaults to the page root. Prefer sectionId." },
           "version" => {
             "type" => "string", "enum" => %w[draft published],
             "description" => "draft (default) or published.",
@@ -357,8 +394,7 @@ module McpTools
     nodes = document["nodes"]
     raise ArgumentError, "That page's document could not be read." unless nodes.is_a?(Hash)
 
-    parent_id = args["nodeId"].to_s.strip
-    parent_id = document["rootNodeId"].to_s if parent_id.empty?
+    parent_id = resolve_target_id!(document, args)
     parent = nodes[parent_id]
     raise ArgumentError, "No node #{parent_id.inspect} on #{slug.inspect}." if parent.nil?
 
@@ -375,10 +411,38 @@ module McpTools
 
     {
       "id" => node["id"].to_s,
+      "sectionId" => SectionIdentity.of(node),
       "moduleId" => node["moduleId"].to_s,
       "text" => visible_text(node["props"]).to_s,
       "childCount" => Array(node["children"]).length,
     }
+  end
+
+  # sectionId (HTML id / data-section-id) is the stable handle. nodeId is the
+  # editor UUID and changes on re-import. Prefer sectionId when both are sent.
+  def resolve_target_id!(document, args)
+    SectionIdentity.resolve_node_id!(document, node_id: args["nodeId"], section_id: args["sectionId"])
+  rescue ::ArgumentError => error
+    raise ArgumentError, error.message
+  end
+
+  def resolve_edit_targets!(document, edits)
+    Array(edits).map do |edit|
+      next edit unless edit.is_a?(Hash)
+
+      sid = edit["sectionId"].to_s.strip
+      next strip_section_id(edit) if sid.empty?
+      next strip_section_id(edit) unless %w[replace delete setProps setClasses].include?(edit["op"].to_s)
+
+      node_id = SectionIdentity.resolve_node_id!(document, section_id: sid)
+      strip_section_id(edit.merge("nodeId" => node_id))
+    end
+  rescue ::ArgumentError => error
+    raise ArgumentError, error.message
+  end
+
+  def strip_section_id(edit)
+    edit.reject { |key, _| key.to_s == "sectionId" }
   end
 
   # Enough of an existing page to add a section that matches it. Lists the
@@ -394,13 +458,18 @@ module McpTools
                    "spacing, type). Call this before adding a section so the " \
                    "new work matches spacing and type. Decorative gradients " \
                    "are omitted from design — for a vague restyle use " \
-                   "get_recipes topic=design. Pass nodeId to sample that " \
-                   "section and a neighbor. Omit it to sample the first two.",
+                   "get_recipes topic=design. Pass sectionId (or nodeId) to " \
+                   "sample that section and a neighbor. Omit both to sample " \
+                   "the first two.",
       input_schema: {
         "type" => "object",
         "properties" => {
           "slug" => { "type" => "string", "description" => "The page slug, from list_pages." },
-          "nodeId" => { "type" => "string", "description" => "Prefer this section and a neighbor." },
+          "sectionId" => {
+            "type" => "string",
+            "description" => "Prefer this section (stable HTML id) and a neighbor.",
+          },
+          "nodeId" => { "type" => "string", "description" => "Prefer this section and a neighbor. Prefer sectionId." },
           "samples" => {
             "type" => "integer", "minimum" => 1, "maximum" => 3,
             "description" => "How many sections to read in detail. Defaults to 2.",
@@ -441,7 +510,11 @@ module McpTools
     styles = style_rules
     want = Integer(args["samples"], exception: false) || 2
     want = want.clamp(1, 3)
-    sample_ids = pick_sample_ids(child_ids, args["nodeId"].to_s.strip, want)
+    prefer = args["nodeId"].to_s.strip
+    if args["sectionId"].to_s.strip != ""
+      prefer = resolve_target_id!(document, args)
+    end
+    sample_ids = pick_sample_ids(child_ids, prefer, want)
 
     sections = child_ids.filter_map { |id| section_summary(nodes[id], styles) }
     samples = sample_ids.filter_map { |id| section_sample(document, nodes[id], styles) }
@@ -489,6 +562,7 @@ module McpTools
 
     {
       "id" => node["id"].to_s,
+      "sectionId" => SectionIdentity.of(node),
       "text" => visible_text(node["props"]).to_s,
       "rootClasses" => node_classes(node, styles),
       "classes" => collect_classes(document["nodes"], node["id"], styles, {}),
@@ -555,10 +629,12 @@ module McpTools
     {
       name: "get_design_tokens",
       title: "Get design tokens",
-      description: "The site's color, font, type, and spacing tokens — CSS " \
-                   "variables and the utility classes bound to them. Call " \
-                   "this before designing or restyling. To change an accent " \
-                   "or a font, patch here rather than editing every page.",
+      description: "The site's color, font, type, spacing tokens, and color " \
+                   "schemes — CSS variables and the utility classes bound to " \
+                   "them. Schemes (scheme-1…) map Background / Heading / Body / " \
+                   "Accent onto palette tokens. Call this before designing or " \
+                   "restyling. To change an accent or a font, patch here " \
+                   "rather than editing every page.",
       input_schema: {
         "type" => "object",
         "properties" => {},
@@ -687,6 +763,31 @@ module McpTools
                 "max" => { "type" => "number" },
                 "scaleRatio" => { "type" => "number" },
                 "steps" => { "type" => "string" },
+              },
+              "additionalProperties" => false,
+            },
+          },
+          "colorSchemes" => {
+            "type" => "array",
+            "maxItems" => 8,
+            "description" => "Upsert a scheme by slug. roles map background, secondary, heading, body, accent, border onto color token slugs.",
+            "items" => {
+              "type" => "object",
+              "properties" => {
+                "slug" => { "type" => "string" },
+                "name" => { "type" => "string" },
+                "roles" => {
+                  "type" => "object",
+                  "properties" => {
+                    "background" => { "type" => "string" },
+                    "secondary" => { "type" => "string" },
+                    "heading" => { "type" => "string" },
+                    "body" => { "type" => "string" },
+                    "accent" => { "type" => "string" },
+                    "border" => { "type" => "string" },
+                  },
+                  "additionalProperties" => false,
+                },
               },
               "additionalProperties" => false,
             },
@@ -975,8 +1076,11 @@ module McpTools
       name: "apply_edits",
       title: "Edit a page",
       description: "Change a page. Each edit names an op and, except for " \
-                   "insert, the id of the node it targets — call read_page " \
-                   "first to learn the ids. Content is ordinary HTML with " \
+                   "insert, the sectionId (stable HTML id) or nodeId it " \
+                   "targets — prefer sectionId; call list_children first. " \
+                   "Replacement HTML must keep the same id and " \
+                   "data-section-id on the section root so later edits still " \
+                   "match. Content is ordinary HTML with " \
                    "Tailwind classes. Store behaviour is data-dukafy-* " \
                    "overlays — call get_recipes first for a product loop, " \
                    "search results (current-query / ?keyword=), homepage " \
@@ -1001,8 +1105,13 @@ module McpTools
                 "op" => { "type" => "string", "enum" => %w[insert replace delete setProps setClasses] },
                 "parentId" => { "type" => "string", "description" => "insert: where to put it. Defaults to the page root." },
                 "index" => { "type" => "integer", "description" => "insert: position among the parent's children." },
-                "nodeId" => { "type" => "string", "description" => "replace/delete/setProps/setClasses: the target." },
-                "html" => { "type" => "string", "description" => "insert/replace: the new markup." },
+                "sectionId" => {
+                  "type" => "string",
+                  "description" => "replace/delete/setProps/setClasses: the " \
+                                   "stable HTML id / data-section-id. Prefer this over nodeId.",
+                },
+                "nodeId" => { "type" => "string", "description" => "replace/delete/setProps/setClasses: the editor node. Prefer sectionId." },
+                "html" => { "type" => "string", "description" => "insert/replace: the new markup. Keep the same section id on the root." },
                 "props" => { "type" => "object", "description" => "setProps: props to merge." },
                 "classes" => { "type" => "string", "description" => "setClasses: a space-separated class list." },
               },
@@ -1035,6 +1144,7 @@ module McpTools
     raise ArgumentError, "This store has no site yet." if state.nil?
 
     site = state.site
+    edits = resolve_edit_targets!(page.document_data, edits)
     result = EditorSidecar.call(
       document: page.document_data,
       style_rules: site.fetch("styleRules", {}),
@@ -1048,7 +1158,7 @@ module McpTools
 
     persist!(page, state, site, result)
 
-    { "applied" => result.applied, "slug" => page.slug,
+    { "applied" => result.applied, "slug" => page.slug, "seq" => page.seq,
       "note" => "Saved to the draft. Call publish to put it live." }
   end
 

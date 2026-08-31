@@ -55,6 +55,7 @@ describe('architecture — framework typography & spacing engine', () => {
       'core/framework/spacing.ts',
       'core/framework/preferences.ts',
       'core/framework/defaults.ts',
+      'core/framework/typeStyles.ts',
     ]
     for (const relative of sources) {
       const source = readSource(relative)

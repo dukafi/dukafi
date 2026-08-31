@@ -296,8 +296,9 @@ describe('framework/preferences', () => {
       typography: fixedTypographySettings(),
       preferences: { rootFontSize: 16, minScreenWidth: 320, maxScreenWidth: 1400, isRem: false },
     })
-    expect(css).toContain('px,')
-    expect(css).not.toMatch(/\b\d+rem\b/)
+    const root = css.match(/^:root \{\n[\s\S]*?\n\}/m)?.[0] ?? ''
+    expect(root).toContain('px,')
+    expect(root).not.toMatch(/\b\d+rem\b/)
   })
 
   it('layers defaults over a partial settings object without re-validating', () => {

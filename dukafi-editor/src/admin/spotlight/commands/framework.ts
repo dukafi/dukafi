@@ -2,8 +2,8 @@
  * Framework commands — quick-jump access to the consolidated Framework panel
  * and the Manage Core Framework dialog.
  *
- * The panel hosts Home / Colors / Typography / Space tabs; these commands open
- * the panel and select a tab, or open the import/remove dialog directly.
+ * The panel hosts Schemes / Colors / Type / Space accordions; these commands
+ * open the panel and expand a section, or open the import/remove dialog.
  *
  * Capability: `site.style.edit` — the Framework panel manages design tokens,
  * which is a style-edit operation.
@@ -16,7 +16,7 @@ const FRAMEWORK_CAPABILITY = 'site.style.edit'
 // Local mirror of the Framework panel's tab union — spotlight commands must not
 // import editor-store internals (slices/types). Gated by
 // spotlight-no-direct-store-mutation.test.ts.
-type FrameworkPanelTab = 'home' | 'colors' | 'typography' | 'spacing'
+type FrameworkPanelTab = 'schemes' | 'colors' | 'typography' | 'spacing'
 
 /** Open the Framework panel and switch it to the given tab. */
 async function openFrameworkTab(tab: FrameworkPanelTab): Promise<void> {
@@ -31,18 +31,37 @@ export function getFrameworkCommands(): Command[] {
     {
       id: 'framework.open',
       title: 'Open Framework panel',
-      subtitle: 'Design tokens overview — colors, typography, spacing',
+      subtitle: 'Schemes, colors, typography, and spacing',
       group: 'framework',
       iconName: 'colors-swatch-solid',
-      keywords: ['framework', 'design', 'tokens', 'overview', 'home', 'open'],
+      keywords: ['framework', 'design', 'tokens', 'schemes', 'open'],
       workspaces: ['site'],
       capability: FRAMEWORK_CAPABILITY,
       run: async (ctx) => {
         ctx.closeSpotlight()
         try {
-          await openFrameworkTab('home')
+          await openFrameworkTab('schemes')
         } catch (err) {
           console.error('[spotlight] openFramework failed:', err)
+        }
+      },
+    },
+
+    {
+      id: 'framework.openSchemes',
+      title: 'Open Schemes',
+      subtitle: 'Generate and apply color schemes',
+      group: 'framework',
+      iconName: 'colors-swatch-solid',
+      keywords: ['schemes', 'palette', 'generate', 'design', 'framework', 'open'],
+      workspaces: ['site'],
+      capability: FRAMEWORK_CAPABILITY,
+      run: async (ctx) => {
+        ctx.closeSpotlight()
+        try {
+          await openFrameworkTab('schemes')
+        } catch (err) {
+          console.error('[spotlight] openSchemes failed:', err)
         }
       },
     },

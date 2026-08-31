@@ -189,10 +189,12 @@ describe('font token store actions', () => {
     expect(site.styleRules.hero.styles.fontFamily).toBe('var(--font-primary)')
   })
 
-  it('blocks removing an installed family while a token references it', () => {
+  it('unassigns tokens when an installed family is removed', () => {
     const removed = useEditorStore.getState().removeFont(inter.id)
 
-    expect(removed).toBe(false)
-    expect(useEditorStore.getState().site?.settings.fonts?.items.map((item) => item.id)).toContain(inter.id)
+    expect(removed).toBe(true)
+    const fonts = useEditorStore.getState().site?.settings.fonts
+    expect(fonts?.items.map((item) => item.id)).not.toContain(inter.id)
+    expect(fonts?.tokens?.[0].familyId).toBeUndefined()
   })
 })

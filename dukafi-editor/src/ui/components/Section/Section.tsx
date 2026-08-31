@@ -18,6 +18,9 @@ interface SectionProps {
   title: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
+  /** Controlled open state. When set, the section ignores internal toggle state. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   /** Render a small green dot next to the title to signal active state. */
   indicator?: boolean;
   indicatorTestId?: string;
@@ -38,6 +41,8 @@ export function Section({
   title,
   children,
   defaultOpen = false,
+  open,
+  onOpenChange,
   indicator = false,
   indicatorTestId,
   icon: SectionIcon,
@@ -46,8 +51,9 @@ export function Section({
   forceOpen = false,
   flush = false,
 }: SectionProps) {
-  const [open, setOpen] = useState(defaultOpen);
-  const expanded = forceOpen || open;
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
+  const isControlled = open !== undefined;
+  const expanded = forceOpen || (isControlled ? open : uncontrolledOpen);
 
   return (
     <div className={cn(styles.section, flush && styles.sectionFlush, expanded && styles.sectionOpen)}>
@@ -57,7 +63,10 @@ export function Section({
       )}>
         <button
           onClick={() => {
-            if (!forceOpen) setOpen((o) => !o);
+            if (forceOpen) return;
+            const next = !expanded;
+            if (!isControlled) setUncontrolledOpen(next);
+            onOpenChange?.(next);
           }}
           className={styles.sectionToggle}
           aria-expanded={expanded}

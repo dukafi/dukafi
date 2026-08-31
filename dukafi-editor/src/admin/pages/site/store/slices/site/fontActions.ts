@@ -160,9 +160,11 @@ export function createFontActions({
     removeFont: (fontId) => {
       return mutateSite((site) => {
         if (!site.settings.fonts) return false
-        if (site.settings.fonts.tokens?.some((token) => token.familyId === fontId)) return false
         const nextItems = site.settings.fonts.items.filter((font) => font.id !== fontId)
         if (nextItems.length === site.settings.fonts.items.length) return false
+        for (const token of site.settings.fonts.tokens ?? []) {
+          if (token.familyId === fontId) delete token.familyId
+        }
         site.settings.fonts.items = nextItems
         return true
       })

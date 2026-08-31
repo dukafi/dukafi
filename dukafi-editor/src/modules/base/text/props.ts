@@ -13,6 +13,7 @@ export const TextPropsSchema = Type.Object({
       Type.Literal('h4'),
       Type.Literal('h5'),
       Type.Literal('h6'),
+      Type.Literal('h7'),
       Type.Literal('span'),
       Type.Literal('div'),
       Type.Literal('small'),

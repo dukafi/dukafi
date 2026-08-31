@@ -127,6 +127,51 @@ class McpApplyEditsSpec < Minitest::Test
     assert_equal "text-xl", SiteState.first.site.dig("styleRules", "rule-1", "name")
   end
 
+  def test_section_id_is_resolved_to_a_node_id_before_the_sidecar
+    document = {
+      "id" => "index", "slug" => "index", "title" => "Home", "rootNodeId" => "root",
+      "nodes" => {
+        "root" => { "id" => "root", "moduleId" => "base.body", "children" => ["hero"],
+                    "props" => {}, "classIds" => [], "breakpointOverrides" => {} },
+        "hero" => { "id" => "hero", "moduleId" => "base.container", "children" => [],
+                    "props" => { "htmlAttributes" => { "id" => "index__hero", "data-section-id" => "index__hero" } },
+                    "classIds" => [], "breakpointOverrides" => {} },
+      },
+    }
+    Page.create(slug: "index", title: "Home", kind: "page", status: "draft",
+                document: JSON.generate(document), created_at: Time.now, updated_at: Time.now)
+    site!
+    captured = nil
+    EditorSidecar.define_singleton_method(:call) do |document:, style_rules:, edits:|
+      captured = edits
+      EditorSidecar::Result.new(document:, style_rules:, applied: 1, reason: nil)
+    end
+
+    apply({ "slug" => "index", "edits" => [{
+      "op" => "replace", "sectionId" => "index__hero",
+      "html" => %(<section id="index__hero" data-section-id="index__hero">Hi</section>),
+    }] })
+
+    assert_equal "hero", captured.fetch(0).fetch("nodeId")
+    refute captured.fetch(0).key?("sectionId")
+  end
+
+  def test_unknown_section_id_is_refused_before_the_sidecar
+    page!
+    site!
+    called = false
+    EditorSidecar.define_singleton_method(:call) do |**|
+      called = true
+      flunk "sidecar should not run"
+    end
+
+    assert_match(/list_children/, refusal({
+      "slug" => "index",
+      "edits" => [{ "op" => "replace", "sectionId" => "missing", "html" => "<p>x</p>" }],
+    }))
+    refute called
+  end
+
   def test_editing_touches_the_draft_and_says_so
     page = page!
     site!

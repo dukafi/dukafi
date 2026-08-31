@@ -13,7 +13,8 @@ import {
 } from 'react'
 import { useEditorStore, selectActiveCanvasPage } from '@site/store/store'
 import { useEditorPreference } from '@site/preferences/editorPreferences'
-import { classifySelectorCreateInput, styleRuleSelector } from '@core/page-tree'
+import { classifySelectorCreateInput, isGeneratedClassLocked, styleRuleSelector } from '@core/page-tree'
+import { isSchemeAssignmentClass } from '@core/framework'
 import { recordClassUsage } from '@site/preferences/classUsage'
 import { getErrorMessage } from '@core/utils/errorMessage'
 import {
@@ -56,6 +57,7 @@ function pickAutoActiveSelectorId(pills: SelectorPillItem[]): string | null {
     const pill = pills[i]
     if (pill.match.kind !== 'direct') continue
     if (styleRuleSelector(pill.rule).trim() === '*') continue
+    if (isGeneratedClassLocked(pill.rule)) continue
     return pill.rule.id
   }
   return null
@@ -150,10 +152,17 @@ export function ClassPicker({ nodeId, trailingAction, ref }: ClassPickerProps) {
 
   const openSuggestions = () => dispatchUi({ type: 'openSuggestions' })
 
+  const activateIfEditable = (classId: string | null) => {
+    if (!classId) return
+    const rule = useEditorStore.getState().site?.styleRules[classId]
+    if (isSchemeAssignmentClass(rule)) return
+    setActiveClass(classId)
+  }
+
   const handleAddExisting = (classId: string) => {
     setUnmatchedSelectorNotice(null)
     addNodeClass(nodeId, classId)
-    setActiveClass(classId)
+    activateIfEditable(classId)
     clearPreviewNodeClass(nodeId, classId)
     recordClassUsage(classId)
     dispatchUi({ type: 'resetAfterSubmit' })
@@ -184,13 +193,13 @@ export function ClassPicker({ nodeId, trailingAction, ref }: ClassPickerProps) {
           recordClassUsage(classRule.id)
           lastClassId = classRule.id
         }
-        if (lastClassId) setActiveClass(lastClassId)
+        activateIfEditable(lastClassId)
         clearPreviewNodeClass(nodeId)
       } else if (intent.kind === 'class') {
         setUnmatchedSelectorNotice(null)
         const newClass = createClass(intent.name)
         addNodeClass(nodeId, newClass.id)
-        setActiveClass(newClass.id)
+        activateIfEditable(newClass.id)
         clearPreviewNodeClass(nodeId)
         recordClassUsage(newClass.id)
       } else {
@@ -359,7 +368,9 @@ export function ClassPicker({ nodeId, trailingAction, ref }: ClassPickerProps) {
         contextClassIndex={contextClassIndex}
         visibleAssignedCount={visibleAssignedIds.length}
         onClose={closeContextMenu}
-        onEdit={(c) => setActiveClass(c.id)}
+        onEdit={(c) => {
+          if (!isSchemeAssignmentClass(c)) setActiveClass(c.id)
+        }}
         onRename={(c) => dispatchUi({ type: 'setRenameTarget', renameTarget: c })}
         onMove={(c, direction) => reorderNodeClass(nodeId, c.id, direction)}
         onRemove={(c) => removeAssignedClass(c.id)}
@@ -429,7 +440,11 @@ export function ClassPicker({ nodeId, trailingAction, ref }: ClassPickerProps) {
         pills={selectorModel.pills}
         showInlinePill={showInlinePill}
         inlineStyleEditing={inlineStyleEditing}
-        onToggleRule={(ruleId, active) => setActiveClass(active ? null : ruleId)}
+        onToggleRule={(ruleId, active) => {
+          const rule = site?.styleRules[ruleId]
+          if (isSchemeAssignmentClass(rule)) return
+          setActiveClass(active ? null : ruleId)
+        }}
         onClassContextMenu={openClassContextMenu}
         onKeyboardClassContextMenu={openKeyboardClassContextMenu}
         onRemoveClass={removeAssignedClass}

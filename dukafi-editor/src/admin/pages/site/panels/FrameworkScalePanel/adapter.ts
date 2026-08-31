@@ -131,6 +131,11 @@ export interface ScaleAdapter<G, C> {
    */
   scalesSectionIcon?: IconComponent
   /**
+   * Hide the built-in Scales + Utilities sections. Typography uses this so
+   * the panel is Fonts + Type styles only; the scale engine still runs.
+   */
+  hideScaleSections?: boolean
+  /**
    * Optional extra collapsible sections rendered alongside the built-in
    * "Scales" + "Utilities" sections. Used by TypographyPanel to host the
    * "Fonts" section (Google + custom font library). Each entry is its own

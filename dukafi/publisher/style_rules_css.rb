@@ -28,7 +28,10 @@ class Dukafi
       # close its own block or the surrounding <style> element. Deliberately
       # narrow: the editor only produces class selectors today, optionally with
       # a pseudo-class/element or a descendant part.
-      SAFE_SELECTOR = /\A[.#]?[a-zA-Z_][\w\- .#:>\[\]="'~+()]*\z/
+      # Comma-separated lists are allowed (`.scheme-1, [data-scheme="scheme-1"]`).
+      # Braces and `</` still fail the match, so a selector cannot close the
+      # rule or the surrounding `<style>` element.
+      SAFE_SELECTOR = /\A[.#\[]?[a-zA-Z_\[][\w\- .#:>\[\]="'~+(),]*\z/
 
       def self.call(site)
         return "" unless site.is_a?(Hash)

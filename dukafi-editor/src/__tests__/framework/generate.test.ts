@@ -130,12 +130,19 @@ describe('framework generation facade', () => {
       spacing: buildDefaultSpacingSettings(),
     }
 
-    const plan = buildFrameworkPlan(settings)
+    const now = Date.now()
+    const dateNow = Date.now
+    Date.now = () => now
+    try {
+      const plan = buildFrameworkPlan(settings)
 
-    // Behaviour-preserving: identical to composing the two public generators,
-    // just without the duplicated per-family traversals.
-    expect(plan.rootCss).toBe(generateFrameworkRootCss(settings))
-    expect(plan.utilityClasses).toEqual(generateFrameworkUtilityClasses(settings))
+      // Behaviour-preserving: identical to composing the two public generators,
+      // just without the duplicated per-family traversals.
+      expect(plan.rootCss).toBe(generateFrameworkRootCss(settings))
+      expect(plan.utilityClasses).toEqual(generateFrameworkUtilityClasses(settings))
+    } finally {
+      Date.now = dateNow
+    }
   })
 
   it('keeps generated framework utilities used only inside visual component trees', () => {

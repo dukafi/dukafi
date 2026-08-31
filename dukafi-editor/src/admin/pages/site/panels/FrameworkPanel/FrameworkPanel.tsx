@@ -1,31 +1,43 @@
 /**
- * FrameworkPanel — the consolidated design-token panel.
+ * FrameworkPanel — design tokens as stacked accordions.
  *
- * One `<Panel>` shell hosting a top SegmentedControl that switches between a
- * Home overview and the Colors / Typography / Space editing tabs (the
- * extracted ColorsPanelBody and the chrome-free scale bodies). The header
- * action opens the Manage Core Framework dialog (import / remove / prune),
- * which is mounted once via FrameworkManagerHost.
+ * Schemes sit at the top. Colors, Type, and Space fold open below. The header
+ * action still opens the Manage Core Framework dialog.
  */
+import { useEffect, useState } from 'react'
 import { useEditorStore } from '@site/store/store'
 import { Panel, type DockablePanelProps } from '@admin/shared/Panel'
-import { SegmentedControl } from '@ui/components/SegmentedControl'
 import { Button } from '@ui/components/Button'
+import { Section } from '@ui/components/Section'
 import { SlidersHorizontalIcon } from 'pixel-art-icons/icons/sliders-horizontal'
+import { ColorsSwatchSolidIcon } from 'pixel-art-icons/icons/colors-swatch-solid'
+import { TextStartTIcon } from 'pixel-art-icons/icons/text-start-t'
+import { RulerDimensionSolidIcon } from 'pixel-art-icons/icons/ruler-dimension-solid'
 import { ColorsPanelBody } from '@site/panels/ColorsPanel'
+import { SchemesPanel } from '@site/panels/SchemesPanel'
 import { TypographyTab } from '@site/panels/TypographyPanel'
 import { SpacingTab } from '@site/panels/SpacingPanel'
 import type { FrameworkPanelTab } from '@site/store/slices/uiSlice'
-import { FrameworkHome } from './FrameworkHome'
 import { FrameworkManagerHost } from './FrameworkManagerHost'
 import styles from './FrameworkPanel.module.css'
 
-const TABS: ReadonlyArray<{ value: FrameworkPanelTab; label: string }> = [
-  { value: 'home', label: 'Overview' },
-  { value: 'colors', label: 'Colors' },
-  { value: 'typography', label: 'Type' },
-  { value: 'spacing', label: 'Space' },
+const SECTIONS: ReadonlyArray<{
+  id: FrameworkPanelTab
+  title: string
+  icon: typeof ColorsSwatchSolidIcon
+}> = [
+  { id: 'schemes', title: 'Schemes', icon: ColorsSwatchSolidIcon },
+  { id: 'colors', title: 'Colors', icon: ColorsSwatchSolidIcon },
+  { id: 'typography', title: 'Type', icon: TextStartTIcon },
+  { id: 'spacing', title: 'Space', icon: RulerDimensionSolidIcon },
 ]
+
+const INITIAL_OPEN: Record<FrameworkPanelTab, boolean> = {
+  schemes: true,
+  colors: false,
+  typography: false,
+  spacing: false,
+}
 
 export function FrameworkPanel({
   mode,
@@ -33,9 +45,13 @@ export function FrameworkPanel({
   onToggleMode,
 }: DockablePanelProps) {
   const tab = useEditorStore((s) => s.frameworkPanelTab)
-  const setTab = useEditorStore((s) => s.setFrameworkPanelTab)
   const setOpen = useEditorStore((s) => s.setFrameworkPanelOpen)
   const setManagerOpen = useEditorStore((s) => s.setFrameworkManagerOpen)
+  const [openSections, setOpenSections] = useState(INITIAL_OPEN)
+
+  useEffect(() => {
+    setOpenSections((current) => (current[tab] ? current : { ...current, [tab]: true }))
+  }, [tab])
 
   return (
     <Panel
@@ -61,20 +77,21 @@ export function FrameworkPanel({
       }
       body="bare"
     >
-      <div className={styles.tabsRow}>
-        <SegmentedControl<FrameworkPanelTab>
-          value={tab}
-          options={TABS}
-          onChange={setTab}
-          size="sm"
-          fullWidth
-        />
-      </div>
-      <div className={styles.tabBody}>
-        {tab === 'home' && <FrameworkHome />}
-        {tab === 'colors' && <ColorsPanelBody />}
-        {tab === 'typography' && <TypographyTab />}
-        {tab === 'spacing' && <SpacingTab />}
+      <div className={styles.accordions}>
+        {SECTIONS.map((section) => (
+          <Section
+            key={section.id}
+            title={section.title}
+            icon={section.icon}
+            open={openSections[section.id]}
+            onOpenChange={(next) => setOpenSections((current) => ({ ...current, [section.id]: next }))}
+          >
+            {section.id === 'schemes' && <SchemesPanel />}
+            {section.id === 'colors' && <ColorsPanelBody />}
+            {section.id === 'typography' && <TypographyTab />}
+            {section.id === 'spacing' && <SpacingTab />}
+          </Section>
+        ))}
       </div>
 
       <FrameworkManagerHost />

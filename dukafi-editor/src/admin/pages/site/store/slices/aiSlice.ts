@@ -24,6 +24,8 @@
 
 import { apiRequest, ApiError } from '@core/http'
 import { Type } from '@core/utils/typeboxHelpers'
+import { streamAiRun } from '@site/ai/harnessRun'
+import { refreshSiteFromServer } from '@site/sync/refreshSiteFromServer'
 import {
   applyEditsToTree,
   compileBuildPlan,
@@ -44,6 +46,7 @@ import { BUILD_PROMPT } from '@site/ai/buildPrompt'
 export interface AiMessage {
   role: 'user' | 'assistant'
   content: string
+  kind?: 'activity' | 'reply'
   /** How many edits this reply applied. Absent on user turns. */
   applied?: number
 }
@@ -55,6 +58,14 @@ export interface AiProfileDraft {
 }
 
 const ChatResponseSchema = Type.Object({ reply: Type.String() })
+const AiConfigSchema = Type.Object({
+  baseUrl: Type.String(),
+  model: Type.String(),
+  hasKey: Type.Boolean(),
+  provider: Type.Optional(Type.String()),
+  harnessUrl: Type.Optional(Type.String()),
+  connected: Type.Optional(Type.Boolean()),
+})
 const ProfileEnvelopeSchema = Type.Object({
   profile: Type.Object({
     startedOn: Type.String(),
@@ -102,7 +113,10 @@ interface AiSlice {
   aiBuildRequest: string | null
   aiPlan: BuildPlan | null
   aiPlanNote: string | null
+  aiProvider: string
+  aiConnected: boolean
 
+  refreshAiConfig: () => Promise<void>
   sendAiMessage: (text: string) => Promise<void>
   startAiBuild: (text: string) => Promise<void>
   submitAiProfile: (draft: AiProfileDraft) => Promise<void>
@@ -176,6 +190,23 @@ export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
     aiBuildRequest: null,
     aiPlan: null,
     aiPlanNote: null,
+    aiProvider: '',
+    aiConnected: false,
+
+    refreshAiConfig: async () => {
+      try {
+        const config = await apiRequest('/admin/api/cms/ai/config', {
+          schema: AiConfigSchema,
+          fallbackMessage: 'Could not read the AI settings',
+        })
+        set({
+          aiProvider: config.provider || '',
+          aiConnected: Boolean(config.connected),
+        })
+      } catch {
+        // Send still works if this fails; the run endpoint reports the real reason.
+      }
+    },
 
     applyAiEdits: (edits) => {
       if (edits.length === 0) return 0
@@ -195,6 +226,11 @@ export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
 
       const history = [...get().aiMessages, { role: 'user' as const, content: trimmed }]
       set({ aiMessages: history, aiPending: true, aiError: null, aiNotConfigured: false })
+
+      if (await isDukafiProvider(get, set)) {
+        await runHarnessWalk(get, set, trimmed, 'landing')
+        return
+      }
 
       try {
         const { reply } = await apiRequest('/admin/api/cms/ai/chat', {
@@ -250,6 +286,11 @@ export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
         aiPlanNote: null,
         aiBuildRequest: trimmed,
       })
+
+      if (await isDukafiProvider(get, set)) {
+        await runHarnessWalk(get, set, trimmed, 'landing')
+        return
+      }
 
       try {
         const { profile } = await apiRequest('/admin/api/cms/store-profile', {
@@ -328,6 +369,81 @@ export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
     }),
 
     setAiNotConfigured: (value) => set({ aiNotConfigured: value }),
+  }
+}
+
+async function isDukafiProvider(
+  get: () => { aiProvider: string },
+  set: (partial: { aiProvider?: string; aiConnected?: boolean }) => void,
+): Promise<boolean> {
+  if (get().aiProvider === 'dukafi') return true
+  if (get().aiProvider) return false
+  try {
+    const config = await apiRequest('/admin/api/cms/ai/config', {
+      schema: AiConfigSchema,
+      fallbackMessage: 'Could not read the AI settings',
+    })
+    set({
+      aiProvider: config.provider || '',
+      aiConnected: Boolean(config.connected),
+    })
+    return config.provider === 'dukafi'
+  } catch {
+    return false
+  }
+}
+
+async function runHarnessWalk(
+  get: () => { site: { pages: Array<{ id: string; slug: string }> } | null; activePageId: string | null },
+  set: (
+    partial:
+      | { aiPending: boolean; aiNotConfigured: boolean; aiError: string | null }
+      | ((state: { aiMessages: AiMessage[] }) => { aiMessages: AiMessage[]; aiPending?: boolean }),
+  ) => void,
+  prompt: string,
+  mode: string,
+): Promise<void> {
+  const page = get().site?.pages.find((candidate) => candidate.id === get().activePageId)
+  const slug = page?.slug || 'index'
+  try {
+    const done = await streamAiRun({
+      prompt,
+      slug,
+      mode,
+      onActivity: (event) => {
+        if (event.phase === 'gather' || event.phase === 'brief') return
+        set((state) => ({
+          aiMessages: [...state.aiMessages, {
+            role: 'assistant',
+            kind: 'activity',
+            content: event.message,
+          }],
+        }))
+      },
+    })
+    if (done.changed === false) {
+      set((state) => ({
+        aiPending: false,
+        aiMessages: [...state.aiMessages, {
+          role: 'assistant',
+          kind: 'reply',
+          content: done.reply?.trim()
+            || 'Say what you want changed on this page.',
+        }],
+      }))
+      return
+    }
+    await refreshSiteFromServer()
+    set((state) => ({
+      aiPending: false,
+      aiMessages: [...state.aiMessages, {
+        role: 'assistant',
+        kind: 'reply',
+        content: 'Draft updated. Publish when you are ready.',
+      }],
+    }))
+  } catch (error) {
+    failAi(set, error)
   }
 }
 

@@ -37,6 +37,13 @@
     color: var(--text);
 }
 
+.activity {
+    padding: 0 var(--space-s);
+    font-size: var(--text-xs);
+    line-height: 1.4;
+    color: var(--text-muted);
+}
+
 .text {
     margin: 0;
     white-space: pre-wrap;
@@ -84,7 +91,7 @@
 }
 
 /* Settings sits left so Send stays the rightmost, primary target. Build is
-   the secondary action on the same row — Enter still sends Assist. */
+   the secondary action on BYOK providers — Enter still sends Assist. */
 .composerActions {
     display: flex;
     align-items: center;
@@ -183,6 +190,12 @@
     margin: 0;
     font-size: var(--text-xs);
     color: var(--danger);
+}
+
+.settingsHint {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--text-muted);
 }
 
 /* Native <select> inside the settings popover. See the note in

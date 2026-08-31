@@ -21,11 +21,12 @@ module DesignTokens
 
     {
       "colors" => color_rows(framework.dig("colors", "tokens")),
+      "colorSchemes" => scheme_rows(framework),
       "fonts" => font_digest(fonts),
       "typography" => scale_rows(framework["typography"], "fontSize"),
       "spacing" => scale_rows(framework["spacing"], "size"),
       "preferences" => preference_row(framework["preferences"]),
-      "note" => "Patch a token to re-skin every bound class. Call update_design_tokens, then publish.",
+      "note" => "Patch a token to re-skin every bound class. Color schemes map Background / Heading / Body / Accent onto those tokens — put scheme-2 on a section, then use bg-scheme-background and text-scheme-heading. On accent or secondary fills use text-scheme-on-accent / text-scheme-on-secondary (contrast-picked ink). Call update_design_tokens, then publish.",
     }
   end
 
@@ -47,12 +48,13 @@ module DesignTokens
     site = ensure_shell(site)
 
     changed.concat(apply_colors(site, args["colors"]))
+    changed.concat(apply_schemes(site, args["colorSchemes"]))
     changed.concat(apply_fonts(site, args["fonts"]))
     changed.concat(apply_scale(site, "typography", args["typography"], "fontSize"))
     changed.concat(apply_scale(site, "spacing", args["spacing"], "size"))
     changed.concat(apply_preferences(site, args["preferences"]))
 
-    raise ArgumentError, "Nothing to change. Pass colors, fonts, typography, spacing, or preferences." if changed.empty?
+    raise ArgumentError, "Nothing to change. Pass colors, colorSchemes, fonts, typography, spacing, or preferences." if changed.empty?
 
     persist!(state, site)
     {
@@ -86,6 +88,90 @@ module DesignTokens
         "classes" => classes,
       }
     end
+  end
+
+  SCHEME_ROLES = %w[background secondary heading body accent border].freeze
+
+  def scheme_rows(framework)
+    framework = {} unless framework.is_a?(Hash)
+    schemes = framework.dig("colorSchemes", "schemes")
+    tokens = Array(framework.dig("colors", "tokens"))
+    schemes = default_schemes(tokens) if !schemes.is_a?(Array) || schemes.empty?
+    Array(schemes).first(8).filter_map do |scheme|
+      next unless scheme.is_a?(Hash)
+
+      slug = slugify(scheme["slug"] || scheme["name"] || "scheme")
+      next if slug.empty?
+
+      roles = scheme["roles"].is_a?(Hash) ? scheme["roles"] : {}
+      {
+        "slug" => slug.start_with?("scheme-") ? slug : "scheme-#{slug}",
+        "name" => scheme["name"].to_s.empty? ? slug : scheme["name"].to_s,
+        "roles" => SCHEME_ROLES.to_h { |role| [role, roles[role].to_s] },
+        "class" => slug.start_with?("scheme-") ? slug : "scheme-#{slug}",
+        "utilities" => %w[bg-scheme-background bg-scheme-secondary text-scheme-heading text-scheme-body text-scheme-accent bg-scheme-accent text-scheme-on-accent text-scheme-on-secondary border-scheme-border],
+      }
+    end
+  end
+
+  def default_schemes(tokens)
+    slugs = Array(tokens).filter_map { |token| token["slug"].to_s if token.is_a?(Hash) && !token["slug"].to_s.empty? }
+    pick = ->(*candidates) { candidates.find { |slug| slugs.include?(slug) } || slugs.first || "primary" }
+    canvas = {
+      "background" => pick.call("bg-body", "bg-surface", "light"),
+      "secondary" => pick.call("bg-surface", "bg-body", "light"),
+      "heading" => pick.call("text-title", "text-body", "dark"),
+      "body" => pick.call("text-body", "text-title", "dark"),
+      "accent" => pick.call("primary", "secondary"),
+      "border" => pick.call("border-primary", "dark", "primary"),
+    }
+    [
+      { "slug" => "scheme-1", "name" => "Scheme 1", "roles" => canvas },
+      { "slug" => "scheme-2", "name" => "Scheme 2", "roles" => canvas.merge("background" => pick.call("bg-surface", "light", canvas["background"])) },
+      { "slug" => "scheme-3", "name" => "Scheme 3", "roles" => canvas.merge("background" => pick.call("dark", canvas["heading"]), "heading" => pick.call("light", canvas["heading"]), "body" => pick.call("light", canvas["body"])) },
+      { "slug" => "scheme-4", "name" => "Scheme 4", "roles" => canvas.merge("background" => canvas["accent"], "heading" => pick.call("light", canvas["heading"]), "body" => pick.call("light", canvas["body"])) },
+    ]
+  end
+
+  def apply_schemes(site, rows)
+    return [] unless rows.is_a?(Array) && !rows.empty?
+
+    framework = site.dig("settings", "framework")
+    framework = {} unless framework.is_a?(Hash)
+    bag = framework["colorSchemes"].is_a?(Hash) ? framework["colorSchemes"].dup : {}
+    schemes = Array(bag["schemes"])
+    changed = []
+    rows.first(8).each do |row|
+      next unless row.is_a?(Hash)
+
+      slug = slugify(row["slug"] || row["name"])
+      raise ArgumentError, "Scheme slug #{(row['slug'] || row['name']).inspect} is not a valid name." unless slug.match?(SAFE_SLUG)
+
+      slug = "scheme-#{slug}" unless slug.start_with?("scheme-")
+      scheme = schemes.find { |item| item.is_a?(Hash) && item["slug"].to_s == slug }
+      roles = row["roles"].is_a?(Hash) ? row["roles"] : {}
+      mapped = SCHEME_ROLES.to_h { |role| [role, slugify(roles[role].to_s)] }
+      mapped = default_schemes(framework.dig("colors", "tokens")).first.fetch("roles") if mapped.values.all?(&:empty?)
+      if scheme.nil?
+        schemes << {
+          "id" => slug,
+          "slug" => slug,
+          "name" => row["name"].to_s.empty? ? slug : row["name"].to_s,
+          "order" => schemes.length,
+          "roles" => mapped,
+        }
+        changed << "added scheme #{slug}"
+      else
+        scheme["name"] = row["name"].to_s unless row["name"].to_s.empty?
+        scheme["roles"] = scheme["roles"].is_a?(Hash) ? scheme["roles"].merge(mapped.reject { |_k, value| value.empty? }) : mapped
+        changed << "updated scheme #{slug}"
+      end
+    end
+    bag["schemes"] = schemes
+    framework["colorSchemes"] = bag
+    site["settings"] ||= {}
+    site["settings"]["framework"] = framework
+    changed
   end
 
   def font_digest(fonts)

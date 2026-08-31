@@ -1,0 +1,105 @@
+.panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-m);
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+}
+
+.seedField {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+}
+
+.seedField input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    background:
+        linear-gradient(var(--scheme-swatch, transparent), var(--scheme-swatch, transparent)),
+        repeating-conic-gradient(#c8c8c8 0% 25%, #ffffff 0% 50%) 50% / 8px 8px;
+    box-shadow: inset 0 0 0 1px var(--overlay-20);
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-s);
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-surface-2);
+    cursor: pointer;
+    text-align: left;
+}
+
+.card:hover {
+    border-color: var(--text-subtle);
+}
+
+.cardName {
+    padding: var(--space-2xs) var(--space-xs) var(--space-xs);
+    font-size: var(--text-s);
+    color: var(--text);
+}
+
+.preview {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    min-height: 72px;
+    padding: var(--space-s);
+    border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.previewAa {
+    font-size: var(--text-xl);
+    font-weight: 600;
+    line-height: 1;
+}
+
+.previewAccent {
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+}
+
+.editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-s);
+}
+
+.hint,
+.classHint {
+    margin: 0;
+    font-size: var(--text-s);
+    color: var(--text-subtle);
+}
+
+.classHint code {
+    font-size: 0.85em;
+}
+
+.field {
+    display: grid;
+    grid-template-columns: 7.5rem 1fr;
+    align-items: center;
+    gap: var(--space-s);
+    font-size: var(--text-s);
+}

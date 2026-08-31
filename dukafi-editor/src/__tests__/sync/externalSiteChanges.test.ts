@@ -6,9 +6,10 @@
  * editor's OWN saves — which would train a merchant to ignore it.
  */
 import { describe, expect, it, beforeEach, afterEach } from 'bun:test'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { useExternalSiteChanges } from '@site/sync/useExternalSiteChanges'
-import { lastSeenSiteSeq, recordSiteSeq, resetSiteSeq } from '@site/sync/siteSyncSeq'
+import { lastSeenSiteSeq, notifyExternalSiteChange, recordSiteSeq, resetSiteSeq } from '@site/sync/siteSyncSeq'
+import { armSkipSiteAutosave, consumeSkipSiteAutosave } from '@site/sync/refreshSiteFromServer'
 
 /** The real interval is 5s; these assert behaviour, not wall-clock. */
 const TICK = 10
@@ -99,5 +100,24 @@ describe('useExternalSiteChanges', () => {
       }))
 
     await waitFor(() => expect(result.current).toBe(true), { timeout: TICK * 30 })
+  })
+
+  it('reports immediately when notifyExternalSiteChange is called', async () => {
+    recordSiteSeq(4)
+    const { result } = renderHook(() =>
+      useExternalSiteChanges({ enabled: true, intervalMs: 60_000, fetchSeq: async () => 4 }))
+
+    expect(result.current).toBe(false)
+    act(() => { notifyExternalSiteChange() })
+    await waitFor(() => expect(result.current).toBe(true))
+  })
+})
+
+describe('skip site autosave after a harness refresh', () => {
+  it('is a one-shot so the loaded document is not written back', () => {
+    expect(consumeSkipSiteAutosave()).toBe(false)
+    armSkipSiteAutosave()
+    expect(consumeSkipSiteAutosave()).toBe(true)
+    expect(consumeSkipSiteAutosave()).toBe(false)
   })
 })

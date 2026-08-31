@@ -27,6 +27,7 @@ import type { VisualComponent } from '@core/visualComponents'
 import type { ActiveDocument } from '../../store/slices/uiSlice'
 import { Button } from '@ui/components/Button'
 import { ClassPicker, type ClassPickerHandle } from './ClassPicker'
+import { ColorSchemePicker } from './ColorSchemePicker'
 import { StyleSurface } from './StyleSurface'
 import { HtmlAttributesPanel } from './HtmlAttributesPanel'
 import { NodeActionsPanel } from './NodeActionsPanel'
@@ -174,6 +175,10 @@ export function PropertiesPanelBody(props: PropertiesPanelBodyProps): React.Reac
 
       {/* ClassPicker — always visible to style-edit-capable callers. Hidden
           for content-only Clients. */}
+      {activeNodeView === 'styles' && permissions.canEditStyle && (
+        <ColorSchemePicker nodeId={selectedNodeId!} classIds={selectedNode.classIds ?? []} />
+      )}
+
       {activeNodeView === 'styles' && (permissions.canEditStyle || showConvertToComponent) && (
         <div className={styles.headerClassPicker}>
           {permissions.canEditStyle ? (
