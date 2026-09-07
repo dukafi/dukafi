@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: dukafi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: dukafi
+    volumes: [dukafi-postgres:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dukafi -d dukafi"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  migrate:
+    image: ${DUKAFI_IMAGE:-ghcr.io/dukafi/dukafi:latest}
+    command: ["ruby", "scripts/migrate.rb"]
+    restart: "no"
+    environment:
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
+      DATABASE_URL: postgresql://dukafi:${POSTGRES_PASSWORD}@postgres:5432/dukafi
+      SKIP_SIDECAR: 1
+    volumes: [dukafi-data:/data]
+    depends_on:
+      postgres: {condition: service_healthy}
+  dukafi:
+    environment:
+      DATABASE_URL: postgresql://dukafi:${POSTGRES_PASSWORD}@postgres:5432/dukafi
+      SKIP_MIGRATIONS: 1
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+volumes:
+  dukafi-postgres:

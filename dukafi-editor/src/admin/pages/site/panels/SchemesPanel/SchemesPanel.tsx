@@ -209,7 +209,7 @@ function SchemeEditor({
 }) {
   const createFrameworkColorToken = useEditorStore((s) => s.createFrameworkColorToken)
   const [addingColor, setAddingColor] = useState(false)
-  const categories = deriveCategoryLabels(tokens)
+  const categories = deriveCategoryLabels([...tokens])
   const options = useMemo(() => paletteSelectOptions(tokens), [tokens])
 
   return (

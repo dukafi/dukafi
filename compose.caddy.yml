@@ -1,0 +1,17 @@
+services:
+  dukafi:
+    ports: !reset []
+  caddy:
+    image: caddy:2-alpine
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN is required}
+    command: ["caddy", "reverse-proxy", "--from", "${DOMAIN}", "--to", "dukafi:9292"]
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [dukafi]
+    restart: unless-stopped
+volumes:
+  caddy-data:
+  caddy-config:

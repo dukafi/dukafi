@@ -137,7 +137,7 @@ const ICON_ELEMENTS = `
 `.trim()
 
 export function generateIconCss(
-  settings: FrameworkIconsSettings | null | undefined,
+  _settings: FrameworkIconsSettings | null | undefined,
   enabled: boolean,
 ): string {
   if (!enabled) return ''

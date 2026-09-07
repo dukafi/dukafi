@@ -2,6 +2,13 @@
 
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 
+Current launch milestones: [M11 AI provider core](docs/milestones/m11-ai-provider-core/README.md),
+[M12 image generation](docs/milestones/m12-image-generation/README.md),
+[M13 theme marketplace](docs/milestones/m13-theme-marketplace/README.md),
+[M14 provider seams](docs/milestones/m14-provider-seams/README.md),
+[M15 replicas and storage](docs/milestones/m15-replicas-and-storage/README.md), and
+[M16 launch and deploy](docs/milestones/m16-launch-deploy/README.md).
+
 Ordering rule: milestones are sequential; tasks within a milestone can be
 parallelized unless marked (dep: ...). Every milestone ends with a DEMO — a
 concrete thing you can click. If the demo can't be shown, the milestone isn't done.
@@ -193,24 +200,27 @@ pages still serve; restore from Litestream works.
 
 ---
 
-## M7 — One-click deploy (the Instatic promise)
+## M7 — One-click deploy (the Instatic promise; superseded by M15/M16)
 
 Goal: a non-technical founder gets a live store in ~2 minutes.
 
-- [ ] Production Dockerfile: multi-stage — stage 1 Bun builds the editor,
+- [x] Production Dockerfile: multi-stage — stage 1 Bun builds the editor,
       stage 2 Ruby slim image with app + built assets; final image has NO node
-- [ ] compose.prod.yml (app + volume) and compose.caddy.yml (TLS variant)
-- [ ] First-boot wizard: no admins row → /setup flow (store name, currency,
-      admin account, optional Stripe keys) → seeds starter theme pages
-- [ ] Env contract: PORT, SESSION_SECRET (auto-generate if absent + persist),
-      DUKAFY_DB, STRIPE_KEY/WEBHOOK_SECRET, SMTP_*; document in .env.example
-- [ ] Health endpoint (`/healthz`: DB reachable, published/current resolves)
+- [x] compose.prod.yml (app + volume) and compose.caddy.yml (TLS variant) — M16
+- [x] First-boot owner setup plus optional starter-theme prompt — M13/M16
+- [x] Env contract documented in `.env.example`; provider credentials stay in
+      encrypted dashboard settings — M11/M14/M16
+- [x] Health endpoint (`/admin/api/health`: DB and runtime status)
 - [ ] Railway template (Dockerfile deploy, volume mounted for db+uploads+published,
       healthcheck wired) — publish the template
 - [ ] Fly.io + generic-VPS guides (`docs/deployment/`)
-- [ ] In-app update path documented (pull new image, migrations run on boot)
-- [ ] Starter theme: polished default store (home, collection, product, cart,
+- [x] In-app update path documented (pull new image, migrations run on boot) — M16
+- [x] Starter theme: polished default store (home, collection, product, cart,
       about, 404) shipped as seed documents so the first boot isn't blank
+
+Railway template publication remains an operator-account release step tracked in
+`docs/milestones/m16-launch-deploy/railway-template-checklist.md`. Fly.io was moved
+out of the 1.0 scope; Compose+Caddy is the generic VPS deployment path.
 
 **DEMO (the money demo):** stopwatch from clicking the Railway button to adding
 a product and buying it with a test card. Target: under 5 minutes, zero terminal.

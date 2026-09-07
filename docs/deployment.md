@@ -11,15 +11,13 @@ straight off disk, and `/uploads` is served by `Rack::Files`. Choosing Postgres
 moves the *database* off the container — it does not make the container
 stateless.
 
-That has two consequences, and neither is optional:
+That has two consequences:
 
 1. **Every deployment needs a persistent volume**, on both engines.
-2. **Run one replica.** Two containers would each hold their own published
-   output and their own uploads, and a visitor would get whichever one the load
-   balancer picked. `railway.json` pins `numReplicas: 1` for this reason.
-
-Object storage for media and published output is what would lift that limit.
-It does not exist yet.
+2. The default disk backend requires replicas on one host to share `/data`.
+   Use Postgres plus the scale overlay; the scheduler and publisher coordinate
+   through database locks. True multi-node deployments additionally configure
+   external media storage and `DUKAFI_PUBLISHED_STORE=db`.
 
 ---
 
@@ -91,6 +89,42 @@ Railway stores it against your account.
 ---
 
 ## Docker, anywhere else
+
+### Compose overlays
+
+The production files are composable:
+
+```sh
+# SQLite, one replica
+docker compose --env-file .env -f compose.prod.yml up -d
+
+# Postgres, one replica
+docker compose --env-file .env -f compose.prod.yml -f compose.postgres.yml up -d
+
+# Postgres and automatic TLS
+docker compose --env-file .env -f compose.prod.yml -f compose.postgres.yml \
+  -f compose.caddy.yml up -d
+
+# Two or more replicas on one host
+docker compose --env-file .env -f compose.prod.yml -f compose.postgres.yml \
+  -f compose.caddy.yml -f compose.scale.yml up -d
+```
+
+The Postgres overlay runs migrations once in a dedicated `migrate` service.
+Application replicas wait for it and boot with `SKIP_MIGRATIONS=1`.
+
+### Scaling out
+
+One replica is the default and works with either database. For multiple replicas:
+
+- use Postgres;
+- mount the same `dukafi-data` named volume into replicas on the host;
+- front the service with Caddy instead of binding an app host port;
+- run `scripts/smoke-replicas.sh` after configuration changes.
+
+Across multiple hosts, set `DUKAFI_PUBLISHED_STORE=db` and configure a shared
+media-storage plugin. Keep Railway's committed default at one replica until both
+settings are active for that deployment.
 
 SQLite:
 
@@ -165,6 +199,5 @@ GHCR packages start **private**. Make it public at
 
 ## Building the image
 
-amd64 only. The publish path shells out to the Tailwind standalone binary at
-**runtime**, and `scripts/install_tailwind.rb` pins the linux-x64 checksum;
-arm64 needs a second pinned checksum, not just a buildx flag.
+Release images target amd64 and arm64. The Tailwind standalone binary is selected
+by `TARGETARCH` and verified against its architecture-specific checksum.

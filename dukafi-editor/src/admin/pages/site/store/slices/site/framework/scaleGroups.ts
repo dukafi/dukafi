@@ -87,10 +87,11 @@ function ensureScaleSettings<F extends 'typography' | 'spacing'>(
   }
   const framework = site.settings.framework
   if (family === 'typography') {
-    if (!framework.typography) framework.typography = { groups: [], classes: [] }
-    framework.typography.groups ??= []
-    framework.typography.classes ??= []
-    return framework.typography as ScaleFamilyTypes[F]['Settings']
+    const typography = framework.typography ??= { groups: [], classes: [], styles: [] }
+    typography.groups ??= []
+    typography.classes ??= []
+    typography.styles ??= []
+    return typography as ScaleFamilyTypes[F]['Settings']
   }
   if (!framework.spacing) framework.spacing = { groups: [], classes: [] }
   framework.spacing.groups ??= []

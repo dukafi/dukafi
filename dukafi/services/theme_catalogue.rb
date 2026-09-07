@@ -18,6 +18,9 @@ module ThemeCatalogue
 
   module_function
 
+  def bundled_path = File.expand_path("../themes/starter.theme.tar.gz", __dir__)
+  def bundled_metadata = JSON.parse(File.read(File.expand_path("../themes/starter.json", __dir__)))
+
   def default
     row = PluginCatalogue.fetch_json("/v1/themes/default")
     return nil unless row.is_a?(Hash)
@@ -25,9 +28,19 @@ module ThemeCatalogue
     theme = row["theme"].is_a?(Hash) ? row["theme"] : row
     summarise(theme)
   rescue PluginCatalogue::Error => error
-    return nil if %w[plugin_not_found unreachable].include?(error.code)
+    return summarise(bundled_metadata) if %w[plugin_not_found unreachable].include?(error.code) && File.file?(bundled_path)
 
     raise Error.new(error.code, error.message)
+  end
+
+  def list(q: nil, category: nil)
+    query = URI.encode_www_form({ q: q, category: category }.reject { |_k, v| v.to_s.empty? })
+    row = PluginCatalogue.fetch_json("/v1/themes#{query.empty? ? '' : "?#{query}"}")
+    themes = Array(row["themes"]).map { |entry| summarise(entry).merge(entry.slice("summary", "categories", "previewUrls", "demoUrl", "author")) }
+    { "themes" => themes, "total" => row["total"].to_i }
+  rescue PluginCatalogue::Error
+    theme = summarise(bundled_metadata).merge(bundled_metadata.slice("summary", "categories", "previewUrls", "demoUrl", "author"))
+    { "themes" => [theme], "total" => 1, "degraded" => true }
   end
 
   def listing(id)
@@ -40,6 +53,7 @@ module ThemeCatalogue
   end
 
   def download(id)
+    return File.binread(bundled_path) if id.to_s == bundled_metadata["id"].to_s && File.file?(bundled_path)
     row = listing(id)
     distribution = row["distribution"].is_a?(Hash) ? row["distribution"] : {}
     url = distribution["downloadUrl"].to_s

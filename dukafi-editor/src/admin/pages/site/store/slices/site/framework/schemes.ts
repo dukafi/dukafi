@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid'
-import type { FrameworkColorScheme, FrameworkColorSchemeRoles } from '@core/framework-schema'
+import type { FrameworkColorScheme } from '@core/framework-schema'
 import type { SiteDocument } from '@core/page-tree'
 import { defaultColorSchemeRoles, deriveSchemeFromColor, schemeClassName } from '@core/framework'
 import { createFrameworkColorTokenFromInput, ensureFrameworkColors } from './colors'

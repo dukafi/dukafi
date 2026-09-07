@@ -34,6 +34,8 @@ import { PluginsSection } from './sections/PluginsSection'
 import { DiscountsSection } from './sections/DiscountsSection'
 import { ProductsSection } from './sections/ProductsSection'
 import { SettingsSection } from './sections/SettingsSection'
+import { ThemesSection } from './sections/ThemesSection'
+import { LaunchChecklist } from './sections/LaunchChecklist'
 import type { CommerceSection } from './types'
 import styles from './DashboardPage.module.css'
 
@@ -48,6 +50,7 @@ const SECTION_LABELS: Record<CommerceSection, string> = {
   import: 'Import',
   reviews: 'Reviews',
   connect: 'Connect',
+  themes: 'Themes',
   settings: 'Settings',
 }
 
@@ -62,10 +65,11 @@ const SECTION_ICONS = {
   import: CloudUploadSolidIcon,
   reviews: StarSolidIcon,
   connect: CommandIcon,
+  themes: Grid2x22SolidIcon,
   settings: Settings2SolidIcon,
 } satisfies Record<CommerceSection, typeof PackageSolidIcon>
 
-const SECTIONS: CommerceSection[] = ['products', 'collections', 'tables', 'orders', 'discounts', 'forms', 'plugins', 'import', 'reviews', 'connect', 'settings']
+const SECTIONS: CommerceSection[] = ['products', 'collections', 'tables', 'orders', 'discounts', 'forms', 'themes', 'plugins', 'import', 'reviews', 'connect', 'settings']
 
 /** `products` is the landing area; anything unrecognised falls back to it. */
 export function sectionFromParam(value: string | undefined): CommerceSection {
@@ -116,6 +120,7 @@ export function DashboardPage() {
         </aside>
 
         <div className={styles.workspaceContent} aria-labelledby="dashboard-title">
+          {section === 'products' && <LaunchChecklist data={data} navigate={navigate} />}
           {section === 'products' && <ProductsSection data={data} />}
           {section === 'orders' && <OrdersSection data={data} />}
           {section === 'discounts' && <DiscountsSection data={data} />}
@@ -126,6 +131,7 @@ export function DashboardPage() {
           {section === 'import' && <ImportSection data={data} />}
           {section === 'reviews' && <ReviewsSection data={data} />}
           {section === 'connect' && <ConnectSection />}
+          {section === 'themes' && <ThemesSection />}
           {section === 'settings' && <SettingsSection />}
         </div>
       </div>

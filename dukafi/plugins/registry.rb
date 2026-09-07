@@ -21,6 +21,7 @@ class Dukafi
       Setting = Data.define(:key, :type, :label, :secret)
 
       attr_reader :id, :settings_schema, :payment_providers, :event_handlers,
+                  :image_providers, :mail_providers, :shipping_providers, :media_storages,
                   :quotes, :filters, :public_routes, :jobs, :catalogue_fields, :pages
 
       def initialize(id)
@@ -31,6 +32,14 @@ class Dukafi
         @settings_schema = []
         @payment_providers = {}
         @payment_provider_meta = {}
+        @image_providers = {}
+        @image_provider_meta = {}
+        @mail_providers = {}
+        @mail_provider_meta = {}
+        @shipping_providers = {}
+        @shipping_provider_meta = {}
+        @media_storages = {}
+        @media_storage_meta = {}
         @event_handlers = Hash.new { |hash, key| hash[key] = [] }
         @quotes = {}
         @filters = Hash.new { |hash, key| hash[key] = [] }
@@ -97,6 +106,33 @@ class Dukafi
       end
 
       def payment_provider_meta(slug) = @payment_provider_meta[slug.to_s]
+
+      def image_provider(slug, provider, label: nil)
+        @image_providers[slug.to_s] = provider
+        @image_provider_meta[slug.to_s] = { "slug" => slug.to_s, "name" => label.to_s.empty? ? name : label.to_s }
+      end
+
+      def image_provider_meta(slug) = @image_provider_meta[slug.to_s]
+
+      def mail_provider(slug, provider, label: nil)
+        @mail_providers[slug.to_s] = provider
+        @mail_provider_meta[slug.to_s] = provider_meta(slug, label)
+      end
+
+      def shipping_provider(slug, provider, label: nil)
+        @shipping_providers[slug.to_s] = provider
+        @shipping_provider_meta[slug.to_s] = provider_meta(slug, label)
+      end
+
+      def media_storage(slug, adapter, label: nil)
+        @media_storages[slug.to_s] = adapter
+        @media_storage_meta[slug.to_s] = provider_meta(slug, label)
+      end
+
+      def provider_meta(slug, label) = { "slug" => slug.to_s, "name" => label.to_s.empty? ? name : label.to_s }
+      def mail_provider_meta(slug) = @mail_provider_meta[slug.to_s]
+      def shipping_provider_meta(slug) = @shipping_provider_meta[slug.to_s]
+      def media_storage_meta(slug) = @media_storage_meta[slug.to_s]
 
       # Handlers run AFTER the triggering transaction commits, and a raising
       # handler never fails the customer's request — see `emit`.
@@ -193,6 +229,10 @@ class Dukafi
           "id" => id, "name" => name, "version" => version,
           "configured" => values.configured?,
           "paymentProviders" => payment_providers.keys,
+          "imageProviders" => image_providers.keys,
+          "mailProviders" => mail_providers.keys,
+          "shippingProviders" => shipping_providers.keys,
+          "mediaStorages" => media_storages.keys,
           "productFields" => @catalogue_fields[:product].map { |entry| entry.merge(pluginId: id).transform_keys(&:to_s) },
           "variantFields" => @catalogue_fields[:variant].map { |entry| entry.merge(pluginId: id).transform_keys(&:to_s) },
           "pages" => @pages.map(&:to_h),
@@ -229,6 +269,9 @@ class Dukafi
       def registry
         @registry ||= {}
       end
+
+      def on_core(event, &handler) = core_handlers[event.to_sym] << handler
+      def core_handlers = (@core_handlers ||= Hash.new { |hash, key| hash[key] = [] })
 
       def register(id)
         plugin = Plugin.new(id)
@@ -287,6 +330,29 @@ class Dukafi
         all.flat_map { |plugin| plugin.payment_providers.keys }.uniq.sort
       end
 
+      def configured_image_providers
+        visible.sort_by(&:id).flat_map do |plugin|
+          next [] unless plugin.settings.configured?
+          plugin.image_providers.map do |slug, provider|
+            (plugin.image_provider_meta(slug) || { "slug" => slug, "name" => plugin.name })
+              .merge("pluginId" => plugin.id, "provider" => provider, "config" => plugin.settings.to_h)
+          end
+        end
+      end
+
+      def configured_mail_providers = configured_providers(:mail_providers, :mail_provider_meta)
+      def configured_shipping_providers = configured_providers(:shipping_providers, :shipping_provider_meta)
+      def configured_media_storages = configured_providers(:media_storages, :media_storage_meta)
+
+      def configured_providers(collection, metadata)
+        visible.sort_by(&:id).flat_map do |plugin|
+          next [] unless plugin.settings.configured?
+          plugin.public_send(collection).map do |slug, provider|
+            plugin.public_send(metadata, slug).merge("pluginId" => plugin.id, "provider" => provider)
+          end
+        end
+      end
+
       # Fire a lifecycle event.
       #
       # There is no job runner in Dukafi (Puma only), so handlers run inside
@@ -296,6 +362,11 @@ class Dukafi
       #   - callers emit AFTER their transaction commits, so a handler can
       #     never roll back the thing it is reacting to
       def emit(event, payload = nil)
+        core_handlers[event.to_sym].each do |handler|
+          handler.call(payload)
+        rescue StandardError => e
+          warn "[core] #{event} handler failed: #{e.class}: #{e.message}"
+        end
         all.each do |plugin|
           plugin.event_handlers[event.to_sym].each do |handler|
             handler.call(payload)

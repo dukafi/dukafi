@@ -11,7 +11,7 @@
  * Background, or Body (whichever contrasts) at generate time.
  */
 
-import type { StyleRule } from '@core/page-tree'
+import type { CSSPropertyBag, StyleRule } from '@core/page-tree'
 import { classKindSelector } from '@core/page-tree'
 import type {
   ColorSchemeRole,
@@ -150,7 +150,7 @@ export function resolveSchemeRoleColor(
   slug: string,
 ): string {
   const name = `--${normalizeFrameworkColorSlug(slug)}`
-  const match = generateFrameworkColorVariableSets({ tokens }).light.find((variable) => variable.name === name)
+  const match = generateFrameworkColorVariableSets({ tokens: [...tokens] }).light.find((variable) => variable.name === name)
   if (match) return match.value
   return tokens.find((token) => normalizeFrameworkColorSlug(token.slug) === normalizeFrameworkColorSlug(slug))
     ?.lightValue || '#888888'
@@ -162,7 +162,7 @@ export function listSchemePaletteOptions(
 ): SchemePaletteOption[] {
   const byId = new Map(tokens.map((token) => [token.id, token]))
   const options: SchemePaletteOption[] = []
-  for (const variable of generateFrameworkColorVariableSets({ tokens }).light) {
+  for (const variable of generateFrameworkColorVariableSets({ tokens: [...tokens] }).light) {
     const token = byId.get(variable.tokenId)
     const brand = humanizeColorSlug(variable.slug)
     const group = token?.category.trim() || 'Colors'

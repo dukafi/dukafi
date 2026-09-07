@@ -1,0 +1,5 @@
+services:
+  dukafi:
+    deploy:
+      replicas: ${DUKAFI_REPLICAS:-2}
+    ports: !reset []

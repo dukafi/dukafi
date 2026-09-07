@@ -2,7 +2,6 @@
  * Framework icons — store action.
  */
 import { resolveIconPresets } from '@core/framework'
-import type { FrameworkIconsSettings } from '@core/framework-schema'
 import type { SiteSlice, SiteSliceHelpers } from '@site/store/slices/site/types'
 
 type FrameworkIconActions = Pick<SiteSlice, 'updateFrameworkIcons'>

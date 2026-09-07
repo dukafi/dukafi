@@ -1,0 +1,11 @@
+{
+  "id": "duka-classic",
+  "name": "Duka Classic",
+  "summary": "A warm, polished starter storefront for independent shops.",
+  "description": "Responsive home page, product and collection foundations, and a practical commerce-first visual system.",
+  "version": "1.0.0",
+  "author": "Dukafi",
+  "categories": ["general"],
+  "previewUrls": [],
+  "contents": {"pages": 1, "templates": 0, "partials": 0, "tables": 0, "forms": 0, "products": 0, "collections": 0, "reviews": 0, "media": 0}
+}

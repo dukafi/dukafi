@@ -8,7 +8,7 @@ import type { ReactNode } from 'react'
 
 export type CommerceSection =
   | 'products' | 'collections' | 'tables' | 'orders' | 'discounts' | 'forms' | 'plugins' | 'import' | 'reviews'
-  | 'connect' | 'settings'
+  | 'connect' | 'themes' | 'settings'
 
 export interface CommerceSettings {
   currency: string
@@ -256,6 +256,8 @@ export interface Plugin {
   version: string
   configured: boolean
   paymentProviders: string[]
+  mailProviders?: string[]
+  shippingProviders?: string[]
   productFields: CatalogueFieldDef[]
   variantFields: CatalogueFieldDef[]
   settings: PluginSettingField[]

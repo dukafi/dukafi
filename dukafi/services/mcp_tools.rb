@@ -25,7 +25,7 @@ module McpTools
       McpCommerceTools.all + McpMediaTools.all + McpReviewTools.all +
       McpDiscountTools.all + McpPluginTools.all + McpDataTableTools.all +
       McpComponentTools.all + McpSitemapTools.all +
-      McpOrderTools.all + McpCustomerTools.all
+      McpOrderTools.all + McpCustomerTools.all + McpAiTools.all
   end
 
   # Which tools change the store. Drives the `mcp:read` / `mcp:write` split, so
@@ -40,7 +40,8 @@ module McpTools
                 McpReviewTools::READ_TOOLS + McpDiscountTools::READ_TOOLS +
                 McpPluginTools::READ_TOOLS + McpDataTableTools::READ_TOOLS +
                 McpComponentTools::READ_TOOLS + McpSitemapTools::READ_TOOLS +
-                McpOrderTools::READ_TOOLS + McpCustomerTools::READ_TOOLS).freeze
+                McpOrderTools::READ_TOOLS + McpCustomerTools::READ_TOOLS +
+                McpAiTools::READ_TOOLS).freeze
 
   def write_tool?(name) = !READ_TOOLS.include?(name.to_s)
 

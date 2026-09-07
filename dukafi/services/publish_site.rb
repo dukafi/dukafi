@@ -1,11 +1,14 @@
 class PublishSite
   Result = Data.define(:published_pages, :version)
+  class InProgress < StandardError; end
 
   def self.call(
     state: SiteState.first,
     pages: nil,
     output_root: Paths.published_root
   )
+    claimed = SchedulerLock.claim(id: 2)
+    raise InProgress, "publish already in progress" unless claimed
     raise ArgumentError, "site state is required" unless state
     SearchPage.ensure!
     pages = pages.nil? ? Page.where(kind: "page").order(:id).all : pages
@@ -35,6 +38,8 @@ class PublishSite
       end,
     )
     Result.new(published_pages: baked.page_count, version: baked.version)
+  ensure
+    SchedulerLock.release(id: 2) if claimed
   end
 
   def self.status(state: SiteState.first, pages: nil)

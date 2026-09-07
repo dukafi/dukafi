@@ -20,7 +20,7 @@ class CreateOrder
     def ok? = reason.nil?
   end
 
-  REASONS = %w[empty_cart missing_identity out_of_stock].freeze
+  REASONS = %w[empty_cart missing_identity out_of_stock invalid_shipping].freeze
 
   # `customer` is the SIGNED-IN shopper, when there is one.
   #
@@ -33,17 +33,21 @@ class CreateOrder
   # The typed email and phone still land ON THE ORDER: they are the contact
   # details for this delivery, and a shopper ordering something to be sent to
   # a relative's phone is not changing who they are.
-  def self.call(cart:, email: nil, phone: nil, name: nil, discount_code: nil, customer: nil)
-    new(cart, email, phone, name, discount_code, customer).call
+  def self.call(cart:, email: nil, phone: nil, name: nil, discount_code: nil, customer: nil,
+                shipping_provider: nil, shipping_rate: nil, address: {})
+    new(cart, email, phone, name, discount_code, customer, shipping_provider, shipping_rate, address).call
   end
 
-  def initialize(cart, email, phone, name, discount_code, customer = nil)
+  def initialize(cart, email, phone, name, discount_code, customer = nil, shipping_provider = nil, shipping_rate = nil, address = {})
     @cart = cart
     @email = email
     @phone = phone
     @name = name
     @discount_code = discount_code
     @customer = customer
+    @shipping_provider = shipping_provider
+    @shipping_rate = shipping_rate
+    @address = address.is_a?(Hash) ? address : {}
   end
 
   def call
@@ -52,6 +56,13 @@ class CreateOrder
     return failure("empty_cart") if entries.empty?
     return failure("missing_identity") if @email.to_s.strip.empty? && @phone.to_s.strip.empty?
 
+    shipping = nil
+    if Dukafi::Plugins.configured_shipping_providers.any?
+      shipping = Shipping.resolve(cart: @cart, provider_slug: @shipping_provider,
+                                  rate_id: @shipping_rate, address: @address)
+      return failure("invalid_shipping") unless shipping
+    end
+
     DB.transaction do
       stock = CheckoutStockCheck.reserve!(@cart)
       next failure("out_of_stock", shortages: stock.shortages) unless stock.ok?
@@ -59,7 +70,7 @@ class CreateOrder
       # Signed in: the order is theirs. Guest: matched by identity, which is
       # what lets a returning guest keep one customer record.
       customer = @customer || Customer.upsert_by_identity(email: @email, phone: @phone, name: @name)
-      order = build_order(customer, payload)
+      order = build_order(customer, payload, shipping)
       entries.each { |entry| build_item(order, entry) }
       consume_discount(payload)
       # The cart is spent. Marking it converted (rather than deleting) keeps
@@ -74,8 +85,9 @@ class CreateOrder
 
   private
 
-  def build_order(customer, payload)
+  def build_order(customer, payload, shipping)
     summary = payload.fetch("cart")
+    shipping_cents = shipping ? shipping.rate.amount_cents.to_i : 0
     now = Time.now
     Order.create(
       cart_id: @cart.id, customer_id: customer.id,
@@ -91,8 +103,10 @@ class CreateOrder
       # under after the discount itself is gone. Blank becomes nil rather than
       # "", so "no code" is one value and not two.
       discount_code: summary["discountCode"].to_s.empty? ? nil : summary["discountCode"].to_s,
-      shipping_cents: 0,
-      total_cents: summary.fetch("totalCents").to_i,
+      shipping_cents: shipping_cents,
+      shipping_meta: shipping && JSON.generate({ provider: shipping.provider, rate_id: shipping.rate.id,
+                                                  label: shipping.rate.label, meta: shipping.rate.meta }),
+      total_cents: summary.fetch("totalCents").to_i + shipping_cents,
       public_token: SecureRandom.urlsafe_base64(24),
       created_at: now, updated_at: now
     )

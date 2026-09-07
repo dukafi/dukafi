@@ -718,7 +718,9 @@ class AdminApi < Roda
         r.get("rebuild-targets") { rebuild_targets_payload(r.params) }
         r.post do
           result = PublishSite.call
-          { publishedPages: result.published_pages }
+          { publishedPages: result.published_pages, version: result.version }
+        rescue PublishSite::InProgress => error
+          halt_json(409, "publish_in_progress", error.message)
         end
       end
 
@@ -767,6 +769,19 @@ class AdminApi < Roda
             halt_json(*font_install_error(result.reason))
           end
           { font: result.font }
+        end
+
+        r.get("jobs") do
+          now = Time.now
+          jobs = Dukafi::Plugins.visible.flat_map do |plugin|
+            plugin.jobs.map do |job|
+              key = PluginJobs.job_key(job[:name])
+              last = PluginSetting.first(plugin_id: plugin.id, key: key)&.value
+              { pluginId: plugin.id, name: job[:name], every: job[:every], lastRunAt: last,
+                due: PluginJobs.due?(plugin, job, now) }
+            end
+          end
+          { jobs: jobs }
         end
 
         # Custom fonts are already in the media library — the binaries were
@@ -931,6 +946,8 @@ class AdminApi < Roda
       r.on("themes") do
         require_admin!
 
+        r.get("catalogue") { ThemeCatalogue.list(q: r.params["q"], category: r.params["category"]) }
+
         r.get("export") do
           payload = ThemeExporter.call(origin: public_origin, include: theme_include_from_params)
           bytes = ThemeArchive.pack(payload)
@@ -990,6 +1007,15 @@ class AdminApi < Roda
           begin
             payload = ThemeArchive.unpack(bytes)
             result = ThemeImporter.call(payload, options: options, remap: remap)
+            if (state = SiteState.first)
+              site = state.site
+              site["settings"] ||= {}
+              meta = payload["theme"] || {}
+              site["settings"]["theme"] = { "themeId" => meta["id"], "version" => meta["version"],
+                                                 "appliedAt" => Time.now.utc.iso8601 }
+              state.site = site
+              state.save
+            end
             {
               applied: result.applied,
               skipped: result.skipped,
@@ -1704,7 +1730,129 @@ class AdminApi < Roda
       r.on("ai") do
         require_admin!
 
+        r.on("connections") do
+          r.is do
+            r.get do
+              { connections: AiConnection.order(:priority, :id).map(&:to_admin_payload),
+                providers: Dukafi::Ai::Drivers.all.map { |d| { id: d.id, label: d.label, authMode: d.auth_mode } } }
+            end
+
+            r.post do
+              attrs = {
+                name: r.params["name"], provider: r.params["provider"], base_url: r.params["baseUrl"],
+                chat_model: r.params["chatModel"], image_model: r.params["imageModel"],
+                priority: Integer(r.params.fetch("priority", 100)), disabled: r.params["disabled"] == true,
+              }
+              attrs[:api_key] = r.params["apiKey"] unless r.params["apiKey"].to_s.empty?
+              connection = AiConnection.create(attrs)
+              response.status = 201
+              connection.to_admin_payload
+            end
+          end
+
+          r.on(Integer) do |id|
+            connection = AiConnection[id]
+            halt_json(404, "not_found", "AI connection not found.") unless connection
+
+            r.post("models") { { models: connection.driver.list_models(connection) } }
+            r.post("test") do
+              model = r.params["model"].to_s
+              model = connection.chat_model.to_s if model.empty?
+              halt_json(422, "validation_error", "Choose a chat model first.") if model.empty?
+              result = connection.driver.chat(connection: connection, model: model,
+                                              messages: [{ "role" => "user", "content" => "Reply OK" }])
+              result.ok? ? { ok: true } : { ok: false, error: result.detail || result.reason }
+            end
+
+            r.patch do
+              mapping = { "name" => :name, "provider" => :provider, "baseUrl" => :base_url,
+                          "chatModel" => :chat_model, "imageModel" => :image_model,
+                          "priority" => :priority, "disabled" => :disabled }
+              attrs = mapping.each_with_object({}) { |(key, column), out| out[column] = r.params[key] if r.params.key?(key) }
+              attrs[:api_key] = r.params["apiKey"] unless r.params["apiKey"].to_s.empty?
+              attrs[:api_key] = nil if r.params["clearKey"] == true
+              connection.update(attrs)
+              connection.to_admin_payload
+            end
+
+            r.delete do
+              if AiDefault.where(connection_id: connection.id).count.positive?
+                halt_json(409, "ai_connection_in_use", "Change the AI task default before deleting this connection.")
+              end
+              connection.destroy
+              no_content!
+            end
+          rescue SecretBox::KeyMismatch => e
+            halt_json(409, "ai_key_mismatch", e.message)
+          end
+        end
+
+        r.is("defaults") do
+          r.get do
+            rows = AiDefault.all.to_h do |entry|
+              [entry.task, { connectionId: entry.connection_id, model: entry[:model] }]
+            end
+            { chat: rows["chat"], image: rows["image"] }
+          end
+          r.put do
+            DB.transaction do
+              %w[chat image].each do |task|
+                value = r.params[task]
+                next unless value.is_a?(Hash)
+                if value["connectionId"].nil?
+                  AiDefault.where(task: task).delete
+                  next
+                end
+                connection = AiConnection[value["connectionId"].to_i]
+                halt_json(422, "validation_error", "Unknown AI connection for #{task}.") unless connection
+                model = value["model"].to_s.strip
+                halt_json(422, "validation_error", "Choose a model for #{task}.") if model.empty?
+                row = AiDefault.first(task: task)
+                attrs = { connection_id: connection.id, model: model, updated_at: Time.now }
+                if row
+                  row.update(attrs)
+                else
+                  row = AiDefault.new
+                  row[:task] = task
+                  attrs.each { |key, value| row[key] = value }
+                  row.save
+                end
+              end
+            end
+            no_content!
+          end
+        end
+
+        r.post("images") do
+          unless AiDefault.first(task: "image") || AiConnection.where(disabled: false).exclude(image_model: [nil, ""]).count.positive? ||
+                 Dukafi::Plugins.configured_image_providers.any?
+            halt_json(409, "ai_not_configured", "Set up an image-capable AI connection first.")
+          end
+          request_data = Dukafi::Ai::Images::Request.new(
+            prompt: r.params["prompt"], size: r.params["size"], count: r.params["count"],
+            connection_id: r.params["connectionId"], model: r.params["model"]
+          )
+          result = Dukafi::Ai::Images.generate(request_data, actor: current_admin)
+          if result.is_a?(Dukafi::Ai::Images::Failure)
+            response.status = 502
+            { error: "generation_failed", attempts: result.attempts }
+          else
+            { asset: media_payload(result.media_asset), provider: result.provider, model: result.model }
+          end
+        rescue ArgumentError => error
+          halt_json(422, "validation_error", error.message)
+        end
+
         r.post("chat") do
+          if (default = AiDefault.first(task: "chat"))
+            caps = Dukafi::Ai::CapabilityResolver.resolve(default.ai_connection, default[:model])
+            if Array(r.params["attachments"]).any? && !caps.vision_input
+              halt_json(422, "ai_vision_unsupported", "The selected model does not support image input. Choose a vision-capable model.")
+            end
+            if Array(r.params["tools"]).any? && !caps.tool_calling
+              halt_json(422, "ai_tools_unsupported", "The selected model does not support tool calling. Choose a tool-capable model.")
+            end
+          end
           result = AiChat.call(messages: r.params["messages"], attachments: r.params["attachments"])
           unless result.ok?
             status, code, message = ai_chat_error(result.reason)

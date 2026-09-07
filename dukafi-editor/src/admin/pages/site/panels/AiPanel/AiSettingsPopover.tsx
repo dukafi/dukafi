@@ -22,6 +22,7 @@ import { ControlRow } from '@ui/components/ControlRow'
 import { Input } from '@ui/components/Input'
 import { AiSettingsSolidIcon } from 'pixel-art-icons/icons/ai-settings-solid'
 import styles from './AiPanel.module.css'
+import { AiConnectionsDialog } from './AiConnectionsDialog'
 
 /**
  * Providers, and what each needs.
@@ -66,6 +67,7 @@ function providerFor(baseUrl: string, stored?: string): string {
 export function AiSettingsPopover({ onSaved }: { onSaved: () => void }) {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
+  const [connectionsOpen, setConnectionsOpen] = useState(false)
 
   const [provider, setProvider] = useState('ollama')
   const [baseUrl, setBaseUrl] = useState('')
@@ -235,6 +237,7 @@ export function AiSettingsPopover({ onSaved }: { onSaved: () => void }) {
           onClose={() => setOpen(false)}
         >
           <div className={styles.settings} data-testid="ai-settings">
+            <Button variant="secondary" size="sm" fullWidth onClick={() => { setOpen(false); setConnectionsOpen(true) }}>Manage connections</Button>
             <ControlRow propKey="ai-provider" inputId="ai-provider" label="Provider" layout="stacked">
               {/* A native <select>, not the `Select` primitive: that one portals
                   its listbox to document.body as its own ContextMenu, and a
@@ -359,6 +362,7 @@ export function AiSettingsPopover({ onSaved }: { onSaved: () => void }) {
           </div>
         </ContextMenu>
       )}
+      <AiConnectionsDialog open={connectionsOpen} onClose={() => setConnectionsOpen(false)} onSaved={onSaved} />
     </>
   )
 }

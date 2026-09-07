@@ -109,11 +109,11 @@ class ThemesSpec < Minitest::Test
     assert_equal "*", last_response.get_header("Access-Control-Allow-Origin")
   end
 
-  def test_default_theme_is_absent_when_the_registry_is_down
+  def test_default_theme_falls_back_to_the_bundled_theme_when_the_registry_is_down
     PluginCatalogue.http = lambda { |_url| raise PluginCatalogue::Error.new("unreachable", "offline") }
     get "/admin/api/cms/themes/default"
     assert_equal 200, last_response.status
-    assert_nil json.fetch("theme")
+    assert_equal "duka-classic", json.dig("theme", "id")
   ensure
     PluginCatalogue.http = nil
   end

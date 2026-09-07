@@ -590,6 +590,11 @@ class Fragments < Roda
     end
 
     # ── Orders ───────────────────────────────────────────────────────────
+    r.get("shipping", "rates") do
+      response["Cache-Control"] = "no-store"
+      { rates: Shipping.rates(cart: current_cart, address: r.params["address"] || {}) }
+    end
+
     # The one fragment whose answer depends on WHO is asking. Never cached,
     # never baked, and never parameterised by customer.
     r.get("orders", "lines") do
@@ -800,7 +805,9 @@ class Fragments < Roda
           email: r.params["email"], phone: r.params["phone"], name: r.params["name"],
           discount_code: session["discount_code"],
           # Whoever is signed in owns the order, whatever address they typed.
-          customer: current_customer
+          customer: current_customer,
+          shipping_provider: r.params["shippingProvider"], shipping_rate: r.params["shippingRate"],
+          address: r.params["address"] || {}
         )
 
         unless result.ok?

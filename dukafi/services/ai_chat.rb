@@ -2,6 +2,9 @@ require "net/http"
 require "uri"
 require "json"
 require "base64"
+require_relative "ai/loop"
+require_relative "ai/drivers"
+require_relative "ai/capability_resolver"
 
 # Proxy one chat turn to the configured model.
 #
@@ -66,6 +69,7 @@ class AiChat
   # `Settings#configured?` is the wrong question: it requires EVERY declared
   # setting to be non-empty, and a local Ollama legitimately has no API key.
   def self.configured?
+    return true if defined?(AiDefault) && AiDefault.first(task: "chat")
     !settings[:base_url].to_s.strip.empty? && !settings[:model].to_s.strip.empty?
   end
 
@@ -75,6 +79,16 @@ class AiChat
 
     clean = sanitize(messages)
     return failure("empty_conversation") if clean.empty?
+
+    if defined?(AiDefault) && (default = AiDefault.first(task: "chat"))
+      connection = default.ai_connection
+      return failure("not_configured") unless connection && !connection.disabled
+      driver = connection.driver
+      attached = sanitize_attachments(attachments)
+      mapped = attach_to_last_user(clean, attached, anthropic: driver.id == "anthropic")
+      result = driver.chat(connection: connection, model: default[:model], messages: mapped)
+      return Result.new(reply: result.reply, reason: result.reason, detail: result.detail)
+    end
 
     uri = endpoint
     return failure("invalid_base_url") unless uri

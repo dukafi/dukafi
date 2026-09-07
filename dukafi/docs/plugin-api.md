@@ -61,6 +61,27 @@ owns:
 7. **Jobs** — install, activate, scheduled sync. Not on the storefront POST.
 8. **Modules / packs** — what the merchant drops onto a page.
 9. **Dashboard pages** — host-rendered stats, info, tables, and actions.
+10. **Provider seams** — mail, shipping, image generation, and media storage.
+
+Provider contracts stay deliberately small:
+
+```ruby
+p.mail_provider "smtp", Smtp::Provider, label: "SMTP"
+# deliver(message:, config:) -> Mailer::DeliveryResult
+
+p.shipping_provider "flat", Flat::Provider, label: "Flat rate"
+# rates(cart:, address:, config:) -> [Shipping::Rate]
+
+p.image_provider "replicate", Replicate::Provider, label: "Replicate"
+# generate(prompt:, size:, count:, config:) -> result with images/error
+
+p.media_storage "s3", S3::Adapter, label: "S3-compatible"
+# store(io:, path:, content_type:), read_url(path), delete(path), verify!
+```
+
+Discovery exposes only fully configured plugins. Secrets remain write-only over
+HTTP. Provider errors must be returned as typed results or raised without including
+credentials; the host sanitizes and logs them.
 
 If a feature needs a new table in core (orders, customers, products), it
 does not belong in a plugin. If it needs a table the core has never heard

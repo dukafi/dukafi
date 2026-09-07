@@ -95,6 +95,12 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/plugins/{id}/media/{name}", a.pluginMedia)
 	mux.HandleFunc("GET /v1/plugins/{id}", a.getPlugin)
 	mux.HandleFunc("GET /v1/plugins/{id}/versions", a.pluginVersions)
+	mux.HandleFunc("GET /v1/themes", a.listThemes)
+	mux.HandleFunc("GET /v1/themes/default", a.defaultTheme)
+	mux.HandleFunc("GET /v1/themes/{id}/download", a.downloadTheme)
+	mux.HandleFunc("GET /v1/themes/{id}", a.getTheme)
+	mux.HandleFunc("POST /v1/themes", a.submitTheme)
+	mux.HandleFunc("POST /v1/admin/themes/{id}/approve", a.approveTheme)
 
 	mux.HandleFunc("POST /v1/auth/signup", a.signup)
 	mux.HandleFunc("POST /v1/auth/login", a.login)

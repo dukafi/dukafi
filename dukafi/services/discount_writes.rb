@@ -46,7 +46,7 @@ module DiscountWrites
     now = Time.now
     attrs = attributes(params)
     guard_uniqueness!(attrs[:code])
-    guard_window!(attrs)
+    guard_window!(attrs, allow_past_inversion: false)
     # Resolved BEFORE the insert so a bad slug fails without leaving a code
     # behind that silently covers the whole catalogue.
     scope = resolve_scope(params)
@@ -64,7 +64,7 @@ module DiscountWrites
   def update!(discount, params)
     attrs = attributes(params, existing: discount)
     guard_uniqueness!(attrs[:code], excluding: discount.id)
-    guard_window!(attrs)
+    guard_window!(attrs, allow_past_inversion: true)
     scope = resolve_scope(params)
 
     DB.transaction do
@@ -247,9 +247,9 @@ module DiscountWrites
   # For a code already running, an end date before its start is not nonsense,
   # it is "stop now" — which is exactly how a merchant turns a live code off
   # while keeping it on record. Refusing that would leave no way to say it.
-  def guard_window!(attrs, now = Time.now)
+  def guard_window!(attrs, now = Time.now, allow_past_inversion: true)
     return if attrs[:ends_at].nil? || attrs[:starts_at].nil?
-    return unless attrs[:starts_at] > now
+    return if allow_past_inversion && attrs[:starts_at] <= now
     return if attrs[:ends_at] > attrs[:starts_at]
 
     raise Invalid, "endsAt must be after startsAt"

@@ -20,7 +20,7 @@ function asFontSettings(
   fonts: readonly FontEntry[] | SiteFontsSettings | null | undefined,
 ): SiteFontsSettings | null {
   if (!fonts) return null
-  return Array.isArray(fonts) ? { items: [...fonts] } : fonts
+  return 'items' in fonts ? fonts : { items: [...fonts] }
 }
 
 export function useInstalledFontFaces(

@@ -1,0 +1,16 @@
+name: dukafi
+services:
+  dukafi:
+    image: ${DUKAFI_IMAGE:-ghcr.io/dukafi/dukafi:latest}
+    ports: ["9292:9292"]
+    environment:
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
+      PORT: 9292
+      DUKAFI_DB: /data/dukafi.sqlite3
+      DUKAFI_STORAGE_ROOT: /data
+      DUKAFI_PUBLISHED_ROOT: /data/published
+      DUKAFI_PLUGINS_ROOT: /data/plugins
+    volumes: [dukafi-data:/data]
+    restart: unless-stopped
+volumes:
+  dukafi-data:

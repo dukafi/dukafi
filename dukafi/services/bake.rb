@@ -63,6 +63,7 @@ class Bake
       SitemapWriter.call(slot_path:, origin: Dukafi::Publisher::ListingJsonLd.public_origin)
       flip_current(slot_name)
       flipped = true
+      PublishedStore.import_directory(version, slot_path)
       DB.transaction do
         DependencyTracker.replace!(entries.to_h do |entry|
           [dependency_path(entry.path), { product_ids: entry.product_ids, sources: entry.sources }]

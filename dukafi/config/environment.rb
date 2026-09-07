@@ -34,3 +34,8 @@ rescue StandardError, LoadError => e
 end
 
 Dukafi::Plugins.boot!
+Dukafi::Plugins.on_core(:"order.paid") { |order| Mailer.deliver(:order_confirmation, order: order) }
+if ENV.fetch("DUKAFI_REPLICAS", "1").to_i > 1 && ENV.fetch("DUKAFI_PUBLISHED_STORE", "disk") == "disk"
+  warn "[storage] multiple replicas with disk-published state can diverge; set DUKAFI_PUBLISHED_STORE=db"
+end
+Scheduler.start!

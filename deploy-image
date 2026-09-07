@@ -24,7 +24,8 @@ set -euo pipefail
 
 IMAGE="ghcr.io/dukafi/dukafi"
 REGISTRY="ghcr.io"
-PLATFORM="linux/amd64"
+PLATFORM="linux/$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')"
+RELEASE_PLATFORMS="linux/amd64,linux/arm64"
 SMOKE_CONTAINER="dukafi-smoke-$$"
 
 TAG=""
@@ -274,10 +275,17 @@ say "logging in to ${REGISTRY}"
 printf '%s' "$TOKEN" | docker login "$REGISTRY" \
   --username "${GHCR_USER:-dukafi}" --password-stdin > /dev/null
 
-say "pushing"
-for ref in "${PUSHED[@]}"; do
-  docker push "$ref"
-done
+say "building and pushing multi-platform manifest (${RELEASE_PLATFORMS})"
+docker buildx build \
+  --platform "$RELEASE_PLATFORMS" \
+  --file Dockerfile \
+  "${TAG_ARGS[@]}" \
+  --label "org.opencontainers.image.source=https://github.com/dukafi/core" \
+  --label "org.opencontainers.image.revision=${REVISION}" \
+  --label "org.opencontainers.image.version=${VERSION}" \
+  --label "org.opencontainers.image.created=${BUILD_DATE}" \
+  --label "org.opencontainers.image.licenses=LicenseRef-Dukafi-Proprietary" \
+  --push .
 
 echo
 say "published"

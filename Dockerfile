@@ -7,11 +7,7 @@
 # chain compiles pg/sqlite3/ruby-vips and is thrown away; the final stage keeps
 # only the runtime libraries.
 #
-# amd64 only, deliberately. The publish path shells out to the Tailwind
-# standalone binary at RUNTIME (services/tailwind_compiler.rb), and upstream
-# ships it per-architecture; scripts/install_tailwind.rb pins the linux-x64
-# checksum. Adding arm64 means pinning a second checksum, not just a buildx
-# flag.
+# Tailwind is selected and checksummed per target architecture.
 
 ARG RUBY_VERSION=3.4.4
 ARG BUN_VERSION=1.3.0
@@ -82,10 +78,17 @@ RUN apt-get update -qq && apt-get install --no-install-recommends -y \
 # scripts/install_tailwind.rb does. Fetched here rather than by running that
 # script so the layer caches independently of the application source.
 ARG TAILWIND_VERSION=4.3.0
-ARG TAILWIND_SHA256=73f0e5459054e5cfaa8ab6f3b940f3fbe0f13cc7fd83bc24e7c655033c203400
-RUN curl -fsSL -o /usr/local/bin/tailwindcss \
-      "https://github.com/tailwindlabs/tailwindcss/releases/download/v${TAILWIND_VERSION}/tailwindcss-linux-x64" \
- && echo "${TAILWIND_SHA256}  /usr/local/bin/tailwindcss" | sha256sum -c - \
+ARG TARGETARCH
+ARG TAILWIND_SHA256_AMD64=73f0e5459054e5cfaa8ab6f3b940f3fbe0f13cc7fd83bc24e7c655033c203400
+ARG TAILWIND_SHA256_ARM64=8f48dcb72be3b351c10563c5329b4638ba8516820dc3b3a1609625a166e87cbd
+RUN case "${TARGETARCH}" in \
+      amd64) asset=tailwindcss-linux-x64; checksum=${TAILWIND_SHA256_AMD64} ;; \
+      arm64) asset=tailwindcss-linux-arm64; checksum=${TAILWIND_SHA256_ARM64} ;; \
+      *) echo "unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL -o /usr/local/bin/tailwindcss \
+      "https://github.com/tailwindlabs/tailwindcss/releases/download/v${TAILWIND_VERSION}/${asset}" \
+ && echo "${checksum}  /usr/local/bin/tailwindcss" | sha256sum -c - \
  && chmod +x /usr/local/bin/tailwindcss
 
 COPY --from=gems /usr/local/bundle /usr/local/bundle

@@ -213,6 +213,18 @@ func (s *Store) migrate() error {
 		  at         TEXT NOT NULL
 		);
 		CREATE INDEX IF NOT EXISTS submission_attempts_source ON submission_attempts(source, at);
+
+		CREATE TABLE IF NOT EXISTS themes (
+		  id TEXT PRIMARY KEY, name TEXT NOT NULL, summary TEXT NOT NULL DEFAULT '',
+		  description TEXT NOT NULL DEFAULT '', author_account_id TEXT NOT NULL DEFAULT '',
+		  version TEXT NOT NULL, categories TEXT NOT NULL DEFAULT '',
+		  preview_urls TEXT NOT NULL DEFAULT '[]', demo_url TEXT,
+		  status TEXT NOT NULL, sha256 TEXT NOT NULL, archive_key TEXT NOT NULL,
+		  archive_size INTEGER NOT NULL DEFAULT 0, default_rank INTEGER,
+		  created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS themes_status ON themes(status);
+		CREATE INDEX IF NOT EXISTS themes_default ON themes(default_rank);
 	`)
 	if err != nil {
 		return err

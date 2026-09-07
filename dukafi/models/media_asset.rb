@@ -28,6 +28,12 @@ class MediaAsset < Sequel::Model
 
   def image? = mime.to_s.start_with?("image/")
 
+  def origin_metadata
+    origin_meta.to_s.empty? ? {} : JSON.parse(origin_meta)
+  rescue JSON::ParserError
+    {}
+  end
+
   # Only the fields a caller may set. `path`, `mime` and the variants are
   # derived from the uploaded bytes and must never be writable — a client that
   # could change `path` could point an asset at any file on disk.
@@ -43,10 +49,12 @@ class MediaAsset < Sequel::Model
 
   def to_payload
     {
-      id: id.to_s, filename: File.basename(path), path: "/#{path}",
+      id: id.to_s, filename: File.basename(path), path: MediaStorage.resolve(respond_to?(:storage) ? storage : "local").read_url(path),
       mimeType: mime, width: width, height: height,
       altText: alt_text.to_s, title: title.to_s, caption: caption.to_s,
       tags: tags, variants: variants,
+      origin: respond_to?(:origin) ? origin : "upload",
+      originMeta: respond_to?(:origin_meta) ? origin_metadata : {},
       createdAt: created_at&.utc&.iso8601,
       updatedAt: updated_at&.utc&.iso8601,
     }

@@ -24,6 +24,7 @@ import { MediaSidebar, type MediaSidebarPanelId } from './components/MediaSideba
 import { MediaCanvas } from './components/MediaCanvas/MediaCanvas'
 import { MediaViewerWindow } from './components/MediaViewerWindow/MediaViewerWindow'
 import { UploadQueueWindow } from './components/UploadQueueWindow/UploadQueueWindow'
+import { GenerateImageDialog } from './components/GenerateImageDialog'
 import { BulkEditWindow } from './components/BulkEditWindow/BulkEditWindow'
 import { useMediaWorkspace } from './hooks/useMediaWorkspace'
 
@@ -51,6 +52,7 @@ export function MediaPage() {
     writeWorkspaceLayout('media', { activeLeftPanel: activePanel })
   }, [activePanel])
   const [uploadQueueOpen, setUploadQueueOpen] = useState(false)
+  const [generateOpen, setGenerateOpen] = useState(false)
 
   // Build the thin viewer-editor handle from the workspace. Same contract the
   // standalone MediaExplorerPanel-driven viewer uses, so the viewer doesn't
@@ -92,7 +94,8 @@ export function MediaPage() {
   }, [workspace.uploadQueue.active, uploadQueueOpen])
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const toolbarRightSlot = (
+  const toolbarRightSlot = (<>
+    <Button variant="ghost" size="sm" onClick={() => setGenerateOpen(true)}>Generate</Button>
     <Button
       variant="ghost"
       size="sm"
@@ -106,7 +109,7 @@ export function MediaPage() {
         <span aria-hidden="true" style={{ marginLeft: 4 }}>·</span>
       )}
     </Button>
-  )
+  </>)
 
   return (
     <>
@@ -141,6 +144,7 @@ export function MediaPage() {
         open={bulkEditOpen}
         onClose={() => workspace.clearSelection()}
       />
+      <GenerateImageDialog open={generateOpen} onClose={() => setGenerateOpen(false)} onGenerated={() => void workspace.refresh()} />
     </>
   )
 }

@@ -38,13 +38,11 @@ class Storefront < Roda
 
   def disk_page(slug)
     relative = slug == "index" ? "index.html" : "#{slug}.html"
-    path = File.join(published_root, "current", relative)
-    File.file?(path) ? File.binread(path) : nil
+    PublishedStore.read(relative)&.content
   end
 
   def disk_public_file(name)
-    path = File.join(published_root, "current", name)
-    File.file?(path) ? File.binread(path) : nil
+    PublishedStore.read(name)&.content
   end
 
   # Where a signed-out visitor goes when they ask for a gated page. Nil when

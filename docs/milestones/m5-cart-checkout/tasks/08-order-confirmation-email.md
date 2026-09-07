@@ -1,5 +1,8 @@
 # 08 — Order confirmation page + email
 
+**Status:** Done in M14. The provider-neutral `Mailer`, SMTP/fake-mail plugins,
+delivery log, and `order.paid` subscriber supersede the original direct-SMTP design.
+
 **Depends on:** 07 (an order must exist to confirm)
 
 ## Scope
