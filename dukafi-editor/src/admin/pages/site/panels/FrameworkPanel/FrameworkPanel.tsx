@@ -1,8 +1,7 @@
 /**
  * FrameworkPanel — design tokens as stacked accordions.
  *
- * Schemes sit at the top. Colors, Type, and Space fold open below. The header
- * action still opens the Manage Core Framework dialog.
+ * Schemes sit at the top. Colors, Type, Space, and Icons fold open below.
  */
 import { useEffect, useState } from 'react'
 import { useEditorStore } from '@site/store/store'
@@ -17,6 +16,11 @@ import { ColorsPanelBody } from '@site/panels/ColorsPanel'
 import { SchemesPanel } from '@site/panels/SchemesPanel'
 import { TypographyTab } from '@site/panels/TypographyPanel'
 import { SpacingTab } from '@site/panels/SpacingPanel'
+import { IconsPanel } from '@site/panels/IconsPanel/IconsPanel'
+import { ButtonsPanel } from '@site/panels/ButtonsPanel/ButtonsPanel'
+import { InputsPanel } from '@site/panels/InputsPanel'
+import { StarSolidIcon } from 'pixel-art-icons/icons/star-solid'
+import { CursorClickSolidIcon } from 'pixel-art-icons/icons/cursor-click-solid'
 import type { FrameworkPanelTab } from '@site/store/slices/uiSlice'
 import { FrameworkManagerHost } from './FrameworkManagerHost'
 import styles from './FrameworkPanel.module.css'
@@ -30,6 +34,9 @@ const SECTIONS: ReadonlyArray<{
   { id: 'colors', title: 'Colors', icon: ColorsSwatchSolidIcon },
   { id: 'typography', title: 'Type', icon: TextStartTIcon },
   { id: 'spacing', title: 'Space', icon: RulerDimensionSolidIcon },
+  { id: 'icons', title: 'Icons', icon: StarSolidIcon },
+  { id: 'buttons', title: 'Buttons', icon: CursorClickSolidIcon },
+  { id: 'inputs', title: 'Inputs', icon: TextStartTIcon },
 ]
 
 const INITIAL_OPEN: Record<FrameworkPanelTab, boolean> = {
@@ -37,6 +44,9 @@ const INITIAL_OPEN: Record<FrameworkPanelTab, boolean> = {
   colors: false,
   typography: false,
   spacing: false,
+  icons: false,
+  buttons: false,
+  inputs: false,
 }
 
 export function FrameworkPanel({
@@ -90,6 +100,9 @@ export function FrameworkPanel({
             {section.id === 'colors' && <ColorsPanelBody />}
             {section.id === 'typography' && <TypographyTab />}
             {section.id === 'spacing' && <SpacingTab />}
+            {section.id === 'icons' && <IconsPanel />}
+            {section.id === 'buttons' && <ButtonsPanel />}
+            {section.id === 'inputs' && <InputsPanel />}
           </Section>
         ))}
       </div>

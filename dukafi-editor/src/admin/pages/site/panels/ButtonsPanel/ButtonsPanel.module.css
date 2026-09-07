@@ -1,0 +1,14 @@
+.root{display:grid;gap:var(--space-s)}
+.hint{margin:0;color:var(--text-subtle);font-size:var(--text-s);line-height:1.4}
+.variantHint{margin:calc(var(--space-xs) * -1) 0 0;color:var(--text-subtle);font-size:var(--text-xs);line-height:1.4}.variantHint code{font-family:var(--font-mono);color:var(--text)}
+.previews{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-s)}
+.card{overflow:hidden;border:1px solid var(--border);border-radius:var(--radius);background:var(--preview-bg)}
+.cardName{display:block;padding:var(--space-2xs) var(--space-xs);border-bottom:1px solid color-mix(in srgb,var(--preview-text) 15%,transparent);color:var(--preview-text);font-size:var(--text-s)}
+.cardStage{display:flex;min-height:5.5rem;align-items:center;justify-content:center;padding:var(--space-m)}
+.previewButton{display:inline-flex;align-items:center;justify-content:center;padding:.65rem 1rem;border:1px solid transparent;border-radius:var(--preview-radius);background:var(--preview-fill);color:var(--preview-text);font-size:.75rem;font-weight:600;text-transform:uppercase}
+.previewButton[data-appearance="secondary"]{border-color:var(--preview-text)}
+.previewButton[data-appearance="link"]{padding-inline:0;background:transparent;color:var(--preview-fill)}
+.viewAll{justify-self:start}.subhead{margin:var(--space-xs) 0 0;font-size:var(--text-s);font-weight:600}
+.row{display:grid;grid-template-columns:7.5rem minmax(0,1fr);align-items:center;gap:var(--space-s)}
+.label{overflow:hidden;color:var(--text-subtle);font-size:var(--text-s);text-overflow:ellipsis;white-space:nowrap}
+.srOnly{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}

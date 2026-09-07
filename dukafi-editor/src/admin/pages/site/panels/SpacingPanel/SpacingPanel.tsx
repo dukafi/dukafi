@@ -36,6 +36,7 @@ import type {
 import { cn } from "@ui/cn";
 import { MonitorSolidIcon } from "pixel-art-icons/icons/monitor-solid";
 import { RulerDimensionSolidIcon } from "pixel-art-icons/icons/ruler-dimension-solid";
+import { SquareSolidIcon } from "pixel-art-icons/icons/square-solid";
 import { SmartphoneSolidIcon } from "pixel-art-icons/icons/smartphone-solid";
 import {
   FrameworkScalePanel,
@@ -43,6 +44,8 @@ import {
 } from "@site/panels/FrameworkScalePanel";
 import { useFrameworkChangeConfirm } from "@admin/shared/dialogs/FrameworkChangeConfirmDialog";
 import { applySpacingGroupPatchPreview } from "@site/store/slices/site/framework/spacing";
+import { SpacingPresetsSection } from "./SpacingPresetsSection";
+import { RadiusPresetsSection } from "./RadiusPresetsSection";
 import styles from "./SpacingPanel.module.css";
 
 const SPACING_CSS_PROPERTIES = [
@@ -359,6 +362,25 @@ export function SpacingTab() {
     onDeleteGroup: wrappedDeleteGroup,
     onUpsertManualSize,
     onSetClassGenerators: wrappedSetClassGenerators,
+    hideScaleSections: true,
+    extraSections: [
+      {
+        id: 'spacing-presets',
+        title: 'Spacing',
+        position: 'top',
+        defaultOpen: true,
+        icon: RulerDimensionSolidIcon,
+        render: () => <SpacingPresetsSection />,
+      },
+      {
+        id: 'radius-presets',
+        title: 'Radius',
+        position: 'top',
+        defaultOpen: true,
+        icon: SquareSolidIcon,
+        render: () => <RadiusPresetsSection />,
+      },
+    ],
   };
 
   return <FrameworkScalePanel adapter={adapter} />;

@@ -10,7 +10,7 @@
  * sends Assist. Dukafi AI has one path, so the composer shows one button.
  */
 
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { useEditorStore } from '@site/store/store'
 import { Panel, useAutoFocusPanel, type DockablePanelProps } from '@admin/shared/Panel'
 import { Button } from '@ui/components/Button'
@@ -19,11 +19,16 @@ import { Alert } from '@ui/components/Alert'
 import { FormField } from '@ui/components/FormField'
 import { Input, Textarea } from '@ui/components/Input'
 import { SparklesSolidIcon } from 'pixel-art-icons/icons/sparkles-solid'
+import { CloseIcon } from 'pixel-art-icons/icons/close'
+import { FileUpload } from '@ui/components/FileUpload'
 import type { BuildPlan } from '@core/ai'
+import type { AiAttachment } from '@site/store/slices/aiSlice'
 import { AiSettingsPopover } from './AiSettingsPopover'
 import styles from './AiPanel.module.css'
 
 const PLACEHOLDER = 'Describe a change — "add a centered hero with a heading and a button to /products"'
+const MAX_ATTACHMENTS = 4
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
 
 export function AiPanel({ mode = 'docked', dragHandleProps, onToggleMode }: DockablePanelProps) {
   const isOpen = useEditorStore((s) => s.aiPanelOpen)
@@ -48,6 +53,8 @@ export function AiPanel({ mode = 'docked', dragHandleProps, onToggleMode }: Dock
   const panelRef = useRef<HTMLElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const [draft, setDraft] = useState('')
+  const [attachments, setAttachments] = useState<AiAttachment[]>([])
+  const [attachmentError, setAttachmentError] = useState<string | null>(null)
   const busy = pending || needProfile || plan !== null
 
   useAutoFocusPanel(panelRef, isOpen)
@@ -64,22 +71,48 @@ export function AiPanel({ mode = 'docked', dragHandleProps, onToggleMode }: Dock
 
   function send() {
     const text = draft.trim()
-    if (text.length === 0 || busy) return
+    if ((text.length === 0 && attachments.length === 0) || busy) return
     setDraft('')
-    void sendAiMessage(text)
+    const selected = attachments
+    setAttachments([])
+    void sendAiMessage(text, selected)
   }
 
   function build() {
     const text = draft.trim()
-    if (text.length === 0 || busy) return
+    if ((text.length === 0 && attachments.length === 0) || busy) return
     setDraft('')
-    void startAiBuild(text)
+    const selected = attachments
+    setAttachments([])
+    void startAiBuild(text, selected)
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
       send()
+    }
+  }
+
+  async function attachFiles(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.currentTarget.files ?? [])
+    event.currentTarget.value = ''
+    if (files.length === 0) return
+    if (attachments.length + files.length > MAX_ATTACHMENTS) {
+      setAttachmentError(`Attach up to ${MAX_ATTACHMENTS} files per message.`)
+      return
+    }
+    const oversized = files.find((file) => file.size > MAX_ATTACHMENT_BYTES)
+    if (oversized) {
+      setAttachmentError(`${oversized.name} is larger than 5 MB.`)
+      return
+    }
+    try {
+      const next = await Promise.all(files.map(readAttachment))
+      setAttachments((current) => [...current, ...next])
+      setAttachmentError(null)
+    } catch {
+      setAttachmentError('One of those files could not be read.')
     }
   }
 
@@ -128,6 +161,19 @@ export function AiPanel({ mode = 'docked', dragHandleProps, onToggleMode }: Dock
               data-kind={message.kind || 'reply'}
             >
               <p className={styles.text}>{message.content}</p>
+              {message.attachments && message.attachments.length > 0 && <div className={styles.messageAttachments}>
+                {message.attachments.map((file, fileIndex) => file.mimeType.startsWith('image/')
+                  ? <img key={`${file.name}-${fileIndex}`} className={styles.messageImage} src={`data:${file.mimeType};base64,${file.data}`} alt={file.name} />
+                  : <span key={`${file.name}-${fileIndex}`} className={styles.messageFile}>{file.name}</span>)}
+              </div>}
+              {message.clarification && <div className={styles.clarification}>
+                <p className={styles.clarificationPrompt}>{message.clarification.prompt}</p>
+                {message.clarification.choices.map((choice) => <Button
+                  key={choice.value} variant="secondary" size="sm" disabled={busy}
+                  tooltip={choice.description}
+                  onClick={() => { if (!busy) void sendAiMessage(choice.label) }}
+                >{choice.label}</Button>)}
+              </div>}
               {message.applied !== undefined && (
                 <p className={styles.applied}>
                   {message.applied === 1 ? 'Applied 1 change' : `Applied ${message.applied} changes`}
@@ -146,6 +192,15 @@ export function AiPanel({ mode = 'docked', dragHandleProps, onToggleMode }: Dock
         </div>
 
         <div className={styles.composer}>
+          {attachments.length > 0 && <div className={styles.attachmentList} aria-label="Attached files">
+            {attachments.map((file, index) => <span key={`${file.name}-${index}`} className={styles.attachmentChip}>
+              {file.name}
+              <Button variant="ghost" size="xs" iconOnly aria-label={`Remove ${file.name}`} onClick={() => setAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))}>
+                <CloseIcon size={10} aria-hidden="true" />
+              </Button>
+            </span>)}
+          </div>}
+          {attachmentError && <p className={styles.attachmentError} role="alert">{attachmentError}</p>}
           <textarea
             className={styles.input}
             value={draft}
@@ -157,14 +212,21 @@ export function AiPanel({ mode = 'docked', dragHandleProps, onToggleMode }: Dock
             aria-label="Message the assistant"
           />
           <div className={styles.composerActions}>
-            <AiSettingsPopover onSaved={() => { setAiNotConfigured(false); void refreshAiConfig() }} />
+            <div className={styles.composerTools}>
+              <AiSettingsPopover onSaved={() => { setAiNotConfigured(false); void refreshAiConfig() }} />
+              <FileUpload
+                accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/*,.json,.csv,.md,.html,.css,.js,.ts,.tsx,.jsx,.xml,.yaml,.yml"
+                multiple disabled={busy} onChange={attachFiles}
+                buttonProps={{ variant: 'ghost', size: 'xs', disabled: busy, 'aria-label': 'Attach images or files', tooltip: 'Attach images or files' }}
+              >Attach</FileUpload>
+            </div>
             <div className={styles.composerButtons}>
               {!dukafi && (
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={build}
-                  disabled={busy || draft.trim().length === 0}
+                  disabled={busy || (draft.trim().length === 0 && attachments.length === 0)}
                   data-testid="ai-build"
                 >
                   Build
@@ -174,7 +236,7 @@ export function AiPanel({ mode = 'docked', dragHandleProps, onToggleMode }: Dock
                 variant="primary"
                 size="sm"
                 onClick={send}
-                disabled={busy || draft.trim().length === 0}
+                disabled={busy || (draft.trim().length === 0 && attachments.length === 0)}
               >
                 <SparklesSolidIcon size={12} aria-hidden="true" />
                 {pending ? 'Working…' : 'Send'}
@@ -185,6 +247,19 @@ export function AiPanel({ mode = 'docked', dragHandleProps, onToggleMode }: Dock
       </div>
     </Panel>
   )
+}
+
+function readAttachment(file: File): Promise<AiAttachment> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(reader.error)
+    reader.onload = () => {
+      const result = reader.result
+      if (typeof result !== 'string') return reject(new Error('File could not be encoded'))
+      resolve({ name: file.name, mimeType: file.type || 'application/octet-stream', size: file.size, data: result.split(',', 2)[1] ?? '' })
+    }
+    reader.readAsDataURL(file)
+  })
 }
 
 function ProfileElicit({

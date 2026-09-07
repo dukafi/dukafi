@@ -21,7 +21,7 @@ module McpTools
   module_function
 
   def all
-    [get_store_context, update_store_profile, list_pages, create_page, read_page, list_children, get_page_context, get_design_tokens, get_recipes, apply_edits, update_design_tokens, list_rebuild_targets, publish, set_page_access, set_page_seo] +
+    [ask_user, get_store_context, update_store_profile, list_pages, create_page, read_page, list_children, get_page_context, get_design_tokens, get_style_framework_snippet, get_recipes, apply_edits, update_design_tokens, list_rebuild_targets, publish, set_page_access, set_page_seo] +
       McpCommerceTools.all + McpMediaTools.all + McpReviewTools.all +
       McpDiscountTools.all + McpPluginTools.all + McpDataTableTools.all +
       McpComponentTools.all + McpSitemapTools.all +
@@ -35,7 +35,7 @@ module McpTools
   # should have to declare which side it is on, and the default below — treat
   # anything unrecognised as a WRITE — means forgetting to update this list
   # fails closed.
-  READ_TOOLS = (%w[get_store_context list_pages read_page list_children get_page_context get_design_tokens get_recipes list_rebuild_targets] +
+  READ_TOOLS = (%w[ask_user get_store_context list_pages read_page list_children get_page_context get_design_tokens get_style_framework_snippet get_recipes list_rebuild_targets] +
                 McpCommerceTools::READ_TOOLS + McpMediaTools::READ_TOOLS +
                 McpReviewTools::READ_TOOLS + McpDiscountTools::READ_TOOLS +
                 McpPluginTools::READ_TOOLS + McpDataTableTools::READ_TOOLS +
@@ -43,6 +43,41 @@ module McpTools
                 McpOrderTools::READ_TOOLS + McpCustomerTools::READ_TOOLS).freeze
 
   def write_tool?(name) = !READ_TOOLS.include?(name.to_s)
+
+  def ask_user
+    {
+      name: "ask_user",
+      title: "Ask the user for clarification",
+      description: "Use this when the request lacks information that would materially change the result: visual direction, target page/section, content facts, framework scope, destructive intent, or whether to publish. Ask 1–3 short questions, then STOP. Return the structured result to the user and wait for their next message; do not continue tools or guess. Do not use it for details that can be discovered with read tools or resolved by a safe, reversible default.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "reason" => { "type" => "string", "description" => "Briefly explain why proceeding would be ambiguous or risky." },
+          "questions" => {
+            "type" => "array", "minItems" => 1, "maxItems" => UserClarification::MAX_QUESTIONS,
+            "items" => {
+              "type" => "object",
+              "properties" => {
+                "id" => { "type" => "string", "description" => "Stable snake_case answer key." },
+                "prompt" => { "type" => "string" },
+                "kind" => { "type" => "string", "enum" => UserClarification::KINDS },
+                "choices" => { "type" => "array", "maxItems" => 8, "items" => {
+                  "type" => "object", "properties" => {
+                    "value" => { "type" => "string" }, "label" => { "type" => "string" }, "description" => { "type" => "string" },
+                  }, "required" => ["label"], "additionalProperties" => false,
+                } },
+                "allowCustom" => { "type" => "boolean" },
+                "recommendedValue" => { "type" => "string" },
+              },
+              "required" => ["prompt"], "additionalProperties" => false,
+            },
+          },
+        },
+        "required" => ["questions"], "additionalProperties" => false,
+      },
+      run: ->(args) { UserClarification.build(args) },
+    }
+  end
 
   def get_store_context
     {
@@ -629,8 +664,10 @@ module McpTools
     {
       name: "get_design_tokens",
       title: "Get design tokens",
-      description: "The site's color, font, type, spacing tokens, and color " \
-                   "schemes — CSS variables and the utility classes bound to " \
+      description: "The site's complete Style Framework: color and font tokens, color " \
+                   "schemes, type and spacing scales, semantic type styles, layout presets, " \
+                   "icons, buttons, inputs, and preferences. It includes " \
+                   "CSS variables and the utility classes bound to " \
                    "them. Schemes (scheme-1…) map Background / Heading / Body / " \
                    "Accent onto palette tokens. Call this before designing or " \
                    "restyling. To change an accent or a font, patch here " \
@@ -674,6 +711,22 @@ module McpTools
     }
   end
 
+  def get_style_framework_snippet
+    {
+      name: "get_style_framework_snippet",
+      title: "Get Style Framework canvas snippet",
+      description: "Return canvas-ready HTML and usage rules for colors, typography, spacing, icons, buttons, inputs, or forms. Use this after get_design_tokens and before apply_edits when you need to consume the Style Framework correctly.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "topic" => { "type" => "string", "enum" => StyleFrameworkSnippets::TOPICS, "description" => "Omit for the complete guide, or select one small snippet family." },
+        },
+        "additionalProperties" => false,
+      },
+      run: ->(args) { StyleFrameworkSnippets.snapshot(args["topic"]) },
+    }
+  end
+
   def run_get_recipes(args)
     args = {} unless args.is_a?(Hash)
     Recipes.snapshot(args["topic"])
@@ -685,10 +738,10 @@ module McpTools
     {
       name: "update_design_tokens",
       title: "Update design tokens",
-      description: "Patch site-wide colors, fonts, type scale, or spacing. " \
+      description: "Create or patch site-wide colors, schemes, font tokens, type/spacing scales, semantic type styles, layout, icons, buttons, inputs, or preferences. " \
                    "A color value change updates every class that uses that " \
                    "token (text-primary, bg-primary). Font family must already " \
-                   "be installed — this does not download Google fonts. " \
+                   "be installed when assigning a family — this does not download Google fonts. " \
                    "Saves the draft; call publish to go live.",
       input_schema: {
         "type" => "object",
@@ -717,7 +770,7 @@ module McpTools
           "fonts" => {
             "type" => "array",
             "maxItems" => 8,
-            "description" => "Remap a font token to an installed family.",
+            "description" => "Upsert by variable/name. A family assignment must reference an installed family; omit family to create the token first.",
             "items" => {
               "type" => "object",
               "properties" => {
@@ -802,10 +855,33 @@ module McpTools
             },
             "additionalProperties" => false,
           },
+          "typeStyles" => {
+            "type" => "array", "maxItems" => 8,
+            "description" => "Upsert semantic H1–H7/P defaults by tag.",
+            "items" => { "type" => "object", "properties" => {
+              "tag" => { "type" => "string", "enum" => %w[h1 h2 h3 h4 h5 h6 h7 p] },
+              "fontFamily" => { "type" => "string" }, "fontSize" => { "type" => "string" },
+              "fontWeight" => { "type" => "string" }, "letterSpacing" => { "type" => "string" },
+              "lineHeight" => { "type" => "string" }, "textTransform" => { "type" => "string" },
+              "maxWidth" => { "type" => "string" },
+            }, "required" => ["tag"], "additionalProperties" => false },
+          },
+          "layout" => framework_object_schema(%w[containerWidth cardPadding vertical horizontal radius]),
+          "icons" => framework_object_schema(%w[color style weight fill treatment fillIntensity padding radius radiusLinked], booleans: %w[radiusLinked]),
+          "buttons" => framework_object_schema(%w[primaryColor secondaryColor linkColor padding radius radiusLinked fontVariable fontSize fontWeight casing letterSpacing], booleans: %w[radiusLinked]),
+          "inputs" => framework_object_schema(%w[backgroundColor textColor borderColor focusColor padding radius radiusLinked borderWidth fontVariable fontSize fontWeight], booleans: %w[radiusLinked]),
         },
         "additionalProperties" => false,
       },
       run: ->(args) { run_update_design_tokens(args) },
+    }
+  end
+
+  def framework_object_schema(keys, booleans: [])
+    {
+      "type" => "object",
+      "properties" => keys.to_h { |key| [key, { "type" => booleans.include?(key) ? "boolean" : "string" }] },
+      "additionalProperties" => false,
     }
   end
 

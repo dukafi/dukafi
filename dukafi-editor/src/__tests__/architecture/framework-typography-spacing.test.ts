@@ -56,6 +56,9 @@ describe('architecture — framework typography & spacing engine', () => {
       'core/framework/preferences.ts',
       'core/framework/defaults.ts',
       'core/framework/typeStyles.ts',
+      'core/framework/spacingPresets.ts',
+      'core/framework/radius.ts',
+      'core/framework/iconPresets.ts',
     ]
     for (const relative of sources) {
       const source = readSource(relative)
@@ -84,6 +87,7 @@ describe('architecture — typography / spacing panels', () => {
       true,
     )
     expect(existsSync(join(ROOT, 'admin/pages/site/panels/SpacingPanel/SpacingPanel.tsx'))).toBe(true)
+    expect(existsSync(join(ROOT, 'admin/pages/site/panels/IconsPanel/IconsPanel.tsx'))).toBe(true)
     expect(
       existsSync(join(ROOT, 'admin/pages/site/panels/FrameworkScalePanel/FrameworkScalePanel.tsx')),
     ).toBe(true)
@@ -108,6 +112,7 @@ describe('architecture — typography / spacing panels', () => {
     for (const file of [
       'admin/pages/site/panels/TypographyPanel/TypographyPanel.tsx',
       'admin/pages/site/panels/SpacingPanel/SpacingPanel.tsx',
+      'admin/pages/site/panels/IconsPanel/IconsPanel.tsx',
       'admin/pages/site/panels/FrameworkScalePanel/FrameworkScalePanel.tsx',
     ]) {
       expect(TINTED.test(readSource(file))).toBe(false)

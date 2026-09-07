@@ -20,7 +20,7 @@ module DukafiAiClient
 
   module_function
 
-  def rack_run(prompt:, slug:, mode:, origin:)
+  def rack_run(prompt:, slug:, mode:, origin:, attachments: nil)
     error = preflight
     return error if error
 
@@ -28,7 +28,7 @@ module DukafiAiClient
     return json_error(422, "ai_invalid_harness_url", "The harness URL is not usable.") unless uri
 
     body = Enumerator.new do |yielder|
-      post_stream(uri, prompt: prompt, slug: slug, mode: mode, origin: origin) do |chunk|
+      post_stream(uri, prompt: prompt, slug: slug, mode: mode, origin: origin, attachments: attachments) do |chunk|
         yielder << chunk
       end
     rescue StandardError => e
@@ -71,9 +71,9 @@ module DukafiAiClient
     uri
   end
 
-  def post_stream(uri, prompt:, slug:, mode:, origin:, &block)
+  def post_stream(uri, prompt:, slug:, mode:, origin:, attachments: nil, &block)
     if self.stub_stream
-      self.stub_stream.call(uri, prompt: prompt, slug: slug, mode: mode, origin: origin, &block)
+      self.stub_stream.call(uri, prompt: prompt, slug: slug, mode: mode, origin: origin, attachments: attachments, &block)
       return
     end
 
@@ -89,6 +89,7 @@ module DukafiAiClient
       slug: slug.to_s,
       mode: mode.to_s.empty? ? "landing" : mode.to_s,
       publish: false,
+      attachments: Array(attachments).first(4),
     )
 
     Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == "https",

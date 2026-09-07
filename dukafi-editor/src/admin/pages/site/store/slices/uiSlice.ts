@@ -15,7 +15,7 @@ export type LeftSidebarPanelId =
   | 'framework'
   | 'ai'
 /** Tabs inside the consolidated Framework panel. */
-export type FrameworkPanelTab = 'schemes' | 'colors' | 'typography' | 'spacing'
+export type FrameworkPanelTab = 'schemes' | 'colors' | 'typography' | 'spacing' | 'icons' | 'buttons' | 'inputs'
 /**
  * Tabs inside the consolidated Explorer panel.
  *   - `layers` — the current page's DOM tree (DomPanel)

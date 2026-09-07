@@ -2,6 +2,9 @@ import type { StyleRule } from '@core/page-tree'
 import type {
   FrameworkColorSchemeSettings,
   FrameworkColorSettings,
+  FrameworkIconsSettings,
+  FrameworkButtonsSettings,
+  FrameworkInputsSettings,
   FrameworkPreferencesSettings,
   FrameworkSpacingSettings,
   FrameworkTypographySettings,
@@ -28,12 +31,20 @@ import { resolveFrameworkPreferences } from './preferences'
 import { formatCssVariableBlock } from './cssVariables'
 import { generateColorSchemeClasses } from './colorSchemes'
 import { generateTypeStyleCss } from './typeStyles'
+import { generateSpacingPresetVariables } from './spacingPresets'
+import { generateRadiusCss } from './radius'
+import { generateIconCss, generateIconPresetVariables } from './iconPresets'
+import { generateButtonCss, generateButtonPresetVariables } from './buttonPresets'
+import { generateInputCss, generateInputPresetVariables } from './inputPresets'
 
 export interface FrameworkGenerationSettings {
   colors?: FrameworkColorSettings | null
   colorSchemes?: FrameworkColorSchemeSettings | null
   typography?: FrameworkTypographySettings | null
   spacing?: FrameworkSpacingSettings | null
+  icons?: FrameworkIconsSettings | null
+  buttons?: FrameworkButtonsSettings | null
+  inputs?: FrameworkInputsSettings | null
   preferences?: FrameworkPreferencesSettings | null
 }
 
@@ -51,15 +62,50 @@ interface FrameworkPlan {
  * variables. Shared by `generateFrameworkRootCss` (single output) and
  * `buildFrameworkPlan` (both outputs) so they stay byte-identical.
  */
+function spacingPresetSource(
+  typography?: FrameworkTypographySettings | null,
+  spacing?: FrameworkSpacingSettings | null,
+): FrameworkSpacingSettings | null {
+  if (spacing?.isDisabled) return spacing
+  if (spacing) return spacing
+  if (typography && !typography.isDisabled) return { groups: [] }
+  return null
+}
+
+function iconsEnabled(settings: FrameworkGenerationSettings | null | undefined): boolean {
+  if (settings?.icons) return true
+  if (settings?.spacing && !settings.spacing.isDisabled) return true
+  if (settings?.typography && !settings.typography.isDisabled) return true
+  return false
+}
+
+function buttonsEnabled(settings: FrameworkGenerationSettings | null | undefined): boolean {
+  return Boolean(settings?.buttons || settings?.inputs) || iconsEnabled(settings)
+}
+
 function composeFrameworkRootCss(
   colorVariables: FrameworkColorVariableSets,
   scaleVariables: FrameworkScaleVariable[],
-  typography?: FrameworkTypographySettings | null,
+  settings?: FrameworkGenerationSettings | null,
 ): string {
+  const spacing = spacingPresetSource(settings?.typography, settings?.spacing)
+  const iconOn = iconsEnabled(settings)
+  const buttonOn = buttonsEnabled(settings)
   return [
-    formatCssVariableBlock(':root', [...colorVariables.light, ...scaleVariables]),
+    formatCssVariableBlock(':root', [
+      ...colorVariables.light,
+      ...scaleVariables,
+      ...generateSpacingPresetVariables(spacing),
+      ...(iconOn ? generateIconPresetVariables(settings?.icons) : []),
+      ...(buttonOn ? generateButtonPresetVariables(settings?.buttons) : []),
+      ...(buttonOn ? generateInputPresetVariables(settings?.inputs) : []),
+    ]),
     formatFrameworkColorThemeCss(colorVariables),
-    generateTypeStyleCss(typography),
+    generateTypeStyleCss(settings?.typography),
+    generateRadiusCss(spacing),
+    generateIconCss(settings?.icons, iconOn),
+    generateButtonCss(buttonOn),
+    generateInputCss(buttonOn),
   ]
     .filter(Boolean)
     .join('\n\n')
@@ -75,7 +121,7 @@ export function generateFrameworkRootCss(
       ...generateFrameworkTypographyVariables(settings?.typography, preferences),
       ...generateFrameworkSpacingVariables(settings?.spacing, preferences),
     ],
-    settings?.typography,
+    settings,
   )
 }
 
@@ -111,7 +157,7 @@ export function buildFrameworkPlan(
     rootCss: composeFrameworkRootCss(colors.variableSets, [
       ...typography.variables,
       ...spacing.variables,
-    ], settings?.typography),
+    ], settings),
     utilityClasses: {
       ...colors.utilityClasses,
       ...generateColorSchemeClasses(settings?.colorSchemes, settings?.colors),

@@ -4,6 +4,12 @@
  */
 
 import { ApiError, responseErrorMessage } from '@core/http'
+export interface AiRunAttachment {
+  name: string
+  mimeType: string
+  size: number
+  data: string
+}
 
 export interface HarnessActivity {
   phase: string
@@ -16,12 +22,20 @@ export interface HarnessDone {
   slug?: string
   changed?: boolean
   reply?: string
+  clarification?: AiRunClarification
+}
+
+export interface AiRunClarification {
+  id: string
+  prompt: string
+  choices: Array<{ value: string; label: string; description: string }>
 }
 
 export async function streamAiRun(options: {
   prompt: string
   slug: string
   mode: string
+  attachments?: AiRunAttachment[]
   onActivity: (event: HarnessActivity) => void
 }): Promise<HarnessDone> {
   const response = await fetch('/admin/api/cms/ai/run', {
@@ -32,6 +46,7 @@ export async function streamAiRun(options: {
       prompt: options.prompt,
       slug: options.slug,
       mode: options.mode,
+      attachments: options.attachments ?? [],
     }),
   })
 

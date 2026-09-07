@@ -297,8 +297,10 @@ describe('framework/preferences', () => {
       preferences: { rootFontSize: 16, minScreenWidth: 320, maxScreenWidth: 1400, isRem: false },
     })
     const root = css.match(/^:root \{\n[\s\S]*?\n\}/m)?.[0] ?? ''
-    expect(root).toContain('px,')
-    expect(root).not.toMatch(/\b\d+rem\b/)
+    const textValues = [...root.matchAll(/--text-[^:]+:\s*([^;]+);/g)].map((row) => row[1]).join('\n')
+    expect(textValues).toContain('px,')
+    expect(textValues).not.toMatch(/\b\d+rem\b/)
+    expect(root).toContain('--container-narrow: 48rem')
   })
 
   it('layers defaults over a partial settings object without re-validating', () => {

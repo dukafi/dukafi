@@ -135,6 +135,7 @@ export function ClassStyleInjector({ targetDocument, viewport }: ClassStyleInjec
   const frameworkTypography = useEditorStore((s) => s.site?.settings.framework?.typography ?? null)
   const frameworkSpacing = useEditorStore((s) => s.site?.settings.framework?.spacing ?? null)
   const frameworkPreferences = useEditorStore((s) => s.site?.settings.framework?.preferences ?? null)
+  const frameworkIcons = useEditorStore((s) => s.site?.settings.framework?.icons ?? null)
   const fonts = useEditorStore((s) => s.site?.settings.fonts ?? null)
   const previewClassStyles = useEditorStore((s) => s.previewClassStyles)
   const activeClassId = useEditorStore((s) => s.activeClassId)
@@ -180,6 +181,7 @@ export function ClassStyleInjector({ targetDocument, viewport }: ClassStyleInjec
       frameworkPreferences,
       fonts,
       { mediaAssets: responsiveMediaAssets, mediaSignature: responsiveMediaSignature },
+      frameworkIcons,
     )
     // Wrap in a named cascade layer so editor-chrome CSS (unlayered, from
     // EditorChromeInjector) always wins over author CSS regardless of specificity.
@@ -210,6 +212,7 @@ export function ClassStyleInjector({ targetDocument, viewport }: ClassStyleInjec
     fonts,
     responsiveMediaAssets,
     responsiveMediaSignature,
+    frameworkIcons,
   ])
 
   useEffect(() => {

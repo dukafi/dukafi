@@ -1,0 +1,132 @@
+.root {
+    display: grid;
+    gap: var(--space-s);
+}
+
+.hint {
+    margin: 0;
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+    line-height: 1.4;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-s);
+}
+
+.rowWithAction {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-s);
+}
+
+.label {
+    overflow: hidden;
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.control {
+    position: relative;
+    height: 2.25rem;
+    padding: 0.85rem 0.4rem 0;
+}
+
+.tooltip {
+    position: absolute;
+    top: 0;
+    left: var(--slider-progress, 0%);
+    z-index: 1;
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--radius-sm);
+    background: var(--text);
+    color: var(--bg-surface);
+    font-size: var(--text-xs);
+    line-height: 1.3;
+    pointer-events: none;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.dots {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 12px;
+    pointer-events: none;
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--border);
+}
+
+.dot[data-active] {
+    background: transparent;
+}
+
+.slider {
+    position: absolute;
+    right: 0;
+    bottom: 0.35rem;
+    left: 0;
+    width: 100%;
+    height: 12px;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    accent-color: var(--text);
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.slider:disabled {
+    cursor: default;
+    opacity: 0.55;
+}
+
+.slider:focus-visible {
+    outline: 1px solid var(--overlay-50);
+    outline-offset: 2px;
+}
+
+.slider::-webkit-slider-runnable-track {
+    height: 2px;
+    border-radius: 999px;
+    background: var(--border);
+}
+
+.slider::-webkit-slider-thumb {
+    width: 12px;
+    height: 12px;
+    margin-top: -5px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--text);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.slider::-moz-range-track {
+    height: 2px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--border);
+}
+
+.slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--text);
+}

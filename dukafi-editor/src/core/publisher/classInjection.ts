@@ -68,6 +68,11 @@ function injectClassIntoRootElement(html: string, classAttr: string): string {
   return html.slice(0, tagStart) + newTag + html.slice(tagStart + fullMatch.length)
 }
 
+/** Inject a trusted platform class (not a user-authored classId). */
+export function injectPlatformClass(html: string, className: string): string {
+  return injectClassIntoRootElement(html, escapeHtml(className))
+}
+
 /**
  * Inject a node's user-applied classIds onto its rendered root element.
  *

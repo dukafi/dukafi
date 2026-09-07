@@ -50,6 +50,17 @@ describe('streamAiRun', () => {
     expect(result.reply).toContain('Say what you want changed')
   })
 
+  it('surfaces structured media consent choices', async () => {
+    globalThis.fetch = (async () => new Response(
+      'event: done\ndata: {"ok":true,"changed":false,"reply":"Choose imagery.","clarification":{"id":"image_source","prompt":"How should I handle imagery?","choices":[{"value":"generate","label":"Generate images","description":"May use credits."}]}}\n\n',
+      { status: 200, headers: { 'content-type': 'text/event-stream' } },
+    )) as typeof fetch
+
+    const result = await streamAiRun({ prompt: 'match this', slug: 'index', mode: 'landing', onActivity: () => {} })
+    expect(result.clarification?.id).toBe('image_source')
+    expect(result.clarification?.choices[0]?.value).toBe('generate')
+  })
+
   it('does not send a token in the body', async () => {
     let sent = ''
     globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
@@ -70,5 +81,22 @@ describe('streamAiRun', () => {
     expect(sent).toContain('"prompt":"hello"')
     expect(sent).not.toContain('dkf_')
     expect(sent).not.toContain('mcpToken')
+  })
+
+  it('forwards private image and file attachments to the harness', async () => {
+    let sent = ''
+    globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+      sent = String(init?.body || '')
+      return new Response('event: done\ndata: {"ok":true}\n\n', { status: 200 })
+    }) as typeof fetch
+
+    await streamAiRun({
+      prompt: 'match this', slug: 'index', mode: 'landing', onActivity: () => {},
+      attachments: [{ name: 'reference.png', mimeType: 'image/png', size: 3, data: 'cG5n' }],
+    })
+
+    expect(JSON.parse(sent).attachments).toEqual([
+      { name: 'reference.png', mimeType: 'image/png', size: 3, data: 'cG5n' },
+    ])
   })
 })

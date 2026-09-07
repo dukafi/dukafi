@@ -408,13 +408,157 @@ const FrameworkTypographySettingsSchema = Type.Object({
 
 export type FrameworkTypographySettings = Static<typeof FrameworkTypographySettingsSchema>
 
+const FrameworkSpacingStepSchema = Type.Union([
+  Type.Literal('xs'),
+  Type.Literal('s'),
+  Type.Literal('m'),
+  Type.Literal('l'),
+  Type.Literal('xl'),
+])
+
+const FrameworkSpacingPresetsSchema = Type.Object({
+  /** Inner content cap: narrow=about column, wide=product grid. */
+  containerWidth: withFallback(
+    Type.Union([Type.Literal('narrow'), Type.Literal('regular'), Type.Literal('wide')]),
+    'wide',
+  ),
+  cardPadding: withFallback(
+    Type.Union([Type.Literal('tight'), Type.Literal('regular'), Type.Literal('roomy')]),
+    'regular',
+  ),
+  /** Section padding-block. */
+  vertical: withFallback(FrameworkSpacingStepSchema, 'l'),
+  /** Section padding-inline. */
+  horizontal: withFallback(FrameworkSpacingStepSchema, 'm'),
+  /**
+   * Corner radius for buttons, inputs, images, articles, and divs.
+   * Tailwind `rounded-*` on a selected element still wins.
+   */
+  radius: withFallback(
+    Type.Union([
+      Type.Literal('none'),
+      Type.Literal('sm'),
+      Type.Literal('md'),
+      Type.Literal('lg'),
+      Type.Literal('full'),
+    ]),
+    'md',
+  ),
+})
+
+export type FrameworkSpacingPresets = Static<typeof FrameworkSpacingPresetsSchema>
+
 const FrameworkSpacingSettingsSchema = Type.Object({
   groups: withFallback(Type.Array(FrameworkSpacingGroupSchema), []),
   classes: Type.Optional(Type.Array(FrameworkSpacingClassGeneratorSchema)),
+  presets: Type.Optional(FrameworkSpacingPresetsSchema),
   isDisabled: Type.Optional(Type.Boolean()),
 })
 
 export type FrameworkSpacingSettings = Static<typeof FrameworkSpacingSettingsSchema>
+
+// ---------------------------------------------------------------------------
+// FrameworkIconsSettings — Relume-style site icon defaults
+// ---------------------------------------------------------------------------
+
+const IconSliderStepSchema = Type.Union([
+  Type.Literal('1'),
+  Type.Literal('2'),
+  Type.Literal('3'),
+  Type.Literal('4'),
+  Type.Literal('5'),
+  Type.Literal('6'),
+  Type.Literal('7'),
+])
+
+export const FrameworkIconsSettingsSchema = Type.Object({
+  /** Scheme role the glyph uses. */
+  color: withFallback(
+    Type.Union([
+      Type.Literal('accent'),
+      Type.Literal('heading'),
+      Type.Literal('body'),
+      Type.Literal('border'),
+    ]),
+    'accent',
+  ),
+  style: withFallback(Type.Union([Type.Literal('outlined'), Type.Literal('filled')]), 'outlined'),
+  /** Stroke weight, 1 = hairline … 7 = bold. */
+  weight: withFallback(IconSliderStepSchema, '4'),
+  /** Glyph fill vs outline. */
+  fill: withFallback(Type.Union([Type.Literal('outline'), Type.Literal('fill')]), 'outline'),
+  /** Icon box: none, filled plate, or outlined plate. */
+  treatment: withFallback(
+    Type.Union([Type.Literal('none'), Type.Literal('fill'), Type.Literal('outline')]),
+    'fill',
+  ),
+  fillIntensity: withFallback(Type.Union([Type.Literal('subtle'), Type.Literal('strong')]), 'subtle'),
+  padding: withFallback(IconSliderStepSchema, '4'),
+  radius: withFallback(IconSliderStepSchema, '2'),
+  /** When true, the box uses site `--radius` instead of `radius`. */
+  radiusLinked: withFallback(Type.Boolean(), true),
+})
+
+export type FrameworkIconsSettings = Static<typeof FrameworkIconsSettingsSchema>
+
+// ---------------------------------------------------------------------------
+// FrameworkButtonsSettings — site-wide defaults for base.button
+// ---------------------------------------------------------------------------
+
+const ButtonSliderStepSchema = Type.Union([
+  Type.Literal('1'), Type.Literal('2'), Type.Literal('3'), Type.Literal('4'),
+  Type.Literal('5'), Type.Literal('6'), Type.Literal('7'),
+])
+
+const ButtonColorRoleSchema = Type.Union([
+  Type.Literal('accent'), Type.Literal('secondary'), Type.Literal('heading'),
+  Type.Literal('body'), Type.Literal('border'),
+])
+
+const InputColorRoleSchema = Type.Union([
+  Type.Literal('background'), Type.Literal('accent'), Type.Literal('secondary'),
+  Type.Literal('heading'), Type.Literal('body'), Type.Literal('border'),
+])
+
+export const FrameworkButtonsSettingsSchema = Type.Object({
+  primaryColor: withFallback(ButtonColorRoleSchema, 'accent'),
+  secondaryColor: withFallback(ButtonColorRoleSchema, 'secondary'),
+  linkColor: withFallback(ButtonColorRoleSchema, 'accent'),
+  padding: withFallback(ButtonSliderStepSchema, '4'),
+  radius: withFallback(ButtonSliderStepSchema, '4'),
+  radiusLinked: withFallback(Type.Boolean(), true),
+  /** Font token variable without the leading `--`, or `inherit`. */
+  fontVariable: withFallback(Type.String(), 'inherit'),
+  fontSize: withFallback(ButtonSliderStepSchema, '4'),
+  fontWeight: withFallback(ButtonSliderStepSchema, '5'),
+  casing: withFallback(
+    Type.Union([Type.Literal('normal'), Type.Literal('capitalize'), Type.Literal('uppercase')]),
+    'normal',
+  ),
+  letterSpacing: withFallback(ButtonSliderStepSchema, '4'),
+})
+
+export type FrameworkButtonsSettings = Static<typeof FrameworkButtonsSettingsSchema>
+
+// ---------------------------------------------------------------------------
+// FrameworkInputsSettings — site-wide defaults for form fields
+// ---------------------------------------------------------------------------
+
+export const FrameworkInputsSettingsSchema = Type.Object({
+  backgroundColor: withFallback(InputColorRoleSchema, 'background'),
+  textColor: withFallback(InputColorRoleSchema, 'body'),
+  borderColor: withFallback(InputColorRoleSchema, 'border'),
+  focusColor: withFallback(InputColorRoleSchema, 'accent'),
+  padding: withFallback(ButtonSliderStepSchema, '4'),
+  radius: withFallback(ButtonSliderStepSchema, '4'),
+  radiusLinked: withFallback(Type.Boolean(), true),
+  borderWidth: withFallback(ButtonSliderStepSchema, '2'),
+  fontVariable: withFallback(Type.String(), 'inherit'),
+  fontSize: withFallback(ButtonSliderStepSchema, '4'),
+  fontWeight: withFallback(ButtonSliderStepSchema, '2'),
+})
+
+export type FrameworkInputsSettings = Static<typeof FrameworkInputsSettingsSchema>
 
 // ---------------------------------------------------------------------------
 // FrameworkPreferencesSettings
@@ -465,8 +609,10 @@ export const FrameworkSettingsSchema = Type.Object({
   colorSchemes: Type.Optional(FrameworkColorSchemeSettingsSchema),
   typography: Type.Optional(FrameworkTypographySettingsSchema),
   spacing: Type.Optional(FrameworkSpacingSettingsSchema),
+  icons: Type.Optional(FrameworkIconsSettingsSchema),
+  buttons: Type.Optional(FrameworkButtonsSettingsSchema),
+  inputs: Type.Optional(FrameworkInputsSettingsSchema),
   preferences: Type.Optional(FrameworkPreferencesSettingsSchema),
 })
 
 export type FrameworkSettings = Static<typeof FrameworkSettingsSchema>
-

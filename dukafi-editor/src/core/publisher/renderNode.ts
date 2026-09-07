@@ -30,7 +30,7 @@ import { resolveDynamicProps, effectiveNodeBindings } from '@core/templates/dyna
 import { sanitizeModuleCSS } from './cssCollector'
 import { escapeHtml } from './utils'
 import { escapeProps } from './escapeProps'
-import { injectNodeClassIds, injectNodeId, injectNodeInlineStyles } from './classInjection'
+import { injectNodeClassIds, injectNodeId, injectNodeInlineStyles, injectPlatformClass } from './classInjection'
 import { renderVisualComponentRef } from './renderVisualComponentRef'
 import { renderLoop } from './renderLoop'
 import { resolveAutoSizes } from './sizesResolver'
@@ -193,7 +193,11 @@ function renderStandardNode(
   // base.body has no wrapper element — its classIds + inline styles go on
   // <body> in publishPage.
   if (node.moduleId === 'base.body') return output.html
-  const withClasses = injectNodeClassIds(output.html, node.classIds, config.site)
+  const frameworkClass = node.moduleId === 'base.button'
+    ? 'dukafi-button'
+    : ['base.input', 'base.textarea', 'base.select'].includes(node.moduleId) ? 'dukafi-input' : null
+  const frameworkHtml = frameworkClass ? injectPlatformClass(output.html, frameworkClass) : output.html
+  const withClasses = injectNodeClassIds(frameworkHtml, node.classIds, config.site)
   const withStyles = injectNodeInlineStyles(withClasses, node.inlineStyles, config.mediaAssets)
   return config.annotateNodeIds ? injectNodeId(withStyles, node.id) : withStyles
 }

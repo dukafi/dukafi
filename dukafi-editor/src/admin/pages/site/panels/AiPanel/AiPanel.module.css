@@ -68,6 +68,14 @@
     gap: var(--space-2xs);
 }
 
+.composerTools,.attachmentList,.messageAttachments{display:flex;align-items:center;gap:var(--space-2xs);flex-wrap:wrap}
+.attachmentChip,.messageFile{display:inline-flex;align-items:center;gap:var(--space-3xs);max-width:100%;border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-3xs) var(--space-2xs);font-size:var(--text-xs);overflow-wrap:anywhere}
+.attachmentError{margin:0;color:var(--danger);font-size:var(--text-xs)}
+.messageAttachments{margin-top:var(--space-2xs)}
+.messageImage{display:block;width:5rem;height:5rem;object-fit:cover;border:1px solid var(--border);border-radius:var(--radius)}
+.clarification{display:grid;gap:var(--space-2xs);margin-top:var(--space-s)}
+.clarificationPrompt{margin:0;font-size:var(--text-s);font-weight:600}
+
 .input {
     width: 100%;
     resize: vertical;

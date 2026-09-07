@@ -8,7 +8,7 @@
 
 import type { StoreApi } from 'zustand'
 import type { Draft } from 'mutative'
-import type { FrameworkColorScheme, FrameworkColorSchemeRoles, FrameworkColorToken, FrameworkColorUtilityType, FrameworkPreferencesSettings, FrameworkScaleManualSize, FrameworkScaleMode, FrameworkSpacingClassGenerator, FrameworkSpacingGroup, FrameworkTypeStyle, FrameworkTypographyClassGenerator, FrameworkTypographyGroup, TypeStyleTag } from '@core/framework-schema'
+import type { FrameworkButtonsSettings, FrameworkColorScheme, FrameworkColorSchemeRoles, FrameworkColorToken, FrameworkColorUtilityType, FrameworkIconsSettings, FrameworkInputsSettings, FrameworkPreferencesSettings, FrameworkScaleManualSize, FrameworkScaleMode, FrameworkSpacingClassGenerator, FrameworkSpacingGroup, FrameworkSpacingPresets, FrameworkTypeStyle, FrameworkTypographyClassGenerator, FrameworkTypographyGroup, TypeStyleTag } from '@core/framework-schema'
 import type {
   DecorativeSiteExplorerSectionId,
   DukafiPageExportFile,
@@ -324,6 +324,10 @@ export interface SiteSlice {
     patch: Partial<FrameworkScaleManualSize>,
   ) => void
   setFrameworkSpacingClassGenerators: (classes: FrameworkSpacingClassGenerator[]) => void
+  updateFrameworkSpacingPresets: (patch: Partial<FrameworkSpacingPresets>) => void
+  updateFrameworkIcons: (patch: Partial<FrameworkIconsSettings>) => void
+  updateFrameworkButtons: (patch: Partial<FrameworkButtonsSettings>) => void
+  updateFrameworkInputs: (patch: Partial<FrameworkInputsSettings>) => void
 
   // ─── Core Framework lifecycle (Manage Framework dialog) ──────────────────
   /**

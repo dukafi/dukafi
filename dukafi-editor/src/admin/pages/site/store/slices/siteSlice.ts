@@ -36,6 +36,9 @@ import { createFrameworkColorActions } from './site/framework/colors'
 import { createColorSchemeActions } from './site/framework/schemes'
 import { createFrameworkTypographyActions } from './site/framework/typography'
 import { createFrameworkSpacingActions } from './site/framework/spacing'
+import { createFrameworkIconActions } from './site/framework/icons'
+import { createFrameworkButtonActions } from './site/framework/buttons'
+import { createFrameworkInputActions } from './site/framework/inputs'
 import { createFrameworkPreferencesActions } from './site/framework/preferences'
 import { createFrameworkPreviewActions } from './site/framework/preview'
 import { createFrameworkManagerActions } from './site/framework/manage'
@@ -82,6 +85,9 @@ export const createSiteSlice: EditorStoreSliceCreator<SiteSlice> = (set, get) =>
     ...createColorSchemeActions(helpers),
     ...createFrameworkTypographyActions(helpers),
     ...createFrameworkSpacingActions(helpers),
+    ...createFrameworkIconActions(helpers),
+    ...createFrameworkButtonActions(helpers),
+    ...createFrameworkInputActions(helpers),
     ...createFrameworkPreferencesActions(helpers),
     ...createFrameworkPreviewActions(helpers),
     ...createFrameworkManagerActions(helpers),

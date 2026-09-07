@@ -4,7 +4,7 @@
  * Generates the platform-level CSS that lives in `framework.css` for a
  * published site:
  *   1. `@font-face` rules + `--font-<slug>` tokens (fonts library).
- *   2. Framework color / typography / spacing variables.
+ *   3. Framework-generated utilities, tree-shaken by site preference.
  *   3. Framework-generated utilities, tree-shaken by site preference.
  *
  * If the user hasn't configured any of those, this returns the empty string.

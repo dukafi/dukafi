@@ -9,6 +9,14 @@ module DesignTokens
   SAFE_COLOR = /\A[^;{}<>\n\r]{1,80}\z/
   SAFE_STEPS = /\A[a-z0-9]+(?:,[a-z0-9]+){0,12}\z/
   UTILITIES = %w[text background border fill].freeze
+  TYPE_TAGS = %w[h1 h2 h3 h4 h5 h6 h7 p].freeze
+  STEPS = %w[1 2 3 4 5 6 7].freeze
+  CONTROL_DEFAULTS = {
+    "layout" => { "containerWidth" => "wide", "cardPadding" => "regular", "vertical" => "l", "horizontal" => "m", "radius" => "md" },
+    "icons" => { "color" => "accent", "style" => "outlined", "weight" => "4", "fill" => "outline", "treatment" => "fill", "fillIntensity" => "subtle", "padding" => "4", "radius" => "2", "radiusLinked" => true },
+    "buttons" => { "primaryColor" => "accent", "secondaryColor" => "secondary", "linkColor" => "accent", "padding" => "4", "radius" => "4", "radiusLinked" => true, "fontVariable" => "inherit", "fontSize" => "4", "fontWeight" => "5", "casing" => "normal", "letterSpacing" => "4" },
+    "inputs" => { "backgroundColor" => "background", "textColor" => "body", "borderColor" => "border", "focusColor" => "accent", "padding" => "4", "radius" => "4", "radiusLinked" => true, "borderWidth" => "2", "fontVariable" => "inherit", "fontSize" => "4", "fontWeight" => "2" },
+  }.freeze
 
   module_function
 
@@ -25,8 +33,15 @@ module DesignTokens
       "fonts" => font_digest(fonts),
       "typography" => scale_rows(framework["typography"], "fontSize"),
       "spacing" => scale_rows(framework["spacing"], "size"),
+      "typeStyles" => Array(framework.dig("typography", "styles")),
+      "layout" => Dukafi::Publisher::FrameworkCss.spacing_preset_variables(site)
+        .merge(Dukafi::Publisher::FrameworkCss.icon_preset_variables(site)),
+      "layoutPresets" => CONTROL_DEFAULTS["layout"].merge(framework.dig("spacing", "presets") || {}),
+      "icons" => CONTROL_DEFAULTS["icons"].merge(framework["icons"] || {}),
+      "buttons" => CONTROL_DEFAULTS["buttons"].merge(framework["buttons"] || {}),
+      "inputs" => CONTROL_DEFAULTS["inputs"].merge(framework["inputs"] || {}),
       "preferences" => preference_row(framework["preferences"]),
-      "note" => "Patch a token to re-skin every bound class. Color schemes map Background / Heading / Body / Accent onto those tokens — put scheme-2 on a section, then use bg-scheme-background and text-scheme-heading. On accent or secondary fills use text-scheme-on-accent / text-scheme-on-secondary (contrast-picked ink). Call update_design_tokens, then publish.",
+      "note" => "Patch a token to re-skin every bound class. Color schemes map Background / Heading / Body / Accent onto those tokens — put scheme-2 on a section, then use bg-scheme-background and text-scheme-heading. On accent or secondary fills use text-scheme-on-accent / text-scheme-on-secondary (contrast-picked ink). Layout vars: max-w-[var(--container-width)] (also --container-narrow/wide), p-[var(--card-padding)], py-[var(--space-vertical)], px-[var(--space-horizontal)]. Site radius (--radius, also --radius-button/image/card) already paints buttons, inputs, images, cards, and divs — omit rounded-* unless you want a one-off (rounded-full for pills). Inline SVGs pick up --icon-color / --icon-box-padding / --icon-box-radius. Call update_design_tokens, then publish.",
     }
   end
 
@@ -52,9 +67,14 @@ module DesignTokens
     changed.concat(apply_fonts(site, args["fonts"]))
     changed.concat(apply_scale(site, "typography", args["typography"], "fontSize"))
     changed.concat(apply_scale(site, "spacing", args["spacing"], "size"))
+    changed.concat(apply_type_styles(site, args["typeStyles"]))
+    changed.concat(apply_control(site, "layout", args["layout"]))
+    changed.concat(apply_control(site, "icons", args["icons"]))
+    changed.concat(apply_control(site, "buttons", args["buttons"]))
+    changed.concat(apply_control(site, "inputs", args["inputs"]))
     changed.concat(apply_preferences(site, args["preferences"]))
 
-    raise ArgumentError, "Nothing to change. Pass colors, colorSchemes, fonts, typography, spacing, or preferences." if changed.empty?
+    raise ArgumentError, "Nothing to change. Pass colors, schemes, fonts, scales, typeStyles, layout, icons, buttons, inputs, or preferences." if changed.empty?
 
     persist!(state, site)
     {
@@ -338,14 +358,18 @@ module DesignTokens
     fonts = site.dig("settings", "fonts")
     items = Array(fonts["items"])
     tokens = Array(fonts["tokens"])
-    raise ArgumentError, "No font tokens on this site yet. Add one in the Type tab first." if tokens.empty?
-
     changed = []
     rows.first(8).each do |row|
       next unless row.is_a?(Hash)
 
       token = find_font_token(tokens, row)
-      raise ArgumentError, "No font token matching #{(row['variable'] || row['name']).inspect}." if token.nil?
+      if token.nil?
+        variable = normalize_font_variable((row["variable"] || row["name"]).to_s)
+        raise ArgumentError, "A new font token needs a variable or name." if variable.empty?
+        now = (Time.now.to_f * 1000).to_i
+        token = { "id" => "font-token-#{SecureRandom.hex(6)}", "name" => row["name"].to_s.empty? ? variable.sub(/\Afont-/, "").capitalize : row["name"].to_s, "variable" => variable, "familyId" => "", "fallback" => row["fallback"].to_s, "order" => tokens.length, "createdAt" => now, "updatedAt" => now }
+        tokens << token
+      end
 
       if row["family"].to_s.strip != ""
         entry = find_family(items, row["family"])
@@ -358,7 +382,7 @@ module DesignTokens
       end
       token["fallback"] = row["fallback"].to_s if row.key?("fallback")
       token["updatedAt"] = (Time.now.to_f * 1000).to_i
-      changed << "updated font #{token['variable']}"
+      changed << "upserted font #{token['variable']}"
     end
     fonts["tokens"] = tokens
     changed
@@ -370,14 +394,19 @@ module DesignTokens
     settings = site.dig("settings", "framework", kind)
     settings = { "groups" => [], "classes" => [] } unless settings.is_a?(Hash)
     groups = Array(settings["groups"])
-    raise ArgumentError, "No #{kind} scale on this site yet. Create one in the Framework panel first." if groups.empty?
-
     changed = []
     rows.first(4).each do |row|
       next unless row.is_a?(Hash)
 
       group = find_scale_group(groups, row)
-      raise ArgumentError, "No #{kind} group matching #{(row['id'] || row['name'] || row['namingConvention']).inspect}." if group.nil?
+      if group.nil?
+        now = (Time.now.to_f * 1000).to_i
+        convention = slugify(row["namingConvention"] || (kind == "typography" ? "text" : "space"))
+        min_size = kind == "typography" ? 14 : 8
+        max_size = kind == "typography" ? 18 : 24
+        group = { "id" => "#{kind}-#{SecureRandom.hex(6)}", "name" => row["name"].to_s.empty? ? kind.capitalize : row["name"].to_s, "mode" => "fluid", "namingConvention" => convention, "min" => { size_key => min_size, "scaleRatio" => kind == "typography" ? 1.125 : 1.25 }, "max" => { size_key => max_size, "scaleRatio" => kind == "typography" ? 1.333 : 1.414 }, "steps" => kind == "typography" ? "xs,s,m,l,xl,2xl,3xl,4xl" : "4xs,3xs,2xs,xs,s,m,l,xl,2xl,3xl,4xl", "baseScaleIndex" => kind == "typography" ? 2 : 5, "order" => groups.length, "createdAt" => now, "updatedAt" => now }
+        groups << group
+      end
 
       min = group["min"].is_a?(Hash) ? group["min"].dup : {}
       max = group["max"].is_a?(Hash) ? group["max"].dup : {}
@@ -404,6 +433,70 @@ module DesignTokens
     settings["groups"] = groups
     site["settings"]["framework"][kind] = settings
     changed
+  end
+
+  def apply_type_styles(site, rows)
+    return [] unless rows.is_a?(Array) && !rows.empty?
+
+    typography = site.dig("settings", "framework", "typography")
+    styles = Array(typography["styles"])
+    rows.first(8).each do |row|
+      next unless row.is_a?(Hash)
+      tag = row["tag"].to_s.downcase
+      raise ArgumentError, "typeStyles tag must be one of: #{TYPE_TAGS.join(', ')}." unless TYPE_TAGS.include?(tag)
+      style = styles.find { |item| item.is_a?(Hash) && item["tag"] == tag } || { "tag" => tag }
+      %w[fontFamily fontSize fontWeight letterSpacing lineHeight textTransform maxWidth].each do |key|
+        style[key] = safe_css_value!(row[key], key) if row.key?(key)
+      end
+      styles << style unless styles.include?(style)
+    end
+    typography["styles"] = styles
+    ["updated type styles"]
+  end
+
+  CONTROL_KEYS = {
+    "layout" => %w[containerWidth cardPadding vertical horizontal radius],
+    "icons" => %w[color style weight fill treatment fillIntensity padding radius radiusLinked],
+    "buttons" => %w[primaryColor secondaryColor linkColor padding radius radiusLinked fontVariable fontSize fontWeight casing letterSpacing],
+    "inputs" => %w[backgroundColor textColor borderColor focusColor padding radius radiusLinked borderWidth fontVariable fontSize fontWeight],
+  }.freeze
+  CONTROL_ENUMS = {
+    "layout" => { "containerWidth" => %w[narrow regular wide], "cardPadding" => %w[tight regular roomy], "vertical" => %w[xs s m l xl], "horizontal" => %w[xs s m l xl], "radius" => %w[none sm md lg full] },
+    "icons" => { "color" => %w[accent heading body border], "style" => %w[outlined filled], "fill" => %w[outline fill], "treatment" => %w[none fill outline], "fillIntensity" => %w[subtle strong] },
+    "buttons" => { "primaryColor" => %w[accent secondary heading body border], "secondaryColor" => %w[accent secondary heading body border], "linkColor" => %w[accent secondary heading body border], "casing" => %w[normal capitalize uppercase] },
+    "inputs" => { "backgroundColor" => %w[background accent secondary heading body border], "textColor" => %w[background accent secondary heading body border], "borderColor" => %w[background accent secondary heading body border], "focusColor" => %w[background accent secondary heading body border] },
+  }.freeze
+
+  def apply_control(site, kind, row)
+    return [] unless row.is_a?(Hash) && !row.empty?
+
+    unknown = row.keys.map(&:to_s) - CONTROL_KEYS.fetch(kind)
+    raise ArgumentError, "Unknown #{kind} properties: #{unknown.join(', ')}." unless unknown.empty?
+    patch = row.transform_keys(&:to_s)
+    patch.each do |key, value|
+      raise ArgumentError, "#{kind}.#{key} must be a boolean." if key == "radiusLinked" && value != true && value != false
+      step_key = %w[weight padding borderWidth fontSize fontWeight letterSpacing].include?(key) || (key == "radius" && kind != "layout")
+      raise ArgumentError, "#{kind}.#{key} must be step 1–7." if step_key && !STEPS.include?(value.to_s)
+      allowed = CONTROL_ENUMS.dig(kind, key)
+      raise ArgumentError, "#{kind}.#{key} must be one of: #{allowed.join(', ')}." if allowed && !allowed.include?(value.to_s)
+      if key == "fontVariable" && value.to_s != "inherit" && !value.to_s.match?(SAFE_SLUG)
+        raise ArgumentError, "#{kind}.fontVariable must be inherit or a safe token name."
+      end
+    end
+    framework = site.dig("settings", "framework")
+    if kind == "layout"
+      spacing = framework["spacing"]
+      spacing["presets"] = CONTROL_DEFAULTS[kind].merge(spacing["presets"] || {}).merge(patch)
+    else
+      framework[kind] = CONTROL_DEFAULTS[kind].merge(framework[kind] || {}).merge(patch)
+    end
+    ["updated #{kind}"]
+  end
+
+  def safe_css_value!(raw, key)
+    value = raw.to_s.strip
+    raise ArgumentError, "#{key} contains unsafe CSS." if value.length > 120 || value.match?(/[;{}<>\n\r]/)
+    value
   end
 
   def apply_preferences(site, row)

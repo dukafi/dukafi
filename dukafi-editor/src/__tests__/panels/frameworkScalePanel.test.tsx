@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import React from 'react'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SpacingTab } from '@site/panels/SpacingPanel'
 import { TypographyTab } from '@site/panels/TypographyPanel'
+import { IconsPanel } from '@site/panels/IconsPanel/IconsPanel'
+import { ButtonsPanel } from '@site/panels/ButtonsPanel/ButtonsPanel'
+import { InputsPanel } from '@site/panels/InputsPanel'
 import { useEditorStore } from '@site/store/store'
 import type { FontEntry } from '@core/fonts'
 import { makeSite } from '../fixtures'
@@ -57,10 +60,7 @@ beforeEach(resetStore)
 afterEach(cleanup)
 
 describe('FrameworkScalePanel', () => {
-  it('keeps scale creation in the section controls', () => {
-    useEditorStore.getState().createFrameworkTypographyGroup()
-    useEditorStore.getState().createFrameworkSpacingGroup()
-
+  it('hides scale editors and shows type styles and spacing presets', () => {
     render(
       <>
         <TypographyPanel />
@@ -70,12 +70,18 @@ describe('FrameworkScalePanel', () => {
 
     const typographyPanel = screen.getByTestId('typography-panel')
     const spacingPanel = screen.getByTestId('spacing-panel')
-    const spacingScalePicker = within(spacingPanel).getByRole('group', {
-      name: 'Spacing scales',
-    })
 
     expect(within(typographyPanel).queryByRole('group', { name: 'Typography scales' })).toBeNull()
-    expect(within(spacingScalePicker).getByRole('button', { name: 'Add spacing scale' })).toBeDefined()
+    expect(within(spacingPanel).queryByRole('group', { name: 'Spacing scales' })).toBeNull()
+
+    const presets = within(spacingPanel).getByTestId('spacing-presets')
+    expect(within(presets).getByLabelText('Container Width')).toBeDefined()
+    expect(within(presets).getByLabelText('Card Padding')).toBeDefined()
+    expect(within(presets).getByLabelText('Vertical')).toBeDefined()
+    expect(within(presets).getByLabelText('Horizontal')).toBeDefined()
+
+    const radius = within(spacingPanel).getByTestId('radius-presets')
+    expect(within(radius).getByLabelText('Radius')).toBeDefined()
   })
 
   it('uses the shared empty state when installed fonts have no font tokens', async () => {
@@ -113,5 +119,89 @@ describe('FrameworkScalePanel', () => {
     expect(within(typeStyles).getByRole('button', { name: 'H7' })).toBeDefined()
     expect(within(typeStyles).getByRole('button', { name: 'P' })).toBeDefined()
     expect(within(typeStyles).getByLabelText('Type style font size')).toBeDefined()
+  })
+
+  it('snaps spacing presets onto discrete steps', async () => {
+    render(<SpacingPanel />)
+
+    const presets = screen.getByTestId('spacing-presets')
+    const container = within(presets).getByLabelText('Container Width')
+    expect(container).toHaveProperty('value', '2')
+
+    fireEvent.input(container, { target: { value: '0' } })
+
+    expect(useEditorStore.getState().site?.settings.framework?.spacing?.presets?.containerWidth).toBe(
+      'narrow',
+    )
+  })
+
+  it('snaps radius onto discrete steps', () => {
+    render(<SpacingPanel />)
+
+    const radius = within(screen.getByTestId('radius-presets')).getByLabelText('Radius')
+    expect(radius).toHaveProperty('value', '2')
+
+    fireEvent.input(radius, { target: { value: '4' } })
+
+    expect(useEditorStore.getState().site?.settings.framework?.spacing?.presets?.radius).toBe(
+      'full',
+    )
+  })
+
+  it('snaps icon weight and writes framework.icons', () => {
+    render(
+      <div data-testid="icons-panel">
+        <IconsPanel />
+      </div>,
+    )
+
+    const panel = screen.getByTestId('icon-presets')
+    expect(within(panel).getByLabelText('Color')).toBeDefined()
+    expect(within(panel).getByLabelText('Style')).toBeDefined()
+    expect(within(panel).getByLabelText('Icon Weight')).toBeDefined()
+    expect(within(panel).getByRole('group', { name: 'Fill' })).toBeDefined()
+    expect(within(panel).getByLabelText('Treatment')).toBeDefined()
+    expect(within(panel).getByRole('group', { name: 'Fill Intensity' })).toBeDefined()
+    expect(within(panel).getByLabelText('Padding')).toBeDefined()
+    expect(within(panel).getByLabelText('Radius')).toBeDefined()
+
+    fireEvent.input(within(panel).getByLabelText('Icon Weight'), { target: { value: '6' } })
+    expect(useEditorStore.getState().site?.settings.framework?.icons?.weight).toBe('7')
+  })
+
+  it('edits site-wide button defaults without adding visual props to base.button', () => {
+    render(<ButtonsPanel />)
+
+    const panel = screen.getByTestId('button-presets')
+    expect(within(panel).getByRole('group', { name: 'Button style' })).toBeDefined()
+    expect(within(panel).getByLabelText('Color')).toBeDefined()
+    expect(within(panel).getByLabelText('Padding')).toBeDefined()
+    expect(within(panel).getByLabelText('Radius')).toBeDefined()
+    expect(within(panel).getByLabelText('Font')).toBeDefined()
+    expect(within(panel).getByLabelText('Font Size')).toBeDefined()
+    expect(within(panel).getByLabelText('Font Weight')).toBeDefined()
+    expect(within(panel).getByRole('group', { name: 'Case' })).toBeDefined()
+    expect(within(panel).getByLabelText('Letter Spacing')).toBeDefined()
+
+    fireEvent.input(within(panel).getByLabelText('Padding'), { target: { value: '6' } })
+    expect(useEditorStore.getState().site?.settings.framework?.buttons?.padding).toBe('7')
+  })
+
+  it('edits site-wide defaults for text inputs, textareas, and selects', () => {
+    render(<InputsPanel />)
+    const panel = screen.getByTestId('input-presets')
+    expect(within(panel).getByLabelText('Background color')).toBeDefined()
+    expect(within(panel).getByLabelText('Text color')).toBeDefined()
+    expect(within(panel).getByLabelText('Border color')).toBeDefined()
+    expect(within(panel).getByLabelText('Focus color')).toBeDefined()
+    expect(within(panel).getByLabelText('Padding')).toBeDefined()
+    expect(within(panel).getByLabelText('Stroke')).toBeDefined()
+    expect(within(panel).getByLabelText('Radius')).toBeDefined()
+    expect(within(panel).getByLabelText('Input font')).toBeDefined()
+    expect(within(panel).getByLabelText('Font Size')).toBeDefined()
+    expect(within(panel).getByLabelText('Font Weight')).toBeDefined()
+
+    fireEvent.input(within(panel).getByLabelText('Stroke'), { target: { value: '5' } })
+    expect(useEditorStore.getState().site?.settings.framework?.inputs?.borderWidth).toBe('6')
   })
 })

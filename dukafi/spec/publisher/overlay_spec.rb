@@ -60,13 +60,13 @@ class OverlaySpec < Minitest::Test
   def test_a_trigger_can_be_any_node
     html = render(drawer).html
 
-    assert_includes html, '<button data-dukafy-overlay-open="sheet">Cart</button>'
+    assert_includes html, '<button data-dukafy-overlay-open="sheet" class="dukafi-button">Cart</button>'
   end
 
   # A close button inside the drawer should not have to name the drawer it is
   # already inside.
   def test_close_without_a_target_means_the_enclosing_overlay
-    assert_includes render(drawer).html, '<button data-dukafy-overlay-close="">Close</button>'
+    assert_includes render(drawer).html, '<button data-dukafy-overlay-close="" class="dukafi-button">Close</button>'
   end
 
   def test_every_variant_is_carried_through

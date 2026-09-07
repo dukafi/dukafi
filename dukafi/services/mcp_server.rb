@@ -57,9 +57,12 @@ class McpServer
     read_page with a child's sectionId to work on that section in detail.
     Call get_page_context before adding a section — it returns two existing
     sections and their colors/spacing so new work can match the page.
-    Call get_design_tokens before designing — colors, fonts, type, and spacing
+    Call get_design_tokens before designing — colors, fonts, type, spacing,
+    icons, buttons, inputs, and form-control defaults
     live in one registry. To change an accent or a font, call
-    update_design_tokens then publish; do not restyle every page.
+    update_design_tokens then publish; do not restyle every page. Call
+    get_style_framework_snippet for canvas-ready examples showing how semantic
+    elements, schemes, utilities, buttons, inputs, and forms consume it.
     Call get_recipes before a product loop, search page, homepage spotlight,
     CMS loop, form, cart, reusable component, SEO / "rank for" job, or a
     vague restyle — those overlays are Dukafi-specific; paste the returned
@@ -76,6 +79,15 @@ class McpServer
     rebuilding a newsletter or header that may already exist; insert with
     <div data-dukafy-component="<id>"></div>.
     If the profile is thin, do not invent a founding story or audience.
+    Ask for clarification when missing context would materially change the
+    result — especially visual direction, the target page or section, factual
+    business content, whether a framework change is site-wide, destructive
+    intent, or permission to publish. First use read tools for facts Dukafi can
+    answer. If ambiguity remains, call ask_user with 1–3 concise questions,
+    surface its structured result, STOP the current turn, and wait for the
+    user's answer. Do not guess, mutate, publish, or continue calling tools
+    after ask_user. Do not ask about details that are discoverable or safely
+    reversible.
   TEXT
 
   def initialize(tools: McpTools.all)

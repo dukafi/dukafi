@@ -31,6 +31,7 @@ export function useInstalledFontFaces(
   const css = settings?.tokens?.length
     ? generateFontsCss(settings)
     : generateSiteFontsCss(settings)
+  useEffect(() => {
     if (!css) return
     const styleEl = document.createElement('style')
     styleEl.setAttribute('data-source', dataSource)

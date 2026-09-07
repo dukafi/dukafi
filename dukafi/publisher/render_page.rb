@@ -134,6 +134,8 @@ class Dukafi
         output = definition.render(props, children, prefetched: @prefetched, node: node, current_product: @current_product)
         html = output.fetch(:html)
         classes = class_names(node)
+        classes = ["dukafi-button", *classes] if definition.id == "base.button"
+        classes = ["dukafi-input", *classes] if %w[base.input base.textarea base.select].include?(definition.id)
         if definition.id == "base.body"
           @body_classes = classes
         elsif classes.any?

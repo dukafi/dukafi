@@ -111,7 +111,7 @@ export function InputEditor({ mcClassName, nodeWrapperProps, props }: ModuleComp
   return (
     <input
       {...nodeWrapperProps}
-      className={mcClassName}
+      className={`dukafi-input ${mcClassName}`.trim()}
       type={props.inputType}
       name={props.name}
       id={props.id || undefined}
@@ -129,7 +129,7 @@ export function TextareaEditor({ mcClassName, nodeWrapperProps, props }: ModuleC
   return (
     <textarea
       {...nodeWrapperProps}
-      className={mcClassName}
+      className={`dukafi-input ${mcClassName}`.trim()}
       name={props.name}
       id={props.id || undefined}
       placeholder={props.placeholder || undefined}
@@ -146,7 +146,7 @@ export function SelectEditor({ children, mcClassName, nodeWrapperProps, props }:
   return (
     <select
       {...nodeWrapperProps}
-      className={mcClassName}
+      className={`dukafi-input ${mcClassName}`.trim()}
       name={props.name}
       id={props.id || undefined}
       required={props.required}

@@ -257,6 +257,47 @@ class McpSpec < Minitest::Test
     assert_equal "#be123c", updated.dig("tokens", "colors", 0, "value")
   end
 
+  def test_design_tokens_cover_and_update_the_complete_style_framework
+    updated = JSON.parse(call_tool("update_design_tokens", {
+      "fonts" => [{ "variable" => "font-display", "name" => "Display", "fallback" => "sans-serif" }],
+      "typeStyles" => [{ "tag" => "h1", "fontSize" => "clamp(2rem, 5vw, 5rem)", "fontWeight" => "700" }],
+      "layout" => { "containerWidth" => "regular", "radius" => "lg" },
+      "icons" => { "color" => "heading", "weight" => "6" },
+      "buttons" => { "primaryColor" => "accent", "padding" => "6", "casing" => "uppercase" },
+      "inputs" => { "backgroundColor" => "background", "borderWidth" => "4", "focusColor" => "accent" },
+    }).dig("content", 0, "text"))
+
+    assert_includes updated.fetch("changed"), "upserted font font-display"
+    assert_equal "clamp(2rem, 5vw, 5rem)", updated.dig("tokens", "typeStyles", 0, "fontSize")
+    assert_equal "regular", updated.dig("tokens", "layoutPresets", "containerWidth")
+    assert_equal "heading", updated.dig("tokens", "icons", "color")
+    assert_equal "6", updated.dig("tokens", "buttons", "padding")
+    assert_equal "4", updated.dig("tokens", "inputs", "borderWidth")
+  end
+
+  def test_style_framework_snippet_is_a_read_tool_with_canvas_ready_examples
+    payload = JSON.parse(call_tool("get_style_framework_snippet", { "topic" => "forms" }).dig("content", 0, "text"))
+    assert_equal ["framework-form"], payload.fetch("snippets").map { |row| row.fetch("id") }
+    assert_includes payload.dig("snippets", 0, "html"), "dukafi-input"
+    assert_includes payload.dig("snippets", 0, "html"), "dukafi-button"
+    refute McpTools.write_tool?("get_style_framework_snippet")
+  end
+
+  def test_ask_user_returns_a_blocking_clarification_result_and_is_read_only
+    payload = JSON.parse(call_tool("ask_user", {
+      "reason" => "Two pages could be the target.",
+      "questions" => [{
+        "id" => "target_page", "prompt" => "Which page should I edit?", "kind" => "single_choice",
+        "choices" => [{ "value" => "index", "label" => "Home" }, { "value" => "about", "label" => "About" }],
+      }],
+    }).dig("content", 0, "text"))
+
+    assert_equal true, payload["requiresUserInput"]
+    assert_equal "target_page", payload.dig("questions", 0, "id")
+    assert_includes payload["agentInstruction"], "do not call more tools"
+    refute McpTools.write_tool?("ask_user")
+  end
+
   def test_get_recipes_is_a_read_and_fills_a_cms_loop
     CustomTable.dataset.delete
     CustomTable.create(

@@ -1705,7 +1705,7 @@ class AdminApi < Roda
         require_admin!
 
         r.post("chat") do
-          result = AiChat.call(messages: r.params["messages"])
+          result = AiChat.call(messages: r.params["messages"], attachments: r.params["attachments"])
           unless result.ok?
             status, code, message = ai_chat_error(result.reason)
             # The provider's own words, appended verbatim. Debugging a rejected
@@ -1742,6 +1742,7 @@ class AdminApi < Roda
             prompt: r.params["prompt"],
             slug: r.params["slug"],
             mode: r.params["mode"],
+            attachments: r.params["attachments"],
             origin: public_origin,
           ))
         end

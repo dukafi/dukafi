@@ -1,6 +1,7 @@
 require "net/http"
 require "uri"
 require "json"
+require "base64"
 
 # Proxy one chat turn to the configured model.
 #
@@ -39,8 +40,10 @@ class AiChat
 
   # A conversation plus a document snapshot is large but not unbounded. This is
   # a guard against a runaway client, not a product limit.
-  MAX_REQUEST_BYTES = 512 * 1024
+  MAX_REQUEST_BYTES = 24 * 1024 * 1024
   MAX_MESSAGES = 40
+  MAX_ATTACHMENTS = 4
+  MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
 
   ROLES = %w[system user assistant].freeze
 
@@ -66,7 +69,7 @@ class AiChat
     !settings[:base_url].to_s.strip.empty? && !settings[:model].to_s.strip.empty?
   end
 
-  def self.call(messages:)
+  def self.call(messages:, attachments: nil)
     @last_transport_error = nil
     return failure("not_configured") unless configured?
 
@@ -76,7 +79,8 @@ class AiChat
     uri = endpoint
     return failure("invalid_base_url") unless uri
 
-    payload = JSON.generate(body_for(uri, clean))
+    attached = sanitize_attachments(attachments)
+    payload = JSON.generate(body_for(uri, attach_to_last_user(clean, attached, anthropic: anthropic?(uri))))
     return failure("request_too_large") if payload.bytesize > MAX_REQUEST_BYTES
 
     response = post(uri, payload)
@@ -239,6 +243,57 @@ class AiChat
     end.last(MAX_MESSAGES)
   end
   private_class_method :sanitize
+
+  def self.sanitize_attachments(rows)
+    Array(rows).first(MAX_ATTACHMENTS).filter_map do |row|
+      next unless row.is_a?(Hash)
+      name = File.basename(row["name"].to_s).slice(0, 160).to_s
+      mime = row["mimeType"].to_s.downcase.slice(0, 100).to_s
+      data = row["data"].to_s
+      next if name.empty? || data.empty? || !data.match?(/\A[A-Za-z0-9+\/=\r\n]+\z/)
+      decoded_size = (data.delete("\r\n").length * 3) / 4
+      next if decoded_size > MAX_ATTACHMENT_BYTES
+      { "name" => name, "mimeType" => mime.empty? ? "application/octet-stream" : mime, "data" => data.delete("\r\n") }
+    end
+  end
+  private_class_method :sanitize_attachments
+
+  def self.attach_to_last_user(messages, attachments, anthropic:)
+    return messages if attachments.empty?
+
+    copy = messages.map(&:dup)
+    index = copy.rindex { |message| message["role"] == "user" }
+    return copy if index.nil?
+
+    text = copy[index]["content"].to_s
+    parts = [{ "type" => "text", "text" => text }]
+    attachments.each do |file|
+      mime = file["mimeType"]
+      if mime.start_with?("text/") || text_filename?(file["name"], mime)
+        decoded = Base64.strict_decode64(file["data"]).force_encoding(Encoding::UTF_8).scrub
+        decoded = decoded.byteslice(0, 200_000).to_s
+        parts[0]["text"] = "#{parts[0]['text']}\n\nAttached file #{file['name']}:\n```\n#{decoded}\n```"
+      elsif anthropic
+        type = mime == "application/pdf" ? "document" : "image"
+        parts << { "type" => type, "source" => { "type" => "base64", "media_type" => mime, "data" => file["data"] } }
+      elsif mime.start_with?("image/")
+        parts << { "type" => "image_url", "image_url" => { "url" => "data:#{mime};base64,#{file['data']}" } }
+      else
+        parts << { "type" => "file", "file" => { "filename" => file["name"], "file_data" => "data:#{mime};base64,#{file['data']}" } }
+      end
+    rescue ArgumentError
+      next
+    end
+    copy[index]["content"] = parts
+    copy
+  end
+  private_class_method :attach_to_last_user
+
+  def self.text_filename?(name, mime)
+    return true if %w[application/json application/xml application/javascript].include?(mime)
+    %w[.md .csv .json .html .css .js .ts .tsx .jsx .xml .yaml .yml].include?(File.extname(name).downcase)
+  end
+  private_class_method :text_filename?
 
   # Anthropic wants the system prompt lifted OUT of the message list, and a
   # max_tokens it will not default for you.

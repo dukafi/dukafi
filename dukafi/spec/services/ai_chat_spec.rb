@@ -1,4 +1,5 @@
 require_relative "../spec_helper"
+require "base64"
 
 # The model proxy, tested up to but never across the socket.
 #
@@ -149,6 +150,30 @@ class AiChatSpec < Minitest::Test
 
     assert_nil body["system"]
     assert_equal 2, body["messages"].length
+  end
+
+  def test_openai_attachments_become_multimodal_parts_and_text_context
+    messages = AiChat.send(:attach_to_last_user, turn("Review these"), [
+      { "name" => "mockup.png", "mimeType" => "image/png", "data" => Base64.strict_encode64("png") },
+      { "name" => "notes.md", "mimeType" => "text/markdown", "data" => Base64.strict_encode64("Use the accent token") },
+    ], anthropic: false)
+    parts = messages.first.fetch("content")
+
+    assert_includes parts.first.fetch("text"), "Use the accent token"
+    assert_equal "image_url", parts[1]["type"]
+    assert_match(/\Adata:image\/png;base64,/, parts[1].dig("image_url", "url"))
+  end
+
+  def test_anthropic_attachments_use_image_and_document_sources
+    messages = AiChat.send(:attach_to_last_user, turn("Review these"), [
+      { "name" => "mockup.webp", "mimeType" => "image/webp", "data" => Base64.strict_encode64("webp") },
+      { "name" => "brief.pdf", "mimeType" => "application/pdf", "data" => Base64.strict_encode64("pdf") },
+    ], anthropic: true)
+    parts = messages.first.fetch("content")
+
+    assert_equal %w[text image document], parts.map { |part| part["type"] }
+    assert_equal "base64", parts[1].dig("source", "type")
+    assert_equal "application/pdf", parts[2].dig("source", "media_type")
   end
 
   def test_anthropic_authenticates_with_its_own_header

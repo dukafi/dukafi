@@ -24,7 +24,7 @@
 
 import { apiRequest, ApiError } from '@core/http'
 import { Type } from '@core/utils/typeboxHelpers'
-import { streamAiRun } from '@site/ai/harnessRun'
+import { streamAiRun, type AiRunAttachment, type AiRunClarification } from '@site/ai/harnessRun'
 import { refreshSiteFromServer } from '@site/sync/refreshSiteFromServer'
 import {
   applyEditsToTree,
@@ -49,7 +49,11 @@ export interface AiMessage {
   kind?: 'activity' | 'reply'
   /** How many edits this reply applied. Absent on user turns. */
   applied?: number
+  attachments?: AiAttachment[]
+  clarification?: AiRunClarification
 }
+
+export type AiAttachment = AiRunAttachment
 
 export interface AiProfileDraft {
   startedOn: string
@@ -111,14 +115,15 @@ interface AiSlice {
   aiError: string | null
   aiNeedProfile: boolean
   aiBuildRequest: string | null
+  aiBuildAttachments: AiAttachment[]
   aiPlan: BuildPlan | null
   aiPlanNote: string | null
   aiProvider: string
   aiConnected: boolean
 
   refreshAiConfig: () => Promise<void>
-  sendAiMessage: (text: string) => Promise<void>
-  startAiBuild: (text: string) => Promise<void>
+  sendAiMessage: (text: string, attachments?: AiAttachment[]) => Promise<void>
+  startAiBuild: (text: string, attachments?: AiAttachment[]) => Promise<void>
   submitAiProfile: (draft: AiProfileDraft) => Promise<void>
   applyAiPlan: () => void
   cancelAiPlan: () => void
@@ -134,7 +139,7 @@ declare module '@site/store/types' {
 export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
   const { mutateActiveTreeAndSite } = buildSiteHelpers(set, get)
 
-  async function runBuildPlan(request: string) {
+  async function runBuildPlan(request: string, attachments: AiAttachment[] = []) {
     const context = await apiRequest('/admin/api/cms/store-context', {
       schema: StoreContextSchema,
       fallbackMessage: 'Could not load the store',
@@ -146,6 +151,7 @@ export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
           { role: 'system', content: BUILD_PROMPT },
           { role: 'user', content: `Store context:\n${JSON.stringify(context)}\n\nMerchant request:\n${request}` },
         ],
+        attachments,
       },
       schema: ChatResponseSchema,
       fallbackMessage: 'The assistant could not answer',
@@ -188,6 +194,7 @@ export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
     aiError: null,
     aiNeedProfile: false,
     aiBuildRequest: null,
+    aiBuildAttachments: [],
     aiPlan: null,
     aiPlanNote: null,
     aiProvider: '',
@@ -220,15 +227,16 @@ export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
       return applied
     },
 
-    sendAiMessage: async (text) => {
+    sendAiMessage: async (text, attachments = []) => {
       const trimmed = text.trim()
-      if (trimmed.length === 0 || get().aiPending) return
+      if ((trimmed.length === 0 && attachments.length === 0) || get().aiPending) return
 
-      const history = [...get().aiMessages, { role: 'user' as const, content: trimmed }]
+      const prompt = trimmed || 'Please review the attached files.'
+      const history = [...get().aiMessages, { role: 'user' as const, content: prompt, attachments }]
       set({ aiMessages: history, aiPending: true, aiError: null, aiNotConfigured: false })
 
       if (await isDukafiProvider(get, set)) {
-        await runHarnessWalk(get, set, trimmed, 'landing')
+        await runHarnessWalk(get, set, harnessPrompt(history), 'landing', harnessAttachments(history))
         return
       }
 
@@ -239,8 +247,9 @@ export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
             messages: [
               { role: 'system', content: SYSTEM_PROMPT },
               ...history.slice(0, -1).map((m) => ({ role: m.role, content: m.content })),
-              { role: 'user', content: `${buildAiContext(get())}\n\n${trimmed}` },
+              { role: 'user', content: `${buildAiContext(get())}\n\n${prompt}` },
             ],
+            attachments,
           },
           schema: ChatResponseSchema,
           fallbackMessage: 'The assistant could not answer',
@@ -271,11 +280,12 @@ export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
       }
     },
 
-    startAiBuild: async (text) => {
+    startAiBuild: async (text, attachments = []) => {
       const trimmed = text.trim()
-      if (trimmed.length === 0 || get().aiPending) return
+      if ((trimmed.length === 0 && attachments.length === 0) || get().aiPending) return
 
-      const history = [...get().aiMessages, { role: 'user' as const, content: trimmed }]
+      const prompt = trimmed || 'Please create a plan from the attached files.'
+      const history = [...get().aiMessages, { role: 'user' as const, content: prompt, attachments }]
       set({
         aiMessages: history,
         aiPending: true,
@@ -284,11 +294,12 @@ export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
         aiNeedProfile: false,
         aiPlan: null,
         aiPlanNote: null,
-        aiBuildRequest: trimmed,
+        aiBuildRequest: prompt,
+        aiBuildAttachments: attachments,
       })
 
       if (await isDukafiProvider(get, set)) {
-        await runHarnessWalk(get, set, trimmed, 'landing')
+        await runHarnessWalk(get, set, harnessPrompt(history), 'landing', harnessAttachments(history))
         return
       }
 
@@ -301,7 +312,7 @@ export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
           set({ aiPending: false, aiNeedProfile: true })
           return
         }
-        await runBuildPlan(trimmed)
+        await runBuildPlan(prompt, attachments)
       } catch (error) {
         failAi(set, error)
       }
@@ -318,7 +329,7 @@ export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
           fallbackMessage: 'Could not save the business profile',
         })
         set({ aiNeedProfile: false })
-        await runBuildPlan(request)
+        await runBuildPlan(request, get().aiBuildAttachments)
       } catch (error) {
         failAi(set, error)
       }
@@ -333,6 +344,7 @@ export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
         aiPlan: null,
         aiPlanNote: null,
         aiBuildRequest: null,
+        aiBuildAttachments: [],
         aiNeedProfile: false,
         aiMessages: [...state.aiMessages, {
           role: 'assistant',
@@ -353,6 +365,7 @@ export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
     cancelAiPlan: () => set({
       aiNeedProfile: false,
       aiBuildRequest: null,
+      aiBuildAttachments: [],
       aiPlan: null,
       aiPlanNote: null,
       aiError: null,
@@ -364,12 +377,23 @@ export const createAiSlice: EditorStoreSliceCreator<AiSlice> = (set, get) => {
       aiNotConfigured: false,
       aiNeedProfile: false,
       aiBuildRequest: null,
+      aiBuildAttachments: [],
       aiPlan: null,
       aiPlanNote: null,
     }),
 
     setAiNotConfigured: (value) => set({ aiNotConfigured: value }),
   }
+}
+
+function harnessPrompt(history: AiMessage[]): string {
+  return history.filter((message) => message.role === 'user' && message.kind !== 'activity').slice(-3)
+    .map((message, index, rows) => `${index === rows.length - 1 ? 'Current merchant message' : 'Earlier merchant message'}:\n${message.content}`)
+    .join('\n\n')
+}
+
+function harnessAttachments(history: AiMessage[]): AiAttachment[] {
+  return history.filter((message) => message.role === 'user').flatMap((message) => message.attachments ?? []).slice(-4)
 }
 
 async function isDukafiProvider(
@@ -402,6 +426,7 @@ async function runHarnessWalk(
   ) => void,
   prompt: string,
   mode: string,
+  attachments: AiAttachment[] = [],
 ): Promise<void> {
   const page = get().site?.pages.find((candidate) => candidate.id === get().activePageId)
   const slug = page?.slug || 'index'
@@ -410,6 +435,7 @@ async function runHarnessWalk(
       prompt,
       slug,
       mode,
+      attachments,
       onActivity: (event) => {
         if (event.phase === 'gather' || event.phase === 'brief') return
         set((state) => ({
@@ -429,6 +455,7 @@ async function runHarnessWalk(
           kind: 'reply',
           content: done.reply?.trim()
             || 'Say what you want changed on this page.',
+          ...(done.clarification ? { clarification: done.clarification } : {}),
         }],
       }))
       return

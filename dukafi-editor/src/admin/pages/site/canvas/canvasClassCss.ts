@@ -13,6 +13,7 @@ import type { StyleRule, ConditionDef } from '@core/page-tree'
 import type { SiteFontsSettings } from '@core/fonts'
 import type {
   FrameworkColorSettings,
+  FrameworkIconsSettings,
   FrameworkPreferencesSettings,
   FrameworkSpacingSettings,
   FrameworkTypographySettings,
@@ -32,6 +33,7 @@ function buildCanvasClassCSS(
   frameworkPreferences?: FrameworkPreferencesSettings | null,
   fonts?: SiteFontsSettings | null,
   responsiveOptions: CanvasResponsiveCssOptions = {},
+  frameworkIcons?: FrameworkIconsSettings | null,
 ): string {
   const blocks: string[] = []
 
@@ -54,6 +56,7 @@ function buildCanvasClassCSS(
     colors: frameworkColors,
     typography: frameworkTypography,
     spacing: frameworkSpacing,
+    icons: frameworkIcons,
     preferences: frameworkPreferences,
   })
   if (frameworkCss) blocks.push(frameworkCss)
@@ -97,6 +100,7 @@ export function createCanvasClassCssMemo(
     frameworkPreferences,
     fonts,
     responsiveOptions = {},
+    frameworkIcons,
   ) => {
     const inputs = [
       classes,
@@ -108,6 +112,7 @@ export function createCanvasClassCssMemo(
       frameworkPreferences,
       fonts,
       responsiveOptions.mediaSignature,
+      frameworkIcons,
     ]
     const prev = lastInputs
     if (prev && inputs.every((value, i) => Object.is(value, prev[i]))) {
@@ -123,6 +128,7 @@ export function createCanvasClassCssMemo(
       frameworkPreferences,
       fonts,
       responsiveOptions,
+      frameworkIcons,
     )
     lastInputs = inputs
     return lastCss

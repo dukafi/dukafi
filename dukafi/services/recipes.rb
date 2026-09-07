@@ -114,7 +114,7 @@ module Recipes
         <section id="products" class="w-full px-6 py-16 md:py-24">
           <div class="mx-auto max-w-6xl">
             <div data-dukafy-loop="products" data-dukafy-loop-per-page="8" class="grid grid-cols-2 gap-6 md:grid-cols-4">
-              <article class="rounded-lg border p-4">
+              <article class="border p-4">
                 <a data-dukafy-bind-href="currentEntry.href"><img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full"></a>
                 <h3 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h3>
                 <p data-dukafy-bind-text="currentEntry.priceDisplay" class="text-sm"></p>
@@ -148,7 +148,7 @@ module Recipes
         </form>
         <section id="search-results">
           <div data-dukafy-loop="current-query" data-dukafy-loop-per-page="12" class="mt-8 grid grid-cols-2 gap-6 md:grid-cols-4">
-            <article class="rounded-lg border p-4">
+            <article class="border p-4">
               <a data-dukafy-bind-href="currentEntry.href"><img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full"></a>
               <h3 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h3>
               <p data-dukafy-bind-text="currentEntry.priceDisplay" class="text-sm"></p>
@@ -175,7 +175,7 @@ module Recipes
         <section id="#{escape(slug)}" class="w-full px-6 py-16 md:py-24">
           <div class="mx-auto max-w-6xl">
             <div data-dukafy-loop="collections/#{slug}.products" data-dukafy-loop-per-page="8" class="grid grid-cols-2 gap-6 md:grid-cols-4">
-              <article class="rounded-lg border p-4">
+              <article class="border p-4">
                 <a data-dukafy-bind-href="currentEntry.href"><img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full"></a>
                 <h3 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h3>
                 <p data-dukafy-bind-text="currentEntry.priceDisplay" class="text-sm"></p>
@@ -207,7 +207,7 @@ module Recipes
           <div class="mx-auto max-w-6xl">
             <h2 class="text-xl font-semibold">#{escape(heading)}</h2>
             <div data-dukafy-loop="collections/#{slug}.products" data-dukafy-loop-per-page="4" class="mt-6 grid grid-cols-2 gap-6 md:grid-cols-4">
-            <article class="rounded-lg border p-4">
+            <article class="border p-4">
               <a data-dukafy-bind-href="currentEntry.href"><img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full"></a>
               <h3 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h3>
               <p data-dukafy-bind-text="currentEntry.priceDisplay" class="text-sm"></p>
@@ -240,7 +240,7 @@ module Recipes
           </div>
           <div class="mx-auto mt-10 max-w-6xl">
             <div data-dukafy-loop="collections/#{slug}.products" data-dukafy-loop-per-page="12" class="grid grid-cols-2 gap-6 md:grid-cols-4">
-              <article class="rounded-lg border p-4">
+              <article class="border p-4">
                 <a data-dukafy-bind-href="currentEntry.href"><img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full"></a>
                 <h2 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h2>
                 <p data-dukafy-bind-text="currentEntry.priceDisplay" class="text-sm"></p>
@@ -285,7 +285,7 @@ module Recipes
             <p class="text-sm tracking-wide text-neutral-500">A short kicker</p>
             <h2 class="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">One clear heading</h2>
             <p class="mt-4 text-base leading-relaxed text-neutral-600">One or two sentences. Products and photos carry color. This block stays plain.</p>
-            <a href="/collections/featured" class="mt-8 inline-block rounded-lg bg-black px-5 py-2.5 text-white">Shop the range</a>
+            <a href="/collections/featured" class="mt-8 inline-block bg-black px-5 py-2.5 text-white">Shop the range</a>
           </div>
         </section>
       HTML
@@ -293,6 +293,7 @@ module Recipes
         "Vague prompts ('make it look better', 'build me a landing page', 'add a section') use this: white canvas, one ink, one muted body, one black (or text-primary / bg-primary) accent. Do not invent a palette.",
         "Never bg-gradient-*, from-/via-/to-*, indigo/purple/pink/cyan washes, blobs, backdrop-blur, shadow-xl, or emoji headings. 'Look better' is more space and fewer colors — setClasses — not a new wrapper.",
         "If get_design_tokens lists primary, swap bg-black/text-neutral-900 for bg-primary/text-primary. Match the page's px/py and type size when a pattern already exists; do not copy a decorative gradient from a sampled section.",
+        "Do not add rounded-* on cards, buttons, inputs, or images — site --radius already paints them. rounded-full is for pills (search chips) only.",
         "Composition: this recipe is the ABOUT / CONTACT column (max-w-3xl inside a full-width section). Hero uses quiet-hero (split). Product grids stay full width (max-w-6xl) — never wrap a loop in max-w-3xl.",
         "Photos and product loops sit on this plain ground. Do not put a gradient behind a grid.",
       ],
@@ -309,7 +310,7 @@ module Recipes
             <div>
               <h1 class="text-4xl font-semibold tracking-tight text-neutral-900 md:text-5xl">One promise from the catalogue</h1>
               <p class="mt-4 text-base leading-relaxed text-neutral-600">One sentence. No origin story. No extra palette.</p>
-              <a href="/collections/featured" class="mt-8 inline-block rounded-lg bg-black px-5 py-2.5 text-white">Shop the range</a>
+              <a href="/collections/featured" class="mt-8 inline-block bg-black px-5 py-2.5 text-white">Shop the range</a>
             </div>
             <img alt="" class="w-full">
           </div>
@@ -331,7 +332,7 @@ module Recipes
         <section id="related" class="mt-16">
           <h2 class="text-xl font-semibold">Related products</h2>
           <div data-dukafy-loop="currentEntry.related" data-dukafy-loop-per-page="4" class="mt-6 grid grid-cols-2 gap-6 md:grid-cols-4">
-            <article class="rounded-lg border p-4">
+            <article class="border p-4">
               <a data-dukafy-bind-href="currentEntry.href"><img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full"></a>
               <h3 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h3>
               <p data-dukafy-bind-text="currentEntry.priceDisplay" class="text-sm"></p>
@@ -357,7 +358,7 @@ module Recipes
       table ? "Loop CMS table #{slug}" : "Loop a CMS table (create_data_table first)",
       <<~HTML.strip,
         <div data-dukafy-loop="data/#{slug}" class="grid gap-6 md:grid-cols-3">
-          <article class="rounded-lg border p-4">
+          <article class="border p-4">
             #{inner}
           </article>
         </div>
@@ -373,14 +374,14 @@ module Recipes
   def cms_form(table)
     slug = table ? table["slug"] : "contact"
     fields = cms_form_fields(table)
-    inner = fields.empty? ? '<label>Email</label><input type="email" name="email" required class="rounded border px-3 py-2">' : fields.join("\n  ")
+    inner = fields.empty? ? '<label>Email</label><input type="email" name="email" required class="border px-3 py-2">' : fields.join("\n  ")
     recipe(
       "cms-form", "cms",
       table ? "Form that writes into table #{slug}" : "Form connected to a CMS table (create the table first)",
       <<~HTML.strip,
         <form data-dukafy-form-mode="cms" data-dukafy-form-id="#{slug}" data-dukafy-target-table="#{slug}" class="flex flex-col gap-3">
           #{inner}
-          <button type="submit" class="rounded bg-black px-4 py-2 text-white">Send</button>
+          <button type="submit" class="bg-black px-4 py-2 text-white">Send</button>
         </form>
       HTML
       [
@@ -398,9 +399,9 @@ module Recipes
       <<~HTML.strip,
         <form data-dukafy-region="form" class="flex flex-col gap-3">
           <p data-dukafy-visible-when="form.hasError:isTrue" data-dukafy-bind-text="form.error" class="text-sm"></p>
-          <input type="email" name="email" required class="rounded border px-3 py-2">
-          <input type="password" name="password" required class="rounded border px-3 py-2">
-          <button type="submit" data-dukafy-action="account.login" class="rounded bg-black px-4 py-2 text-white">Sign in</button>
+          <input type="email" name="email" required class="border px-3 py-2">
+          <input type="password" name="password" required class="border px-3 py-2">
+          <button type="submit" data-dukafy-action="account.login" class="bg-black px-4 py-2 text-white">Sign in</button>
         </form>
       HTML
       [
@@ -416,18 +417,18 @@ module Recipes
       "product-card-cart", "cart",
       "Product card with add-to-cart and in-cart quantity",
       <<~HTML.strip,
-        <article class="rounded-lg border p-4">
+        <article class="border p-4">
           <a data-dukafy-bind-href="currentEntry.href"><img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full"></a>
           <h3 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h3>
           <p data-dukafy-bind-text="currentEntry.priceDisplay"></p>
           <div data-dukafy-region="cart" class="mt-3">
             <button data-dukafy-action="cart.addItem" data-dukafy-action-quantity="1"
                     data-dukafy-visible-when="currentEntry.inCart:isFalse"
-                    class="w-full rounded bg-black px-4 py-2 text-white">Add to cart</button>
+                    class="w-full bg-black px-4 py-2 text-white">Add to cart</button>
             <div data-dukafy-visible-when="currentEntry.inCart:isTrue" class="flex items-center gap-2">
-              <button data-dukafy-action="cart.setQuantity" data-dukafy-action-delta="-1" class="rounded border px-3 py-1">-</button>
+              <button data-dukafy-action="cart.setQuantity" data-dukafy-action-delta="-1" class="border px-3 py-1">-</button>
               <span data-dukafy-bind-text="currentEntry.cartQuantity" class="min-w-8 text-center"></span>
-              <button data-dukafy-action="cart.setQuantity" data-dukafy-action-delta="1" class="rounded border px-3 py-1">+</button>
+              <button data-dukafy-action="cart.setQuantity" data-dukafy-action-delta="1" class="border px-3 py-1">+</button>
             </div>
           </div>
         </article>
@@ -445,7 +446,7 @@ module Recipes
       "cart-drawer", "overlays",
       "Cart drawer: overlay + cart.items loop + totals",
       <<~HTML.strip,
-        <button data-dukafy-action="overlay.open" data-dukafy-action-target="CART_OVERLAY_UID" class="rounded border px-3 py-2">Cart</button>
+        <button data-dukafy-action="overlay.open" data-dukafy-action-target="CART_OVERLAY_UID" class="border px-3 py-2">Cart</button>
         <div data-dukafy-overlay="sheet-right" data-dukafy-region="cart" class="ml-auto h-full w-full max-w-md bg-white p-6">
           <button data-dukafy-action="overlay.close" class="ml-auto block text-2xl">&times;</button>
           <p data-dukafy-visible-when="cart.isEmpty:isTrue">Your cart is empty.</p>
@@ -456,7 +457,7 @@ module Recipes
             </div>
           </div>
           <p data-dukafy-bind-text="cart.totalDisplay" class="mt-4 font-medium"></p>
-          <a href="/checkout" data-dukafy-visible-when="cart.isEmpty:isFalse" class="mt-4 block rounded bg-black px-4 py-2 text-center text-white">Checkout</a>
+          <a href="/checkout" data-dukafy-visible-when="cart.isEmpty:isFalse" class="mt-4 block bg-black px-4 py-2 text-center text-white">Checkout</a>
         </div>
       HTML
       [
@@ -507,9 +508,9 @@ module Recipes
       label = id if label.empty?
       type = id.include?("email") ? "email" : "text"
       if col["type"].to_s == "longText"
-        %(<label>#{escape(label)}</label>\n  <textarea name="#{id}" class="rounded border px-3 py-2"></textarea>)
+        %(<label>#{escape(label)}</label>\n  <textarea name="#{id}" class="border px-3 py-2"></textarea>)
       else
-        %(<label>#{escape(label)}</label>\n  <input type="#{type}" name="#{id}" class="rounded border px-3 py-2">)
+        %(<label>#{escape(label)}</label>\n  <input type="#{type}" name="#{id}" class="border px-3 py-2">)
       end
     end
   end
@@ -517,8 +518,8 @@ module Recipes
   def pager_nav
     <<~HTML.strip
       <nav data-dukafy-pagination class="col-span-full mt-8 flex items-center justify-center gap-4">
-        <a data-dukafy-action="loop.previous" data-dukafy-visible-when="loop.hasPrevious:isTrue" class="rounded border px-4 py-2">Previous</a>
-        <a data-dukafy-action="loop.next" data-dukafy-visible-when="loop.hasNext:isTrue" class="rounded border px-4 py-2">Next</a>
+        <a data-dukafy-action="loop.previous" data-dukafy-visible-when="loop.hasPrevious:isTrue" class="border px-4 py-2">Previous</a>
+        <a data-dukafy-action="loop.next" data-dukafy-visible-when="loop.hasNext:isTrue" class="border px-4 py-2">Next</a>
       </nav>
     HTML
   end

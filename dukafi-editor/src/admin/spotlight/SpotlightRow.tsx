@@ -60,6 +60,7 @@ import { ListBoxSolidIcon } from 'pixel-art-icons/icons/list-box-solid'
 import { ProportionsSolidIcon } from 'pixel-art-icons/icons/proportions-solid'
 import { PowerIcon } from 'pixel-art-icons/icons/power'
 import { DockSolidIcon } from 'pixel-art-icons/icons/dock-solid'
+import { StarSolidIcon } from 'pixel-art-icons/icons/star-solid'
 import { ShortcutKeys } from '@ui/components/Kbd'
 import styles from './Spotlight.module.css'
 import type { Command } from './types'
@@ -121,6 +122,7 @@ const ICON_MAP: Record<string, IconComponent> = {
   'proportions-solid': ProportionsSolidIcon,
   'power': PowerIcon,
   'dock-solid': DockSolidIcon,
+  'star-solid': StarSolidIcon,
 }
 
 function SpotlightRowIcon({ iconName }: { iconName?: string }): ReactNode {

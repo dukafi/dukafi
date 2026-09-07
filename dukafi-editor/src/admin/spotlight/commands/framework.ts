@@ -16,7 +16,7 @@ const FRAMEWORK_CAPABILITY = 'site.style.edit'
 // Local mirror of the Framework panel's tab union — spotlight commands must not
 // import editor-store internals (slices/types). Gated by
 // spotlight-no-direct-store-mutation.test.ts.
-type FrameworkPanelTab = 'schemes' | 'colors' | 'typography' | 'spacing'
+type FrameworkPanelTab = 'schemes' | 'colors' | 'typography' | 'spacing' | 'icons' | 'buttons' | 'inputs'
 
 /** Open the Framework panel and switch it to the given tab. */
 async function openFrameworkTab(tab: FrameworkPanelTab): Promise<void> {
@@ -31,7 +31,7 @@ export function getFrameworkCommands(): Command[] {
     {
       id: 'framework.open',
       title: 'Open Framework panel',
-      subtitle: 'Schemes, colors, typography, and spacing',
+      subtitle: 'Schemes, colors, typography, spacing, icons, buttons, and inputs',
       group: 'framework',
       iconName: 'colors-swatch-solid',
       keywords: ['framework', 'design', 'tokens', 'schemes', 'open'],
@@ -119,6 +119,25 @@ export function getFrameworkCommands(): Command[] {
           await openFrameworkTab('spacing')
         } catch (err) {
           console.error('[spotlight] openSpacing failed:', err)
+        }
+      },
+    },
+
+    {
+      id: 'framework.openIcons',
+      title: 'Open Icons',
+      subtitle: 'Site defaults for inline SVG icons',
+      group: 'framework',
+      iconName: 'star-solid',
+      keywords: ['icons', 'svg', 'radius', 'weight', 'tokens', 'design', 'framework', 'open'],
+      workspaces: ['site'],
+      capability: FRAMEWORK_CAPABILITY,
+      run: async (ctx) => {
+        ctx.closeSpotlight()
+        try {
+          await openFrameworkTab('icons')
+        } catch (err) {
+          console.error('[spotlight] openIcons failed:', err)
         }
       },
     },

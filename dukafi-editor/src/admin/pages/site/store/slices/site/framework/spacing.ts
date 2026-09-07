@@ -14,6 +14,7 @@ import {
   buildDefaultSpacingGroup,
   makeFreshSpacingGroup,
   nextSpacingTabValues,
+  resolveSpacingPresets,
 } from '@core/framework'
 import { createScaleGroupActions } from './scaleGroups'
 import type { SiteSlice, SiteSliceHelpers } from '@site/store/slices/site/types'
@@ -57,6 +58,7 @@ type FrameworkSpacingActions = Pick<
   | 'deleteFrameworkSpacingGroup'
   | 'upsertFrameworkSpacingManualSize'
   | 'setFrameworkSpacingClassGenerators'
+  | 'updateFrameworkSpacingPresets'
 >
 
 export function createFrameworkSpacingActions(
@@ -78,5 +80,19 @@ export function createFrameworkSpacingActions(
     deleteFrameworkSpacingGroup: inner.deleteGroup,
     upsertFrameworkSpacingManualSize: inner.upsertManualSize,
     setFrameworkSpacingClassGenerators: inner.setClassGenerators,
+    updateFrameworkSpacingPresets(patch) {
+      helpers.mutateSite((draft) => {
+        if (!draft.settings.framework) {
+          draft.settings.framework = { colors: { tokens: [] } }
+        }
+        const framework = draft.settings.framework
+        if (!framework.spacing) {
+          framework.spacing = { groups: [], classes: [] }
+        }
+        const spacing = framework.spacing
+        spacing.presets = { ...resolveSpacingPresets(spacing), ...patch }
+        return true
+      }, { coalesceKey: 'framework-spacing-presets' })
+    },
   }
 }

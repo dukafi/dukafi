@@ -21,6 +21,7 @@ class DesignTokensSpec < Minitest::Test
               "generateUtilities" => { "text" => true, "background" => true, "border" => false, "fill" => false },
             }],
           },
+          "spacing" => { "groups" => [] },
         },
         "fonts" => {
           "items" => [{ "id" => "f1", "family" => "Inter", "source" => "google" }],
@@ -40,6 +41,13 @@ class DesignTokensSpec < Minitest::Test
     font = payload.dig("fonts", "tokens", 0)
     assert_equal "font-primary", font.fetch("variable")
     assert_equal "Inter", font.fetch("family")
+    assert_equal "var(--container-wide)", payload.dig("layout", "--container-width")
+    assert_equal "1.5rem", payload.dig("layout", "--card-padding")
+    assert_equal "5rem", payload.dig("layout", "--space-vertical")
+    assert_equal "1.5rem", payload.dig("layout", "--space-horizontal")
+    assert_equal "var(--radius-md)", payload.dig("layout", "--radius")
+    assert_equal "var(--radius)", payload.dig("layout", "--radius-button")
+    assert_equal "var(--scheme-accent, currentColor)", payload.dig("layout", "--icon-color")
   end
 
   def test_updating_primary_rewrites_the_variable_and_keeps_bound_classes

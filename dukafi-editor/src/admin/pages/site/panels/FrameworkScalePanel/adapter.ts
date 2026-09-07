@@ -131,8 +131,8 @@ export interface ScaleAdapter<G, C> {
    */
   scalesSectionIcon?: IconComponent
   /**
-   * Hide the built-in Scales + Utilities sections. Typography uses this so
-   * the panel is Fonts + Type styles only; the scale engine still runs.
+   * Hide the built-in Scales + Utilities sections. Typography and Spacing
+   * use this so the panel is semantic defaults only; the scale engine still runs.
    */
   hideScaleSections?: boolean
   /**

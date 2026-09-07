@@ -36,7 +36,7 @@ export const ButtonEditor: React.FC<ModuleComponentProps<ButtonStoredProps>> = (
         href: anchor.href,
         target: props.target,
         rel: anchorRel(props.target) ?? undefined,
-        className: mcClassName,
+        className: `dukafi-button ${mcClassName}`.trim(),
         ...(inlineEdit ? inlineEditableElementProps(inlineEdit) : {}),
       },
       inlineEdit ? undefined : label,
@@ -48,7 +48,7 @@ export const ButtonEditor: React.FC<ModuleComponentProps<ButtonStoredProps>> = (
       ...nodeWrapperProps,
       ...htmlAttrs,
       type: 'button',
-      className: mcClassName,
+      className: `dukafi-button ${mcClassName}`.trim(),
       // A disabled button can't be focused/edited — never disable while editing.
       disabled: inlineEdit ? undefined : props.disabled,
       ...(inlineEdit ? inlineEditableElementProps(inlineEdit) : {}),

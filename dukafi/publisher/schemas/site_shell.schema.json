@@ -267,10 +267,77 @@
                 }
               }
             },
+            "colorSchemes": {
+              "type": "object",
+              "required": [
+                "schemes"
+              ],
+              "properties": {
+                "schemes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "slug",
+                      "name",
+                      "order",
+                      "roles"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "slug": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "order": {
+                        "type": "number"
+                      },
+                      "roles": {
+                        "type": "object",
+                        "required": [
+                          "background",
+                          "secondary",
+                          "heading",
+                          "body",
+                          "accent",
+                          "border"
+                        ],
+                        "properties": {
+                          "background": {
+                            "type": "string"
+                          },
+                          "secondary": {
+                            "type": "string"
+                          },
+                          "heading": {
+                            "type": "string"
+                          },
+                          "body": {
+                            "type": "string"
+                          },
+                          "accent": {
+                            "type": "string"
+                          },
+                          "border": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
             "typography": {
               "type": "object",
               "required": [
-                "groups"
+                "groups",
+                "styles"
               ],
               "properties": {
                 "groups": {
@@ -447,28 +514,83 @@
                     }
                   }
                 },
-                "isDisabled": {
-                  "type": "boolean"
-                },
                 "styles": {
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "required": ["tag"],
+                    "required": [
+                      "tag",
+                      "fontFamily",
+                      "fontSize",
+                      "fontWeight",
+                      "letterSpacing",
+                      "lineHeight",
+                      "textTransform",
+                      "maxWidth"
+                    ],
                     "properties": {
                       "tag": {
-                        "type": "string",
-                        "enum": ["h1", "h2", "h3", "h4", "h5", "h6", "h7", "p"]
+                        "anyOf": [
+                          {
+                            "const": "h1",
+                            "type": "string"
+                          },
+                          {
+                            "const": "h2",
+                            "type": "string"
+                          },
+                          {
+                            "const": "h3",
+                            "type": "string"
+                          },
+                          {
+                            "const": "h4",
+                            "type": "string"
+                          },
+                          {
+                            "const": "h5",
+                            "type": "string"
+                          },
+                          {
+                            "const": "h6",
+                            "type": "string"
+                          },
+                          {
+                            "const": "h7",
+                            "type": "string"
+                          },
+                          {
+                            "const": "p",
+                            "type": "string"
+                          }
+                        ]
                       },
-                      "fontFamily": { "type": "string" },
-                      "fontSize": { "type": "string" },
-                      "fontWeight": { "type": "string" },
-                      "letterSpacing": { "type": "string" },
-                      "lineHeight": { "type": "string" },
-                      "textTransform": { "type": "string" },
-                      "maxWidth": { "type": "string" }
+                      "fontFamily": {
+                        "type": "string"
+                      },
+                      "fontSize": {
+                        "type": "string"
+                      },
+                      "fontWeight": {
+                        "type": "string"
+                      },
+                      "letterSpacing": {
+                        "type": "string"
+                      },
+                      "lineHeight": {
+                        "type": "string"
+                      },
+                      "textTransform": {
+                        "type": "string"
+                      },
+                      "maxWidth": {
+                        "type": "string"
+                      }
                     }
                   }
+                },
+                "isDisabled": {
+                  "type": "boolean"
                 }
               }
             },
@@ -652,8 +774,879 @@
                     }
                   }
                 },
+                "presets": {
+                  "type": "object",
+                  "required": [
+                    "containerWidth",
+                    "cardPadding",
+                    "vertical",
+                    "horizontal",
+                    "radius"
+                  ],
+                  "properties": {
+                    "containerWidth": {
+                      "anyOf": [
+                        {
+                          "const": "narrow",
+                          "type": "string"
+                        },
+                        {
+                          "const": "regular",
+                          "type": "string"
+                        },
+                        {
+                          "const": "wide",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "cardPadding": {
+                      "anyOf": [
+                        {
+                          "const": "tight",
+                          "type": "string"
+                        },
+                        {
+                          "const": "regular",
+                          "type": "string"
+                        },
+                        {
+                          "const": "roomy",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "vertical": {
+                      "anyOf": [
+                        {
+                          "const": "xs",
+                          "type": "string"
+                        },
+                        {
+                          "const": "s",
+                          "type": "string"
+                        },
+                        {
+                          "const": "m",
+                          "type": "string"
+                        },
+                        {
+                          "const": "l",
+                          "type": "string"
+                        },
+                        {
+                          "const": "xl",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "horizontal": {
+                      "anyOf": [
+                        {
+                          "const": "xs",
+                          "type": "string"
+                        },
+                        {
+                          "const": "s",
+                          "type": "string"
+                        },
+                        {
+                          "const": "m",
+                          "type": "string"
+                        },
+                        {
+                          "const": "l",
+                          "type": "string"
+                        },
+                        {
+                          "const": "xl",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "radius": {
+                      "anyOf": [
+                        {
+                          "const": "none",
+                          "type": "string"
+                        },
+                        {
+                          "const": "sm",
+                          "type": "string"
+                        },
+                        {
+                          "const": "md",
+                          "type": "string"
+                        },
+                        {
+                          "const": "lg",
+                          "type": "string"
+                        },
+                        {
+                          "const": "full",
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  }
+                },
                 "isDisabled": {
                   "type": "boolean"
+                }
+              }
+            },
+            "icons": {
+              "type": "object",
+              "required": [
+                "color",
+                "style",
+                "weight",
+                "fill",
+                "treatment",
+                "fillIntensity",
+                "padding",
+                "radius",
+                "radiusLinked"
+              ],
+              "properties": {
+                "color": {
+                  "anyOf": [
+                    {
+                      "const": "accent",
+                      "type": "string"
+                    },
+                    {
+                      "const": "heading",
+                      "type": "string"
+                    },
+                    {
+                      "const": "body",
+                      "type": "string"
+                    },
+                    {
+                      "const": "border",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "style": {
+                  "anyOf": [
+                    {
+                      "const": "outlined",
+                      "type": "string"
+                    },
+                    {
+                      "const": "filled",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "weight": {
+                  "anyOf": [
+                    {
+                      "const": "1",
+                      "type": "string"
+                    },
+                    {
+                      "const": "2",
+                      "type": "string"
+                    },
+                    {
+                      "const": "3",
+                      "type": "string"
+                    },
+                    {
+                      "const": "4",
+                      "type": "string"
+                    },
+                    {
+                      "const": "5",
+                      "type": "string"
+                    },
+                    {
+                      "const": "6",
+                      "type": "string"
+                    },
+                    {
+                      "const": "7",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "fill": {
+                  "anyOf": [
+                    {
+                      "const": "outline",
+                      "type": "string"
+                    },
+                    {
+                      "const": "fill",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "treatment": {
+                  "anyOf": [
+                    {
+                      "const": "none",
+                      "type": "string"
+                    },
+                    {
+                      "const": "fill",
+                      "type": "string"
+                    },
+                    {
+                      "const": "outline",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "fillIntensity": {
+                  "anyOf": [
+                    {
+                      "const": "subtle",
+                      "type": "string"
+                    },
+                    {
+                      "const": "strong",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "padding": {
+                  "anyOf": [
+                    {
+                      "const": "1",
+                      "type": "string"
+                    },
+                    {
+                      "const": "2",
+                      "type": "string"
+                    },
+                    {
+                      "const": "3",
+                      "type": "string"
+                    },
+                    {
+                      "const": "4",
+                      "type": "string"
+                    },
+                    {
+                      "const": "5",
+                      "type": "string"
+                    },
+                    {
+                      "const": "6",
+                      "type": "string"
+                    },
+                    {
+                      "const": "7",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "radius": {
+                  "anyOf": [
+                    {
+                      "const": "1",
+                      "type": "string"
+                    },
+                    {
+                      "const": "2",
+                      "type": "string"
+                    },
+                    {
+                      "const": "3",
+                      "type": "string"
+                    },
+                    {
+                      "const": "4",
+                      "type": "string"
+                    },
+                    {
+                      "const": "5",
+                      "type": "string"
+                    },
+                    {
+                      "const": "6",
+                      "type": "string"
+                    },
+                    {
+                      "const": "7",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "radiusLinked": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "buttons": {
+              "type": "object",
+              "required": [
+                "primaryColor",
+                "secondaryColor",
+                "linkColor",
+                "padding",
+                "radius",
+                "radiusLinked",
+                "fontVariable",
+                "fontSize",
+                "fontWeight",
+                "casing",
+                "letterSpacing"
+              ],
+              "properties": {
+                "primaryColor": {
+                  "anyOf": [
+                    {
+                      "const": "accent",
+                      "type": "string"
+                    },
+                    {
+                      "const": "secondary",
+                      "type": "string"
+                    },
+                    {
+                      "const": "heading",
+                      "type": "string"
+                    },
+                    {
+                      "const": "body",
+                      "type": "string"
+                    },
+                    {
+                      "const": "border",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "secondaryColor": {
+                  "anyOf": [
+                    {
+                      "const": "accent",
+                      "type": "string"
+                    },
+                    {
+                      "const": "secondary",
+                      "type": "string"
+                    },
+                    {
+                      "const": "heading",
+                      "type": "string"
+                    },
+                    {
+                      "const": "body",
+                      "type": "string"
+                    },
+                    {
+                      "const": "border",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "linkColor": {
+                  "anyOf": [
+                    {
+                      "const": "accent",
+                      "type": "string"
+                    },
+                    {
+                      "const": "secondary",
+                      "type": "string"
+                    },
+                    {
+                      "const": "heading",
+                      "type": "string"
+                    },
+                    {
+                      "const": "body",
+                      "type": "string"
+                    },
+                    {
+                      "const": "border",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "padding": {
+                  "anyOf": [
+                    {
+                      "const": "1",
+                      "type": "string"
+                    },
+                    {
+                      "const": "2",
+                      "type": "string"
+                    },
+                    {
+                      "const": "3",
+                      "type": "string"
+                    },
+                    {
+                      "const": "4",
+                      "type": "string"
+                    },
+                    {
+                      "const": "5",
+                      "type": "string"
+                    },
+                    {
+                      "const": "6",
+                      "type": "string"
+                    },
+                    {
+                      "const": "7",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "radius": {
+                  "anyOf": [
+                    {
+                      "const": "1",
+                      "type": "string"
+                    },
+                    {
+                      "const": "2",
+                      "type": "string"
+                    },
+                    {
+                      "const": "3",
+                      "type": "string"
+                    },
+                    {
+                      "const": "4",
+                      "type": "string"
+                    },
+                    {
+                      "const": "5",
+                      "type": "string"
+                    },
+                    {
+                      "const": "6",
+                      "type": "string"
+                    },
+                    {
+                      "const": "7",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "radiusLinked": {
+                  "type": "boolean"
+                },
+                "fontVariable": {
+                  "type": "string"
+                },
+                "fontSize": {
+                  "anyOf": [
+                    {
+                      "const": "1",
+                      "type": "string"
+                    },
+                    {
+                      "const": "2",
+                      "type": "string"
+                    },
+                    {
+                      "const": "3",
+                      "type": "string"
+                    },
+                    {
+                      "const": "4",
+                      "type": "string"
+                    },
+                    {
+                      "const": "5",
+                      "type": "string"
+                    },
+                    {
+                      "const": "6",
+                      "type": "string"
+                    },
+                    {
+                      "const": "7",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "fontWeight": {
+                  "anyOf": [
+                    {
+                      "const": "1",
+                      "type": "string"
+                    },
+                    {
+                      "const": "2",
+                      "type": "string"
+                    },
+                    {
+                      "const": "3",
+                      "type": "string"
+                    },
+                    {
+                      "const": "4",
+                      "type": "string"
+                    },
+                    {
+                      "const": "5",
+                      "type": "string"
+                    },
+                    {
+                      "const": "6",
+                      "type": "string"
+                    },
+                    {
+                      "const": "7",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "casing": {
+                  "anyOf": [
+                    {
+                      "const": "normal",
+                      "type": "string"
+                    },
+                    {
+                      "const": "capitalize",
+                      "type": "string"
+                    },
+                    {
+                      "const": "uppercase",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "letterSpacing": {
+                  "anyOf": [
+                    {
+                      "const": "1",
+                      "type": "string"
+                    },
+                    {
+                      "const": "2",
+                      "type": "string"
+                    },
+                    {
+                      "const": "3",
+                      "type": "string"
+                    },
+                    {
+                      "const": "4",
+                      "type": "string"
+                    },
+                    {
+                      "const": "5",
+                      "type": "string"
+                    },
+                    {
+                      "const": "6",
+                      "type": "string"
+                    },
+                    {
+                      "const": "7",
+                      "type": "string"
+                    }
+                  ]
+                }
+              }
+            },
+            "inputs": {
+              "type": "object",
+              "required": [
+                "backgroundColor",
+                "textColor",
+                "borderColor",
+                "focusColor",
+                "padding",
+                "radius",
+                "radiusLinked",
+                "borderWidth",
+                "fontVariable",
+                "fontSize",
+                "fontWeight"
+              ],
+              "properties": {
+                "backgroundColor": {
+                  "anyOf": [
+                    {
+                      "const": "background",
+                      "type": "string"
+                    },
+                    {
+                      "const": "accent",
+                      "type": "string"
+                    },
+                    {
+                      "const": "secondary",
+                      "type": "string"
+                    },
+                    {
+                      "const": "heading",
+                      "type": "string"
+                    },
+                    {
+                      "const": "body",
+                      "type": "string"
+                    },
+                    {
+                      "const": "border",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "textColor": {
+                  "anyOf": [
+                    {
+                      "const": "background",
+                      "type": "string"
+                    },
+                    {
+                      "const": "accent",
+                      "type": "string"
+                    },
+                    {
+                      "const": "secondary",
+                      "type": "string"
+                    },
+                    {
+                      "const": "heading",
+                      "type": "string"
+                    },
+                    {
+                      "const": "body",
+                      "type": "string"
+                    },
+                    {
+                      "const": "border",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "borderColor": {
+                  "anyOf": [
+                    {
+                      "const": "background",
+                      "type": "string"
+                    },
+                    {
+                      "const": "accent",
+                      "type": "string"
+                    },
+                    {
+                      "const": "secondary",
+                      "type": "string"
+                    },
+                    {
+                      "const": "heading",
+                      "type": "string"
+                    },
+                    {
+                      "const": "body",
+                      "type": "string"
+                    },
+                    {
+                      "const": "border",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "focusColor": {
+                  "anyOf": [
+                    {
+                      "const": "background",
+                      "type": "string"
+                    },
+                    {
+                      "const": "accent",
+                      "type": "string"
+                    },
+                    {
+                      "const": "secondary",
+                      "type": "string"
+                    },
+                    {
+                      "const": "heading",
+                      "type": "string"
+                    },
+                    {
+                      "const": "body",
+                      "type": "string"
+                    },
+                    {
+                      "const": "border",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "padding": {
+                  "anyOf": [
+                    {
+                      "const": "1",
+                      "type": "string"
+                    },
+                    {
+                      "const": "2",
+                      "type": "string"
+                    },
+                    {
+                      "const": "3",
+                      "type": "string"
+                    },
+                    {
+                      "const": "4",
+                      "type": "string"
+                    },
+                    {
+                      "const": "5",
+                      "type": "string"
+                    },
+                    {
+                      "const": "6",
+                      "type": "string"
+                    },
+                    {
+                      "const": "7",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "radius": {
+                  "anyOf": [
+                    {
+                      "const": "1",
+                      "type": "string"
+                    },
+                    {
+                      "const": "2",
+                      "type": "string"
+                    },
+                    {
+                      "const": "3",
+                      "type": "string"
+                    },
+                    {
+                      "const": "4",
+                      "type": "string"
+                    },
+                    {
+                      "const": "5",
+                      "type": "string"
+                    },
+                    {
+                      "const": "6",
+                      "type": "string"
+                    },
+                    {
+                      "const": "7",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "radiusLinked": {
+                  "type": "boolean"
+                },
+                "borderWidth": {
+                  "anyOf": [
+                    {
+                      "const": "1",
+                      "type": "string"
+                    },
+                    {
+                      "const": "2",
+                      "type": "string"
+                    },
+                    {
+                      "const": "3",
+                      "type": "string"
+                    },
+                    {
+                      "const": "4",
+                      "type": "string"
+                    },
+                    {
+                      "const": "5",
+                      "type": "string"
+                    },
+                    {
+                      "const": "6",
+                      "type": "string"
+                    },
+                    {
+                      "const": "7",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "fontVariable": {
+                  "type": "string"
+                },
+                "fontSize": {
+                  "anyOf": [
+                    {
+                      "const": "1",
+                      "type": "string"
+                    },
+                    {
+                      "const": "2",
+                      "type": "string"
+                    },
+                    {
+                      "const": "3",
+                      "type": "string"
+                    },
+                    {
+                      "const": "4",
+                      "type": "string"
+                    },
+                    {
+                      "const": "5",
+                      "type": "string"
+                    },
+                    {
+                      "const": "6",
+                      "type": "string"
+                    },
+                    {
+                      "const": "7",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "fontWeight": {
+                  "anyOf": [
+                    {
+                      "const": "1",
+                      "type": "string"
+                    },
+                    {
+                      "const": "2",
+                      "type": "string"
+                    },
+                    {
+                      "const": "3",
+                      "type": "string"
+                    },
+                    {
+                      "const": "4",
+                      "type": "string"
+                    },
+                    {
+                      "const": "5",
+                      "type": "string"
+                    },
+                    {
+                      "const": "6",
+                      "type": "string"
+                    },
+                    {
+                      "const": "7",
+                      "type": "string"
+                    }
+                  ]
                 }
               }
             },
@@ -1104,6 +2097,36 @@
                       "type": "string"
                     },
                     "step": {
+                      "type": "string"
+                    },
+                    "locked": {
+                      "const": true,
+                      "type": "boolean"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "origin",
+                    "family",
+                    "sourceId",
+                    "tokenName",
+                    "locked"
+                  ],
+                  "properties": {
+                    "origin": {
+                      "const": "framework",
+                      "type": "string"
+                    },
+                    "family": {
+                      "const": "scheme",
+                      "type": "string"
+                    },
+                    "sourceId": {
+                      "type": "string"
+                    },
+                    "tokenName": {
                       "type": "string"
                     },
                     "locked": {

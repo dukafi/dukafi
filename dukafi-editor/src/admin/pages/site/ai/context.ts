@@ -54,7 +54,7 @@ DESIGN — quiet storefront, even when the merchant is vague
 - Prefer bound tokens when listed below: text-primary, bg-primary, font-primary. Do not invent a palette, a hex, or a second accent.
 - Never: bg-gradient-*, from-*/via-*/to-*, indigo/purple/pink/cyan washes, blobs, backdrop-blur, shadow-xl, emoji in headings, arbitrary bg-[#…].
 - "Make it look better" / a short vague request means more space and fewer colors (setClasses). Do not wrap the page in a new gradient. Match the page's spacing and type.
-- Buttons: rounded or rounded-lg, bg-black or bg-primary, text-white. Cards: rounded-lg border, no heavy shadow.
+- Buttons: bg-black or bg-primary, text-white. Cards: border, no heavy shadow. Do not add rounded-* — site radius already paints buttons, inputs, images, cards, and divs. Use rounded-full only for pills (search chips).
 - Composition: the section is full width (w-full px-6 py-16). Hero is two columns on md (copy | photo), not heading then image stacked. Product grids are max-w-6xl, never inside max-w-3xl. About/contact is a type column (max-w-3xl) on that same full-width canvas.
 
 IMAGES
@@ -85,18 +85,18 @@ SEO
 "Rank for …" / "optimize SEO" is not the search page. Put matching products in a collection and loop collections/<slug>.products on an indexable page (home, a landing page, or the collection template). Unique H1 and intro per page. Never <meta name="keywords">, never a <title> or meta description tag in HTML — those live in page settings. Do not invent shipping, origin stories, or reviews.
 
 PRODUCT CARD with cart states
-<article class="rounded-lg border p-4">
+<article class="border p-4">
   <a data-dukafy-bind-href="currentEntry.href"><img data-dukafy-bind-src="currentEntry.imageUrl" alt="" class="w-full"></a>
   <h3 data-dukafy-bind-text="currentEntry.title" class="mt-2 font-medium"></h3>
   <p data-dukafy-bind-text="currentEntry.priceDisplay" class="text-sm text-gray-600"></p>
   <div data-dukafy-region="cart" class="mt-3">
     <button data-dukafy-action="cart.addItem" data-dukafy-action-quantity="1"
             data-dukafy-visible-when="currentEntry.inCart:isFalse"
-            class="w-full rounded bg-black px-4 py-2 text-white">Add to cart</button>
+            class="w-full bg-black px-4 py-2 text-white">Add to cart</button>
     <div data-dukafy-visible-when="currentEntry.inCart:isTrue" class="flex items-center gap-2">
-      <button data-dukafy-action="cart.setQuantity" data-dukafy-action-delta="-1" class="rounded border px-3 py-1">−</button>
+      <button data-dukafy-action="cart.setQuantity" data-dukafy-action-delta="-1" class="border px-3 py-1">−</button>
       <span data-dukafy-bind-text="currentEntry.cartQuantity" class="min-w-8 text-center"></span>
-      <button data-dukafy-action="cart.setQuantity" data-dukafy-action-delta="1" class="rounded border px-3 py-1">+</button>
+      <button data-dukafy-action="cart.setQuantity" data-dukafy-action-delta="1" class="border px-3 py-1">+</button>
       <button data-dukafy-action="cart.removeItem" class="ml-auto text-sm underline">Remove</button>
     </div>
   </div>
@@ -109,17 +109,17 @@ CART TOTALS — anywhere, inside a cart region
   <p data-dukafy-bind-text="cart.count"></p>
   <p data-dukafy-bind-text="cart.totalDisplay"></p>
   <p data-dukafy-visible-when="cart.isEmpty:isTrue">Your cart is empty.</p>
-  <a href="/checkout" data-dukafy-visible-when="cart.isEmpty:isFalse" class="rounded bg-black px-4 py-2 text-white">Checkout</a>
+  <a href="/checkout" data-dukafy-visible-when="cart.isEmpty:isFalse" class="bg-black px-4 py-2 text-white">Checkout</a>
 </div>
 cart fields: count · isEmpty · subtotalDisplay · discountDisplay · totalDisplay · currency
 
 FORMS
 <form data-dukafy-region="form" class="flex flex-col gap-3">
   <p data-dukafy-visible-when="form.hasError:isTrue" data-dukafy-bind-text="form.error"
-     class="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"></p>
-  <input type="email" name="email" required class="rounded border px-3 py-2">
-  <input type="password" name="password" required class="rounded border px-3 py-2">
-  <button type="submit" data-dukafy-action="account.login" class="rounded bg-black px-4 py-2 text-white">Sign in</button>
+     class="border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"></p>
+  <input type="email" name="email" required class="border px-3 py-2">
+  <input type="password" name="password" required class="border px-3 py-2">
+  <button type="submit" data-dukafy-action="account.login" class="bg-black px-4 py-2 text-white">Sign in</button>
 </form>
 Verbs: account.login · account.register · account.logout · cart.createOrder (checkout) · payment.initiate
 form fields: hasError · error · message · signedIn · email · name
