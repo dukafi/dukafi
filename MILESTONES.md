@@ -371,6 +371,27 @@ is a scoreboard.
 
 ---
 
+## M11–M16 — Launch milestones (September 2026)
+
+The launch gap analysis and the six milestones that close it live under
+`docs/LAUNCH-PLAN.md` (decisions D1–D12, dependency order, launch checklist) with one
+spec each in `docs/milestones/m11-*` … `m16-*`:
+
+- M11 — AI provider core: driver registry, multiple BYOK connections, capability model
+  (the core is fully usable with zero AI; Dukafi AI harness stays optional/v2)
+- M12 — Image generation with cross-provider fallback + `p.image_provider` seam
+- M13 — Theme marketplace: registry `/v1/themes/*`, bundled starter theme, in-app gallery
+- M14 — Provider seams: `p.mail_provider` + SMTP plugin + order emails, plugin job
+  scheduler (leader-elected), `p.shipping_provider` + flat rate
+- M15 — Replicas & storage: compose scale-out with shared volume + migrator service
+  (Tier 1); media storage adapter + DB-backed published store (Tier 2 fast-follow)
+- M16 — Launch & deploy: Railway template + Deploy button, compose overlays,
+  `.env.example`, first-run theme flow, README/docs rewrite, v1.0.0 release checklist
+
+Several M7 items are superseded by M15/M16; M16 task 11 reconciles them here.
+
+---
+
 ## Post-1.0 parking lot (do NOT start early)
 
 - Dynamic tables (`data_tables`/`data_rows` port) as the plugin storage layer
