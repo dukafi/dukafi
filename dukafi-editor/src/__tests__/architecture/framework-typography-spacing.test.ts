@@ -120,20 +120,19 @@ describe('architecture — typography / spacing panels', () => {
   })
 })
 
-describe('architecture — panel rail', () => {
-  const railSource = readSource('admin/pages/site/sidebars/PanelRail/PanelRail.tsx')
+describe('architecture — editor sidebar', () => {
+  const navSource = readSource('admin/pages/site/sidebars/LeftSidebar/SiteEditorNav.tsx')
 
-  // Colors / Typography / Spacing were consolidated into one Framework rail
-  // entry (tabs live inside the FrameworkPanel). The rail now exposes a single
-  // `framework` item via the colors-swatch catalog icon.
-  it('rail wires the Framework entry via the catalog icon import', () => {
-    expect(railSource).toContain("from 'pixel-art-icons/icons/colors-swatch-solid'")
+  // Colors / Typography / Spacing were consolidated into one Framework
+  // sidebar entry (tabs live inside the FrameworkPanel).
+  it('sidebar wires the Framework entry via the catalog icon import', () => {
+    expect(navSource).toContain("from 'pixel-art-icons/icons/colors-swatch-solid'")
   })
 
-  it('rail exposes a single framework entry with a stable id', () => {
-    expect(railSource).toMatch(/id:\s*'framework'/)
-    expect(railSource).not.toMatch(/id:\s*'typography'/)
-    expect(railSource).not.toMatch(/id:\s*'spacing'/)
+  it('sidebar exposes a single framework entry with a stable id', () => {
+    expect(navSource).toMatch(/id:\s*'framework'/)
+    expect(navSource).not.toMatch(/id:\s*'typography'/)
+    expect(navSource).not.toMatch(/id:\s*'spacing'/)
   })
 })
 

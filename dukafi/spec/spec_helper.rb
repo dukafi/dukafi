@@ -26,3 +26,5 @@ end
 Sequel::Migrator.run(DB, File.expand_path("../db/migrations", __dir__))
 require_relative "../config/environment"
 require "minitest/autorun"
+Dir[File.expand_path("support/*.rb", __dir__)].sort.each { |file| require file }
+Dir[File.expand_path("support/*.rb", __dir__)].sort.each { |file| require file }

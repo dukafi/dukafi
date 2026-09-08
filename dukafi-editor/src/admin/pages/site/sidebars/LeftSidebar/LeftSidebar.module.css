@@ -2,7 +2,7 @@
     position: relative;
     z-index: 85;
     display: flex;
-    --left-sidebar-rail-width: 42px;
+    --left-sidebar-rail-width: 184px;
     --left-sidebar-panel-width: 0px;
     --left-sidebar-panel-layout-width: var(--left-sidebar-panel-width);
     --left-sidebar-panel-render-width: min(
@@ -51,7 +51,7 @@
     max-height: calc(100vh - 80px);
     overflow: hidden;
     border: 1px solid var(--overlay-10);
-    border-radius: var(--panel-radius);
+    border-radius: 0;
     background: var(--bg-surface);
     backdrop-filter: blur(var(--panel-blur));
     box-shadow: var(--shadow-panel);

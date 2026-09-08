@@ -27,7 +27,7 @@ export function RowActionMenu({ triggerLabel, menuLabel, disabled = false, items
       <Button
         ref={triggerRef}
         type="button"
-        variant="secondary"
+        variant="ghost"
         size="xs"
         iconOnly
         disabled={disabled}

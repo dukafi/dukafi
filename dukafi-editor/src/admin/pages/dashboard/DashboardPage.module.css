@@ -15,90 +15,26 @@
     min-width: 0;
 }
 
-.workspaceIdentity {
-    display: grid;
-    gap: var(--space-s);
-    padding: 0 0 var(--space-4xl);
-}
-
-.workspaceIdentity h1 {
-    margin: 0;
-    color: var(--text-bright);
-    font-size: var(--text-4xl);
-    line-height: 1;
-}
-
-.workspaceIdentity p {
-    color: var(--text-subtle);
-    font-size: var(--text-m);
-    line-height: 1.5;
-}
-
-.workspaceNavigation {
-    display: grid;
-    gap: var(--space-xs);
-}
-
-.workspaceNavigationButton {
-    min-width: 0;
+.visuallyHidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 .workspaceContent {
     min-width: 0;
 }
 
-@media (max-width: 1180px) {
-    .workspace {
-        grid-template-columns: 168px minmax(0, 1fr);
-        gap: var(--space-5xl);
-    }
-}
-
-@media (max-width: 900px) {
-    .workspace {
-        grid-template-columns: 48px minmax(0, 1fr);
-        gap: var(--space-3xl);
-    }
-
-    .workspaceIdentity {
-        padding: 0 0 var(--space-3xl);
-        text-align: center;
-    }
-
-    .workspaceIdentity p,
-    .workspaceNavigationButton span {
-        display: none;
-    }
-
-    .workspaceNavigationButton {
-        justify-content: center;
-        width: 32px;
-        padding: 0;
-    }
-}
-
 @media (max-width: 760px) {
     .workspace {
         grid-template-columns: 1fr;
         min-height: 0;
-    }
-
-    .workspaceSidebar {
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr);
-        align-items: center;
-        gap: var(--space-2xl);
-        padding-bottom: var(--space-3xl);
-    }
-
-    .workspaceNavigation {
-        display: flex;
-        justify-content: flex-end;
-        overflow-x: auto;
-    }
-
-    .workspaceNavigationButton {
-        width: 32px;
     }
 }
 
@@ -581,24 +517,13 @@
 
 /* ── Connect an AI client ─────────────────────────────────────────────────── */
 
-.connectCard {
+.issuedToken {
     display: grid;
     justify-items: start;
     gap: var(--space-m);
-    max-width: 720px;
-    padding: var(--space-xl);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
 }
 
-.connectCard h3 {
-    margin: 0;
-    color: var(--text-bright);
-    font-size: var(--text-xl);
-    font-weight: 600;
-}
-
-.connectCard h4 {
+.issuedToken h4 {
     margin: var(--space-m) 0 0;
     color: var(--text-bright);
     font-size: var(--text-m);

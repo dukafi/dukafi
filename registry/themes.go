@@ -150,6 +150,19 @@ func validateTheme(body []byte, id string) error {
 				return ErrBadBlobKey
 			}
 		}
+		if name == "media.json" {
+			data, _ := io.ReadAll(io.LimitReader(tr, 1<<20))
+			var media []map[string]any
+			if json.Unmarshal(data, &media) != nil {
+				return ErrNotGzip
+			}
+			for _, item := range media {
+				url, _ := item["url"].(string)
+				if url != "" && !strings.HasPrefix(url, "https://") {
+					return ErrNotGzip
+				}
+			}
+		}
 	}
 	sort.Strings(found)
 	if strings.Join(found, ",") != strings.Join(themeFiles, ",") {
@@ -201,9 +214,13 @@ func (a *API) submitTheme(w http.ResponseWriter, r *http.Request) {
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	previews, _ := json.Marshal([]string{})
-	_, err = a.Store.db.Exec(`INSERT INTO themes(id,name,summary,description,author_account_id,version,categories,preview_urls,status,sha256,archive_key,archive_size,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,summary=excluded.summary,description=excluded.description,version=excluded.version,categories=excluded.categories,status='pending',sha256=excluded.sha256,archive_key=excluded.archive_key,archive_size=excluded.archive_size,updated_at=excluded.updated_at WHERE themes.author_account_id=excluded.author_account_id`, id, name, r.FormValue("summary"), r.FormValue("description"), account.ID, version, r.FormValue("categories"), string(previews), StatusPending, sha, "theme-"+id, int64(len(body)), now, now)
+	result, err := a.Store.db.Exec(`INSERT INTO themes(id,name,summary,description,author_account_id,version,categories,preview_urls,status,sha256,archive_key,archive_size,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,summary=excluded.summary,description=excluded.description,version=excluded.version,categories=excluded.categories,status='pending',sha256=excluded.sha256,archive_key=excluded.archive_key,archive_size=excluded.archive_size,updated_at=excluded.updated_at WHERE themes.author_account_id=excluded.author_account_id`, id, name, r.FormValue("summary"), r.FormValue("description"), account.ID, version, r.FormValue("categories"), string(previews), StatusPending, sha, "theme-"+id, int64(len(body)), now, now)
 	if err != nil {
 		writeError(w, 500, "internal", "could not record theme")
+		return
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
+		writeError(w, 409, "conflict", "that theme id is owned by another account")
 		return
 	}
 	writeJSON(w, 202, map[string]any{"id": id, "status": StatusPending, "sha256": sha})

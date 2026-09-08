@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { Button } from '@ui/components/Button'
 import { Dialog } from '@ui/components/Dialog'
 import { getErrorMessage } from '@core/utils/errorMessage'
+import { normalizeCmsMediaAsset, type CmsMediaAsset } from '@core/persistence/cmsMedia'
+import type { CmsMediaAssetWire } from '@core/persistence/responseSchemas'
 
 export function GenerateImageDialog({ open, onClose, onGenerated }: {
   open: boolean
   onClose: () => void
-  onGenerated: () => void
+  onGenerated: (asset?: CmsMediaAsset) => void
 }) {
   const [prompt, setPrompt] = useState('')
   const [size, setSize] = useState('1024x1024')
@@ -22,9 +24,15 @@ export function GenerateImageDialog({ open, onClose, onGenerated }: {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: prompt.trim(), size, count: 1 }),
       })
-      const payload = await response.json().catch(() => ({})) as { error?: string; message?: string }
+      const payload = await response.json().catch(() => ({})) as {
+        asset?: CmsMediaAssetWire
+        error?: string
+        message?: string
+        attempts?: unknown
+      }
       if (!response.ok) throw new Error(payload.message || payload.error || 'Image generation failed')
-      onGenerated()
+      const asset = payload.asset ? normalizeCmsMediaAsset(payload.asset) : undefined
+      onGenerated(asset)
       onClose()
       setPrompt('')
     } catch (cause) {

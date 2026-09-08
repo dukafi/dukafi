@@ -13,7 +13,7 @@
     display: inline-flex;
     align-items: stretch;
     gap: var(--space-4xs);
-    border-radius: 12px;
+    border-radius: 0;
     padding: var(--space-4xs);
     border: 1px solid var(--overlay-20);
     background: var(--overlay-5);
@@ -24,8 +24,7 @@
     width: 100%;
 }
 
-/* Each segment fills available width and uses a smaller radius so it nests
- * cleanly inside the 10px track. The doubled `.group .segment.segment`
+/* Each segment fills available width. The doubled `.group .segment.segment`
  * selector lifts specificity above Button.module.css's `.btn.variant-X`
  * pairings so the segment's transparent / pressed look wins regardless of
  * stylesheet load order. */
@@ -33,7 +32,7 @@
     position: relative;
     flex: 1 1 0;
     min-width: 0;
-    border-radius: 8px;
+    border-radius: 0;
     background: transparent;
 }
 
@@ -74,7 +73,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
+    border-radius: 0;
     background: var(--overlay-20);
     color: var(--text);
     opacity: 0;

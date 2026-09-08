@@ -49,7 +49,6 @@ import { useEditorStore } from '@admin/pages/site/store/store'
 import { useCurrentAdminUser } from '@admin/sessionContext'
 import { cmsAdapter } from '@core/persistence/cms'
 import { useAdminUi } from '@admin/state/adminUi'
-import { AdminSectionNavigation } from '@admin/shared/AdminSectionNavigation'
 import {
   CanvasFrameSkeletonFrame,
   DEFAULT_CANVAS_FRAME_SKELETON_BREAKPOINTS,
@@ -204,9 +203,6 @@ export function AdminCanvasLayout() {
           siteName={siteName}
           faviconUrl={faviconUrl}
           section="site"
-          adminNavigationSlot={(
-            <AdminSectionNavigation section="site" currentUser={currentUser} />
-          )}
           overlay={previewOpen && (
             <Suspense fallback={null}>
               <PreviewOverlay />

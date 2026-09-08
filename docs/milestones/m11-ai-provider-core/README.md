@@ -203,3 +203,11 @@ assist today does not execute tools server-side), prompt caching, usage-based bi
 - `docs/LAUNCH-PLAN.md` D1–D3
 - `../instatic-inspo/server/ai/drivers/types.ts`, `modelCapabilities.ts` — the pattern source
 - M12 consumes `image_generation` capability + `image` task default
+
+## Manual flow
+
+1. Open **AI connections and models** in Site settings.
+2. Add an **OpenRouter** connection with an API key.
+3. Click **Load models**, pick a design/chat model and an image model.
+4. Click **Save and use** (sets design + image defaults).
+5. Click **Test design model** and confirm the status notice.

@@ -72,10 +72,25 @@ class Dukafi
               outputs = Array(row.dig("architecture", "output_modalities"))
               caps = caps.with(image_generation: outputs.include?("image"))
             end
+            caps = ollama_show_capabilities(connection, model_id, caps) if id == "ollama"
             { id: model_id, label: row["name"].to_s.empty? ? model_id : row["name"], capabilities: caps.to_h }
           end.sort_by { |r| r[:id] }
         rescue StandardError
           []
+        end
+
+        def ollama_show_capabilities(connection, model_id, fallback)
+          base = effective_base(connection).sub(%r{/+\z}, "").sub(%r{/v1\z}, "")
+          uri = URI.parse("#{base}/api/show")
+          response = Loop.request(uri, method: :post, headers: headers(connection),
+                                   body: { name: model_id }, read_timeout: 8)
+          parsed = JSON.parse(response.body)
+          families = Array(parsed.dig("details", "families")) + Array(parsed["capabilities"])
+          blob = "#{families.join(' ')} #{parsed['modelfile']}"
+          vision = blob.match?(/clip|llava|vision|mllama/i)
+          fallback.with(vision_input: vision || fallback.vision_input)
+        rescue StandardError
+          fallback
         end
 
         def chat(connection:, model:, messages:, tools: [], stream: nil)

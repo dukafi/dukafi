@@ -186,7 +186,7 @@ export function FormsSection() {
                   <DataTableCell key={column}>{String(submission.fields[column] ?? '')}</DataTableCell>
                 ))}
                 <DataTableCell>
-                  <Button variant="ghost" size="xs" tone="danger" onClick={() => void remove(submission.id)}>
+                  <Button variant="ghost" size="xs" onClick={() => void remove(submission.id)}>
                     Delete
                   </Button>
                 </DataTableCell>

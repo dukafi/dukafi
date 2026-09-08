@@ -60,6 +60,8 @@ export interface CmsMediaAsset {
   blurHash: string | null
   variants: CmsMediaVariant[]
   posterPath: string | null
+  origin?: 'upload' | 'import' | 'ai'
+  originMeta?: Record<string, unknown>
 }
 
 export type { CmsMediaFolder }
@@ -87,6 +89,8 @@ export function normalizeCmsMediaAsset(wire: CmsMediaAssetWire): CmsMediaAsset {
     blurHash: wire.blurHash ?? null,
     variants: wire.variants ?? [],
     posterPath: wire.posterPath ?? null,
+    origin: wire.origin ?? 'upload',
+    originMeta: wire.originMeta ?? {},
   }
 }
 

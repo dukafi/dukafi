@@ -2,7 +2,7 @@
  * Toolbar — fixed top bar shared by every admin route.
  *
  * Layout (left → right):
- *   [Site brand] [admin nav]
+ *   [Site brand]
  *   [Plugin buttons] [spacer→] [right slot]    [Account menu]
  *
  * Undo/Redo lives inside the canvas notch (CanvasNotch), not the toolbar —
@@ -28,14 +28,11 @@
  */
 
 import { useEffect, useState, type ReactNode } from 'react'
-import { ImagesSolidIcon } from 'pixel-art-icons/icons/images-solid'
-import { LayoutSolidIcon } from 'pixel-art-icons/icons/layout-solid'
 import { pluginRuntime } from '@core/plugins/runtime'
 import type { RegisteredPluginToolbarButton } from '@core/plugin-sdk'
 import { AccountMenuButton } from '@admin/shared/AccountMenuButton'
 import { OpenLivePageButton } from '@admin/shared/OpenLivePageButton'
 import { SettingsButton } from './SettingsButton'
-import { Link } from '@admin/lib/routing'
 import { Button } from '@ui/components/Button'
 import { Skeleton } from '@ui/components/Skeleton'
 import { Tooltip } from '@ui/components/Tooltip'
@@ -44,16 +41,15 @@ import type { AdminWorkspace } from '@admin/workspace'
 import styles from './Toolbar.module.css'
 import { getErrorMessage } from '@core/utils/errorMessage'
 
-const NAV_ICON_SIZE = 13
 
 interface ToolbarProps {
   /** Site name shown in the brand position. Null renders the loading skeleton. */
   siteName?: string | null
   /** Optional site favicon URL. When set, renders instead of the site-name text. */
   faviconUrl?: string | null
-  /** Active admin section — drives the default nav slot's highlight. */
+  /** Active admin section. Kept for callers; workspace nav lives in the sidebar. */
   section?: AdminWorkspace
-  /** Replaces the default admin section navigation links. */
+  /** Optional extra chrome between the brand and plugin buttons. */
   adminNavigationSlot?: ReactNode
   /**
    * Full-screen overlay siblings rendered before the toolbar header. Used by
@@ -84,7 +80,6 @@ function pluginButtonKey(button: RegisteredPluginToolbarButton): string {
 export function Toolbar({
   siteName = null,
   faviconUrl = null,
-  section = 'site',
   adminNavigationSlot,
   overlay,
   rightSlot,
@@ -194,7 +189,7 @@ export function Toolbar({
             </span>
           </Tooltip>
         )}
-        {adminNavigationSlot ?? <DefaultAdminNavigation section={section} />}
+        {adminNavigationSlot}
 
         <div className={styles.workspaceToolbarItems}>
           {pluginButtons.map((button) => {
@@ -254,51 +249,5 @@ export function Toolbar({
         </div>
       </header>
     </>
-  )
-}
-
-function DefaultAdminNavigation({ section }: { section: AdminWorkspace }) {
-  return (
-    <>
-      <DefaultNavSlot
-        to="/admin/site"
-        icon={<LayoutSolidIcon size={NAV_ICON_SIZE} aria-hidden="true" />}
-        label="Site"
-        active={section === 'site'}
-      />
-      <DefaultNavSlot
-        to="/admin/media"
-        icon={<ImagesSolidIcon size={NAV_ICON_SIZE} aria-hidden="true" />}
-        label="Media"
-        active={section === 'media'}
-      />
-    </>
-  )
-}
-
-function DefaultNavSlot({
-  to,
-  icon,
-  label,
-  active,
-}: {
-  to: string
-  icon: ReactNode
-  label: string
-  active: boolean
-}) {
-  if (active) {
-    return (
-      <span className={styles.activeSection}>
-        {icon}
-        <span>{label}</span>
-      </span>
-    )
-  }
-  return (
-    <Link className={styles.adminLink} to={to}>
-      {icon}
-      <span>{label}</span>
-    </Link>
   )
 }

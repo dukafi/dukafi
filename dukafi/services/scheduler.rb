@@ -1,7 +1,17 @@
 class Scheduler
   INTERVAL = 60
-  def self.start!
-    return if ENV["DUKAFI_DISABLE_SCHEDULER"] == "1" || ENV["RACK_ENV"] == "test" || @thread&.alive?
+  class << self
+    attr_accessor :interval
+  end
+
+  def self.disabled?
+    ENV["DUKAFI_DISABLE_SCHEDULER"] == "1" ||
+      (ENV["RACK_ENV"] == "test" && ENV["DUKAFI_ENABLE_SCHEDULER"] != "1")
+  end
+
+  def self.start!(interval: nil)
+    return if disabled? || @thread&.alive?
+    wait = interval || self.interval || INTERVAL
     @thread = Thread.new do
       Thread.current.name = "dukafi-scheduler"
       loop do
@@ -10,7 +20,7 @@ class Scheduler
         rescue StandardError => error
           warn "[scheduler] #{error.class}: #{error.message}"
         end
-        sleep INTERVAL
+        sleep wait
       end
     end
   end

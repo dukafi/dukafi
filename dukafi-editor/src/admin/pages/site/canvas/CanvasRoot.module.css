@@ -17,7 +17,7 @@
     z-index: 0;
     overflow: hidden;
     background: var(--bg-surface-2);
-    border-top-left-radius: 16px;
+    border-top-left-radius: 0;
     cursor: default;
     user-select: none;
     /* Required by @use-gesture/react to intercept trackpad pinch gestures.

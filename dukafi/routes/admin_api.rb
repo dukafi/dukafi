@@ -299,7 +299,22 @@ class AdminApi < Roda
       width: asset.width, height: asset.height, variants: asset.variants,
       altText: asset.alt_text.to_s, title: asset.title.to_s,
       caption: asset.caption.to_s, tags: asset.tags,
+      origin: asset.respond_to?(:origin) ? asset.origin.to_s : "upload",
+      originMeta: asset.respond_to?(:origin_meta) ? asset.origin_metadata : {},
     }
+  end
+
+  def plugin_jobs_payload
+    now = Time.now
+    jobs = Dukafi::Plugins.visible.flat_map do |plugin|
+      plugin.jobs.map do |job|
+        key = PluginJobs.job_key(job[:name])
+        last = PluginSetting.first(plugin_id: plugin.id, key: key)&.value
+        { pluginId: plugin.id, name: job[:name], every: job[:every], lastRunAt: last,
+          due: PluginJobs.due?(plugin, job, now) }
+      end
+    end
+    { jobs: jobs }
   end
 
   def commerce_product_payload(product)
@@ -771,18 +786,7 @@ class AdminApi < Roda
           { font: result.font }
         end
 
-        r.get("jobs") do
-          now = Time.now
-          jobs = Dukafi::Plugins.visible.flat_map do |plugin|
-            plugin.jobs.map do |job|
-              key = PluginJobs.job_key(job[:name])
-              last = PluginSetting.first(plugin_id: plugin.id, key: key)&.value
-              { pluginId: plugin.id, name: job[:name], every: job[:every], lastRunAt: last,
-                due: PluginJobs.due?(plugin, job, now) }
-            end
-          end
-          { jobs: jobs }
-        end
+        r.get("jobs") { plugin_jobs_payload }
 
         # Custom fonts are already in the media library — the binaries were
         # uploaded through the media route. This only turns chosen assets into
@@ -1047,6 +1051,8 @@ class AdminApi < Roda
             halt_json(catalogue_status(error), error.code, error.message)
           end
         end
+
+        r.get("jobs") { plugin_jobs_payload }
 
         r.post("install") do
           id = r.params["id"].to_s

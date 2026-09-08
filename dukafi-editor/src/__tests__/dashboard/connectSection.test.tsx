@@ -57,6 +57,7 @@ describe('ConnectSection', () => {
     render(<ConnectSection />)
     await waitFor(() => expect(screen.getByText('No tokens yet')).toBeDefined())
 
+    await userEvent.click(screen.getByRole('button', { name: 'New token' }))
     await userEvent.type(screen.getByLabelText('Token name'), 'Claude Code')
     await userEvent.click(screen.getByRole('button', { name: 'Create token' }))
 
@@ -81,6 +82,7 @@ describe('ConnectSection', () => {
 
     render(<ConnectSection />)
     await waitFor(() => expect(screen.getByText('No tokens yet')).toBeDefined())
+    await userEvent.click(screen.getByRole('button', { name: 'New token' }))
     await userEvent.type(screen.getByLabelText('Token name'), 'Anything')
     await userEvent.click(screen.getByRole('button', { name: 'Create token' }))
 
@@ -94,9 +96,21 @@ describe('ConnectSection', () => {
     render(<ConnectSection />)
     await waitFor(() => expect(screen.getByText('No tokens yet')).toBeDefined())
 
+    await userEvent.click(screen.getByRole('button', { name: 'New token' }))
+
     // Naming the tool and machine is what makes a token revocable later with
     // any confidence about what breaks.
     expect((screen.getByRole('button', { name: 'Create token' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('does not show Claude connector instructions on the page', async () => {
+    globalThis.fetch = mock(async () => listResponse([])) as unknown as typeof fetch
+
+    render(<ConnectSection />)
+    await waitFor(() => expect(screen.getByText('No tokens yet')).toBeDefined())
+
+    expect(screen.queryByText(/Claude’s own connectors/)).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Claude connectors' })).toBeNull()
   })
 
   it('offers no revoke action for a token that is already revoked', async () => {

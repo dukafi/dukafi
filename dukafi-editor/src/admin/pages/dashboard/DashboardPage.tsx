@@ -3,14 +3,12 @@
  *
  * The authenticated Dashboard workspace: products, variants, collections, CSV
  * import, and store-wide settings (see `docs/architecture/admin-store.md`).
- * Left sidebar section nav (`AdminPageLayout`'s `workspace` mode, same shell
- * shape as the AI workspace) — each section is a plain, paginated data
- * table; create/edit happens in a `Dialog`, never inline.
+ * Grouped sidebar (Workspace + Store) — each section is a plain, paginated
+ * data table; create/edit happens in a `Dialog`, never inline.
  */
 import { useParams } from '@admin/lib/routing'
 import { FileTextSolidIcon } from 'pixel-art-icons/icons/file-text-solid'
 import { useAdminNavigate } from '@admin/lib/useAdminNavigate'
-import { Button } from '@ui/components/Button'
 import { AdminPageLayout } from '@admin/layouts/AdminPageLayout'
 import { BoxStackSolidIcon } from 'pixel-art-icons/icons/box-stack-solid'
 import { Grid2x22SolidIcon } from 'pixel-art-icons/icons/grid-2x2-2-solid'
@@ -36,6 +34,8 @@ import { ProductsSection } from './sections/ProductsSection'
 import { SettingsSection } from './sections/SettingsSection'
 import { ThemesSection } from './sections/ThemesSection'
 import { LaunchChecklist } from './sections/LaunchChecklist'
+import { AdminAppSidebar, type AdminAppSidebarItem } from '@admin/shared/AdminAppSidebar'
+import { useAdminUi } from '@admin/state/adminUi'
 import type { CommerceSection } from './types'
 import styles from './DashboardPage.module.css'
 
@@ -84,42 +84,30 @@ export function DashboardPage() {
   const section = sectionFromParam(dashboardSection)
   const navigate = useAdminNavigate()
   const data = useCommerceData()
+  const siteName = useAdminUi((s) => s.siteName)
+
+  const storeItems: AdminAppSidebarItem[] = SECTIONS.map((item) => ({
+    id: item,
+    label: SECTION_LABELS[item],
+    icon: SECTION_ICONS[item],
+    href: `/admin/dashboard/${item}`,
+    active: section === item,
+    testId: `dashboard-nav-${item}`,
+  }))
 
   return (
     <AdminPageLayout workspace="dashboard" mode="workspace">
       <div className={styles.workspace}>
         <aside className={styles.workspaceSidebar} aria-label="Dashboard workspace">
-          <div className={styles.workspaceIdentity}>
-            <h1 id="dashboard-title">Dashboard</h1>
-            <p>Products, collections, tables, and imports.</p>
-          </div>
-
-          <nav className={styles.workspaceNavigation} aria-label="Dashboard sections">
-            {SECTIONS.map((item) => {
-              const Icon = SECTION_ICONS[item]
-              return (
-                <Button
-                  key={item}
-                  type="button"
-                  variant={section === item ? 'secondary' : 'ghost'}
-                  size="md"
-                  align="start"
-                  fullWidth
-                  active={section === item}
-                  onClick={() => navigate(`/admin/dashboard/${item}`)}
-                  aria-current={section === item ? 'page' : undefined}
-                  data-testid={`dashboard-nav-${item}`}
-                  className={styles.workspaceNavigationButton}
-                >
-                  <Icon size={16} aria-hidden="true" />
-                  <span>{SECTION_LABELS[item]}</span>
-                </Button>
-              )
-            })}
-          </nav>
+          <AdminAppSidebar
+            workspace="dashboard"
+            brand={siteName}
+            groups={[{ id: 'store', label: 'Store', items: storeItems }]}
+          />
         </aside>
 
         <div className={styles.workspaceContent} aria-labelledby="dashboard-title">
+          <h1 id="dashboard-title" className={styles.visuallyHidden}>{SECTION_LABELS[section]}</h1>
           {section === 'products' && <LaunchChecklist data={data} navigate={navigate} />}
           {section === 'products' && <ProductsSection data={data} />}
           {section === 'orders' && <OrdersSection data={data} />}

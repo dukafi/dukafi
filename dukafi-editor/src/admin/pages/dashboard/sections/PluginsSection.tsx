@@ -102,6 +102,14 @@ export function PluginsSection({ data }: { data: CommerceData }) {
   const [inspecting, setInspecting] = useState<CataloguePlugin | null>(null)
   const [draft, setDraft] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
+  const [jobs, setJobs] = useState<Array<{ pluginId: string; name: string; every: string; lastRunAt: string | null; due: boolean }>>([])
+
+  useEffect(() => {
+    fetch('/admin/api/cms/plugins/jobs', { credentials: 'same-origin' })
+      .then(async (response) => response.ok ? response.json() as Promise<{ jobs: typeof jobs }> : { jobs: [] })
+      .then((payload) => setJobs(payload.jobs || []))
+      .catch(() => {})
+  }, [])
 
   // Reseed whenever a different plugin is opened, and after a refresh brings
   // new values back.
@@ -266,6 +274,34 @@ export function PluginsSection({ data }: { data: CommerceData }) {
 
       {error && <p className={styles.error} role="alert">{error}</p>}
 
+      {jobs.length > 0 && (
+        <section aria-label="Scheduled jobs" style={{ marginBottom: 24 }}>
+          <h3>Scheduled jobs</h3>
+          <DataTable aria-label="Scheduled jobs" density="compact">
+            <DataTableHead>
+              <DataTableRow>
+                <DataTableHeader scope="col">Plugin</DataTableHeader>
+                <DataTableHeader scope="col">Job</DataTableHeader>
+                <DataTableHeader scope="col">Every</DataTableHeader>
+                <DataTableHeader scope="col">Last run</DataTableHeader>
+                <DataTableHeader scope="col">Due</DataTableHeader>
+              </DataTableRow>
+            </DataTableHead>
+            <DataTableBody>
+              {jobs.map((job) => (
+                <DataTableRow key={`${job.pluginId}.${job.name}`}>
+                  <DataTableCell>{job.pluginId}</DataTableCell>
+                  <DataTableCell>{job.name}</DataTableCell>
+                  <DataTableCell>{job.every}</DataTableCell>
+                  <DataTableCell>{job.lastRunAt || '—'}</DataTableCell>
+                  <DataTableCell>{job.due ? 'due' : 'waiting'}</DataTableCell>
+                </DataTableRow>
+              ))}
+            </DataTableBody>
+          </DataTable>
+        </section>
+      )}
+
       {plugins.length === 0 ? (
         <EmptyState
           title="No plugins installed."
@@ -329,7 +365,6 @@ export function PluginsSection({ data }: { data: CommerceData }) {
                   <Button
                     type="button"
                     variant="ghost"
-                    tone="danger"
                     size="xs"
                     iconOnly
                     tooltip="Delete"

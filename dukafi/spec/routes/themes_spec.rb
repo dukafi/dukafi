@@ -167,6 +167,48 @@ class ThemesSpec < Minitest::Test
     assert_equal ["bag"], featured.products.map(&:slug)
   end
 
+  def test_apply_persists_theme_on_site_settings
+    get "/admin/api/cms/themes/export"
+    archive = Base64.strict_encode64(last_response.body)
+
+    post_json "/admin/api/cms/themes/apply", archive: archive, remap: {}, options: { "pages" => true }
+    assert_equal 200, last_response.status, last_response.body
+    theme = SiteState.first.site.dig("settings", "theme")
+    refute_nil theme
+    assert_equal "demo-store", theme["themeId"]
+    refute_nil theme["version"]
+    refute_nil theme["appliedAt"]
+  end
+
+  def test_bundled_starter_apply_publish_bakes_storefront_content
+    bytes = ThemeCatalogue.download("duka-classic")
+    refute_nil bytes
+    archive = Base64.strict_encode64(bytes)
+
+    post_json "/admin/api/cms/themes/apply", archive: archive, remap: {}, options: {
+      "overridePages" => true, "pages" => true, "templates" => true, "partials" => true,
+    }
+    assert_equal 200, last_response.status, last_response.body
+    page = Page.first(slug: "index")
+    refute_nil page
+    page.update(status: "published")
+
+    published_root = Dir.mktmpdir("dukafi-theme-bake-")
+    previous = ENV["DUKAFY_PUBLISHED_ROOT"]
+    ENV["DUKAFY_PUBLISHED_ROOT"] = published_root
+    begin
+      Bake.call(state: SiteState.first, output_root: published_root)
+      html = File.read(File.join(published_root, "current", "index.html"))
+      assert_includes html, "Made for everyday moments"
+      get "/"
+      assert_equal 200, last_response.status
+      assert_includes last_response.body, "Made for everyday moments"
+    ensure
+      ENV["DUKAFY_PUBLISHED_ROOT"] = previous
+      FileUtils.remove_entry(published_root) if published_root && Dir.exist?(published_root)
+    end
+  end
+
   def form_page
     {
       "id" => "contact-page", "slug" => "contact", "title" => "Contact", "rootNodeId" => "body",

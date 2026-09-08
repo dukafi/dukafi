@@ -407,3 +407,34 @@ listing, a failed refresh delisting a good plugin, a licensed plugin exposing a
 direct download, a session appearing in a response it should not, `*` being
 handed out alongside `Allow-Credentials`, and a rotated `X-Forwarded-For`
 walking through every rate limit.
+
+## Themes
+
+Public catalogue and download (no auth):
+
+- `GET /v1/themes` — query `q`, `category`; returns `{ themes, total }`.
+- `GET /v1/themes/default` — lowest `default_rank` among approved themes (404 if none).
+- `GET /v1/themes/{id}` — approved listing; 404 if missing.
+- `GET /v1/themes/{id}/download` — gzip archive; response header `X-Checksum-Sha256`.
+
+Submission and approval:
+
+- `POST /v1/themes` — multipart fields `id`, `name`, `version`, `archive` (plus optional summary/description/categories). Requires a signed-in account; rate limited per account.
+- `POST /v1/admin/themes/{id}/approve?defaultRank=` — admin Bearer token or admin account; sets status `approved` and optional default rank.
+
+### Archive contract
+
+The gzip tarball must contain **exactly** these files (basename match, sorted):
+
+`catalogue.json`, `media.json`, `pages.json`, `partials.json`, `reviews.json`, `shell.json`, `tables.json`, `templates.json`, `theme.json`
+
+- `theme.json` must include `"id"` matching the submitted `id`.
+- `media.json` is a JSON array; any `url` values must be `https://`.
+
+### Distribution keys
+
+Public listing `distribution` exposes:
+
+- `downloadUrl` / `url` — same download path under this registry
+- `sha256` — SHA-256 of the archive bytes
+- `size` — archive byte length

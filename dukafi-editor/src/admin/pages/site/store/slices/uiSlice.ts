@@ -108,10 +108,10 @@ interface UiSlice {
    */
   layoutNameDialogRequest: LayoutNameDialogRequest | null
 
-  // Consolidated Explorer panel — the Layers / Pages / Media navigation
-  // surfaces in one rail item with tabs.
+  // Consolidated Explorer panel — Layers / Pages / Code / Media live in the
+  // grouped sidebar; this flag is the shared panel those items open.
   explorerPanelOpen: boolean
-  /** Active tab inside the consolidated Explorer panel. */
+  /** Active Explorer view selected from the grouped sidebar. */
   explorerPanelTab: ExplorerPanelTab
   frameworkPanelOpen: boolean
   /** Active tab inside the consolidated Framework panel. */

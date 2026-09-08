@@ -4,6 +4,11 @@ require_relative "json_path"
 require "roda"
 
 class Dukafi < Roda
+  def self.warn_storage_config!(io: $stderr)
+    if ENV.fetch("DUKAFI_REPLICAS", "1").to_i > 1 && ENV.fetch("DUKAFI_PUBLISHED_STORE", "disk") == "disk"
+      io.puts "[storage] multiple replicas with disk-published state can diverge; set DUKAFI_PUBLISHED_STORE=db"
+    end
+  end
 end
 
 Dir[File.expand_path("../models/concerns/*.rb", __dir__)].sort.each { |f| require f }
@@ -35,7 +40,5 @@ end
 
 Dukafi::Plugins.boot!
 Dukafi::Plugins.on_core(:"order.paid") { |order| Mailer.deliver(:order_confirmation, order: order) }
-if ENV.fetch("DUKAFI_REPLICAS", "1").to_i > 1 && ENV.fetch("DUKAFI_PUBLISHED_STORE", "disk") == "disk"
-  warn "[storage] multiple replicas with disk-published state can diverge; set DUKAFI_PUBLISHED_STORE=db"
-end
+Dukafi.warn_storage_config!
 Scheduler.start!

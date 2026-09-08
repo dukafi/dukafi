@@ -121,6 +121,12 @@ const CmsMediaAssetSchema = Type.Object({
   blurHash: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   variants: Type.Optional(Type.Array(CmsMediaVariantSchema)),
   posterPath: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  origin: Type.Optional(Type.Union([
+    Type.Literal('upload'),
+    Type.Literal('import'),
+    Type.Literal('ai'),
+  ])),
+  originMeta: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
 })
 
 /**
@@ -381,3 +387,73 @@ export const CmsPluginScheduleRunOutcomeEnvelopeSchema = Type.Object(
   },
   { additionalProperties: true },
 )
+
+export const CmsAiConnectionSchema = Type.Object({
+  id: Type.Number(),
+  name: Type.String(),
+  provider: Type.String(),
+  baseUrl: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  chatModel: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  imageModel: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  priority: Type.Number(),
+  disabled: Type.Boolean(),
+  isSet: Type.Boolean(),
+}, { additionalProperties: true })
+
+export const CmsAiConnectionsResponseSchema = Type.Object({
+  connections: Type.Array(CmsAiConnectionSchema),
+  providers: Type.Array(Type.Object({
+    id: Type.String(),
+    label: Type.String(),
+    authMode: Type.String(),
+  }, { additionalProperties: true })),
+}, { additionalProperties: true })
+
+export const CmsAiDefaultsSchema = Type.Object({
+  chat: Type.Optional(Type.Union([
+    Type.Object({ connectionId: Type.Number(), model: Type.String() }),
+    Type.Null(),
+  ])),
+  image: Type.Optional(Type.Union([
+    Type.Object({ connectionId: Type.Number(), model: Type.String() }),
+    Type.Null(),
+  ])),
+}, { additionalProperties: true })
+
+export const CmsAiImageResponseSchema = Type.Object({
+  asset: Type.Optional(CmsMediaAssetSchema),
+  provider: Type.Optional(Type.String()),
+  model: Type.Optional(Type.String()),
+  error: Type.Optional(Type.String()),
+  attempts: Type.Optional(Type.Array(Type.Unknown())),
+}, { additionalProperties: true })
+
+export const CmsThemeCatalogueResponseSchema = Type.Object({
+  themes: Type.Array(Type.Object({
+    id: Type.String(),
+    name: Type.String(),
+    version: Type.String(),
+  }, { additionalProperties: true })),
+  total: Type.Optional(Type.Number()),
+  degraded: Type.Optional(Type.Boolean()),
+}, { additionalProperties: true })
+
+export const CmsShippingRatesResponseSchema = Type.Object({
+  rates: Type.Array(Type.Object({
+    provider: Type.String(),
+    id: Type.String(),
+    label: Type.String(),
+    amountCents: Type.Number(),
+  }, { additionalProperties: true })),
+}, { additionalProperties: true })
+
+export const CmsJobsStatusResponseSchema = Type.Object({
+  jobs: Type.Array(Type.Object({
+    pluginId: Type.String(),
+    name: Type.String(),
+    every: Type.String(),
+    lastRunAt: Type.Union([Type.String(), Type.Null()]),
+    due: Type.Boolean(),
+  }, { additionalProperties: true })),
+}, { additionalProperties: true })
+

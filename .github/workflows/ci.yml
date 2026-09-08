@@ -67,14 +67,30 @@ jobs:
       - run: bun run build
         working-directory: dukafi-editor
 
+  # Validate Compose files only (no `up`). Replica smoke stays in scripts/smoke-replicas.sh.
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose -f compose.prod.yml config >/dev/null
+      - run: docker compose -f compose.prod.yml -f compose.postgres.yml config >/dev/null
+      - run: docker compose -f compose.prod.yml -f compose.caddy.yml config >/dev/null
+      - run: docker compose -f compose.prod.yml -f compose.scale.yml config >/dev/null
+      - run: docker compose -f compose.prod.yml -f compose.postgres.yml -f compose.caddy.yml -f compose.scale.yml config >/dev/null
+
   # Builds the real image on every push. Catches a broken Dockerfile at the
   # commit that broke it rather than at release time. Never pushes — that is
-  # bin/publish-image, run deliberately.
+  # bin/publish-image / deploy-image, run deliberately.
+  #
+  # CI builds linux/amd64 only for speed. Multi-arch release
+  # (RELEASE_PLATFORMS=linux/amd64,linux/arm64) lives in ./deploy-image.
   image:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
+      - name: Note multi-arch is release-only
+        run: echo "CI image job is amd64-only; deploy-image sets RELEASE_PLATFORMS=linux/amd64,linux/arm64"
       - uses: docker/build-push-action@v6
         with:
           context: .

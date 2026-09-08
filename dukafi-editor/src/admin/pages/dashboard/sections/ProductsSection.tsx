@@ -474,7 +474,7 @@ function VariantsDialog({ product, extraFields, refresh, onClose }: {
                         <span>Edit</span>
                       </Button>
                       <Button
-                        type="button" variant="ghost" tone="danger" size="xs" iconOnly
+                        type="button" variant="ghost" size="xs" iconOnly
                         aria-label={`Delete variant ${variant.sku}`}
                         onClick={() => setRemoving(variant)}
                       >

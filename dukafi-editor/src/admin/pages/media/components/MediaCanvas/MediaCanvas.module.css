@@ -88,6 +88,7 @@
 }
 
 .tilePreview {
+    position: relative;
     width: 100%;
     aspect-ratio: 1 / 1;
     display: flex;
@@ -97,6 +98,32 @@
     border-radius: var(--radius-sm);
     overflow: hidden;
     color: var(--text-subtle);
+}
+
+.originBadge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--accent, #2563eb) 85%, black);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+}
+
+.originBadgeInline {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 5px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--accent, #2563eb) 85%, black);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
 }
 
 .folderPreview {

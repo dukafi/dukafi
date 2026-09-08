@@ -1,0 +1,105 @@
+/* Grouped admin sidebar — workspace switcher + page/panel items.
+ * Square, monochrome, no pill chrome. */
+
+.root {
+    display: flex;
+    flex: 0 0 184px;
+    width: 184px;
+    min-width: 184px;
+    height: 100%;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    border-right: 1px solid var(--overlay-10);
+    background: var(--bg-body);
+}
+
+.brand {
+    flex: 0 0 auto;
+    padding: var(--space-m) var(--space-l);
+    overflow: hidden;
+    border-bottom: 1px solid var(--overlay-10);
+    color: var(--text);
+    font-size: var(--text-s);
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nav {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: var(--space-2xl);
+    min-height: 0;
+    padding: var(--space-m) var(--space-s) var(--space-l);
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+}
+
+.groupLabel {
+    padding: var(--space-2xs) var(--space-s);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 600;
+}
+
+.item {
+    min-width: 0;
+}
+
+.itemLabel {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.navLink {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    width: 100%;
+    min-height: 32px;
+    padding: 0 var(--space-s);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+    font-weight: 500;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.navLink:hover {
+    background: var(--overlay-10);
+    color: var(--text);
+}
+
+.navLink:focus-visible {
+    outline: 2px solid var(--border-strong);
+    outline-offset: -2px;
+}
+
+.navLinkActive {
+    background: var(--overlay-10);
+    color: var(--text);
+    cursor: default;
+}
+
+.navLinkActive:hover {
+    background: var(--overlay-10);
+    color: var(--text);
+}
+
+.icon {
+    flex: none;
+    color: inherit;
+}

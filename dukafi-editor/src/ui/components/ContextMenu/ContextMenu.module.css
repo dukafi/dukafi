@@ -8,7 +8,7 @@
     overflow: hidden;
     padding: var(--space-3xs);
     border: 0;
-    border-radius: 16px;
+    border-radius: 0;
     background: var(--bg-surface-3);
     box-shadow: 0 12px 28px var(--scrim-50);
     /* Anchor the subtle scale to the menu's top edge — the menu drops down
@@ -63,7 +63,7 @@
 /* Scrollable variant — used when the caller passes a `maxHeight`. The menu
    is capped to `min(maxHeight, 100vh - 16px)` so it never overflows the
    viewport, and the inner content scrolls vertically. The 4px padding keeps
-   the rounded corners visible above and below the scrollbar track. */
+   a gap above and below the scrollbar track. */
 .menu[data-scrollable] {
     max-height: min(var(--context-menu-max-height), calc(100vh - 16px));
     overflow-y: auto;
@@ -103,7 +103,7 @@
     min-height: 28px;
     padding: 0 var(--space-m);
     gap: var(--space-m);
-    border-radius: 12px;
+    border-radius: 0;
     font-size: var(--text-s);
     font-weight: 560;
     color: var(--text);

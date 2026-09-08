@@ -36,7 +36,7 @@ import {
   type UpdateCmsMediaAssetInput,
 } from '@core/persistence/cmsMedia'
 import { buildFolderTree, type MediaFolderNode } from '../utils/folderTree'
-import { collectMediaTags, filterMediaAssets, type MediaFilters, type MediaSort, type MediaType } from '../utils/filters'
+import { collectMediaTags, filterMediaAssets, type MediaFilters, type MediaOrigin, type MediaSort, type MediaType } from '../utils/filters'
 import { useUploadQueue, type UseUploadQueueResult } from './useUploadQueue'
 import { primeCmsMediaAssetCache, refreshCmsMediaAssetCache } from './useCmsMediaAssetByPath'
 import type { WorkspaceLoadState } from '@admin/lib/workspaceLoadState'
@@ -93,8 +93,9 @@ export interface UseMediaWorkspaceResult extends WorkspaceLoadState {
   uploadQueue: UseUploadQueueResult
 
   // Filters
-  filters: { type: MediaType; q: string; tag: string; sort: MediaSort }
+  filters: { type: MediaType; origin: MediaOrigin; q: string; tag: string; sort: MediaSort }
   setFilterType: (type: MediaType) => void
+  setFilterOrigin: (origin: MediaOrigin) => void
   setQuery: (q: string) => void
   setTag: (tag: string) => void
   setSort: (sort: MediaSort) => void
@@ -134,6 +135,7 @@ export function useMediaWorkspace(): UseMediaWorkspaceResult {
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(() => new Set())
   const [selectedAssetOrder, setSelectedAssetOrder] = useState<string[]>([])
   const [filterType, setFilterType] = useState<MediaType>('all')
+  const [filterOrigin, setFilterOrigin] = useState<MediaOrigin>('all')
   const [query, setQuery] = useState('')
   const [tag, setTag] = useState('')
   const [sort, setSort] = useState<MediaSort>('newest')
@@ -243,6 +245,7 @@ export function useMediaWorkspace(): UseMediaWorkspaceResult {
   const filteredAssets = filterMediaAssets(assets, {
     folderId: filterFolder,
     type: filterType,
+    origin: filterOrigin,
     q: query,
     tag,
     sort,
@@ -537,8 +540,9 @@ export function useMediaWorkspace(): UseMediaWorkspaceResult {
     selectRange,
     clearSelection,
     uploadQueue,
-    filters: { type: filterType, q: query, tag, sort },
+    filters: { type: filterType, origin: filterOrigin, q: query, tag, sort },
     setFilterType,
+    setFilterOrigin,
     setQuery,
     setTag,
     setSort,

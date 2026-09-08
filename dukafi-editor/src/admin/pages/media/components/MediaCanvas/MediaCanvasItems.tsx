@@ -87,6 +87,14 @@ export function AssetTile({
           ) : (
             <FolderGlyphIcon size={28} />
           )}
+          {asset.origin === 'ai' && (
+            <span
+              className={styles.originBadge}
+              title={typeof asset.originMeta?.prompt === 'string' ? asset.originMeta.prompt : 'AI generated'}
+            >
+              AI
+            </span>
+          )}
         </span>
         <span className={styles.tileBody}>
           <span className={styles.tileLabel}>{asset.filename}</span>
@@ -143,6 +151,14 @@ export function AssetRow({
           )}
         </span>
         <span className={styles.rowLabel}>{asset.filename}</span>
+        {asset.origin === 'ai' && (
+          <span
+            className={styles.originBadgeInline}
+            title={typeof asset.originMeta?.prompt === 'string' ? asset.originMeta.prompt : 'AI generated'}
+          >
+            AI
+          </span>
+        )}
         <span className={styles.rowMeta}>{formatBytes(asset.sizeBytes)}</span>
       </Button>
       {actions && <span className={styles.itemActions}>{actions}</span>}

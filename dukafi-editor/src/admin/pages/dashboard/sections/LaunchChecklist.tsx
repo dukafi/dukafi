@@ -15,7 +15,7 @@ export function LaunchChecklist({ data, navigate }: { data: CommerceData; naviga
     { done: published, label: 'Publish your storefront', path: '/admin/site' },
   ]
   if (items.every((item) => item.done)) return null
-  return <aside aria-label="Launch checklist" style={{ border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 16, marginBottom: 20 }}>
+  return <aside aria-label="Launch checklist" style={{ border: '1px solid var(--border-subtle)', borderRadius: 0, padding: 16, marginBottom: 20 }}>
     <h2 style={{ marginTop: 0 }}>Launch your store</h2>
     {items.map((item) => <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
       <span aria-hidden="true">{item.done ? '✓' : '○'}</span>

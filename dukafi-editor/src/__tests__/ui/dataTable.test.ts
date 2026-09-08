@@ -8,11 +8,12 @@ const dataTableCss = readFileSync(
 )
 
 describe('DataTable visual density', () => {
-  it('uses 1px row spacing and editor-surface-2 hover for every table density', () => {
-    expect(dataTableCss).toContain('border-spacing: 0 1px')
-    expect(dataTableCss).toContain('.row:hover .cell')
-    expect(dataTableCss).toContain('background: var(--bg-surface-2)')
-    expect(dataTableCss).not.toContain('border-spacing: 0 4px')
-    expect(dataTableCss).not.toContain('border-spacing: 0 8px')
+  it('is a square grid with cell borders and no rounded row pills', () => {
+    expect(dataTableCss).toContain('border-collapse: collapse')
+    expect(dataTableCss).toContain('border-right: 1px solid var(--border)')
+    expect(dataTableCss).toContain('border-bottom: 1px solid var(--border)')
+    expect(dataTableCss).toContain('.table tbody .row:hover')
+    expect(dataTableCss).not.toContain('border-radius')
+    expect(dataTableCss).not.toContain('border-spacing')
   })
 })

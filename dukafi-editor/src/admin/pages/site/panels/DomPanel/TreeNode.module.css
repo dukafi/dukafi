@@ -42,12 +42,12 @@
 
 /* ── Open container group highlight ─────────────────────────────────────── */
 .openContainerGroup {
-    border-radius: 8px;
+    border-radius: 0;
     background: var(--bg-surface);
 }
 
 .openContainerGroup > [role="treeitem"] {
-    border-radius: 8px;
+    border-radius: 0;
 }
 
 /* ── Drag/drop state ─────────────────────────────────────────────────────── */

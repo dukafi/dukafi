@@ -14,14 +14,13 @@ require "uri"
 #     ExternalReference, MpesaReceiptNumber, Phone, ResultCode, ResultDesc,
 #     Status } }
 #
-# Two things their docs do NOT provide, and both shape this file:
-#   1. No callback signature/token. The unguessable callback URL is therefore
-#      the shared secret, and `Payments.settle` re-checks the amount before
-#      any order is marked paid.
-#   2. No documented transaction-status endpoint, so `poll` is not
-#      implemented. The flow depends on the callback arriving; if PayHero
-#      publishes a status endpoint, adding `poll` here makes a lost callback
-#      self-healing with no other change.
+    # Two things their docs used to omit, and both still shape this file:
+    #   1. No callback signature/token. The unguessable callback URL is therefore
+    #      the shared secret, and `Payments.settle` re-checks the amount before
+    #      any order is marked paid.
+    #   2. Transaction status lives at GET /api/v2/transaction-status?reference=
+    #      (`poll` + the 15m `reconcile` job). A lost callback is therefore
+    #      self-healing for attempts older than five minutes.
 module PayHero
   module Provider
     DEFAULT_BASE = "https://backend.payhero.co.ke".freeze
@@ -69,6 +68,29 @@ module PayHero
         provider_reference: response["CheckoutRequestID"] || response["reference"],
         client_payload: {}, error: nil
       )
+    end
+
+    # GET /api/v2/transaction-status?reference= — documented at
+    # https://docs.payhero.co.ke/docs/get-transaction-status
+    # Status values: QUEUED, SUCCESS, FAILED.
+    def poll(attempt:, config:)
+      reference = attempt.provider_reference.to_s
+      reference = attempt.reference if reference.empty?
+      parsed = get_json("#{base_url(config)}/api/v2/transaction-status?reference=#{URI.encode_www_form_component(reference)}", config)
+      return :pending unless parsed.is_a?(Hash)
+
+      status = parsed["status"].to_s.upcase
+      return :succeeded if status == "SUCCESS"
+      return :pending if status == "QUEUED" || status.empty?
+      :failed
+    end
+
+    def reconcile(now: Time.now)
+      stale = now - 300
+      PaymentAttempt.where(provider: "payhero", status: %w[pending processing])
+                    .where(Sequel[:created_at] < stale).each do |attempt|
+        Payments.refresh(attempt)
+      end
     end
 
     def parse_callback(body:, config:)
@@ -137,6 +159,20 @@ module PayHero
       value.empty? ? DEFAULT_BASE : value.chomp("/")
     end
 
+    def get_json(url, config)
+      uri = URI(url)
+      request = Net::HTTP::Get.new(uri)
+      request["Authorization"] = authorization(config)
+      response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == "https",
+                                 open_timeout: 10, read_timeout: 20) do |http|
+        http.request(request)
+      end
+      JSON.parse(response.body.to_s)
+    rescue StandardError => e
+      warn "[payhero] poll failed: #{e.class}: #{e.message}"
+      nil
+    end
+
     def post_json(url, body, config)
       uri = URI(url)
       request = Net::HTTP::Post.new(uri)
@@ -170,4 +206,7 @@ Dukafi::Plugins.register("payhero") do |p|
                      label: "M-Pesa",
                      fields: [{ name: "phone", label: "M-Pesa number", type: "tel",
                                 placeholder: "07XX XXX XXX" }]
+  p.job "reconcile", every: "15m" do
+    PayHero::Provider.reconcile
+  end
 end

@@ -10,6 +10,7 @@ import type { CmsMediaAsset } from '@core/persistence/cmsMedia'
 
 export type MediaSort = 'newest' | 'oldest' | 'largest' | 'smallest' | 'name-asc' | 'name-desc'
 export type MediaType = 'all' | 'image' | 'video' | 'svg' | 'other'
+export type MediaOrigin = 'all' | 'upload' | 'ai'
 
 /** The single MIME type for SVG — its own filter even though it buckets as image. */
 export const SVG_MIME = 'image/svg+xml'
@@ -26,6 +27,7 @@ export interface MediaFilters {
    */
   folderId?: string | null
   type?: MediaType
+  origin?: MediaOrigin
   /** Free-text query — matches filename, title, alt text, caption (case-insensitive). */
   q?: string
   /** Single-tag filter — asset's `tags` array must include this string. */
@@ -90,12 +92,20 @@ function compareAssets(a: CmsMediaAsset, b: CmsMediaAsset, sort: MediaSort): num
   }
 }
 
+function matchesOrigin(asset: CmsMediaAsset, origin: MediaOrigin | undefined): boolean {
+  if (!origin || origin === 'all') return true
+  const value = asset.origin ?? 'upload'
+  if (origin === 'ai') return value === 'ai'
+  return value !== 'ai'
+}
+
 export function filterMediaAssets(
   assets: CmsMediaAsset[],
   filters: MediaFilters,
 ): CmsMediaAsset[] {
   const filtered = assets.filter((asset) =>
     matchesType(asset, filters.type) &&
+    matchesOrigin(asset, filters.origin) &&
     matchesQuery(asset, filters.q) &&
     matchesTag(asset, filters.tag) &&
     matchesFolder(asset, filters.folderId),

@@ -25,7 +25,7 @@ describe('SegmentedControl editor chrome variants', () => {
     expect(screen.getByRole('button', { name: 'Layers' }).getAttribute('aria-pressed')).toBe('true')
   })
 
-  it('uses the recessed tab surface and top fade in Explorer Layers chrome', () => {
+  it('uses the top fade in Explorer Layers chrome', () => {
     const explorerSource = readFileSync('src/admin/pages/site/panels/ExplorerPanel/ExplorerPanel.tsx', 'utf8')
     const domPanelCss = readFileSync('src/admin/pages/site/panels/DomPanel/DomPanel.module.css', 'utf8')
     const leftSidebarCss = readFileSync(
@@ -33,7 +33,7 @@ describe('SegmentedControl editor chrome variants', () => {
       'utf8',
     )
 
-    expect(explorerSource).toContain('activeSurface="recessed"')
+    expect(explorerSource).not.toContain('SegmentedControl')
     expect(domPanelCss).toContain('.searchRow::after')
     expect(domPanelCss).toContain('linear-gradient(180deg, var(--panel-fade-bg) 0%, transparent)')
     expect(leftSidebarCss).toContain('--panel-fade-bg: var(--bg-body)')

@@ -5,7 +5,7 @@
  *
  * The registry is intentionally curated: plugins can't reach into arbitrary
  * icon files at runtime (no dynamic import, no string-to-module shims), so
- * the rail's bundle stays tree-shakeable and the surface area authors
+ * the sidebar's bundle stays tree-shakeable and the surface area authors
  * compile against is explicit. Unknown names fall back to `BoxSolidIcon`.
  *
  * Adding a new icon: import it here and add a record entry. That's it.
@@ -49,7 +49,7 @@ const PLUGIN_PANEL_ICONS: Record<string, IconComponent> = {
 /**
  * Resolve a plugin-declared icon name to a `pixel-art-icons` component.
  * Falls back to `BoxSolidIcon` for any name not in the registry — keeps the
- * rail visually stable even when a plugin ships an icon name we haven't
+ * sidebar visually stable even when a plugin ships an icon name we haven't
  * imported yet.
  */
 export function resolvePluginPanelIcon(name: string): IconComponent {

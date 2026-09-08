@@ -26,6 +26,7 @@ import { isValidImageUrl } from '@core/utils/urlValidation'
 import type { ControlProps } from './shared'
 import { ControlRow } from '@ui/components/ControlRow'
 import controlRowStyles from '@ui/components/ControlRow/ControlRow.module.css'
+import { Button } from '@ui/components/Button'
 import { Input } from '@ui/components/Input'
 import { SegmentedControl } from '@ui/components/SegmentedControl'
 import { VideoSolidIcon } from 'pixel-art-icons/icons/video-solid'
@@ -34,6 +35,7 @@ import { MediaViewerWindow } from '@admin/pages/media/components/MediaViewerWind
 import { useStandaloneMediaEditor } from '@admin/pages/media/hooks/useStandaloneMediaEditor'
 import { primeCmsMediaAssetCache } from '@admin/pages/media/hooks/useCmsMediaAssetByPath'
 import styles from './controls.module.css'
+import { GenerateImageDialog } from '@admin/pages/media/components/GenerateImageDialog'
 import { getErrorMessage } from '@core/utils/errorMessage'
 
 // Lazy-load the modal so the entire MediaPage stack (folders / canvas /
@@ -101,6 +103,7 @@ export function MediaLibraryControl({
   const currentValue = String(value ?? '')
   const [mode, setMode] = useState<MediaMode>(() => startsInUrlMode(currentValue) ? 'url' : 'library')
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [generateOpen, setGenerateOpen] = useState(false)
   // We still fetch the asset list ONCE on mount so the "currently picked"
   // preview can show the right thumbnail + blurhash for the field's
   // saved publicPath. The modal mounts its own workspace when opened —
@@ -228,6 +231,16 @@ export function MediaLibraryControl({
               onEdit={currentAsset ? openViewer : undefined}
               onClear={currentValue ? handleClear : undefined}
             />
+            {mediaKind === 'image' && (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={disabled}
+                onClick={() => setGenerateOpen(true)}
+              >
+                Generate
+              </Button>
+            )}
             {libraryError && (
               <p className={styles.mediaStatus} role="alert">{libraryError}</p>
             )}
@@ -277,6 +290,13 @@ export function MediaLibraryControl({
         </Suspense>
       )}
 
+      <GenerateImageDialog
+        open={generateOpen}
+        onClose={() => setGenerateOpen(false)}
+        onGenerated={(asset) => {
+          if (asset) handlePickFromModal(asset)
+        }}
+      />
       <MediaViewerWindow
         editor={viewerEditor}
         open={viewerAsset !== null}

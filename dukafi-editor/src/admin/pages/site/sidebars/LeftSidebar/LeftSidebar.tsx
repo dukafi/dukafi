@@ -4,7 +4,6 @@ import type { LeftSidebarPanelId } from '@site/store/slices/uiSlice'
 import { FrameworkPanel } from '@site/panels/FrameworkPanel'
 import { ExplorerPanel } from '@site/panels/ExplorerPanel'
 import { AiPanel } from '@site/panels/AiPanel'
-import { PanelRail } from '@site/sidebars/PanelRail'
 import { FrameworkChangeConfirmProvider } from '@admin/shared/dialogs/FrameworkChangeConfirmDialog'
 import { VCDeletionConfirmProvider } from '@admin/shared/dialogs/VCDeletionConfirmDialog'
 import { SidebarResizeHandle } from '@admin/shared/SidebarResizeHandle'
@@ -14,11 +13,9 @@ import {
   useResizablePanel,
 } from '@admin/shared/FloatingWindow'
 import { cn } from '@ui/cn'
+import { SiteEditorNav } from './SiteEditorNav'
 import styles from './LeftSidebar.module.css'
 
-// Image preparation and provider catalogue code belong to the AI surface, not
-// the editor startup path. A nested boundary lets the sidebar/canvas render as
-// independently so its local draft survives panel switches after first load.
 type HostedLeftPanelId = LeftSidebarPanelId
 
 function selectActiveLeftSidebarPanel(
@@ -35,16 +32,14 @@ function selectActiveLeftSidebarPanel(
 }
 
 interface LeftSidebarProps {
-  /** Drives the rail-button accent identity hash (`${workspace}:${id}:…`). */
   workspace?: 'site' | 'content' | 'media'
   railOnly?: boolean
   /**
    * Whether the caller can perform structural edits (DnD, add/remove nodes,
-   * pages, styles). Controls which side-panels are exposed in the rail.
+   * pages, styles). Controls which editor groups appear in the sidebar.
    *
-   * Falsy callers (Viewer / Client) still see the Explorer panel (Layers /
-   * Pages / Media navigation surfaces) — they're not editing tools. The
-   * structural Framework panel stays hidden. The
+   * Falsy callers (Viewer / Client) still see Layers / Pages / Code / Media
+   * — they're not editing tools. Framework and Assistant stay hidden.
    *
    * Each panel is responsible for respecting its own read-only state for
    * the interactions it exposes (TreeNode drag, context menus, etc.).
@@ -53,9 +48,9 @@ interface LeftSidebarProps {
 }
 
 /**
- * Set of rail items that remain visible to read-only callers — purely
+ * Set of panels that remain visible to read-only callers — purely
  * navigational / view surfaces. Anything not in this set is editing-only
- * and is dropped from the rail (and its panel mount) when `editable=false`.
+ * and is dropped from the sidebar (and its panel mount) when `editable=false`.
  */
 const READ_ONLY_RAIL_IDS: ReadonlySet<LeftSidebarPanelId> = new Set(['explorer'])
 const PANEL_RESIZE_LABELS: Record<HostedLeftPanelId, string> = {
@@ -65,7 +60,6 @@ const PANEL_RESIZE_LABELS: Record<HostedLeftPanelId, string> = {
 }
 
 export function LeftSidebar({
-  workspace = 'site',
   railOnly = false,
   editable = true,
 }: LeftSidebarProps) {
@@ -102,7 +96,7 @@ export function LeftSidebar({
     setPanelRef,
     headerDragProps,
     panelPositionStyle,
-  } = useDraggablePanel('site', () => ({ x: 58, y: 64 }))
+  } = useDraggablePanel('site', () => ({ x: 192, y: 64 }))
   const {
     panelSizeStyle,
     resizeHandleProps,
@@ -138,11 +132,7 @@ export function LeftSidebar({
         : effectiveActivePanel ?? 'none'}
       style={style}
     >
-      <PanelRail
-        workspace={workspace}
-        editable={editable}
-        railOnly={railOnly}
-      />
+      <SiteEditorNav editable={editable} railOnly={railOnly} />
 
       <FrameworkChangeConfirmProvider>
       <VCDeletionConfirmProvider>

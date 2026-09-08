@@ -36,7 +36,7 @@ import { cn } from '@ui/cn'
 // rounded top-left, `--bg-surface-2` background. Keeps the look consistent.
 import canvasStyles from '@site/canvas/CanvasRoot.module.css'
 import type { CmsMediaAsset, CmsMediaFolder } from '@core/persistence/cmsMedia'
-import type { MediaSort, MediaType } from '../../utils/filters'
+import type { MediaOrigin, MediaSort, MediaType } from '../../utils/filters'
 import {
   readStoredMediaViewMode,
   writeStoredMediaViewMode,
@@ -73,9 +73,15 @@ interface MediaCanvasProps {
 const TYPE_FILTERS: FilterBarItem<MediaType>[] = [
   { value: 'all', label: 'All' },
   { value: 'image', label: 'Images' },
-  { value: 'svg', label: 'SVG' },
   { value: 'video', label: 'Videos' },
+  { value: 'svg', label: 'SVGs' },
   { value: 'other', label: 'Other' },
+]
+
+const ORIGIN_FILTERS: FilterBarItem<MediaOrigin>[] = [
+  { value: 'all', label: 'All origins' },
+  { value: 'upload', label: 'Uploaded' },
+  { value: 'ai', label: 'AI generated' },
 ]
 
 const SORT_OPTIONS: Array<{ value: MediaSort; label: string }> = [
@@ -374,6 +380,12 @@ export function MediaCanvas({ workspace, selectionMode = 'standard' }: MediaCanv
               </Button>
             </div>
           )}
+        />
+        <FilterBar<MediaOrigin>
+          items={ORIGIN_FILTERS}
+          value={workspace.filters.origin}
+          onValueChange={workspace.setFilterOrigin}
+          groupLabel="Filter media origin"
         />
       </header>
 

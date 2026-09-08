@@ -15,9 +15,25 @@ class PublishedStore
         relative = path.delete_prefix("#{root}/")
         [relative, { content: File.binread(path), content_type: content_type(relative) }]
       end
+      write_version(version, files)
+      activate(version)
+    end
+
+    def write_version(version, files)
+      return unless backend == "db"
       DB.transaction do
         DB[:published_files].where(version: version).delete
-        files.each { |path, value| DB[:published_files].insert(version: version, path: path, **value) }
+        files.each do |path, value|
+          content = value[:content] || value["content"]
+          type = value[:content_type] || value["content_type"] || content_type(path)
+          DB[:published_files].insert(version: version, path: path, content: content, content_type: type)
+        end
+      end
+    end
+
+    def activate(version)
+      return unless backend == "db"
+      DB.transaction do
         DB[:published_states].where(id: 1).update(current_version: version)
         old = DB[:published_files].select_map(:version).uniq.sort.reverse.drop(2)
         DB[:published_files].where(version: old).delete unless old.empty?
