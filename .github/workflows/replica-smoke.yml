@@ -1,9 +1,10 @@
 name: Replica smoke
 
 on:
+  push:
+    branches:
+      - master
   workflow_dispatch:
-  schedule:
-    - cron: '17 2 * * *'
 
 jobs:
   smoke:

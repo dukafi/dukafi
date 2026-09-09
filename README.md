@@ -2,9 +2,55 @@
 
 Own your store. One click to live.
 
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/dukafi-sqlite?referralCode=ANIopl&utm_medium=integration&utm_source=template&utm_campaign=generic)
+
+[One-Click Deploy](#deploy-in-one-click) · [Quick Start](#quick-start) · [Docs](docs/deployment.md)
+
 Dukafi is a self-hosted visual commerce CMS. Merchants design pages, manage a
 catalogue, take payments, and publish fast static storefront HTML while carts,
 stock, accounts, checkout, and orders remain live server-rendered fragments.
+
+## Deploy in one click
+
+Railway is the fastest way to get a store live. Pick the template, hit the
+button, wait a couple of minutes. It generates `SESSION_SECRET`, attaches the
+`/data` volume, and sets the health check. You never open a terminal.
+
+*One minute to live. Unedited.*
+
+| Provider | Database | Best for | Deploy |
+|---|---|---|---|
+| **Railway** · *Recommended* | SQLite | A single store — one merchant, one volume | [Deploy →](https://railway.com/deploy/dukafi-sqlite?referralCode=ANIopl&utm_medium=integration&utm_source=template&utm_campaign=generic) |
+| **Railway** | Postgres | Managed backups, room to grow | [Deploy →](https://railway.com/deploy/dukafi-sqlite?referralCode=ANIopl&utm_medium=integration&utm_source=template&utm_campaign=generic) |
+| **Docker / VPS** | SQLite or Postgres | Bring-your-own server, Caddy TLS, custom backup policy | [Guide →](docs/deployment.md) |
+
+SQLite is the right default for most shops. Reach for Postgres when you want
+managed database backups or more than one replica.
+
+### Updating is just a redeploy
+
+When a new Dukafi version is available, update by redeploying
+`ghcr.io/dukafi/dukafi:latest`. The database, uploads, plugins, and published
+HTML stay on the attached volume.
+
+Prefer your own hardware?
+
+```sh
+cp .env.example .env
+# Set SESSION_SECRET to: openssl rand -hex 64
+docker compose --env-file .env -f compose.prod.yml up -d
+```
+
+Postgres with automatic TLS:
+
+```sh
+docker compose --env-file .env \
+  -f compose.prod.yml -f compose.postgres.yml -f compose.caddy.yml up -d
+```
+
+Add `-f compose.scale.yml` for same-host replicas. Postgres is required when
+scaling. Full guides for backups and storage are in
+[docs/deployment.md](docs/deployment.md).
 
 ## What ships
 
@@ -31,27 +77,6 @@ cd .. && ./bin/dev
 
 Open the editor at <http://localhost:5173/admin/> and the storefront at
 <http://localhost:9292/>. See [SETUP.md](SETUP.md) for local setup.
-
-Production with SQLite:
-
-```sh
-cp .env.example .env
-# Set SESSION_SECRET to: openssl rand -hex 64
-docker compose --env-file .env -f compose.prod.yml up -d
-```
-
-Postgres with automatic TLS:
-
-```sh
-docker compose --env-file .env \
-  -f compose.prod.yml -f compose.postgres.yml -f compose.caddy.yml up -d
-```
-
-Add `-f compose.scale.yml` for same-host replicas. Postgres is required when
-scaling. See [deployment guidance](docs/deployment.md) for backups and storage.
-
-The Railway template must be published from the team account. Its setup is in
-[the template checklist](docs/milestones/m16-launch-deploy/railway-template-checklist.md).
 
 ## Architecture
 

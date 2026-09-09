@@ -20,9 +20,9 @@ dukafi/vendor/tailwindcss
 dukafi-editor/dist/
 dukafi-editor/.tmp-lint/
 
-# Full upstream Instatic clone, kept only as a diffing/reference baseline.
-# Has its own .git — never tracked as part of this repo.
-/reference/instatic/
+# Upstream Instatic clone and any other local reference trees. Local only —
+# never push this directory to GitHub.
+/reference/
 
 # GHCR token for ./deploy-image — never commit this
 .ghcr-token
