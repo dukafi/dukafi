@@ -53,7 +53,7 @@ function makeUser(capabilities: string[]): CmsCurrentUser {
 function makeCtx(capabilities: string[], workspace: CommandContext['workspace'] = 'site'): CommandContext {
   return {
     workspace,
-    pathname: '/admin/site',
+    pathname: '/admin/editor',
     user: makeUser(capabilities),
   }
 }

@@ -51,7 +51,7 @@
 import { Suspense, useEffect } from 'react'
 import type { CmsCurrentUser } from '@core/persistence'
 import { AppLoadingScreen } from './AppLoadingScreen'
-import type { AdminWorkspace } from './workspace'
+import { isSiteEditorPath, type AdminWorkspace } from './workspace'
 import { AdminSessionProvider } from './session'
 import { StepUpProvider } from './shared/StepUp'
 import { canAccessWorkspace, firstAccessibleWorkspace, workspacePath } from './access'
@@ -111,7 +111,7 @@ const DashboardPage = prewarmedLazy(
 if (typeof window !== 'undefined') {
   const pathname = window.location.pathname
   const activePage =
-    pathname.startsWith('/admin/site') ? SitePage :
+    isSiteEditorPath(pathname) ? SitePage :
     pathname.startsWith('/admin/media') ? MediaPage :
     pathname.startsWith('/admin/dashboard') ? DashboardPage :
     DashboardPage
@@ -199,11 +199,11 @@ export default function AuthenticatedAdmin({ section, currentUser }: Authenticat
     }
 
     if (section === 'site') {
-      // `/admin/site` has a second, active-route post-paint import:
+      // `/admin/editor` has a second, active-route post-paint import:
       // AdminCanvasEditorBody. Let that editor body claim the first idle
       // slot before warming sibling workspace pages; otherwise Content/Data
       // preloads start first and delay the canvas/dnd work the user actually
-      // asked for by opening Site.
+      // asked for by opening Editor.
       let cancelIdlePreload: (() => void) | null = null
       const timeoutId = window.setTimeout(() => {
         cancelIdlePreload = scheduleIdlePreload()

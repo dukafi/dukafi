@@ -1,9 +1,9 @@
 # Exact commerce figures from tables that already exist.
 #
 # Revenue, orders, AOV, units, status mix, payments, bestsellers, abandoned
-# carts, discount codes. No beacon, no visitors — those are a different
-# product (M10 Track B) because Caddy serves baked HTML and Ruby never sees
-# most hits.
+# carts, discount codes, and storefront page views. Page views are HTML
+# loads the Ruby storefront actually served — not unique visitors, not
+# assets, not admin.
 #
 # One service, one payload. Screens slice it; they do not each query.
 class CommerceStats
@@ -38,7 +38,7 @@ class CommerceStats
       topCollections: current[:top_collections],
       abandonedCarts: abandoned_carts,
       discounts: current[:discounts],
-      traffic: { available: false },
+      traffic: traffic,
     }
   end
 
@@ -196,6 +196,36 @@ class CommerceStats
         amountCents: succeeded.sum(&:amount_cents),
       }
     end.sort_by { |row| -row[:amountCents] }
+  end
+
+  def traffic
+    current = loads_in(@from...@to)
+    previous = loads_in(@previous_from...@from)
+    page_views = current.sum(&:views)
+    previous_views = previous.sum(&:views)
+    by_day = Hash.new(0)
+    current.each { |row| by_day[coerce_day(row.day)] += row.views }
+    paths = current.group_by(&:path).map do |path, rows|
+      { path: path, views: rows.sum(&:views) }
+    end.sort_by { |row| -row[:views] }.first(10)
+    {
+      available: true,
+      pageViews: page_views,
+      previous: { pageViews: previous_views },
+      deltas: { pageViewsPct: delta_pct(page_views, previous_views) },
+      series: { pageViews: buckets(@from...@to, by_day) },
+      paths: paths,
+    }
+  end
+
+  def loads_in(range)
+    first = range.begin.to_date
+    last = (range.end - 1).to_date
+    StorefrontLoad.where(day: first..last).all
+  end
+
+  def coerce_day(value)
+    value.is_a?(Date) ? value : Date.parse(value.to_s)
   end
 
   def abandoned_carts

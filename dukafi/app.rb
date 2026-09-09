@@ -72,7 +72,7 @@ class Dukafi < Roda
       # connection is something only the store owner can do.
       r.on("oauth") { r.run Oauth }
 
-      r.root { r.redirect "/admin/site" }
+      r.root { r.redirect "/admin/editor" }
       r.get do
         File.read(File.expand_path("public/admin/index.html", __dir__))
       rescue Errno::ENOENT
@@ -84,6 +84,6 @@ class Dukafi < Roda
     r.on("forms") { r.run Forms }
     r.on("payments") { r.run Payments::Routes }
     r.on("plugins") { r.run PluginRuntime }
-    r.run Storefront
+    r.run StorefrontLoadTracker.new(Storefront)
   end
 end

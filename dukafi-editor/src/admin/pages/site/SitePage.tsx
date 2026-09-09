@@ -6,7 +6,7 @@ import { useEditorStore } from '@site/store/store'
 /**
  * SitePage — visual editor route.
  *
- * The route renders the real admin/site shell immediately. Heavy editor body
+ * The route renders the real admin/editor shell immediately. Heavy editor body
  * work (DnD, canvas, panels, module registration, CodeMirror panel mount) is
  * lazy-loaded one level down by AdminCanvasLayout after the shell has painted.
  */

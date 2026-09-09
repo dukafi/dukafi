@@ -29,6 +29,7 @@ class AdminApiSpec < Minitest::Test
     Page.dataset.delete
     SiteState.dataset.delete
     Admin.dataset.delete
+    StorefrontLoad.dataset.delete
     clear_cookies
     @published_root = Dir.mktmpdir("dukafi-admin-publish-")
     ENV["DUKAFY_PUBLISHED_ROOT"] = @published_root
@@ -279,7 +280,9 @@ class AdminApiSpec < Minitest::Test
     overview = json.fetch("stats").fetch("overview")
     assert_equal 2_000, overview.fetch("revenueCents")
     assert_equal 1, overview.fetch("orders")
-    refute json.dig("stats", "traffic", "available")
+    traffic = json.dig("stats", "traffic")
+    assert traffic.fetch("available")
+    assert_equal 0, traffic.fetch("pageViews")
   end
 
   def test_commerce_stats_endpoint_requires_authentication

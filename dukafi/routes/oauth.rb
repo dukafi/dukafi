@@ -141,7 +141,7 @@ class Oauth < Roda
         # place we can establish who that is.
         if admin.nil?
           return_to = "/admin/oauth/authorize?#{URI.encode_www_form(r.params)}"
-          r.redirect("/admin/site?next=#{CGI.escape(return_to)}", 302)
+          r.redirect("/admin/editor?next=#{CGI.escape(return_to)}", 302)
         end
 
         html!(200, consent_page(client:, scopes:, params: r.params, admin:))

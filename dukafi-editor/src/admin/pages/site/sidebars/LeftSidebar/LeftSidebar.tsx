@@ -14,6 +14,7 @@ import {
 } from '@admin/shared/FloatingWindow'
 import { cn } from '@ui/cn'
 import { SiteEditorNav } from './SiteEditorNav'
+import { useAdminNavChrome, adminNavRailWidth } from '@admin/state/adminNavChrome'
 import styles from './LeftSidebar.module.css'
 
 type HostedLeftPanelId = LeftSidebarPanelId
@@ -115,7 +116,9 @@ export function LeftSidebar({
     onToggleMode: togglePanelMode,
   } as const
 
+  const navMode = useAdminNavChrome((state) => state.mode)
   const style = {
+    '--left-sidebar-rail-width': `${adminNavRailWidth(navMode)}px`,
     '--left-sidebar-panel-width': `${panelWidth}px`,
     '--left-sidebar-panel-layout-width': `${panelExpanded ? leftSidebarWidth : 0}px`,
   } as CSSProperties

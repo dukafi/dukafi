@@ -71,7 +71,7 @@ export function getPagesCommands(): Command[] {
 
         // Cross-workspace: queue + navigate. SitePage executes on mount.
         queuePendingAction('site.newPage', { title })
-        ctx.navigate('/admin/site')
+        ctx.navigate('/admin/editor')
       },
     },
 

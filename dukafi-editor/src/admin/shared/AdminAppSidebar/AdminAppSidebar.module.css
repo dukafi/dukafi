@@ -3,15 +3,46 @@
 
 .root {
     display: flex;
-    flex: 0 0 184px;
     width: 184px;
     min-width: 184px;
+    flex-shrink: 0;
+    align-self: stretch;
     height: 100%;
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
     border-right: 1px solid var(--overlay-10);
-    background: var(--bg-body);
+    background: var(--bg-surface);
+}
+
+.root[data-mode="icons"] {
+    width: 48px;
+    min-width: 48px;
+}
+
+.root[data-mode="hidden"] {
+    width: 0;
+    min-width: 0;
+    overflow: visible;
+    border-right: 0;
+    background: transparent;
+}
+
+.hamburger,
+.backdrop {
+    display: none;
+}
+
+.pane {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+.pane[hidden] {
+    display: none;
 }
 
 .brand {
@@ -102,4 +133,148 @@
 .icon {
     flex: none;
     color: inherit;
+}
+
+.chrome {
+    display: flex;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    margin-top: auto;
+    padding: var(--space-s);
+    border-top: 1px solid var(--overlay-10);
+}
+
+.root[data-mode="icons"] .chrome {
+    justify-content: center;
+    padding: var(--space-s) 0;
+}
+
+.root[data-mode="hidden"] .chrome {
+    position: fixed;
+    top: 40px;
+    left: 8px;
+    z-index: 90;
+    justify-content: center;
+    padding: var(--space-3xs);
+    border: 1px solid var(--overlay-10);
+    background: var(--bg-surface);
+}
+
+.root[data-mode="icons"] .brand,
+.root[data-mode="icons"] .groupLabel,
+.root[data-mode="icons"] .itemLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.root[data-mode="icons"] .nav {
+    padding: var(--space-s) var(--space-3xs);
+}
+
+.root[data-mode="icons"] .navLink {
+    justify-content: center;
+    width: 32px;
+    margin-inline: auto;
+    padding: 0;
+    gap: 0;
+}
+
+@media (max-width: 760px) {
+    .hamburger {
+        display: block;
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        z-index: 120;
+    }
+
+    .backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 105;
+        padding: 0;
+        border: 0;
+        background: color-mix(in srgb, var(--bg-body) 50%, transparent);
+        cursor: pointer;
+    }
+
+    .root,
+    .root[data-mode="icons"],
+    .root[data-mode="hidden"] {
+        width: 0;
+        min-width: 0;
+        overflow: visible;
+        border-right: 0;
+        background: transparent;
+    }
+
+    .pane {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 110;
+        display: flex;
+        width: min(280px, 86vw);
+        background: var(--bg-surface);
+        border-right: 1px solid var(--overlay-10);
+        transform: translateX(-100%);
+        transition: transform 180ms ease;
+    }
+
+    .pane[hidden] {
+        display: none;
+    }
+
+    .root[data-sheet-open] .pane {
+        transform: translateX(0);
+    }
+
+    .chrome,
+    .root[data-mode="hidden"] .chrome {
+        display: none;
+    }
+
+    .root[data-mode="icons"] .brand,
+    .root[data-mode="icons"] .groupLabel,
+    .root[data-mode="icons"] .itemLabel {
+        position: static;
+        width: auto;
+        height: auto;
+        padding: var(--space-2xs) var(--space-s);
+        margin: 0;
+        overflow: hidden;
+        clip: auto;
+        white-space: nowrap;
+    }
+
+    .root[data-mode="icons"] .brand {
+        padding: var(--space-m) var(--space-l);
+    }
+
+    .root[data-mode="icons"] .nav {
+        padding: var(--space-m) var(--space-s) var(--space-l);
+    }
+
+    .root[data-mode="icons"] .navLink {
+        justify-content: flex-start;
+        width: 100%;
+        margin-inline: 0;
+        padding: 0 var(--space-s);
+        gap: var(--space-s);
+    }
+}
+
+@media (max-width: 760px) and (prefers-reduced-motion: reduce) {
+    .pane {
+        transition: none;
+    }
 }

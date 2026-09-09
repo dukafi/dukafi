@@ -13,7 +13,7 @@
  *
  * Why sessionStorage (not a global Zustand atom)?
  *   - Survives the React tree teardown that happens when navigating from
- *     /admin/account → /admin/site (the entire admin shell re-renders).
+ *     /admin/account → /admin/editor (the entire admin shell re-renders).
  *   - Doesn't bloat the editor store with non-editor state.
  *   - Tab-scoped: opening a new tab starts with an empty queue.
  *

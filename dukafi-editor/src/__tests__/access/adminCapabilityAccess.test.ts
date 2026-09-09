@@ -110,7 +110,7 @@ describe('admin capability access helpers', () => {
     expect(firstAccessibleWorkspace(mediaOnly)).toBe('media')
 
     expect(firstAccessibleWorkspace(null)).toBeNull()
-    expect(workspacePath('site')).toBe('/admin/site')
+    expect(workspacePath('site')).toBe('/admin/editor')
     expect(workspacePath('media')).toBe('/admin/media')
     expect(workspacePath('dashboard')).toBe('/admin/dashboard')
   })

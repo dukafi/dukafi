@@ -6,9 +6,9 @@
     align-items: center;
     width: 100%;
     box-sizing: border-box;
-    background: transparent;
+    background: var(--bg-surface);
     border: 1px solid var(--overlay-20);
-    border-radius: var(--input-radius);
+    border-radius: 0;
     color: var(--text);
     cursor: pointer;
     font-family: var(--font-sans);
@@ -20,7 +20,7 @@
 
 .select:focus-within,
 .select[data-open="true"] {
-    background: transparent;
+    background: var(--bg-surface);
     border-color: var(--overlay-50);
 }
 
@@ -152,7 +152,7 @@
     padding: 0 var(--space-m);
     border: 0;
     border-top: 1px solid var(--overlay-10);
-    border-radius: 0 0 12px 12px;
+    border-radius: 0;
     background: transparent;
     color: var(--text);
     cursor: pointer;
@@ -164,4 +164,9 @@
 
 .addItem:hover {
     background: var(--overlay-5);
+}
+
+.menu {
+    border-radius: 0;
+    background: var(--bg-surface);
 }

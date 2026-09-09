@@ -554,3 +554,8 @@ body {
  * stops its animation). The static fill still communicates "this region
  * is loading" via its surface tone + the `aria-busy="true"` semantic
  * on the host wrapper. */
+
+select {
+    border-radius: 0;
+    background-color: var(--bg-surface);
+}
