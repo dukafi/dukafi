@@ -2,7 +2,8 @@ name: CI
 
 on:
   push:
-  pull_request:
+    branches:
+      - master
 
 jobs:
   # The Ruby suite runs against BOTH engines. The image ships both adapters, so
@@ -78,8 +79,8 @@ jobs:
       - run: docker compose -f compose.prod.yml -f compose.scale.yml config >/dev/null
       - run: docker compose -f compose.prod.yml -f compose.postgres.yml -f compose.caddy.yml -f compose.scale.yml config >/dev/null
 
-  # Builds the real image on every push. Catches a broken Dockerfile at the
-  # commit that broke it rather than at release time. Never pushes — that is
+  # Builds the real image when master updates. Catches a broken Dockerfile
+  # on the merge, not at release time. Never pushes — that is
   # bin/publish-image / deploy-image, run deliberately.
   #
   # CI builds linux/amd64 only for speed. Multi-arch release
