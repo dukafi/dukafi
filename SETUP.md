@@ -329,8 +329,8 @@ publish completed. Then use port 9292 and the exact slug:
 - Do not add DB, filesystem, or network access to `dukafi/publisher/`.
 - Keep editor and Ruby module implementations behaviorally aligned.
 - Regenerate schemas whenever editor core document types change.
-- Treat `reference/` as read-only.
+- Treat `reference/` as read-only and local-only (it is gitignored).
 - Preserve Instatic MIT attribution.
 - `dukafi-editor/` is tracked and committed like any other part of this repo.
-  Do not commit `reference/instatic/`, databases, uploads, generated published
+  Do not commit `reference/`, databases, uploads, generated published
   output, built editor assets, or the local Tailwind executable.
