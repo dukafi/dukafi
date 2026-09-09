@@ -70,6 +70,8 @@ class RecipesSpec < Minitest::Test
     assert_equal "seo", page_seo.fetch("topic")
     assert_equal "", page_seo.fetch("html")
     assert_includes page_seo.fetch("rules").join(" "), "keywords"
+    assert_includes page_seo.fetch("rules").join(" "), "update_store_settings"
+    assert_includes page_seo.fetch("rules").join(" "), "title"
   end
 
   def test_spotlight_prefers_featured_over_the_first_collection

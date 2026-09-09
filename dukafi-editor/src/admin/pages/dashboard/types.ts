@@ -7,8 +7,82 @@
 import type { ReactNode } from 'react'
 
 export type CommerceSection =
+  | 'analytics' | 'analytics-sales' | 'analytics-products' | 'analytics-traffic'
   | 'products' | 'collections' | 'tables' | 'orders' | 'discounts' | 'forms' | 'plugins' | 'import' | 'reviews'
   | 'connect' | 'themes' | 'settings'
+
+export type StatsPeriod = '7d' | '30d' | '90d'
+
+export interface CommerceStatsOverview {
+  revenueCents: number
+  orders: number
+  aovCents: number
+  units: number
+  previous: {
+    revenueCents: number
+    orders: number
+    aovCents: number
+    units: number
+  }
+  deltas: {
+    revenuePct: number | null
+    ordersPct: number | null
+    aovPct: number | null
+    unitsPct: number | null
+  }
+  series: {
+    revenue: number[]
+    orders: number[]
+    units: number[]
+  }
+}
+
+export interface CommerceStatsProductRow {
+  title: string
+  sku: string
+  revenueCents: number
+  units: number
+}
+
+export interface CommerceStatsCollectionRow {
+  title: string
+  slug: string
+  revenueCents: number
+  units: number
+}
+
+export interface CommerceStatsDiscountCode {
+  code: string
+  orders: number
+  discountCents: number
+  revenueCents: number
+}
+
+export interface CommerceStatsProvider {
+  provider: string
+  attempts: number
+  succeeded: number
+  amountCents: number
+}
+
+export interface CommerceStats {
+  period: StatsPeriod
+  currency: string
+  overview: CommerceStatsOverview
+  ordersByStatus: Record<string, number>
+  paymentsByStatus: Record<string, number>
+  paymentsByProvider: CommerceStatsProvider[]
+  topProducts: CommerceStatsProductRow[]
+  topCollections: CommerceStatsCollectionRow[]
+  abandonedCarts: { count: number; olderThanHours: number }
+  discounts: {
+    ordersWithCode: number
+    discountCents: number
+    revenueCents: number
+    codes: CommerceStatsDiscountCode[]
+  }
+  traffic: { available: boolean }
+}
 
 export interface CommerceSettings {
   currency: string

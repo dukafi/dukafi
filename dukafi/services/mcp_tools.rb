@@ -21,7 +21,7 @@ module McpTools
   module_function
 
   def all
-    [ask_user, get_store_context, update_store_profile, list_pages, create_page, read_page, list_children, get_page_context, get_design_tokens, get_style_framework_snippet, get_recipes, apply_edits, update_design_tokens, list_rebuild_targets, publish, set_page_access, set_page_seo] +
+    [ask_user, get_store_context, update_store_profile, update_store_settings, list_pages, create_page, read_page, list_children, get_page_context, get_design_tokens, get_style_framework_snippet, get_recipes, apply_edits, update_design_tokens, list_rebuild_targets, publish, set_page_access, set_page_seo] +
       McpCommerceTools.all + McpMediaTools.all + McpReviewTools.all +
       McpDiscountTools.all + McpPluginTools.all + McpDataTableTools.all +
       McpComponentTools.all + McpSitemapTools.all +
@@ -84,22 +84,26 @@ module McpTools
     {
       name: "get_store_context",
       title: "Get store context",
-      description: "One planning snapshot: store name, optional business " \
-                   "profile, page list, a sample of products and media, and " \
-                   "saved components. Prefer this over many list_* calls when " \
-                   "you need to understand the store. It does not include " \
-                   "page trees — call list_children for structure, then " \
-                   "read_page with a sectionId for that section. A thin profile " \
-                   "means the merchant has not filled in their story; do not " \
-                   "invent founding dates or audiences. Includes a compact " \
-                   "tokens summary — call get_design_tokens for the full " \
-                   "color/font/type/spacing registry. Includes a recipes " \
-                   "index — call get_recipes before a product loop, search, " \
-                   "homepage spotlight, CMS loop, form, cart, reusable " \
+      description: "One planning snapshot: store name, fallback title/" \
+                   "description, language, favicon, default share image, " \
+                   "optional business profile, page list, a sample of products " \
+                   "and media, and saved components. Prefer this over many " \
+                   "list_* calls when you need to understand the store. It " \
+                   "does not include page trees — call list_children for " \
+                   "structure, then read_page with a sectionId for that " \
+                   "section. A thin profile means the merchant has not filled " \
+                   "in their story; do not invent founding dates or audiences. " \
+                   "Includes a compact tokens summary — call get_design_tokens " \
+                   "for the full color/font/type/spacing registry. Includes a " \
+                   "recipes index — call get_recipes before a product loop, " \
+                   "search, homepage spotlight, CMS loop, form, cart, reusable " \
                    "component, SEO / 'rank for' job, or a vague restyle " \
                    "(topic design); those overlays " \
                    "are not general HTML. Call list_components before " \
-                   "rebuilding a newsletter or header that may already exist.",
+                   "rebuilding a newsletter or header that may already exist. " \
+                   "Call update_store_settings to change the name, fallback " \
+                   "SEO, favicon, or default og:image; set_page_seo for one " \
+                   "CMS page; set_product_og_image for a product.",
       input_schema: {
         "type" => "object",
         "properties" => {},
@@ -115,8 +119,10 @@ module McpTools
       title: "Update store profile",
       description: "Write the optional business profile: startedOn, audience, " \
                    "difference. Empty strings clear a field. A thin profile " \
-                   "is valid — do not invent a founding story. There is no " \
-                   "store id argument; the token selects this store.",
+                   "is valid — do not invent a founding story. This is not " \
+                   "the storefront name or the default share image — those " \
+                   "are update_store_settings. There is no store id argument; " \
+                   "the token selects this store.",
       input_schema: {
         "type" => "object",
         "properties" => {
@@ -128,6 +134,72 @@ module McpTools
       },
       run: ->(args) { StoreProfile.current.apply!(args).to_payload },
     }
+  end
+
+  def update_store_settings
+    {
+      name: "update_store_settings",
+      title: "Update store name, fallback SEO, favicon, and default share image",
+      description: "Site settings — the storefront name, fallback <title> and " \
+                   "meta description, language, favicon, and default og:image. " \
+                   "Pages that have set their own SEO keep it; this is what " \
+                   "shows when they have not. Product pages use the product " \
+                   "image unless set_product_og_image picked one. Pass an " \
+                   "empty string to clear a field except name. Favicon and " \
+                   "ogImage must be paths from list_media. Draft until publish.",
+      input_schema: {
+        "type" => "object",
+        "properties" => {
+          "name" => {
+            "type" => "string",
+            "description" => "Storefront name (og:site_name, {site.name}). Cannot be empty.",
+          },
+          "metaTitle" => {
+            "type" => "string",
+            "description" => "Fallback browser/search title when a page has no seoTitle. Empty string clears it.",
+          },
+          "metaDescription" => {
+            "type" => "string",
+            "description" => "Fallback meta description. Empty string clears it.",
+          },
+          "language" => {
+            "type" => "string",
+            "description" => "HTML lang, e.g. en. Empty string resets to en.",
+          },
+          "favicon" => {
+            "type" => "string",
+            "description" => "Favicon: a path from list_media, or empty string to clear.",
+          },
+          "ogImage" => {
+            "type" => "string",
+            "description" => "Default share image for pages (and collections) without their own. A path from list_media, or empty string to clear.",
+          },
+        },
+        "additionalProperties" => false,
+      },
+      run: ->(args) { run_update_store_settings(args) },
+    }
+  end
+
+  def run_update_store_settings(args)
+    present = StoreSettings::KEYS.select { |key| args.key?(key) }
+    if present.empty?
+      raise ArgumentError, "Pass name, metaTitle, metaDescription, language, favicon, and/or ogImage. Empty string clears a field except name."
+    end
+
+    patch = {}
+    if args.key?("name")
+      name = args["name"].to_s.strip
+      raise ArgumentError, "name cannot be empty" if name.empty?
+
+      patch["name"] = name
+    end
+    %w[metaTitle metaDescription language].each do |key|
+      patch[key] = args[key] if args.key?(key)
+    end
+    patch["favicon"] = resolve_page_og_image(args["favicon"]) if args.key?("favicon")
+    patch["ogImage"] = resolve_page_og_image(args["ogImage"]) if args.key?("ogImage")
+    StoreSettings.apply!(patch)
   end
 
   def list_pages
@@ -1040,20 +1112,28 @@ module McpTools
   def set_page_seo
     {
       name: "set_page_seo",
-      title: "Set a page's SEO title, description, and share image",
-      description: "Unique search-result title, meta description, and og:image " \
-                   "on a CMS page (page settings — not HTML tags). Draft until " \
-                   "publish. Pass an empty string to clear a field. Collections " \
-                   "and products use update_collection / update_product and " \
-                   "set_product_og_image instead. Search is always noindex; " \
-                   "do not use this to rank a keyword — call get_recipes topic=seo.",
+      title: "Set a page's title, SEO, and share image",
+      description: "Rename a CMS page and/or set its unique search-result " \
+                   "title, meta description, and og:image (page settings — " \
+                   "not HTML tags). title is the name in the editor, nav, and " \
+                   "the browser tab when seoTitle is blank. Draft until " \
+                   "publish. Pass an empty string to clear an SEO field; title " \
+                   "cannot be empty. Collections and products use " \
+                   "update_collection / update_product and set_product_og_image " \
+                   "instead. The store-wide fallback is update_store_settings. " \
+                   "Search is always noindex; do not use this to rank a " \
+                   "keyword — call get_recipes topic=seo.",
       input_schema: {
         "type" => "object",
         "properties" => {
           "slug" => { "type" => "string", "description" => "Which page, from list_pages." },
+          "title" => {
+            "type" => "string",
+            "description" => "Page name (editor, nav, browser tab). Cannot be empty.",
+          },
           "seoTitle" => {
             "type" => "string",
-            "description" => "Search-result title. Unique to this page. Empty string clears it.",
+            "description" => "Search-result title. Unique to this page. Empty string clears it (falls back to title).",
           },
           "seoDescription" => {
             "type" => "string",
@@ -1061,7 +1141,7 @@ module McpTools
           },
           "ogImage" => {
             "type" => "string",
-            "description" => "Share image: a path from list_media, or empty string to clear.",
+            "description" => "Share image: a path from list_media, or empty string to clear (falls back to the site default).",
           },
         },
         "required" => ["slug"],
@@ -1075,15 +1155,22 @@ module McpTools
     slug = args["slug"].to_s.strip.downcase
     raise ArgumentError, "slug is required" if slug.empty?
 
-    present = %w[seoTitle seoDescription ogImage].select { |key| args.key?(key) }
+    present = %w[title seoTitle seoDescription ogImage].select { |key| args.key?(key) }
     if present.empty?
-      raise ArgumentError, "Pass seoTitle, seoDescription, and/or ogImage. Empty string clears that field."
+      raise ArgumentError, "Pass title, seoTitle, seoDescription, and/or ogImage. Empty string clears an SEO field. title cannot be empty."
     end
 
     page = Page.first(slug: slug)
     raise ArgumentError, "No page with slug #{slug.inspect}. Call list_pages to see what exists." if page.nil?
 
     document = page.document_data
+    if args.key?("title")
+      title = args["title"].to_s.strip
+      raise ArgumentError, "title cannot be empty" if title.empty?
+
+      page.title = title
+      document["title"] = title
+    end
     assign_seo_field!(document, "seoTitle", args["seoTitle"]) if args.key?("seoTitle")
     assign_seo_field!(document, "seoDescription", args["seoDescription"]) if args.key?("seoDescription")
     if args.key?("ogImage")
@@ -1095,6 +1182,7 @@ module McpTools
 
     {
       "slug" => page.slug,
+      "title" => page.title,
       "seoTitle" => document["seoTitle"],
       "seoDescription" => document["seoDescription"],
       "ogImage" => document["ogImage"],

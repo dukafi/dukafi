@@ -1,0 +1,23 @@
+{
+  "id": "september-2026",
+  "name": "September 2026",
+  "summary": "A quiet editorial starter: white canvas, one accent, a shop, and a journal.",
+  "description": "Home, shop, journal, and about — with product and collection templates, a Featured collection, and a CMS journal table. No gradients. Replace the sample goods and the journal row with your own.",
+  "version": "1.0.0",
+  "author": "Dukafi",
+  "categories": [
+    "general"
+  ],
+  "previewUrls": [],
+  "contents": {
+    "pages": 5,
+    "templates": 2,
+    "partials": 2,
+    "tables": 1,
+    "forms": 0,
+    "products": 3,
+    "collections": 1,
+    "reviews": 0,
+    "media": 0
+  }
+}

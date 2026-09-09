@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Setup and operations
+    url: https://github.com/dukafi/core/blob/master/SETUP.md
+    about: Local install, bootstrap, and day-to-day commands
+  - name: Deployment
+    url: https://github.com/dukafi/core/blob/master/docs/deployment.md
+    about: Docker, volumes, SQLite vs Postgres, Railway
+  - name: Plugin API
+    url: https://github.com/dukafi/core/blob/master/dukafi/docs/plugin-api.md
+    about: Extending a store with a plugin
+  - name: Security report
+    url: https://github.com/dukafi/core/security/advisories/new
+    about: Report a vulnerability privately — do not open an issue

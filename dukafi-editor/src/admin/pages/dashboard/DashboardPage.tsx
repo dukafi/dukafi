@@ -3,8 +3,8 @@
  *
  * The authenticated Dashboard workspace: products, variants, collections, CSV
  * import, and store-wide settings (see `docs/architecture/admin-store.md`).
- * Grouped sidebar (Workspace + Store) — each section is a plain, paginated
- * data table; create/edit happens in a `Dialog`, never inline.
+ * Grouped sidebar (Workspace + Insights + Store) — each section is a plain,
+ * paginated data table; create/edit happens in a `Dialog`, never inline.
  */
 import { useParams } from '@admin/lib/routing'
 import { FileTextSolidIcon } from 'pixel-art-icons/icons/file-text-solid'
@@ -21,6 +21,8 @@ import { useCommerceData } from './hooks/useCommerceData'
 import { CommandIcon } from 'pixel-art-icons/icons/command'
 import { StarSolidIcon } from 'pixel-art-icons/icons/star-solid'
 import { TargetSolidIcon } from 'pixel-art-icons/icons/target-solid'
+import { ImagesSolidIcon } from 'pixel-art-icons/icons/images-solid'
+import { ChartSolidIcon } from 'pixel-art-icons/icons/chart-solid'
 import { CollectionsSection } from './sections/CollectionsSection'
 import { TablesSection } from './sections/TablesSection'
 import { ConnectSection } from './sections/ConnectSection'
@@ -33,6 +35,10 @@ import { DiscountsSection } from './sections/DiscountsSection'
 import { ProductsSection } from './sections/ProductsSection'
 import { SettingsSection } from './sections/SettingsSection'
 import { ThemesSection } from './sections/ThemesSection'
+import { AnalyticsOverviewSection } from './sections/AnalyticsOverviewSection'
+import { AnalyticsSalesSection } from './sections/AnalyticsSalesSection'
+import { AnalyticsProductsSection } from './sections/AnalyticsProductsSection'
+import { AnalyticsTrafficSection } from './sections/AnalyticsTrafficSection'
 import { LaunchChecklist } from './sections/LaunchChecklist'
 import { AdminAppSidebar, type AdminAppSidebarItem } from '@admin/shared/AdminAppSidebar'
 import { useAdminUi } from '@admin/state/adminUi'
@@ -40,6 +46,10 @@ import type { CommerceSection } from './types'
 import styles from './DashboardPage.module.css'
 
 const SECTION_LABELS: Record<CommerceSection, string> = {
+  analytics: 'Overview',
+  'analytics-sales': 'Sales',
+  'analytics-products': 'Bestsellers',
+  'analytics-traffic': 'Traffic',
   products: 'Products',
   collections: 'Collections',
   tables: 'Tables',
@@ -55,6 +65,10 @@ const SECTION_LABELS: Record<CommerceSection, string> = {
 }
 
 const SECTION_ICONS = {
+  analytics: ChartSolidIcon,
+  'analytics-sales': ListBoxSolidIcon,
+  'analytics-products': PackageSolidIcon,
+  'analytics-traffic': ImagesSolidIcon,
   products: PackageSolidIcon,
   collections: BoxStackSolidIcon,
   tables: Grid2x22SolidIcon,
@@ -69,11 +83,29 @@ const SECTION_ICONS = {
   settings: Settings2SolidIcon,
 } satisfies Record<CommerceSection, typeof PackageSolidIcon>
 
-const SECTIONS: CommerceSection[] = ['products', 'collections', 'tables', 'orders', 'discounts', 'forms', 'themes', 'plugins', 'import', 'reviews', 'connect', 'settings']
+const INSIGHT_SECTIONS: CommerceSection[] = [
+  'analytics', 'analytics-sales', 'analytics-products', 'analytics-traffic',
+]
+const STORE_SECTIONS: CommerceSection[] = [
+  'products', 'collections', 'tables', 'orders', 'discounts', 'forms', 'themes',
+  'plugins', 'import', 'reviews', 'connect', 'settings',
+]
+const SECTIONS: CommerceSection[] = [...INSIGHT_SECTIONS, ...STORE_SECTIONS]
 
 /** `products` is the landing area; anything unrecognised falls back to it. */
 export function sectionFromParam(value: string | undefined): CommerceSection {
   return SECTIONS.includes(value as CommerceSection) ? (value as CommerceSection) : 'products'
+}
+
+function navItems(ids: CommerceSection[], section: CommerceSection): AdminAppSidebarItem[] {
+  return ids.map((item) => ({
+    id: item,
+    label: SECTION_LABELS[item],
+    icon: SECTION_ICONS[item],
+    href: `/admin/dashboard/${item}`,
+    active: section === item,
+    testId: `dashboard-nav-${item}`,
+  }))
 }
 
 export function DashboardPage() {
@@ -86,15 +118,6 @@ export function DashboardPage() {
   const data = useCommerceData()
   const siteName = useAdminUi((s) => s.siteName)
 
-  const storeItems: AdminAppSidebarItem[] = SECTIONS.map((item) => ({
-    id: item,
-    label: SECTION_LABELS[item],
-    icon: SECTION_ICONS[item],
-    href: `/admin/dashboard/${item}`,
-    active: section === item,
-    testId: `dashboard-nav-${item}`,
-  }))
-
   return (
     <AdminPageLayout workspace="dashboard" mode="workspace">
       <div className={styles.workspace}>
@@ -102,12 +125,19 @@ export function DashboardPage() {
           <AdminAppSidebar
             workspace="dashboard"
             brand={siteName}
-            groups={[{ id: 'store', label: 'Store', items: storeItems }]}
+            groups={[
+              { id: 'insights', label: 'Insights', items: navItems(INSIGHT_SECTIONS, section) },
+              { id: 'store', label: 'Store', items: navItems(STORE_SECTIONS, section) },
+            ]}
           />
         </aside>
 
         <div className={styles.workspaceContent} aria-labelledby="dashboard-title">
           <h1 id="dashboard-title" className={styles.visuallyHidden}>{SECTION_LABELS[section]}</h1>
+          {section === 'analytics' && <AnalyticsOverviewSection />}
+          {section === 'analytics-sales' && <AnalyticsSalesSection />}
+          {section === 'analytics-products' && <AnalyticsProductsSection />}
+          {section === 'analytics-traffic' && <AnalyticsTrafficSection />}
           {section === 'products' && <LaunchChecklist data={data} navigate={navigate} />}
           {section === 'products' && <ProductsSection data={data} />}
           {section === 'orders' && <OrdersSection data={data} />}

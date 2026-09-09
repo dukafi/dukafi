@@ -267,8 +267,9 @@ module Recipes
       "Unique SEO title, description, and share image on a CMS page",
       "",
       [
-        "CMS pages: set_page_seo with slug, seoTitle, seoDescription, optional ogImage (a path from list_media). Empty string clears that field. Draft until publish.",
+        "CMS pages: set_page_seo with slug, optional title (rename), seoTitle, seoDescription, optional ogImage (a path from list_media). Empty string clears an SEO field; title cannot be empty. Draft until publish.",
         "seoTitle is the search-result title (leave blank to use the page title). seoDescription is a short pitch — what this page is, who it is for. Not a keyword list. Never emit <meta name=\"keywords\"> or a <title> tag in apply_edits.",
+        "Store-wide fallback name / title / description / default share image: update_store_settings, then publish. That is Settings → General, not the business profile.",
         "Collections and products do not use this tool: update_collection / update_product, and set_product_og_image / set_collection_image.",
         "Search (slug search) is noindex regardless of these fields. Ranking copy belongs on an indexable collection or landing page (recipe rank-for).",
       ],

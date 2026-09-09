@@ -1387,6 +1387,10 @@ class AdminApi < Roda
             end
           end
         end
+        r.get("stats") do
+          { stats: CommerceStats.call(period: r.params["period"].to_s) }
+        end
+
         r.on("orders") do
           r.is do
             r.get do

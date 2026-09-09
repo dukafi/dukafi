@@ -8,9 +8,9 @@
  */
 import type {
   Collection, CommerceSettings, FormSubmission, FormSummary, Order,
-  CataloguePage, CatalogueQuery, Plugin, PluginDashboardActionResult,
+  CataloguePage, CatalogueQuery, CommerceStats, Plugin, PluginDashboardActionResult,
   PluginDashboardData, PluginDashboardPage, PluginDashboardTablePage,
-  Product, Variant,
+  Product, StatsPeriod, Variant,
   DataColumn, DataRow, DataTable,
 } from './types'
 
@@ -160,6 +160,9 @@ export const commerceApi = {
       filename: match?.[1] || `${id}-${input.version}.tar.gz`,
     }
   },
+
+  stats: (period: StatsPeriod = '30d') =>
+    request<{ stats: CommerceStats }>(`/stats?period=${encodeURIComponent(period)}`),
 
   listOrders: () => request<{ orders: Order[] }>('/orders'),
   updateOrderStatus: (id: number, status: string) =>

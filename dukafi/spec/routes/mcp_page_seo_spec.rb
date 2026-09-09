@@ -52,11 +52,32 @@ class McpPageSeoSpec < Minitest::Test
                     "seoDescription" => "Who we are and how to reach us." })
 
     assert_equal "about", outcome.fetch("slug")
+    assert_equal "About", outcome.fetch("title")
     assert_equal "About the shop", outcome.fetch("seoTitle")
     assert_equal "Who we are and how to reach us.", outcome.fetch("seoDescription")
     document = Page.first(slug: "about").document_data
     assert_equal "About the shop", document.fetch("seoTitle")
     assert_equal "Who we are and how to reach us.", document.fetch("seoDescription")
+  end
+
+  def test_it_renames_the_page
+    page!(slug: "about", title: "About")
+    site!
+
+    outcome = set({ "slug" => "about", "title" => "Our story" })
+
+    page = Page.first(slug: "about")
+    assert_equal "Our story", outcome.fetch("title")
+    assert_equal "Our story", page.title
+    assert_equal "Our story", page.document_data.fetch("title")
+  end
+
+  def test_title_cannot_be_empty
+    page!(slug: "about")
+    site!
+
+    assert_match(/title cannot be empty/i, refusal({ "slug" => "about", "title" => "  " }))
+    assert_equal "About", Page.first(slug: "about").title
   end
 
   def test_empty_string_clears_a_field

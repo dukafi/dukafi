@@ -223,6 +223,8 @@ class McpSpec < Minitest::Test
     components = result.fetch("tools").find { |entry| entry.fetch("name") == "list_components" }
     refute_nil components
     refute_nil result.fetch("tools").find { |entry| entry.fetch("name") == "update_store_profile" }
+    refute_nil result.fetch("tools").find { |entry| entry.fetch("name") == "update_store_settings" }
+    refute_nil result.fetch("tools").find { |entry| entry.fetch("name") == "set_page_seo" }
     refute_nil result.fetch("tools").find { |entry| entry.fetch("name") == "list_orders" }
     refute_nil result.fetch("tools").find { |entry| entry.fetch("name") == "list_customers" }
   end

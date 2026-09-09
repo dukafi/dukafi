@@ -262,6 +262,31 @@ class AdminApiSpec < Minitest::Test
     assert_equal 401, last_response.status
   end
 
+  def test_commerce_stats_endpoint_returns_the_scoreboard
+    setup_and_login
+    order = Order.create(
+      email: "buyer@example.com", status: "paid", currency: "KES",
+      subtotal_cents: 2_000, discount_cents: 0, shipping_cents: 0, total_cents: 2_000,
+      public_token: "stats-tok", created_at: Time.now, updated_at: Time.now
+    )
+    OrderItem.create(
+      order_id: order.id, product_title: "Tote", variant_title: "Default",
+      sku: "TOTE-1", unit_price_cents: 2_000, quantity: 1, created_at: Time.now
+    )
+
+    get "/admin/api/cms/commerce/stats?period=30d"
+    assert_equal 200, last_response.status, last_response.body
+    overview = json.fetch("stats").fetch("overview")
+    assert_equal 2_000, overview.fetch("revenueCents")
+    assert_equal 1, overview.fetch("orders")
+    refute json.dig("stats", "traffic", "available")
+  end
+
+  def test_commerce_stats_endpoint_requires_authentication
+    get "/admin/api/cms/commerce/stats"
+    assert_equal 401, last_response.status
+  end
+
   def test_plugin_settings_can_be_configured_but_secrets_never_come_back
     setup_and_login
     PluginSetting.dataset.delete

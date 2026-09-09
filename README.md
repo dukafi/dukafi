@@ -73,20 +73,52 @@ are write-only dashboard settings, not build-time secrets.
 
 - `dukafi/` — Ruby app, publisher, migrations, services, and tests
 - `dukafi-editor/` — visual editor and admin application
-- `registry/` — Go plugin/theme registry
 - `plugins-available/` — first-party and reference plugins
 - `docs/` — operator and architecture documentation
 - `compose.*.yml` — composable production stacks
+
+The plugin/theme registry is a separate Go service:
+[github.com/dukafi/plugins](https://github.com/dukafi/plugins). Stores talk to
+it over HTTP (`registry.dukafi.dev`). This repo does not vendor that code.
 
 ## Verify
 
 ```sh
 cd dukafi && bundle exec rake test
-cd ../registry && go test ./...
 cd ../dukafi-editor && bun run build
 ```
 
 Start with [the plugin API](dukafi/docs/plugin-api.md) when extending Dukafi.
+
+## Contributing
+
+Thank you for considering contributing to Dukafi. Please read
+[CONTRIBUTING.md](CONTRIBUTING.md) for how we take bug reports, features, and
+pull requests.
+
+## Code of Conduct
+
+This project is released with a [Contributor Covenant Code of
+Conduct](CODE_OF_CONDUCT.md). By participating you agree to that code.
+
+## Security Vulnerabilities
+
+If you discover a security vulnerability, please follow
+[SECURITY.md](SECURITY.md) and report it privately. Do not open a public
+issue.
+
+## Support
+
+How-to questions belong in the docs, not the issue tracker. See
+[.github/SUPPORT.md](.github/SUPPORT.md).
+
+## License
+
+Dukafi is open-source software licensed under the [MIT license](LICENSE).
+
+Hosted or commercial products built *around* Dukafi can stay proprietary —
+the same split Laravel uses between the framework and Laravel Cloud. This
+repository is the MIT product.
 
 ## Attribution
 

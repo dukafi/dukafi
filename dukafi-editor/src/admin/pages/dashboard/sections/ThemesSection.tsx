@@ -40,7 +40,7 @@ export function ThemesSection() {
   return <section>
     <h2>Themes</h2><p>Start with a complete storefront and customize it in the editor.</p>
     {applied?.themeId && <p data-testid="applied-theme">Applied: {applied.themeId}{applied.version ? ` v${applied.version}` : ''}</p>}
-    {degraded && <p role="status">Registry is unreachable. Showing the bundled starter theme.</p>}
+    {degraded && <p role="status">Registry is unreachable. Showing bundled starter themes.</p>}
     {error && <p role="alert">{error}</p>}
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 16 }}>
       {themes.map((theme) => <article key={theme.id} style={{ border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 16 }}>

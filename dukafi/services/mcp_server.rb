@@ -79,6 +79,11 @@ class McpServer
     rebuilding a newsletter or header that may already exist; insert with
     <div data-dukafy-component="<id>"></div>.
     If the profile is thin, do not invent a founding story or audience.
+    To rename a page or set its search title, description, or og:image,
+    call set_page_seo (draft until publish). To change the store name,
+    fallback meta title/description, favicon, or default share image,
+    call update_store_settings then publish. Product share images use
+    set_product_og_image; collection covers use set_collection_image.
     Ask for clarification when missing context would materially change the
     result — especially visual direction, the target page or section, factual
     business content, whether a framework change is site-wide, destructive

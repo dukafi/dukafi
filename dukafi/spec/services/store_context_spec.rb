@@ -21,6 +21,9 @@ class StoreContextSpec < Minitest::Test
     assert_equal 0, payload.dig("pages", "total")
     assert_equal 0, payload.dig("products", "total")
     assert_equal [], payload.dig("products", "sample")
+    assert_equal "", payload.dig("settings", "name")
+    assert_equal "en", payload.dig("settings", "language")
+    assert_nil payload.dig("settings", "ogImage")
   end
 
   def test_search_media_matches_filename_and_alt

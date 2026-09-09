@@ -22,6 +22,7 @@ module StoreContext
         "name" => site["name"].to_s,
         "currency" => settings.currency,
       },
+      "settings" => StoreSettings.payload,
       "profile" => StoreProfile.current.to_payload,
       "pages" => {
         "total" => page_ds.count,

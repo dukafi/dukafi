@@ -22,6 +22,10 @@ describe('Commerce area from the URL', () => {
     expect(sectionFromParam('tables')).toBe('tables')
     expect(sectionFromParam('settings')).toBe('settings')
     expect(sectionFromParam('import')).toBe('import')
+    expect(sectionFromParam('analytics')).toBe('analytics')
+    expect(sectionFromParam('analytics-sales')).toBe('analytics-sales')
+    expect(sectionFromParam('analytics-products')).toBe('analytics-products')
+    expect(sectionFromParam('analytics-traffic')).toBe('analytics-traffic')
   })
 
   it('treats a bare /admin/dashboard as Products', () => {

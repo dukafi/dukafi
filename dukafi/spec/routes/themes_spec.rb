@@ -113,7 +113,19 @@ class ThemesSpec < Minitest::Test
     PluginCatalogue.http = lambda { |_url| raise PluginCatalogue::Error.new("unreachable", "offline") }
     get "/admin/api/cms/themes/default"
     assert_equal 200, last_response.status
-    assert_equal "duka-classic", json.dig("theme", "id")
+    assert_equal "september-2026", json.dig("theme", "id")
+  ensure
+    PluginCatalogue.http = nil
+  end
+
+  def test_catalogue_falls_back_to_bundled_starters_when_the_registry_is_down
+    PluginCatalogue.http = lambda { |_url| raise PluginCatalogue::Error.new("unreachable", "offline") }
+    get "/admin/api/cms/themes/catalogue"
+    assert_equal 200, last_response.status
+    ids = json.fetch("themes").map { |row| row.fetch("id") }
+    assert_includes ids, "september-2026"
+    assert_includes ids, "duka-classic"
+    assert json.fetch("degraded")
   ensure
     PluginCatalogue.http = nil
   end
@@ -178,6 +190,40 @@ class ThemesSpec < Minitest::Test
     assert_equal "demo-store", theme["themeId"]
     refute_nil theme["version"]
     refute_nil theme["appliedAt"]
+  end
+
+  def test_bundled_september_2026_apply_publish_bakes_storefront_content
+    bytes = ThemeCatalogue.download("september-2026")
+    refute_nil bytes
+    archive = Base64.strict_encode64(bytes)
+
+    post_json "/admin/api/cms/themes/apply", archive: archive, remap: {}, options: {
+      "overridePages" => true, "pages" => true, "templates" => true, "partials" => true,
+      "tables" => true, "products" => true,
+    }
+    assert_equal 200, last_response.status, last_response.body
+    page = Page.first(slug: "index")
+    refute_nil page
+    assert_equal "Home", page.title
+    refute_nil Page.first(slug: "journal")
+    refute_nil CustomTable.first(slug: "journal")
+    refute_nil Collection.first(slug: "featured")
+    page.update(status: "published")
+
+    published_root = Dir.mktmpdir("dukafi-theme-bake-")
+    previous = ENV["DUKAFY_PUBLISHED_ROOT"]
+    ENV["DUKAFY_PUBLISHED_ROOT"] = published_root
+    begin
+      Bake.call(state: SiteState.first, output_root: published_root)
+      html = File.read(File.join(published_root, "current", "index.html"))
+      assert_includes html, "Goods for everyday use"
+      get "/"
+      assert_equal 200, last_response.status
+      assert_includes last_response.body, "Shop the range"
+    ensure
+      ENV["DUKAFY_PUBLISHED_ROOT"] = previous
+      FileUtils.remove_entry(published_root) if published_root && Dir.exist?(published_root)
+    end
   end
 
   def test_bundled_starter_apply_publish_bakes_storefront_content

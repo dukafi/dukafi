@@ -322,6 +322,52 @@
     line-height: 1.45;
 }
 
+.statGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-l);
+}
+
+.statCard {
+    display: grid;
+    gap: var(--space-m);
+    min-width: 0;
+    padding: var(--space-xl);
+    border: 1px solid var(--border-subtle);
+    border-radius: 0;
+    background: var(--bg-surface);
+}
+
+.statLabel {
+    margin: 0;
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+}
+
+.statFigure {
+    margin: 0;
+    color: var(--text-bright);
+    font-size: var(--text-5xl);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1;
+    font-feature-settings: "tnum";
+}
+
+.statHint {
+    margin: 0;
+    color: var(--text-subtle);
+    font-size: var(--text-s);
+    line-height: 1.45;
+}
+
+.statGroupTitle {
+    margin: var(--space-l) 0 0;
+    color: var(--text-bright);
+    font-size: var(--text-xl);
+    font-weight: 600;
+}
+
 .heroIcon {
     display: inline-flex;
     flex: none;
