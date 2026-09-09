@@ -81,7 +81,21 @@ export interface CommerceStats {
     revenueCents: number
     codes: CommerceStatsDiscountCode[]
   }
-  traffic: { available: boolean }
+  traffic: CommerceStatsTraffic
+}
+
+export interface CommerceStatsPathRow {
+  path: string
+  views: number
+}
+
+export interface CommerceStatsTraffic {
+  available: boolean
+  pageViews: number
+  previous: { pageViews: number }
+  deltas: { pageViewsPct: number | null }
+  series: { pageViews: number[] }
+  paths: CommerceStatsPathRow[]
 }
 
 export interface CommerceSettings {

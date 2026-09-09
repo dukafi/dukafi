@@ -72,3 +72,16 @@
         transition: none;
     }
 }
+
+@media (max-width: 760px) {
+    .sidebar {
+        flex: 0 0 auto;
+        width: 0;
+        min-width: 0;
+        overflow: visible;
+    }
+
+    .panelSlot {
+        left: 0;
+    }
+}

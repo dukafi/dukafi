@@ -3,8 +3,8 @@
  *
  * The authenticated Dashboard workspace: products, variants, collections, CSV
  * import, and store-wide settings (see `docs/architecture/admin-store.md`).
- * Grouped sidebar (Workspace + Insights + Store) — each section is a plain,
- * paginated data table; create/edit happens in a `Dialog`, never inline.
+ * Grouped sidebar (Workspace + Insights + Store + Editor) — each section is a
+ * plain, paginated data table; create/edit happens in a `Dialog`, never inline.
  */
 import { useParams } from '@admin/lib/routing'
 import { FileTextSolidIcon } from 'pixel-art-icons/icons/file-text-solid'
@@ -41,7 +41,6 @@ import { AnalyticsProductsSection } from './sections/AnalyticsProductsSection'
 import { AnalyticsTrafficSection } from './sections/AnalyticsTrafficSection'
 import { LaunchChecklist } from './sections/LaunchChecklist'
 import { AdminAppSidebar, type AdminAppSidebarItem } from '@admin/shared/AdminAppSidebar'
-import { useAdminUi } from '@admin/state/adminUi'
 import type { CommerceSection } from './types'
 import styles from './DashboardPage.module.css'
 
@@ -88,9 +87,11 @@ const INSIGHT_SECTIONS: CommerceSection[] = [
 ]
 const STORE_SECTIONS: CommerceSection[] = [
   'products', 'collections', 'tables', 'orders', 'discounts', 'forms', 'themes',
+]
+const EDITOR_SECTIONS: CommerceSection[] = [
   'plugins', 'import', 'reviews', 'connect', 'settings',
 ]
-const SECTIONS: CommerceSection[] = [...INSIGHT_SECTIONS, ...STORE_SECTIONS]
+const SECTIONS: CommerceSection[] = [...INSIGHT_SECTIONS, ...STORE_SECTIONS, ...EDITOR_SECTIONS]
 
 /** `products` is the landing area; anything unrecognised falls back to it. */
 export function sectionFromParam(value: string | undefined): CommerceSection {
@@ -116,7 +117,6 @@ export function DashboardPage() {
   const section = sectionFromParam(dashboardSection)
   const navigate = useAdminNavigate()
   const data = useCommerceData()
-  const siteName = useAdminUi((s) => s.siteName)
 
   return (
     <AdminPageLayout workspace="dashboard" mode="workspace">
@@ -124,10 +124,10 @@ export function DashboardPage() {
         <aside className={styles.workspaceSidebar} aria-label="Dashboard workspace">
           <AdminAppSidebar
             workspace="dashboard"
-            brand={siteName}
             groups={[
               { id: 'insights', label: 'Insights', items: navItems(INSIGHT_SECTIONS, section) },
               { id: 'store', label: 'Store', items: navItems(STORE_SECTIONS, section) },
+              { id: 'editor', label: 'Editor', items: navItems(EDITOR_SECTIONS, section) },
             ]}
           />
         </aside>

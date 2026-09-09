@@ -3,16 +3,24 @@
    master-detail canvas. */
 
 .workspace {
-    display: grid;
-    grid-template-columns: 184px minmax(0, 1fr);
-    gap: var(--space-7xl);
-    min-height: calc(100vh - 116px);
+    display: flex;
+    flex: 1 1 auto;
+    align-items: stretch;
+    min-height: 0;
 }
 
 .workspaceSidebar {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    min-height: 0;
+    align-self: stretch;
+}
+
+.workspaceSidebar > * {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
 }
 
 .visuallyHidden {
@@ -28,13 +36,37 @@
 }
 
 .workspaceContent {
+    flex: 1 1 auto;
     min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    padding: var(--space-5xl) var(--space-6xl) var(--space-7xl);
+    background: var(--bg-surface);
 }
 
 @media (max-width: 760px) {
     .workspace {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: row;
+        flex: 1 1 auto;
         min-height: 0;
+    }
+
+    .workspaceSidebar {
+        width: 0;
+        min-width: 0;
+        height: auto;
+        overflow: visible;
+        border-bottom: 0;
+    }
+
+    .workspaceSidebar > * {
+        height: auto;
+    }
+
+    .workspaceContent {
+        overflow: auto;
+        padding: var(--space-2xl);
     }
 }
 

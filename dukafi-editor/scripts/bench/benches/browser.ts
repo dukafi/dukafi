@@ -6,9 +6,9 @@
  * paint / heap metrics for each.
  *
  * Scenarios (in order):
- *   1. Cold-load metrics for /admin (login), authenticated /admin, /admin/site
+ *   1. Cold-load metrics for /admin (login), authenticated /admin, /admin/editor
  *   2. Admin-route navigation cycle (dashboard ↔ content ↔ data ↔ site)
- *   3. Idle frame stability on /admin/site
+ *   3. Idle frame stability on /admin/editor
  *   4. Spotlight (Cmd+K) open/close storm — latency to "visible" + frame drops
  *   5. Selectors panel open/close storm — sidebar toggle latency
  *   6. Class creation via UI — open dialog, submit, repeat. Real UI stress.
@@ -138,7 +138,7 @@ async function scenarioAdminRouteCycle(
   // Frame stability isn't measured across navigations — each goto wipes the
   // in-page accumulator. Instead we measure per-route transition latency,
   // which is what the user-facing question actually is.
-  const routes = ['/admin/dashboard', '/admin/content', '/admin/data', '/admin/site']
+  const routes = ['/admin/dashboard', '/admin/content', '/admin/data', '/admin/editor']
   const perRoute: Record<string, number[]> = {}
   for (const r of routes) perRoute[r] = []
 
@@ -250,7 +250,7 @@ async function scenarioIdleFrames(session: BrowserSession, durationMs: number): 
 /**
  * Authenticated cold-load measurement. Opens a fresh browser context (no
  * disk cache, no warm JIT cache) with the session cookie pre-installed,
- * then measures the cold load of the heavy `/admin/site` route.
+ * then measures the cold load of the heavy `/admin/editor` route.
  *
  * This simulates the realistic scenario "user reloads the editor tab
  * while logged in" — the most common workflow path. Unlike the other
@@ -392,13 +392,13 @@ export const browserBench: BenchModule = {
 
       if (authOk) {
         loadScenarios.push(await runLoadScenario(session, baseUrl, 'warm /admin/dashboard (same context)', '/admin/dashboard'))
-        loadScenarios.push(await runLoadScenario(session, baseUrl, 'warm /admin/site (same context)', '/admin/site'))
+        loadScenarios.push(await runLoadScenario(session, baseUrl, 'warm /admin/editor (same context)', '/admin/editor'))
       }
 
       // ── 1b. Authenticated COLD-LOAD scenarios ───────────────────────────
       // Fresh browser context, no HTTP cache, no warm JIT cache — but
       // session cookie pre-installed. This is the realistic "user reloads
-      // /admin/site after their morning coffee" measurement.
+      // /admin/editor after their morning coffee" measurement.
       if (authOk && sessionCookieValue) {
         log.step('Authenticated cold-load (fresh context, cache disabled)')
         const overrideChromeForCold = readArg('chrome-path')
@@ -407,8 +407,8 @@ export const browserBench: BenchModule = {
             baseUrl,
             sessionCookieValue,
             overrideChromeForCold ?? findSystemChrome() ?? undefined,
-            '/admin/site',
-            'AUTHENTICATED COLD /admin/site (fresh context)',
+            '/admin/editor',
+            'AUTHENTICATED COLD /admin/editor (fresh context)',
           ),
         )
         loadScenarios.push(
@@ -431,8 +431,8 @@ export const browserBench: BenchModule = {
       }
 
       // ── 3. Idle frame stability ─────────────────────────────────────────
-      log.step(authOk ? 'Idle frame stability (5s on /admin/site)' : 'Idle frame stability (login screen)')
-      if (authOk) await session.page.goto(`${baseUrl}/admin/site`, { waitUntil: 'load' })
+      log.step(authOk ? 'Idle frame stability (5s on /admin/editor)' : 'Idle frame stability (login screen)')
+      if (authOk) await session.page.goto(`${baseUrl}/admin/editor`, { waitUntil: 'load' })
       const idleFrames = await scenarioIdleFrames(session, ctx.quick ? 2000 : 5000)
 
       // ── 4. Spotlight churn ──────────────────────────────────────────────
@@ -484,7 +484,7 @@ export const browserBench: BenchModule = {
 
       const interactionRows: BenchRow[] = []
       interactionRows.push({
-        label: authOk ? 'Idle frame stability on /admin/site' : 'Idle frame stability on login screen',
+        label: authOk ? 'Idle frame stability on /admin/editor' : 'Idle frame stability on login screen',
         inputs: { window_ms: ctx.quick ? 2000 : 5000 },
         metrics: {
           frames: fmtNum(idleFrames.frames),
@@ -569,7 +569,7 @@ export const browserBench: BenchModule = {
       }))
 
       const coldLogin = loadScenarios.find((s) => s.label.startsWith('cold /admin (login'))
-      const authedColdSite = loadScenarios.find((s) => s.label.includes('AUTHENTICATED COLD /admin/site'))
+      const authedColdSite = loadScenarios.find((s) => s.label.includes('AUTHENTICATED COLD /admin/editor'))
       const totalTbt = loadScenarios.reduce((sum, s) => sum + s.metrics.totalBlockingMs, 0)
 
       return {

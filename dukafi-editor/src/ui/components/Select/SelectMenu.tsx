@@ -98,6 +98,7 @@ export function SelectMenu({
       minWidth={menuSizing.minWidth}
       maxHeight={maxHeight}
       zIndex={10000}
+      menuClassName={styles.menu}
       ariaLabel={ariaLabel ?? 'Select option'}
       aria-labelledby={ariaLabelledBy}
       role="listbox"

@@ -74,7 +74,7 @@ function jsonResponse(body: unknown, status = 200): Response {
  */
 function renderWithUser(user: CmsCurrentUser) {
   return render(
-    <MemoryRouter initialEntries={['/admin/site']}>
+    <MemoryRouter initialEntries={['/admin/editor']}>
       <AdminSessionProvider user={user}>
         <StepUpProvider>
           <AccountMenuButton />
@@ -205,12 +205,12 @@ describe('AccountMenuButton', () => {
     }
 
     render(
-      <MemoryRouter initialEntries={['/admin/site']}>
+      <MemoryRouter initialEntries={['/admin/editor']}>
         <AdminSessionProvider user={makeUser()}>
           <StepUpProvider>
             <AccountMenuButton />
             <Routes>
-              <Route path="/admin/site" element={<PathProbe />} />
+              <Route path="/admin/editor" element={<PathProbe />} />
               <Route path="/admin/account" element={<PathProbe />} />
             </Routes>
           </StepUpProvider>

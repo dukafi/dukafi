@@ -212,7 +212,7 @@
 .nativeSelect {
     width: 100%;
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: 0;
     background: var(--bg-surface);
     color: var(--text);
     padding: var(--space-3xs) var(--space-2xs);

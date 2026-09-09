@@ -67,7 +67,7 @@ export function getVisualComponentsCommands(): Command[] {
         }
 
         queuePendingAction('site.newVisualComponent', { name })
-        ctx.navigate('/admin/site')
+        ctx.navigate('/admin/editor')
       },
     },
 

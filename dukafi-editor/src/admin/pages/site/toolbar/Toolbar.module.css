@@ -11,7 +11,8 @@
     position: relative;
     z-index: 30;
     user-select: none;
-    background: var(--bg-body);
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--overlay-10);
 }
 
 .siteName {
@@ -213,7 +214,7 @@
         flex-wrap: wrap;
         align-content: center;
         row-gap: var(--space-4xs);
-        padding: var(--space-4xs) var(--space-s);
+        padding: var(--space-4xs) var(--space-s) var(--space-4xs) 48px;
     }
 
     .siteName {

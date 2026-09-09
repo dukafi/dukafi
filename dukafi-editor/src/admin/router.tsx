@@ -5,6 +5,7 @@ import { useLocation } from './lib/routing'
 import { ErrorBoundary } from '@ui/components/ErrorBoundary'
 import { AppLoadingScreen } from './AppLoadingScreen'
 import AdminEntry from './AdminEntry'
+import { SITE_EDITOR_PATH } from './workspace'
 
 // AdminEntry is eager-imported (not behind `React.lazy`) so the cold load
 // path does not require Suspense resolution before the first contentful
@@ -48,12 +49,18 @@ function withRouteBoundary(element: ReactElement): ReactElement {
   return <RouteBoundary>{withSuspense(element)}</RouteBoundary>
 }
 
+function LegacySiteEditorRedirect() {
+  const { search } = useLocation()
+  return <Navigate to={`${SITE_EDITOR_PATH}${search}`} replace />
+}
+
 export function AdminRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
       <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-      <Route path="/admin/site" element={withRouteBoundary(<AdminEntry section="site" />)} />
+      <Route path={SITE_EDITOR_PATH} element={withRouteBoundary(<AdminEntry section="site" />)} />
+      <Route path="/admin/site" element={<LegacySiteEditorRedirect />} />
       <Route path="/admin/media" element={withRouteBoundary(<AdminEntry section="media" />)} />
       <Route path="/admin/dashboard" element={withRouteBoundary(<AdminEntry section="dashboard" />)} />
       {/* Each Commerce area is its own URL, so it is linkable, bookmarkable

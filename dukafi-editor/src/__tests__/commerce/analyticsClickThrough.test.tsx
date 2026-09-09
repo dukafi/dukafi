@@ -2,8 +2,8 @@
  * Insights click-through — the merchant path, not just the URL map.
  *
  * Opens Overview, switches the period, then walks Sales → Bestsellers →
- * Traffic via the sidebar. Traffic must stay an honest empty, not invented
- * visitor numbers.
+ * Traffic via the sidebar. Traffic shows storefront page views, never
+ * invented unique visitors.
  */
 import { afterEach, describe, expect, it } from 'bun:test'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -11,12 +11,15 @@ import { MemoryRouter, Route, Routes } from '@admin/lib/routing'
 import { AdminSessionProvider } from '@admin/session'
 import { StepUpProvider } from '@admin/shared/StepUp'
 import { DashboardPage } from '@admin/pages/dashboard/DashboardPage'
+import { useAdminNavChrome } from '@admin/state/adminNavChrome'
 import type { CmsCurrentUser } from '@core/persistence'
 import type { CommerceStats } from '@admin/pages/dashboard/types'
 
 afterEach(() => {
   cleanup()
   globalThis.fetch = originalFetch
+  useAdminNavChrome.getState().setMode('expanded')
+  useAdminNavChrome.getState().setMobileSheetOpen(false)
 })
 
 const now = '2026-09-09T09:00:00.000Z'
@@ -79,7 +82,14 @@ function statsFor(period: CommerceStats['period']): CommerceStats {
       revenueCents: 8000,
       codes: [{ code: 'WELCOME', orders: 1, discountCents: 500, revenueCents: 8000 }],
     },
-    traffic: { available: false },
+    traffic: {
+      available: true,
+      pageViews: 42,
+      previous: { pageViews: 20 },
+      deltas: { pageViewsPct: 110 },
+      series: { pageViews: [10, 32] },
+      paths: [{ path: '/', views: 30 }, { path: '/about', views: 12 }],
+    },
   }
 }
 
@@ -140,9 +150,13 @@ describe('Insights click-through', () => {
 
     await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: 'Overview' })).toBeDefined())
     expect(screen.getByTestId('admin-sidebar-group-insights')).toBeDefined()
-    expect(screen.getByText('Revenue')).toBeDefined()
+    expect(screen.getByTestId('admin-sidebar-group-editor')).toBeDefined()
+    expect(screen.getAllByText('Revenue').length).toBeGreaterThan(0)
     expect(screen.getByText('KES 279.00')).toBeDefined()
-    expect(screen.queryByText('Notebook')).toBeNull()
+    expect(screen.getByText('Notebook')).toBeDefined()
+    expect(screen.getByText('Featured')).toBeDefined()
+    expect(screen.getByRole('table', { name: 'Page views by path' })).toBeDefined()
+    expect(screen.getByRole('table', { name: 'Orders by status' })).toBeDefined()
 
     fireEvent.click(screen.getByRole('combobox', { name: 'Period' }))
     fireEvent.click(screen.getByRole('option', { name: 'Last 7 days' }))
@@ -162,11 +176,16 @@ describe('Insights click-through', () => {
 
     fireEvent.click(screen.getByTestId('dashboard-nav-analytics-traffic'))
     await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: 'Traffic' })).toBeDefined())
-    expect(screen.getByTestId('analytics-traffic-empty').textContent).toContain('Page views are not tracked.')
+    expect(screen.getByText('Page views')).toBeDefined()
+    expect(screen.getByText('42')).toBeDefined()
+    expect(screen.getByText('/about')).toBeDefined()
+    expect(screen.queryByText('Unique visitors')).toBeNull()
     expect(screen.queryByText('KES 279.00')).toBeNull()
 
     fireEvent.click(screen.getByTestId('dashboard-nav-analytics'))
     await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: 'Overview' })).toBeDefined())
-    expect(screen.getByText('Revenue')).toBeDefined()
+    expect(screen.getAllByText('Revenue').length).toBeGreaterThan(0)
+    expect(screen.getByText('Notebook')).toBeDefined()
+    expect(screen.getByRole('table', { name: 'Page views by path' })).toBeDefined()
   })
 })

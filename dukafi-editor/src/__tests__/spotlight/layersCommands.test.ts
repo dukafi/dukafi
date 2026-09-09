@@ -53,7 +53,7 @@ async function runLayerCommand(commandId: string, selectedNodeIds: string[]): Pr
 
   const ctx: CommandRunContext = {
     workspace: 'site',
-    pathname: '/admin/site',
+    pathname: '/admin/editor',
     user: null as never,
     editor: {
       selectedNodeIds,

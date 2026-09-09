@@ -119,7 +119,7 @@ export const httpBench: BenchModule = {
       const baseEndpoints: Endpoint[] = [
         { label: '/health', path: '/health' },
         { label: '/admin', path: '/admin' },
-        { label: '/admin/site', path: '/admin/site' },
+        { label: '/admin/editor', path: '/admin/editor' },
       ]
       const eager = readEagerEndpoints()
       const endpoints = [...baseEndpoints, ...eager]

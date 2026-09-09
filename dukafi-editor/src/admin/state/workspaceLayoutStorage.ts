@@ -1,5 +1,6 @@
 import { Type } from '@sinclair/typebox'
 import { safeParseJson } from '@core/utils/jsonValidate'
+import { isSiteEditorPath } from '@admin/workspace'
 
 export type PanelMode = 'docked' | 'floating'
 
@@ -281,7 +282,7 @@ export function writeStoredPanelSize(panelId: FloatingPanelId, size: PanelSize) 
  * eager bundle.
  */
 export function workspaceFromPathname(pathname: string): EditorWorkspaceId | null {
-  if (pathname.startsWith('/admin/site')) return 'site'
+  if (isSiteEditorPath(pathname)) return 'site'
   if (pathname.startsWith('/admin/content')) return 'content'
   if (pathname.startsWith('/admin/data')) return 'data'
   if (pathname.startsWith('/admin/media')) return 'media'

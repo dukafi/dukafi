@@ -9,15 +9,15 @@
  *
  * URL contract
  * ------------
- *   /admin/site                  → home page (slug `index`); the bare URL is the
+ *   /admin/editor                  → home page (slug `index`); the bare URL is the
  *                                  canonical home form, so no `?page` is written
  *                                  while the home page is active.
- *   /admin/site?page=<slug>      → opens the page with that slug.
+ *   /admin/editor?page=<slug>      → opens the page with that slug.
  *
  * Incoming deep links from the Data workspace's "Open in Site editor" button
  * (see `handleOpenInSiteEditor` in `DataPage.tsx`) are also consumed once:
- *   /admin/site?table=pages&row=<rowId>       → openPageInCanvas(rowId)
- *   /admin/site?table=components&row=<rowId>  → setActiveDocument({ kind: 'visualComponent', vcId: rowId })
+ *   /admin/editor?table=pages&row=<rowId>       → openPageInCanvas(rowId)
+ *   /admin/editor?table=components&row=<rowId>  → setActiveDocument({ kind: 'visualComponent', vcId: rowId })
  * After consuming them, the WRITE sync normalizes the URL to the `?page=` form
  * (or strips it for the home page / VC mode) by clearing `table`/`row`.
  *
@@ -75,7 +75,7 @@ export function useSiteEditorUrlSync({ enabled, loaded }: UseSiteEditorUrlSyncOp
 
   // ── WRITE: mirror the active page's slug into the URL. ─────────────────────
   // `null` while a visual component is active (VC mode is page-less) or when
-  // the home page is active (the bare `/admin/site` is the canonical form).
+  // the home page is active (the bare `/admin/editor` is the canonical form).
   const activePageSlug = useEditorStore((s) => {
     if (!enabled) return null
     if (s.activeDocument?.kind === 'visualComponent') return null

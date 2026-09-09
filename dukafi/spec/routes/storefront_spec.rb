@@ -244,4 +244,33 @@ class StorefrontSpec < Minitest::Test
     refute_includes last_response.body, '"@type":"CollectionPage"'
     refute_includes last_response.body, 'href="/products/water"'
   end
+
+  def test_successful_html_page_loads_are_counted
+    StorefrontLoad.dataset.delete
+    create_page(slug: "index", text: "Home", title: "Home")
+    Bake.call(state: @state, output_root: @published_root)
+
+    get "/"
+    get "/?utm_source=ad"
+
+    assert_equal 200, last_response.status
+    row = StorefrontLoad.first(path: "/")
+    assert_equal 2, row.views
+  end
+
+  def test_assets_robots_and_missing_pages_are_not_counted
+    StorefrontLoad.dataset.delete
+    create_page(slug: "index", text: "Home", title: "Home")
+    create_page(slug: "404", text: "Missing", title: "Missing")
+    Bake.call(state: @state, output_root: @published_root)
+    html = File.read(File.join(@published_root, "current", "index.html"))
+    css_name = html[%r{/assets/(site-[0-9a-f]{12}\.css)}, 1]
+
+    get "/assets/#{css_name}"
+    get "/robots.txt"
+    get "/sitemap.xml"
+    get "/no-such-page"
+
+    assert_equal 0, StorefrontLoad.count
+  end
 end

@@ -1,7 +1,7 @@
 import type { DataRow, DataTable } from '@core/data/schemas'
 import type { CmsCurrentUser } from '@core/persistence'
 import type { CoreCapability } from '@core/capabilities'
-import type { AdminWorkspace } from './workspace'
+import { SITE_EDITOR_PATH, type AdminWorkspace } from './workspace'
 
 // Any-of gate for saving the draft site: holding at least one lets the user
 // save in some form; granular diff validation enforces which kinds of changes
@@ -269,7 +269,7 @@ export function firstAccessibleWorkspace(user: CmsCurrentUser | null): AdminWork
 export function workspacePath(workspace: AdminWorkspace): string {
   switch (workspace) {
     case 'site':
-      return '/admin/site'
+      return SITE_EDITOR_PATH
     case 'media':
       return '/admin/media'
     case 'dashboard':

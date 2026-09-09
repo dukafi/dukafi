@@ -12,6 +12,7 @@ class CommerceStatsSpec < Minitest::Test
     Variant.dataset.delete
     Product.dataset.delete
     Discount.dataset.delete
+    StorefrontLoad.dataset.delete
     @now = Time.utc(2026, 9, 9, 12, 0, 0)
     @product = Product.create(
       title: "Canvas Bag", slug: "canvas-bag", status: "active",
@@ -167,7 +168,20 @@ class CommerceStatsSpec < Minitest::Test
     assert_equal "30d", stats("not-a-window").fetch(:period)
   end
 
-  def test_traffic_is_honestly_unavailable
-    refute stats.fetch(:traffic).fetch(:available)
+  def test_traffic_counts_storefront_page_views_not_visitors
+    StorefrontLoad.record!(path: "/", at: @now - 86_400)
+    StorefrontLoad.record!(path: "/", at: @now - 86_400)
+    StorefrontLoad.record!(path: "/about", at: @now - 86_400)
+    StorefrontLoad.record!(path: "/", at: @now - (40 * 86_400))
+
+    traffic = stats.fetch(:traffic)
+    assert traffic.fetch(:available)
+    assert_equal 3, traffic.fetch(:pageViews)
+    refute traffic.key?(:visitors)
+    refute traffic.key?(:uniqueVisitors)
+    paths = traffic.fetch(:paths)
+    assert_equal "/", paths.first.fetch(:path)
+    assert_equal 2, paths.first.fetch(:views)
+    assert_equal 200.0, traffic.fetch(:deltas).fetch(:pageViewsPct)
   end
 end

@@ -108,6 +108,8 @@ describe('workspaceLayoutStorage — per-workspace layouts', () => {
 
 describe('workspaceLayoutStorage — workspaceFromPathname', () => {
   it('maps admin canvas routes onto workspace ids', () => {
+    expect(workspaceFromPathname('/admin/editor')).toBe('site')
+    expect(workspaceFromPathname('/admin/editor/pages/abc')).toBe('site')
     expect(workspaceFromPathname('/admin/site')).toBe('site')
     expect(workspaceFromPathname('/admin/site/pages/abc')).toBe('site')
     expect(workspaceFromPathname('/admin/content')).toBe('content')
@@ -119,6 +121,7 @@ describe('workspaceLayoutStorage — workspaceFromPathname', () => {
     expect(workspaceFromPathname('/admin/account')).toBeNull()
     expect(workspaceFromPathname('/admin/users')).toBeNull()
     expect(workspaceFromPathname('/admin/plugins')).toBeNull()
+    expect(workspaceFromPathname('/admin/site.webmanifest')).toBeNull()
     expect(workspaceFromPathname('/')).toBeNull()
   })
 })

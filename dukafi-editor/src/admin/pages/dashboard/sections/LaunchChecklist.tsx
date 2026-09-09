@@ -12,7 +12,7 @@ export function LaunchChecklist({ data, navigate }: { data: CommerceData; naviga
     { done: data.products.length > 0, label: 'Add a product', path: '/admin/dashboard/products' },
     { done: payment, label: 'Connect a payment provider', path: '/admin/dashboard/plugins' },
     { done: mail, label: 'Connect email', path: '/admin/dashboard/plugins' },
-    { done: published, label: 'Publish your storefront', path: '/admin/site' },
+    { done: published, label: 'Publish your storefront', path: '/admin/editor' },
   ]
   if (items.every((item) => item.done)) return null
   return <aside aria-label="Launch checklist" style={{ border: '1px solid var(--border-subtle)', borderRadius: 0, padding: 16, marginBottom: 20 }}>

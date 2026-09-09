@@ -385,6 +385,16 @@ describe('Toolbar — structural requirements', () => {
     expect(src).toContain('data-testid="toolbar"')
   })
 
+  it('paints the toolbar on a white surface with a bottom edge', () => {
+    const { readFileSync } = require('fs')
+    const css = readFileSync(
+      new URL('../../admin/pages/site/toolbar/Toolbar.module.css', import.meta.url),
+      'utf-8',
+    )
+    expect(css).toContain('background: var(--bg-surface)')
+    expect(css).toContain('border-bottom: 1px solid var(--overlay-10)')
+  })
+
   it('Toolbar is a prop-driven shell — EDITOR-only buttons live in AdminCanvasLayout, global trailer lives in the shell', () => {
     // The Toolbar shell owns the GLOBAL trailer (SettingsButton +
     // OpenLivePageButton + AccountMenuButton) so the settings cog, live-page

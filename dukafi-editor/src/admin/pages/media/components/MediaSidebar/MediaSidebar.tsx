@@ -11,6 +11,7 @@ import { FolderGlyphIcon } from 'pixel-art-icons/icons/folder-glyph'
 import type { IconComponent } from 'pixel-art-icons/types'
 import { AdminAppSidebar, type AdminAppSidebarItem } from '@admin/shared/AdminAppSidebar'
 import { useWorkspaceLayout } from '@admin/state/workspaceLayout'
+import { useAdminNavChrome, adminNavRailWidth } from '@admin/state/adminNavChrome'
 import { hasCapability } from '@admin/access'
 import { useCurrentAdminUser } from '@admin/sessionContext'
 import { useAdminUi } from '@admin/state/adminUi'
@@ -51,8 +52,10 @@ export function MediaSidebar({ workspace, activePanel, onActivePanelChange }: Me
   const setLeftSidebarWidth = useWorkspaceLayout((s) => s.setLeftSidebarWidth)
   const currentUser = useCurrentAdminUser()
   const siteName = useAdminUi((s) => s.siteName)
+  const navMode = useAdminNavChrome((state) => state.mode)
   const panelWidth = activePanel ? leftSidebarWidth : 0
   const style = {
+    '--left-sidebar-rail-width': `${adminNavRailWidth(navMode)}px`,
     '--left-sidebar-panel-width': `${panelWidth}px`,
     '--left-sidebar-panel-layout-width': `${leftSidebarWidth}px`,
   } as CSSProperties
