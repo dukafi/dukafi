@@ -7,7 +7,8 @@
 - Confirm the service starts with one replica in the region nearest the merchant.
 - Open the generated domain and complete owner setup and starter-theme selection.
 - Publish the project through **Settings → Share as Template**.
-- Replace the placeholder template URL in README after publication.
+- Marketplace URL: https://railway.com/deploy/dukafi-sqlite
+- The README one-click button uses that URL (plus the referral query string).
 
 For a Postgres variant, add Railway Postgres and set
 `DATABASE_URL=${{Postgres.DATABASE_URL}}`. The `/data` volume remains required until
